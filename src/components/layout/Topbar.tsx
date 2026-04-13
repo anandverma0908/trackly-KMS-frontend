@@ -1,139 +1,445 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useThemeStore } from "@/store";
 import { useAuthStore } from "@/features/auth/useAuthStore";
-import { ROLE_COLORS, ROLE_LABELS } from "@/features/auth/types";
+import { ROLE_COLORS } from "@/features/auth/types";
+import { useNotificationStore } from "@/store";
+import { semanticSearch, novaQuery } from "@/services/api";
+import type { SearchResult } from "@/types";
 import styles from "./Topbar.module.css";
+
+/* MUI */
+import IconButton   from "@mui/material/IconButton";
+import Avatar       from "@mui/material/Avatar";
+import Tooltip      from "@mui/material/Tooltip";
+import Badge        from "@mui/material/Badge";
+import Menu         from "@mui/material/Menu";
+import MenuItem     from "@mui/material/MenuItem";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import Divider      from "@mui/material/Divider";
+import CircularProgress from "@mui/material/CircularProgress";
+
+/* MUI Icons */
+import MenuOpenIcon      from "@mui/icons-material/MenuOpen";
+import MenuIcon          from "@mui/icons-material/Menu";
+import SearchIcon        from "@mui/icons-material/Search";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import DarkModeIcon      from "@mui/icons-material/DarkMode";
+import LightModeIcon     from "@mui/icons-material/LightMode";
+import LogoutIcon        from "@mui/icons-material/Logout";
+import PersonIcon        from "@mui/icons-material/Person";
+import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
+import ArticleIcon       from "@mui/icons-material/Article";
+import AutoAwesomeIcon   from "@mui/icons-material/AutoAwesome";
+import CloseIcon         from "@mui/icons-material/Close";
+
+/* ── Commented out — preserved for later use ──────────────────────────────
 import DateRangePicker from "../ui/DateRangePicker";
-import NotificationBell from "@/components/nova/NotificationBell";
-import TimerWidget from "@/components/nova/TimerWidget";
-import SearchModal from "@/features/search/SearchModal";
+import TimerWidget     from "@/components/nova/TimerWidget";
+───────────────────────────────────────────────────────────────────────── */
 
 interface TopbarProps {
-  onMenuClick?: () => void;
+  onMenuClick?:      () => void;
+  onSidebarToggle?:  () => void;
+  sidebarCollapsed?: boolean;
+  notifOpen?:        boolean;
+  onNotifToggle?:    () => void;
 }
 
-export default function Topbar({ onMenuClick }: TopbarProps) {
+type SearchMode = "semantic" | "nova";
+
+export default function Topbar({
+  onMenuClick,
+  onSidebarToggle,
+  sidebarCollapsed = false,
+  notifOpen        = false,
+  onNotifToggle,
+}: TopbarProps) {
   const navigate = useNavigate();
   const { colorMode, toggleMode } = useThemeStore();
-  const { user, logout } = useAuthStore();
-  const [showSearch, setShowSearch] = useState(false);
+  const { user, logout }          = useAuthStore();
+  const { unreadCount }           = useNotificationStore();
 
-  // Cmd+K to open search
+  const [anchorEl,  setAnchorEl]  = useState<null | HTMLElement>(null);
+
+  /* ── Search state ── */
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [query,     setQuery]     = useState("");
+  const [mode,      setMode]      = useState<SearchMode>("semantic");
+  const [results,   setResults]   = useState<SearchResult[]>([]);
+  const [novaAnswer, setNovaAnswer] = useState<string | null>(null);
+  const [loading,   setLoading]   = useState(false);
+  const [selIdx,    setSelIdx]    = useState(0);
+  const inputRef    = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  /* Cmd+K → focus search */
   useEffect(() => {
     function handler(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
-        setShowSearch(true);
+        inputRef.current?.focus();
       }
     }
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  /* Click outside → close dropdown */
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setSearchFocused(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const doSearch = useCallback(async (q: string, m: SearchMode) => {
+    if (!q.trim()) { setResults([]); setNovaAnswer(null); return; }
+    setLoading(true);
+    try {
+      if (m === "nova") {
+        const res = await novaQuery(q);
+        setNovaAnswer(res.answer ?? null);
+        setResults(res.citations ?? []);
+      } else {
+        const res = await semanticSearch(q);
+        setResults(res);
+        setNovaAnswer(null);
+      }
+      setSelIdx(0);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value;
+    setQuery(v);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => doSearch(v, mode), 400);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Escape") {
+      setSearchFocused(false);
+      inputRef.current?.blur();
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelIdx((i) => Math.min(i + 1, results.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelIdx((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter" && results[selIdx]) {
+      handleResultClick(results[selIdx]);
+    }
+  }
+
+  function handleResultClick(r: SearchResult) {
+    if (r.url) window.open(r.url, "_blank");
+    setSearchFocused(false);
+    setQuery("");
+    setResults([]);
+  }
+
+  function handleModeSwitch(m: SearchMode) {
+    setMode(m);
+    if (query.trim()) doSearch(query, m);
+  }
+
+  function clearSearch() {
+    setQuery("");
+    setResults([]);
+    setNovaAnswer(null);
+    inputRef.current?.focus();
+  }
+
   function handleLogout() {
+    setAnchorEl(null);
     logout();
     navigate("/login", { replace: true });
   }
 
-  const roleColor = user ? ROLE_COLORS[user.role] : undefined;
-  const initials =
-    user?.name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .slice(0, 2) ?? "?";
+  const initials = user?.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2) ?? "?";
 
+  const roleColor = user ? ROLE_COLORS[user.role] : undefined;
+  const isDark    = colorMode === "dark";
   return (
     <header className={styles.topbar}>
-      {/* Hamburger — mobile only */}
-      <button className={styles.hamburger} onClick={onMenuClick} aria-label="Open menu">
-        <span /><span /><span />
-      </button>
 
-      {/* Logo */}
-      <div className={styles.logo}>
-        <div className={styles.logoMark}>T</div>
-        <div>
-          <div className={styles.logoName}>Trackly</div>
-          <div className={styles.logoTag}>Work. Tracked.</div>
+      {/* ── Left ── */}
+      <div className={styles.left}>
+        {/* Desktop sidebar collapse toggle */}
+        <Tooltip title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} placement="bottom">
+          <IconButton
+            size="small"
+            onClick={onSidebarToggle}
+            className={`${styles.iconBtn} ${styles.sidebarToggle}`}
+            aria-label="Toggle sidebar"
+          >
+            {sidebarCollapsed ? <MenuIcon fontSize="small" /> : <MenuOpenIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+
+        {/* Mobile hamburger */}
+        <Tooltip title="Menu" placement="bottom">
+          <IconButton
+            size="small"
+            onClick={onMenuClick}
+            className={`${styles.iconBtn} ${styles.hamburger}`}
+            aria-label="Open menu"
+          >
+            <MenuIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+
+        <div className={styles.logo} onClick={() => navigate("/dashboard")}>
+          <div className={styles.logoMark}>T</div>
+          <span className={styles.logoName}>Trackly</span>
         </div>
       </div>
 
-      {/* <div className={styles.sep} /> */}
-
-      {/* Nav — only shows routes the user can access */}
-      {/* <nav className={styles.nav}>
-        {navItems.map((item) => (
-          <button
-            key={item.path}
-            className={`${styles.navBtn} ${location.pathname === item.path ? styles.navBtnActive : ""}`}
-            onClick={() => navigate(item.path)}
-          >
-            <span className={styles.navIcon}>{item.icon}</span>
-            {item.label}
-          </button>
-        ))}
-      </nav> */}
-
-      {/* Right */}
-      <div className={styles.right}>
-        {/* Search trigger */}
-        <button
-          className={styles.searchBtn}
-          onClick={() => setShowSearch(true)}
-          title="Search (⌘K)"
-        >
-          🔍 <span className={styles.searchKbd}>⌘K</span>
-        </button>
-
-        <div className={styles.sep} />
-
-        <TimerWidget />
-
-        <div className={styles.sep} />
-
-        <DateRangePicker />
-
-        <div className={styles.sep} />
-
-        {/* Mode toggle */}
-        <button
-          className={styles.iconBtn}
-          onClick={toggleMode}
-          title="Toggle light/dark"
-        >
-          {colorMode === "dark" ? "☀️" : "🌙"}
-        </button>
-
-        <NotificationBell />
-
-        {/* User pill */}
-        {user && (
-          <div className={styles.userPill}>
-            <div className={styles.avatar}>{initials}</div>
-            <div className={styles.userInfo}>
-              <div className={styles.userName}>{user.name.split(" ")[0]}</div>
-              <div
-                className={styles.userRole}
-                style={{ color: roleColor?.text, background: roleColor?.bg }}
-              >
-                {ROLE_LABELS[user.role]}
-              </div>
-            </div>
-            <button
-              className={styles.logoutBtn}
-              onClick={handleLogout}
-              title="Sign out"
-            >
-              ⎋
+      {/* ── Centre — Inline Search ── */}
+      <div className={styles.center} ref={dropdownRef}>
+        <div className={`${styles.searchBar} ${searchFocused ? styles.searchBarFocused : ""}`}>
+          <SearchIcon sx={{ fontSize: 15, color: "var(--text-3)", flexShrink: 0 }} />
+          <input
+            ref={inputRef}
+            className={styles.searchInput}
+            placeholder="Search tickets, wiki, people…"
+            value={query}
+            onChange={handleInput}
+            onFocus={() => setSearchFocused(true)}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          {loading && (
+            <CircularProgress size={13} sx={{ color: "var(--accent)", flexShrink: 0 }} />
+          )}
+          {query && !loading && (
+            <button className={styles.clearBtn} onClick={clearSearch} tabIndex={-1}>
+              <CloseIcon sx={{ fontSize: 13 }} />
             </button>
+          )}
+
+          {/* Mode pills */}
+          <div className={styles.modePills}>
+            <button
+              className={`${styles.modePill} ${mode === "semantic" ? styles.modePillActive : ""}`}
+              onMouseDown={(e) => { e.preventDefault(); handleModeSwitch("semantic"); }}
+              tabIndex={-1}
+            >
+              Search
+            </button>
+            <button
+              className={`${styles.modePill} ${mode === "nova" ? styles.modePillActive : ""}`}
+              onMouseDown={(e) => { e.preventDefault(); handleModeSwitch("nova"); }}
+              tabIndex={-1}
+            >
+              <span className={styles.novaGlow} />
+              NOVA
+            </button>
+          </div>
+
+          {!searchFocused && <kbd className={styles.kbd}>⌘K</kbd>}
+        </div>
+
+        {/* ── Dropdown ── */}
+        {searchFocused && (
+          <div className={styles.dropdown}>
+            {/* NOVA answer */}
+            {novaAnswer && (
+              <div className={styles.novaAnswer}>
+                <div className={styles.novaBadge}>
+                  <AutoAwesomeIcon sx={{ fontSize: 11 }} />
+                  NOVA
+                </div>
+                <p className={styles.novaText}>{novaAnswer}</p>
+              </div>
+            )}
+
+            {/* Results */}
+            {results.length > 0 && (
+              <div className={styles.resultsList}>
+                <div className={styles.resultsLabel}>{results.length} result{results.length !== 1 ? "s" : ""}</div>
+                {results.map((r, i) => (
+                  <button
+                    key={`${r.type}-${r.id}`}
+                    className={`${styles.resultItem} ${i === selIdx ? styles.resultItemActive : ""}`}
+                    onMouseDown={() => handleResultClick(r)}
+                  >
+                    <span className={styles.resultIcon}>
+                      {r.type === "ticket"
+                        ? <ConfirmationNumberIcon sx={{ fontSize: 15 }} />
+                        : <ArticleIcon sx={{ fontSize: 15 }} />
+                      }
+                    </span>
+                    <div className={styles.resultBody}>
+                      <div className={styles.resultTitle}>
+                        {r.key && <span className={styles.resultKey}>{r.key}</span>}
+                        <span>{r.title}</span>
+                      </div>
+                      {r.snippet && <p className={styles.resultSnippet}>{r.snippet}</p>}
+                    </div>
+                    <span className={`badge ${r.type === "ticket" ? "badge-blue" : "badge-purple"}`}
+                      style={{ fontSize: "10px", flexShrink: 0 }}>
+                      {r.type}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Empty state */}
+            {!loading && query && results.length === 0 && (
+              <div className={styles.emptyState}>
+                No results for "<strong>{query}</strong>"
+              </div>
+            )}
+
+            {/* Hint (no query yet) */}
+            {!query && (
+              <div className={styles.hintArea}>
+                <div className={styles.hintRow}>
+                  <kbd className={styles.kbdSmall}>↑↓</kbd> navigate
+                  <kbd className={styles.kbdSmall}>↵</kbd> open
+                  <kbd className={styles.kbdSmall}>Esc</kbd> close
+                </div>
+                <div className={styles.hintRow}>
+                  <AutoAwesomeIcon sx={{ fontSize: 12, color: "var(--accent)" }} />
+                  <span>Switch to NOVA for AI-powered answers</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Search Modal */}
-      {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
+      {/* ── Right ── */}
+      <div className={styles.right}>
+
+        {/* ── Commented-out controls — preserved ─────────────────────────
+        <TimerWidget />
+        <div className={styles.sep} />
+        <DateRangePicker />
+        <div className={styles.sep} />
+        ──────────────────────────────────────────────────────────────── */}
+
+        {/* Theme toggle */}
+        <Tooltip title={isDark ? "Light mode" : "Dark mode"} placement="bottom">
+          <IconButton size="small" onClick={toggleMode} className={styles.iconBtn}>
+            {isDark ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+
+        {/* Notifications */}
+        <Tooltip title="Notifications" placement="bottom">
+          <IconButton
+            size="small"
+            onClick={onNotifToggle}
+            className={`${styles.iconBtn} ${notifOpen ? styles.iconBtnActive : ""}`}
+          >
+            <Badge
+              badgeContent={unreadCount || undefined}
+              max={99}
+              sx={{
+                "& .MuiBadge-badge": {
+                  background: "var(--accent)",
+                  color: "#fff",
+                  fontSize: "9px",
+                  minWidth: "16px",
+                  height: "16px",
+                  padding: "0 4px",
+                },
+              }}
+            >
+              <NotificationsIcon fontSize="small" />
+            </Badge>
+          </IconButton>
+        </Tooltip>
+
+        {/* User avatar + menu */}
+        {user && (
+          <>
+            <Tooltip title={user.name} placement="bottom">
+              <Avatar
+                onClick={(e) => setAnchorEl(e.currentTarget)}
+                sx={{
+                  width: 32,
+                  height: 32,
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  background: `linear-gradient(135deg, var(--accent), var(--accent-2))`,
+                  border: "2px solid transparent",
+                  transition: "border-color 0.15s",
+                  "&:hover": { borderColor: "var(--accent-border)" },
+                }}
+              >
+                {initials}
+              </Avatar>
+            </Tooltip>
+
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={() => setAnchorEl(null)}
+              transformOrigin={{ horizontal: "right", vertical: "top" }}
+              anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+              slotProps={{
+                paper: {
+                  sx: {
+                    mt: 1,
+                    minWidth: 200,
+                    background: "var(--surface)",
+                    border: "1px solid var(--border-2)",
+                    boxShadow: "var(--shadow-lg)",
+                  },
+                },
+              }}
+            >
+              <div className={styles.menuHeader}>
+                <div className={styles.menuName}>{user.name}</div>
+                <div
+                  className={styles.menuRole}
+                  style={roleColor ? { color: roleColor.text, background: roleColor.bg } : {}}
+                >
+                  {user.role.replace(/_/g, " ")}
+                </div>
+              </div>
+              <Divider sx={{ borderColor: "var(--border)" }} />
+              <MenuItem
+                onClick={() => { setAnchorEl(null); navigate("/settings"); }}
+                sx={{ fontSize: "13px", color: "var(--text-2)", "&:hover": { color: "var(--text)", background: "var(--surface-2)" } }}
+              >
+                <ListItemIcon sx={{ color: "inherit", minWidth: 32 }}>
+                  <PersonIcon fontSize="small" />
+                </ListItemIcon>
+                Settings
+              </MenuItem>
+              <MenuItem
+                onClick={handleLogout}
+                sx={{ fontSize: "13px", color: "var(--red)", "&:hover": { background: "var(--red-glow)" } }}
+              >
+                <ListItemIcon sx={{ color: "inherit", minWidth: 32 }}>
+                  <LogoutIcon fontSize="small" />
+                </ListItemIcon>
+                Sign out
+              </MenuItem>
+            </Menu>
+          </>
+        )}
+      </div>
     </header>
   );
 }

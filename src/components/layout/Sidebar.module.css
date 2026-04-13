@@ -1,6 +1,5 @@
 .sidebar {
-  width: var(--sidebar-w, 228px);
-  background: var(--bg-2);
+  background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -9,15 +8,16 @@
   transition: transform 0.25s ease;
 }
 
+
 /* Mobile close button — hidden on desktop */
 .mobileCloseBtn {
   display: none;
-  align-self: flex-end;
+  margin-left: auto;
   background: none;
   border: none;
   color: var(--text-3);
   font-size: 18px;
-  padding: 12px 16px 4px;
+  padding: 4px 8px;
   cursor: pointer;
 }
 .mobileCloseBtn:hover { color: var(--text); }
@@ -36,7 +36,7 @@
     transform: translateX(0);
   }
   .mobileCloseBtn {
-    display: block;
+    display: flex;
   }
 }
 
@@ -65,7 +65,10 @@
 .body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 8px 8px 16px;
+  width: 228px;        /* fixed — never reflows during collapse animation */
+  min-width: 228px;
   /* Custom scrollbar */
   scrollbar-width: thin;
   scrollbar-color: var(--border-2) transparent;
@@ -111,6 +114,14 @@
 }
 .item:hover  { background: var(--surface-2); color: var(--text); }
 .itemActive  { background: var(--accent-glow); color: var(--accent); font-weight: 600; }
+
+
+.itemIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 
 .icon {
   font-size: 14px;

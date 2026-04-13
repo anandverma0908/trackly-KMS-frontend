@@ -1,21 +1,39 @@
 .shell {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;   /* sidebar | rightSide | notifPanel */
   height: 100vh;
   overflow: hidden;
 }
 
-.body {
+/* Right column: topbar stacked above main — this is what shrinks */
+.rightSide {
   display: flex;
+  flex-direction: column;
   flex: 1;
   overflow: hidden;
-  position: relative;
+  min-width: 0;
 }
 
 .main {
   flex: 1;
   overflow-y: auto;
   background: var(--bg);
+  min-width: 0;
+}
+
+/* Notification panel — flex sibling at shell level, no backdrop */
+.notifPanel {
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  height: 100vh;
+}
+
+.notifInner {
+  width: 340px;
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Mobile sidebar overlay */
@@ -23,12 +41,21 @@
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 199;
 }
 
 @media (max-width: 768px) {
-  .mobileOverlay {
-    display: block;
+  .mobileOverlay { display: block; }
+
+  .notifPanel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    height: 100vh;
+    z-index: 250;
   }
+
+  .notifInner { width: 100vw; }
 }
