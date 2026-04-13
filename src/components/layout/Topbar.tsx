@@ -179,7 +179,7 @@ export default function Topbar({
       {/* ── Left ── */}
       <div className={styles.left}>
         {/* Desktop sidebar collapse toggle */}
-        <Tooltip title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} placement="bottom">
+        {/* <Tooltip title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} placement="bottom"> */}
           <IconButton
             size="small"
             onClick={onSidebarToggle}
@@ -188,7 +188,7 @@ export default function Topbar({
           >
             {sidebarCollapsed ? <MenuIcon fontSize="small" /> : <MenuOpenIcon fontSize="small" />}
           </IconButton>
-        </Tooltip>
+        {/* </Tooltip> */}
 
         {/* Mobile hamburger */}
         <Tooltip title="Menu" placement="bottom">
@@ -241,14 +241,14 @@ export default function Topbar({
             >
               Search
             </button>
-            <button
+            {/* <button
               className={`${styles.modePill} ${mode === "nova" ? styles.modePillActive : ""}`}
               onMouseDown={(e) => { e.preventDefault(); handleModeSwitch("nova"); }}
               tabIndex={-1}
             >
               <span className={styles.novaGlow} />
               NOVA
-            </button>
+            </button> */}
           </div>
 
           {!searchFocused && <kbd className={styles.kbd}>⌘K</kbd>}

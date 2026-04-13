@@ -17,7 +17,8 @@
 .main {
   flex: 1;
   overflow-y: auto;
-  background: var(--bg);
+  /* background: var(--bg); */
+  background: var(--surface);
   min-width: 0;
 }
 
@@ -26,12 +27,12 @@
   flex-shrink: 0;
   overflow: hidden;
   background: var(--surface);
-  border-left: 1px solid var(--border);
+  /* border-left: 1px solid var(--border); */
   height: 100vh;
 }
 
 .notifInner {
-  width: 340px;
+  width: 280px;
   height: 100%;
   overflow: hidden;
 }

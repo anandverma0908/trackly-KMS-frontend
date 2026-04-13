@@ -1,6 +1,6 @@
 .sidebar {
   background: var(--surface);
-  border-right: 1px solid var(--border);
+  /* border-right: 1px solid var(--border); */
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -106,7 +106,7 @@
   font-weight: 500;
   transition: all 0.15s;
   margin: 1px 0;
-  width: 100%;
+  /* width: 100%; */
   text-align: left;
   border: none;
   background: transparent;

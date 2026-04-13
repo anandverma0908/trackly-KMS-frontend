@@ -1,5 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchNotifications, markNotificationRead, markAllNotificationsRead } from "@/services/api";
+import {
+  fetchNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "@/services/api";
 import { useNotificationStore } from "@/store";
 import type { Notification } from "@/types";
 import IconButton from "@mui/material/IconButton";
@@ -16,8 +20,8 @@ interface Props {
 }
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
-  sprint_started:    <SprintIcon fontSize="small" />,
-  standup_ready:     <WbSunnyIcon fontSize="small" />,
+  sprint_started: <SprintIcon fontSize="small" />,
+  standup_ready: <WbSunnyIcon fontSize="small" />,
   burn_rate_warning: <LocalFireDepartmentIcon fontSize="small" />,
 };
 
@@ -27,7 +31,7 @@ export default function NotificationPanel({ onClose }: Props) {
 
   const { data: raw = [] } = useQuery({
     queryKey: ["notifications"],
-    queryFn:  fetchNotifications,
+    queryFn: fetchNotifications,
     refetchInterval: 30_000,
   });
 
@@ -36,12 +40,12 @@ export default function NotificationPanel({ onClose }: Props) {
 
   const readMut = useMutation({
     mutationFn: (id: number) => markNotificationRead(id),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
   const readAllMut = useMutation({
     mutationFn: markAllNotificationsRead,
-    onSuccess:  () => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["notifications"] });
       clearUnread();
     },
@@ -62,18 +66,21 @@ export default function NotificationPanel({ onClose }: Props) {
               title="Mark all read"
               onClick={() => readAllMut.mutate()}
               disabled={readAllMut.isPending}
-              sx={{ color: "var(--text-3)", "&:hover": { color: "var(--accent)" } }}
+              sx={{
+                color: "var(--text-3)",
+                "&:hover": { color: "var(--accent)" },
+              }}
             >
               <DoneAllIcon fontSize="small" />
             </IconButton>
           )}
-          <IconButton
+          {/* <IconButton
             size="small"
             onClick={onClose}
             sx={{ color: "var(--text-3)", "&:hover": { color: "var(--text)" } }}
           >
             <CloseIcon fontSize="small" />
-          </IconButton>
+          </IconButton> */}
         </div>
       </div>
 
@@ -81,7 +88,9 @@ export default function NotificationPanel({ onClose }: Props) {
       <div className={styles.list}>
         {notifications.length === 0 ? (
           <div className={styles.empty}>
-            <NotificationsNoneIcon sx={{ fontSize: 36, color: "var(--text-3)" }} />
+            <NotificationsNoneIcon
+              sx={{ fontSize: 36, color: "var(--text-3)" }}
+            />
             <p>You're all caught up</p>
           </div>
         ) : (
@@ -95,7 +104,9 @@ export default function NotificationPanel({ onClose }: Props) {
               }}
             >
               <span className={styles.itemIcon}>
-                {TYPE_ICON[n.type] ?? <NotificationsNoneIcon fontSize="small" />}
+                {TYPE_ICON[n.type] ?? (
+                  <NotificationsNoneIcon fontSize="small" />
+                )}
               </span>
               <div className={styles.itemBody}>
                 <div className={styles.itemTitle}>{n.title}</div>

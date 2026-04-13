@@ -9,15 +9,18 @@ import NotificationPanel from "@/components/nova/NotificationPanel";
 import styles from "./AppShell.module.css";
 
 export default function AppShell() {
-  const [sidebarOpen,      setSidebarOpen]      = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [notifOpen,        setNotifOpen]        = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   return (
     <div className={styles.shell}>
       {/* Sidebar — full height, never shifts */}
       {sidebarOpen && (
-        <div className={styles.mobileOverlay} onClick={() => setSidebarOpen(false)} />
+        <div
+          className={styles.mobileOverlay}
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
       <Sidebar
         open={sidebarOpen}
@@ -28,14 +31,14 @@ export default function AppShell() {
       {/* Right side: topbar + main — shrinks when notif panel opens */}
       <div className={styles.rightSide}>
         <Topbar
-          onMenuClick={()     => setSidebarOpen((v) => !v)}
-          onSidebarToggle={()  => setSidebarCollapsed((v) => !v)}
+          onMenuClick={() => setSidebarOpen((v) => !v)}
+          onSidebarToggle={() => setSidebarCollapsed((v) => !v)}
           sidebarCollapsed={sidebarCollapsed}
           notifOpen={notifOpen}
-          onNotifToggle={()   => setNotifOpen((v) => !v)}
+          onNotifToggle={() => setNotifOpen((v) => !v)}
         />
         <main className={styles.main}>
-          <Outlet />
+          {/* <Outlet /> */}
         </main>
       </div>
 
@@ -45,9 +48,14 @@ export default function AppShell() {
           <motion.aside
             className={styles.notifPanel}
             initial={{ width: 0 }}
-            animate={{ width: 340 }}
+            animate={{ width: 280 }}
             exit={{ width: 0 }}
-            transition={{ type: "spring", stiffness: 320, damping: 38, mass: 0.7 }}
+            transition={{
+              type: "spring",
+              stiffness: 280,
+              damping: 38,
+              mass: 0.7,
+            }}
           >
             <div className={styles.notifInner}>
               <NotificationPanel onClose={() => setNotifOpen(false)} />
