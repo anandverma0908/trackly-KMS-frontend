@@ -8,13 +8,13 @@ import { getPodColor } from "@/config/themes";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import styles from "./Sidebar.module.css";
 import { FaUsers } from "react-icons/fa";
-import { TbKeyFilled } from "react-icons/tb";
-import { TbSettingsFilled } from "react-icons/tb";
-import { TbLayoutDashboardFilled } from "react-icons/tb";
+import { TbKeyFilled, TbSettingsFilled, TbLayoutDashboardFilled } from "react-icons/tb";
 import { HiTicket } from "react-icons/hi2";
 import { RiTeamFill } from "react-icons/ri";
 import { FaSheetPlastic } from "react-icons/fa6";
 import { BiSolidFileExport } from "react-icons/bi";
+import { MdViewKanban, MdSpeed, MdAutoAwesome } from "react-icons/md";
+import { BsBook, BsSunrise, BsBarChart, BsBell, BsGrid } from "react-icons/bs";
 
 /* ── Multi-select filter section ─────────────────────────────────────────── */
 interface FilterSectionProps {
@@ -203,12 +203,17 @@ function FilterSection({
 }
 
 /* ── Main Sidebar ────────────────────────────────────────────────────────── */
-export default function Sidebar() {
+interface SidebarProps {
+  open?:    boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ open = false, onClose }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { pods, clients, togglePod, toggleClient, clearPods, clearClients } =
     useFilterStore();
-  const { can, user } = useAuthStore();
+  const { can } = useAuthStore();
 
   const { data: filters } = useQuery({
     queryKey: QUERY_KEYS.filters(),
@@ -219,8 +224,15 @@ export default function Sidebar() {
   const allPods = filters?.pods ?? [];
   const allClients = filters?.clients ?? [];
 
+  function handleNavClick(path: string) {
+    navigate(path);
+    onClose?.();
+  }
+
   return (
-    <aside className={styles.sidebar}>
+    <aside className={`${styles.sidebar} ${open ? styles.sidebarOpen : ""}`}>
+      {/* Mobile close button */}
+      <button className={styles.mobileCloseBtn} onClick={onClose} aria-label="Close menu">✕</button>
       {/* Search */}
       <div className={styles.body}>
         {/* Navigation */}
@@ -228,40 +240,88 @@ export default function Sidebar() {
           label="Dashboard"
           icon={<TbLayoutDashboardFilled />}
           active={location.pathname === "/dashboard"}
-          onClick={() => navigate("/dashboard")}
+          onClick={() => handleNavClick("/dashboard")}
         />
-        {can("view:tickets") && (
+        {/* {can("view:tickets") && ( */}
           <NavItem
             label="Tickets"
             icon={<HiTicket />}
             active={location.pathname === "/tickets"}
-            onClick={() => navigate("/tickets")}
+            onClick={() => handleNavClick("/tickets")}
           />
-        )}
-        {can("view:teams") && (
+        {/* )} */}
+        {/* {can("view:tickets") && ( */}
+          <NavItem
+            label="Kanban"
+            icon={<MdViewKanban />}
+            active={location.pathname === "/kanban"}
+            onClick={() => handleNavClick("/kanban")}
+          />
+        {/* )} */}
+        {/* {can("view:tickets") && ( */}
+          <NavItem
+            label="Sprints"
+            icon={<MdSpeed />}
+            active={location.pathname === "/sprints"}
+            onClick={() => handleNavClick("/sprints")}
+          />
+        {/* )} */}
+
+        <div className={styles.divider} />
+
+        <NavItem
+          label="Wiki"
+          icon={<BsBook />}
+          active={location.pathname === "/wiki"}
+          onClick={() => handleNavClick("/wiki")}
+        />
+        <NavItem
+          label="Standup"
+          icon={<BsSunrise />}
+          active={location.pathname === "/standup"}
+          onClick={() => handleNavClick("/standup")}
+        />
+        <NavItem
+          label="Analytics"
+          icon={<BsBarChart />}
+          active={location.pathname === "/analytics"}
+          onClick={() => handleNavClick("/analytics")}
+        />
+
+        <div className={styles.divider} />
+
+        {/* {can("view:teams") && ( */}
           <NavItem
             label="Team"
             icon={<RiTeamFill />}
             active={location.pathname === "/team"}
-            onClick={() => navigate("/team")}
+            onClick={() => handleNavClick("/team")}
           />
-        )}
-        {can("entry:manual") && (
+        {/* )} */}
+        {/* {can("entry:manual") && ( */}
           <NavItem
             label="Timesheets"
             icon={<FaSheetPlastic />}
             active={location.pathname === "/manual-entry"}
-            onClick={() => navigate("/manual-entry")}
+            onClick={() => handleNavClick("/manual-entry")}
           />
-        )}
-        {can("export:all") && (
+        {/* )} */}
+        {/* {can("entry:manual") && ( */}
+          <NavItem
+            label="Weekly Grid"
+            icon={<BsGrid />}
+            active={location.pathname === "/timesheets/weekly"}
+            onClick={() => handleNavClick("/timesheets/weekly")}
+          />
+        {/* )} */}
+        {/* {can("export:all") && ( */}
           <NavItem
             label="Export"
             icon={<BiSolidFileExport />}
             active={location.pathname === "/export"}
-            onClick={() => navigate("/export")}
+            onClick={() => handleNavClick("/export")}
           />
-        )}
+        {/* )} */}
 
         <div className={styles.divider} />
 
@@ -290,30 +350,44 @@ export default function Sidebar() {
 
         <div className={styles.divider} />
 
-        {can("manage:settings") && (
+        {/* {can("manage:settings") && ( */}
           <NavItem
             label="Settings"
             icon={<TbSettingsFilled />}
             active={location.pathname === "/settings"}
-            onClick={() => navigate("/settings")}
+            onClick={() => handleNavClick("/settings")}
           />
-        )}
-        {!can("manage:users") && (
+        {/* )} */}
+        {/* {can("manage:settings") && ( */}
+          <NavItem
+            label="Burn Rate"
+            icon={<MdAutoAwesome />}
+            active={location.pathname === "/settings/budget"}
+            onClick={() => handleNavClick("/settings/budget")}
+          />
+        {/* )} */}
+        <NavItem
+          label="Notifications"
+          icon={<BsBell />}
+          active={location.pathname === "/settings/notifications"}
+          onClick={() => handleNavClick("/settings/notifications")}
+        />
+        {/* {!can("manage:users") && ( */}
           <NavItem
             label="Change Password"
             icon={<TbKeyFilled />}
             active={location.pathname === "/settings/password"}
-            onClick={() => navigate("/settings/password")}
+            onClick={() => handleNavClick("/settings/password")}
           />
-        )}
-        {can("manage:users") && (
+        {/* )} */}
+        {/* {can("manage:users") && ( */}
           <NavItem
             label="Users"
             icon={<FaUsers />}
             active={location.pathname === "/admin/users"}
-            onClick={() => navigate("/admin/users")}
+            onClick={() => handleNavClick("/admin/users")}
           />
-        )}
+        {/* )} */}
       </div>
     </aside>
   );

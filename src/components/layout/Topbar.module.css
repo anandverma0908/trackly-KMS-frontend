@@ -330,3 +330,63 @@
 .iconBtn:hover {
   border-color: var(--border-3);
 }
+
+.searchBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 0.8rem;
+  padding: 5px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.searchBtn:hover { border-color: var(--accent); color: var(--text); }
+
+.searchKbd {
+  font-size: 0.68rem;
+  color: var(--text-3);
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* Hamburger — hidden on desktop, visible on mobile */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--r-xs);
+  flex-shrink: 0;
+}
+.hamburger span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--text-2);
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+.hamburger:hover span { background: var(--text); }
+
+@media (max-width: 768px) {
+  .hamburger { display: flex; }
+
+  /* Hide logo text on very small screens */
+  .logoTag { display: none; }
+
+  /* Collapse search hint */
+  .searchKbd { display: none; }
+
+  /* Hide less critical right items */
+  .sep { display: none; }
+}

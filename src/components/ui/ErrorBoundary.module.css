@@ -1,0 +1,14 @@
+.errorPage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 24px;
+  text-align: center;
+  min-height: 300px;
+}
+
+.errorIcon  { font-size: 3rem; }
+.errorTitle { font-size: 1.2rem; font-weight: 600; margin: 0; }
+.errorMsg   { color: var(--text-2); font-size: 0.88rem; max-width: 440px; margin: 0; }

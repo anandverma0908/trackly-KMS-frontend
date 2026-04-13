@@ -1,0 +1,174 @@
+.page {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title    { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 4px; }
+.subtitle { font-size: 0.78rem; color: var(--text-2); margin: 0; }
+
+.novaBadge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent-glow); border: 1px solid var(--accent-border);
+  color: var(--accent); font-size: 0.72rem; font-weight: 700;
+  padding: 5px 12px; border-radius: 99px; letter-spacing: 0.06em;
+}
+
+.novaGlow {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 6px var(--accent);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+/* Client Card */
+.clientCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.clientHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.clientName { font-weight: 600; font-size: 0.95rem; }
+
+.statusBadge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+
+.progress {
+  height: 6px;
+  background: var(--border-2);
+  border-radius: 99px;
+  overflow: visible;
+  position: relative;
+  display: flex;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+
+.progressOver {
+  height: 100%;
+  background: var(--red);
+  opacity: 0.5;
+  border-radius: 0 99px 99px 0;
+}
+
+.clientStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  text-align: center;
+}
+
+.stat { }
+.statVal   { display: block; font-size: 1rem; font-weight: 700; }
+.statLabel { font-size: 0.68rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }
+
+.novaSummary {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  color: var(--text-2);
+  line-height: 1.5;
+  display: flex;
+  gap: 6px;
+}
+
+.novaSummaryBadge { color: var(--accent); font-size: 0.8rem; flex-shrink: 0; }
+
+.editBudget { display: flex; gap: 6px; align-items: center; }
+
+.editBtn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 0.78rem;
+  padding: 5px 12px;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  transition: all 0.15s;
+  align-self: flex-start;
+}
+.editBtn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Alert Section */
+.alertSection {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+}
+
+.alertTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.alertItem {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.alertItem:first-of-type { border-top: none; }
+
+.alertLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.alertClient    { font-weight: 600; font-size: 0.85rem; }
+.alertThreshold { font-size: 0.78rem; color: var(--amber); }
+.alertTime      { font-size: 0.72rem; color: var(--text-3); margin-left: auto; }
+
+.alertNova {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  display: flex;
+  gap: 6px;
+  padding-left: 4px;
+}
+.alertNovaBadge { color: var(--accent); flex-shrink: 0; }
+
+.empty, .emptyState {
+  color: var(--text-3); font-size: 0.85rem;
+  text-align: center; padding: 32px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.emptyIcon { font-size: 2rem; }

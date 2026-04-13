@@ -1,33 +1,35 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useThemeStore } from "@/store";
 import { useAuthStore } from "@/features/auth/useAuthStore";
-import { getPresetDates, type DatePreset } from "@/config/queryKeys";
-import { formatDate } from "@/utils/formatters";
 import { ROLE_COLORS, ROLE_LABELS } from "@/features/auth/types";
 import styles from "./Topbar.module.css";
 import DateRangePicker from "../ui/DateRangePicker";
+import NotificationBell from "@/components/nova/NotificationBell";
+import TimerWidget from "@/components/nova/TimerWidget";
+import SearchModal from "@/features/search/SearchModal";
 
-export default function Topbar() {
+interface TopbarProps {
+  onMenuClick?: () => void;
+}
+
+export default function Topbar({ onMenuClick }: TopbarProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const { colorMode, toggleMode } = useThemeStore();
-  const { user, logout, canAccessRoute } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const [showSearch, setShowSearch] = useState(false);
 
-  /* Build nav items filtered by role */
-  // const ALL_NAV = [
-  //   { path: "/dashboard", label: "Dashboard", icon: "▦" },
-  //   { path: "/tickets", label: "Tickets", icon: "≡" },
-  //   { path: "/team", label: "Team", icon: "◎" },
-  //   { path: "/manual-entry", label: "Manual Entry", icon: "✦" },
-  // ];
-
-  // const navItems = ALL_NAV.filter((item) => canAccessRoute(item.path));
-
-  function handlePreset(preset: DatePreset) {
-    const { from, to } = getPresetDates(preset);
-    /* Could update filter store here — kept simple for now */
-    console.log("preset", from, to);
-  }
+  // Cmd+K to open search
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    }
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   function handleLogout() {
     logout();
@@ -44,6 +46,11 @@ export default function Topbar() {
 
   return (
     <header className={styles.topbar}>
+      {/* Hamburger — mobile only */}
+      <button className={styles.hamburger} onClick={onMenuClick} aria-label="Open menu">
+        <span /><span /><span />
+      </button>
+
       {/* Logo */}
       <div className={styles.logo}>
         <div className={styles.logoMark}>T</div>
@@ -71,6 +78,21 @@ export default function Topbar() {
 
       {/* Right */}
       <div className={styles.right}>
+        {/* Search trigger */}
+        <button
+          className={styles.searchBtn}
+          onClick={() => setShowSearch(true)}
+          title="Search (⌘K)"
+        >
+          🔍 <span className={styles.searchKbd}>⌘K</span>
+        </button>
+
+        <div className={styles.sep} />
+
+        <TimerWidget />
+
+        <div className={styles.sep} />
+
         <DateRangePicker />
 
         <div className={styles.sep} />
@@ -84,22 +106,7 @@ export default function Topbar() {
           {colorMode === "dark" ? "☀️" : "🌙"}
         </button>
 
-        {/* Sync */}
-        <div className={styles.syncPill}>
-          <div className={styles.syncDot} />
-          Synced
-        </div>
-
-        {/* Settings */}
-        {/* {can("manage:settings") && (
-          <button
-            className={styles.iconBtn}
-            onClick={() => navigate("/settings")}
-            title="Settings"
-          >
-            ⚙️
-          </button>
-        )} */}
+        <NotificationBell />
 
         {/* User pill */}
         {user && (
@@ -124,6 +131,9 @@ export default function Topbar() {
           </div>
         )}
       </div>
+
+      {/* Search Modal */}
+      {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
     </header>
   );
 }

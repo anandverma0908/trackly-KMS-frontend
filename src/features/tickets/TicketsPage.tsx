@@ -1,24 +1,16 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import toast from "react-hot-toast";
 import { useFilterStore } from "@/store";
-import { fetchTickets, fetchFilters } from "@/services/api";
+import { fetchTickets } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import { useDebounce } from "@/hooks";
-import { parseNLQuery } from "@/utils/aiParser";
 import { formatDate, formatHours } from "@/utils/formatters";
 import { IssueTypeBadge, StatusBadge, PODBadge } from "@/components/ui/Badge";
 import DataTable, { Column } from "@/components/ui/DataTable";
+import TicketCreateModal from "./TicketCreateModal";
+import TicketDetailDrawer from "./TicketDetailDrawer";
 import type { Ticket } from "@/types";
 import styles from "./TicketsPage.module.css";
-
-const AI_SUGGESTIONS = [
-  "Bugs from Colgate last month",
-  "Top engineers by hours this FY",
-  "All DPAI meetings this month",
-  "DevOps tickets in progress",
-  "Hours by client this quarter",
-];
 
 const COLUMNS: Column<Ticket>[] = [
   {
@@ -87,17 +79,15 @@ const COLUMNS: Column<Ticket>[] = [
 ];
 
 export default function TicketsPage() {
-  const [aiQuery, setAiQuery] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [typeFilter, setTypeFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   const filters = useFilterStore();
   const { pods, clients, togglePod, toggleClient, clearPods, clearClients } =
     useFilterStore();
   const debouncedSearch = useDebounce(filters.search, 300);
-
-  const { data: filtersData } = useQuery({
-    queryKey: QUERY_KEYS.filters(),
-    queryFn: fetchFilters,
-  });
 
   const { data, isLoading } = useQuery({
     queryKey: QUERY_KEYS.tickets({
@@ -118,45 +108,30 @@ export default function TicketsPage() {
   });
 
   const tickets: Ticket[] = (data?.tickets ?? []).filter((t) => {
-    if (!debouncedSearch) return true;
-    const q = debouncedSearch.toLowerCase();
-    return (
-      t.key.toLowerCase().includes(q) ||
-      t.summary.toLowerCase().includes(q) ||
-      t.assignee.toLowerCase().includes(q) ||
-      t.client.toLowerCase().includes(q)
-    );
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      if (
+        !t.key.toLowerCase().includes(q) &&
+        !t.summary.toLowerCase().includes(q) &&
+        !t.assignee.toLowerCase().includes(q) &&
+        !t.client.toLowerCase().includes(q)
+      ) return false;
+    }
+    if (typeFilter && t.issue_type !== typeFilter) return false;
+    if (statusFilter && t.status !== statusFilter) return false;
+    return true;
   });
 
-  function handleAISearch(query: string) {
-    setAiQuery(query);
-    if (!query.trim()) return;
-    const parsed = parseNLQuery(query, {
-      pods: filtersData?.pods ?? [],
-      clients: filtersData?.clients ?? [],
-      users: filtersData?.users ?? [],
-      projects: filtersData?.projects ?? [],
-    });
-    Object.entries(parsed.filters).forEach(([k, v]) =>
-      filters.setFilter(k as keyof typeof filters, v as string | null),
-    );
-    toast.success("Filters applied from AI search");
-  }
+  const uniqueTypes    = [...new Set((data?.tickets ?? []).map((t) => t.issue_type))].sort();
+  const uniqueStatuses = [...new Set((data?.tickets ?? []).map((t) => t.status))].sort();
 
   const activeFilters = [
-    filters.project && {
-      label: `Project: ${filters.project}`,
-      onRemove: () => filters.setFilter("project", null),
-    },
-    filters.user && {
-      label: `Engineer: ${filters.user}`,
-      onRemove: () => filters.setFilter("user", null),
-    },
-    ...pods.map((p) => ({ label: `POD: ${p}`, onRemove: () => togglePod(p) })),
-    ...clients.map((c) => ({
-      label: `Client: ${c}`,
-      onRemove: () => toggleClient(c),
-    })),
+    filters.project && { label: `Project: ${filters.project}`, onRemove: () => filters.setFilter("project", null) },
+    filters.user    && { label: `Engineer: ${filters.user}`, onRemove: () => filters.setFilter("user", null) },
+    typeFilter      && { label: `Type: ${typeFilter}`, onRemove: () => setTypeFilter("") },
+    statusFilter    && { label: `Status: ${statusFilter}`, onRemove: () => setStatusFilter("") },
+    ...pods.map((p)    => ({ label: `POD: ${p}`, onRemove: () => togglePod(p) })),
+    ...clients.map((c) => ({ label: `Client: ${c}`, onRemove: () => toggleClient(c) })),
   ].filter(Boolean) as { label: string; onRemove: () => void }[];
 
   return (
@@ -168,60 +143,49 @@ export default function TicketsPage() {
           <p className={styles.subtitle}>
             {isLoading
               ? "Loading…"
-              : `${(data?.count ?? tickets.length).toLocaleString()} tickets synced from Jira — filtered to ${tickets.length.toLocaleString()} results.`}
+              : `${(data?.total ?? tickets.length).toLocaleString()} tickets · ${tickets.length.toLocaleString()} shown`}
           </p>
         </div>
+        <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
+          + New Ticket
+        </button>
       </div>
-
-      {/* AI Search */}
-      {/* <div className={`${styles.aiWrap} fade-up-1`}>
-        <div className={styles.aiInner}>
-          <div className={styles.aiBadge}>
-            <div className={styles.aiDot} />
-            AI
-          </div>
-          <input
-            className={styles.aiInput}
-            value={aiQuery}
-            onChange={(e) => setAiQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAISearch(aiQuery)}
-            placeholder='Ask in plain English: "show bug tickets from Colgate in DPAI last month"…'
-          />
-          {aiQuery && (
-            <button className={styles.aiClear} onClick={() => setAiQuery("")}>
-              ✕
-            </button>
-          )}
-          <div className={styles.aiKbd}>⌘K</div>
-        </div>
-        <div className={styles.aiSugs}>
-          {AI_SUGGESTIONS.map((s) => (
-            <button
-              key={s}
-              className={styles.aiSug}
-              onClick={() => handleAISearch(s)}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div> */}
 
       {/* Filter bar */}
       <div className={`${styles.filterBar} fade-up-2`}>
-        <span className={styles.filterLabel}>Filters: </span>
+        <span className={styles.filterLabel}>Filter: </span>
         <input
           className={`input input-sm ${styles.searchInline}`}
           placeholder="Search tickets…"
           value={filters.search}
           onChange={(e) => filters.setFilter("search", e.target.value)}
-          style={{ width: 160 }}
+          style={{ width: 180 }}
         />
+
+        <select
+          className={`input input-sm ${styles.filterSelect}`}
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+        >
+          <option value="">All Types</option>
+          {uniqueTypes.map((t) => <option key={t}>{t}</option>)}
+        </select>
+
+        <select
+          className={`input input-sm ${styles.filterSelect}`}
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="">All Statuses</option>
+          {uniqueStatuses.map((s) => <option key={s}>{s}</option>)}
+        </select>
+
         {activeFilters.map((f) => (
           <button key={f.label} className="chip active" onClick={f.onRemove}>
             {f.label} <span className="chip-close">✕</span>
           </button>
         ))}
+
         {activeFilters.length > 0 && (
           <button
             className="btn btn-ghost btn-sm"
@@ -230,6 +194,8 @@ export default function TicketsPage() {
               filters.resetFilters();
               clearPods();
               clearClients();
+              setTypeFilter("");
+              setStatusFilter("");
             }}
           >
             Clear all
@@ -244,17 +210,42 @@ export default function TicketsPage() {
           rows={tickets}
           rowKey="key"
           isLoading={isLoading}
-          onRowClick={(t) => t.url && window.open(t.url, "_blank")}
+          onRowClick={(t) => setSelectedTicket(t)}
           emptyIcon="📭"
           emptyTitle="No tickets found"
-          emptyDesc="Try adjusting your filters or date range."
+          emptyDesc="Try adjusting your filters or create a new ticket."
           footerLeft={
             !isLoading && tickets.length > 0
-              ? `Showing ${Math.min(tickets.length, data?.count ?? 0).toLocaleString()} of ${(data?.count ?? 0).toLocaleString()} tickets`
+              ? `Showing ${tickets.length.toLocaleString()} of ${(data?.total ?? 0).toLocaleString()} tickets`
+              : undefined
+          }
+          footerRight={
+            !isLoading && tickets.length > 0
+              ? (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setShowCreate(true)}
+                >
+                  + Create ticket
+                </button>
+              )
               : undefined
           }
         />
       </div>
+
+      {/* Create Modal */}
+      {showCreate && (
+        <TicketCreateModal onClose={() => setShowCreate(false)} />
+      )}
+
+      {/* Detail Drawer */}
+      {selectedTicket && (
+        <TicketDetailDrawer
+          ticket={selectedTicket}
+          onClose={() => setSelectedTicket(null)}
+        />
+      )}
     </div>
   );
 }

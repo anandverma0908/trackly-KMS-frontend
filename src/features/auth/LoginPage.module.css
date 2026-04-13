@@ -1,260 +1,302 @@
+/* ── Layout ───────────────────────────────────────────────────────────────── */
 .root {
   display: flex;
   min-height: 100vh;
   background: var(--bg);
-  overflow: hidden;
 }
 
-/* ── Left panel ── */
+/* ══════════════════════════════════════════════════════════════════════════
+   LEFT — brand panel
+   ══════════════════════════════════════════════════════════════════════════ */
 .left {
-  width: 420px;
-  flex-shrink: 0;
+  width: 52%;
+  max-width: 640px;
+  position: relative;
+  display: flex;
+  overflow: hidden;
   background: var(--bg-2);
   border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  padding: 40px 44px;
-  position: relative;
-  overflow: hidden;
 }
 
-.leftAccent {
-  position: absolute;
-  top: -80px;
-  left: -80px;
-  width: 350px;
-  height: 320px;
-  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.leftAccent2 {
-  position: absolute;
-  bottom: -60px;
-  right: -60px;
-  width: 260px;
-  height: 260px;
-  background: radial-gradient(circle, var(--purple-glow) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-/* Logo */
-.logoRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 52px;
-  position: relative;
-  z-index: 1;
-}
-
-.logoMark {
-  width: 30px;
-  height: 36px;
-  font-weight: 900;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 17px;
-  box-shadow: 0 4px 20px var(--accent-glow-2);
-  position: relative;
-  overflow: hidden;
-}
-
-.logoMark::after {
-  content: "";
+/* Subtle dot grid */
+.dotGrid {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent);
+  background-image: radial-gradient(circle, rgba(255,255,255,0.045) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
 }
 
-.logoName {
-  font-size: 28px;
+/* Atmospheric glows */
+.glowBlue {
+  position: absolute;
+  top: -160px;
+  left: -120px;
+  width: 560px;
+  height: 520px;
+  background: radial-gradient(ellipse, rgba(79,126,255,0.13) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.glowPurple {
+  position: absolute;
+  bottom: -100px;
+  right: -80px;
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(ellipse, rgba(167,139,250,0.10) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+/* Content container */
+.leftInner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 52px 60px;
+  width: 100%;
+  gap: 0;
+}
+
+/* ── Wordmark ─────────────────────────────────────────────────────────────── */
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: auto;
+  padding-bottom: 48px;
+}
+
+.wordmarkIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 16px;
+  color: #fff;
+  box-shadow: 0 4px 18px var(--accent-glow-2);
+  flex-shrink: 0;
+}
+
+.wordmarkName {
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.04em;
-  background: linear-gradient(135deg, var(--text), var(--accent-2));
+  color: var(--text);
+}
+
+/* ── Hero copy ────────────────────────────────────────────────────────────── */
+.heroCopy {
+  margin-bottom: 28px;
+}
+
+.heroTitle {
+  font-size: clamp(36px, 4vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1.08;
+  color: var(--text);
+  margin-bottom: 18px;
+}
+
+.heroAccent {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 55%, #c084fc 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.logoTag {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-3);
-  letter-spacing: 0.03em;
-  margin-top: 1px;
-}
-
-/* Brand content */
-.brandContent {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  position: relative;
-  z-index: 1;
-}
-
-.eyebrow {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.eyebrow::before {
-  content: "";
-  width: 20px;
-  height: 1px;
-  background: var(--accent);
-}
-
-.headline {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1.15;
-  color: var(--text);
-  margin-bottom: 14px;
-}
-
-.headline em {
-  font-style: italic;
-  color: var(--accent-2);
-}
-
-.desc {
-  font-size: 13px;
+.heroSub {
+  font-size: 15px;
   color: var(--text-2);
   line-height: 1.65;
-  max-width: 300px;
-  margin-bottom: 32px;
+  max-width: 380px;
+  font-weight: 400;
 }
 
-.stats {
+/* ── Capability pills ─────────────────────────────────────────────────────── */
+.pills {
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 36px;
+}
+
+.pill {
+  display: inline-flex;
   align-items: center;
-  margin-bottom: 40px;
+  padding: 5px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  letter-spacing: -0.01em;
 }
 
-.stat {
-  text-align: center;
+/* ── NOVA preview card ────────────────────────────────────────────────────── */
+.novaCard {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-lg);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255,255,255,0.04);
+  max-width: 440px;
+  /* Subtle top-border highlight */
+  position: relative;
+  overflow: hidden;
 }
 
-.statVal {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  color: var(--text);
-  margin-bottom: 2px;
+.novaCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 20px;
+  right: 20px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(79,126,255,0.4), rgba(167,139,250,0.4), transparent);
 }
 
-.statLbl {
-  font-size: 10px;
-  font-weight: 600;
+.novaCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.novaIndicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: blink 2.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.novaLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+}
+
+.novaModel {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 500;
   color: var(--text-3);
+  font-family: var(--font-mono);
 }
 
-.statDiv {
-  width: 1px;
-  height: 28px;
-  background: var(--border-2);
-}
-
-/* Role list */
-.roleList {
+.novaMsg {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  position: relative;
-  z-index: 1;
 }
 
-.roleItem {
+.novaMsgUser {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  font-style: italic;
+  padding-left: 10px;
+  border-left: 2px solid var(--border-3);
+  line-height: 1.5;
+}
+
+.novaMsgReply {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
 }
 
-.roleDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  opacity: 0.5;
-  flex-shrink: 0;
-  margin-top: 5px;
-}
-
-.roleTitle {
+.novaMsgReplyDot {
+  color: var(--accent);
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-  margin-bottom: 1px;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
-.roleDesc {
-  font-size: 11px;
-  color: var(--text-3);
+.novaMsgReply em {
+  font-style: normal;
+  background: rgba(79,126,255,0.12);
+  color: var(--accent);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-weight: 500;
+  font-size: 12px;
 }
 
-/* ── Right panel ── */
+/* ══════════════════════════════════════════════════════════════════════════
+   RIGHT — form panel
+   ══════════════════════════════════════════════════════════════════════════ */
 .right {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 48px 40px;
+  position: relative;
 }
 
 .formWrap {
   width: 100%;
-  max-width: 380px;
+  max-width: 360px;
+}
+
+.formHead {
+  margin-bottom: 32px;
 }
 
 .formTitle {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.05em;
   color: var(--text);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .formSub {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-2);
-  margin-bottom: 32px;
-  line-height: 1.5;
 }
 
+/* ── Form fields ──────────────────────────────────────────────────────────── */
 .form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 
 .label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   color: var(--text-3);
+  text-transform: uppercase;
 }
 
 .inputWrap {
@@ -266,12 +308,11 @@
   left: 13px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 13px;
   color: var(--text-3);
+  font-size: 14px;
   pointer-events: none;
   display: flex;
   align-items: center;
-  justify-content: center;
 }
 
 .input {
@@ -279,15 +320,12 @@
   background: var(--surface-2);
   border: 1px solid var(--border-2);
   border-radius: var(--r-sm);
-  padding: 11px 13px 11px 40px;
-  font-size: 13px;
-  font-weight: 500;
+  padding: 12px 14px 12px 40px;
+  font-size: 14px;
   color: var(--text);
   font-family: var(--font-sans);
   outline: none;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
+  transition: border-color 0.18s, box-shadow 0.18s;
 }
 
 .input:focus {
@@ -297,10 +335,11 @@
 
 .input::placeholder {
   color: var(--text-3);
+  font-size: 13px;
 }
 
-.inputWithPad {
-  padding-right: 42px;
+.inputPad {
+  padding-right: 44px;
 }
 
 .inputError {
@@ -317,36 +356,49 @@
   border: none;
   cursor: pointer;
   color: var(--text-3);
-  font-size: 13px;
-  padding: 3px 5px;
+  padding: 4px;
   border-radius: 4px;
-  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
 }
 
-.eyeBtn:hover {
-  color: var(--text-2);
-}
+.eyeBtn:hover { color: var(--text-2); }
 
+/* Error */
 .errorMsg {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 9px;
   background: var(--red-glow);
-  border: 1px solid rgba(248, 113, 113, 0.25);
+  border: 1px solid rgba(248,113,113,0.2);
   border-radius: var(--r-sm);
-  padding: 9px 12px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: 10px 14px;
+  font-size: 13px;
   color: var(--red);
 }
 
+.errorIcon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Submit */
 .submitBtn {
   width: 100%;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: #fff;
   border: none;
   border-radius: var(--r-sm);
-  padding: 12px;
+  padding: 13px;
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 700;
@@ -355,285 +407,86 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow:
-    0 4px 20px var(--accent-glow-2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  transition: all 0.2s;
   letter-spacing: -0.01em;
+  box-shadow: 0 4px 22px var(--accent-glow-2);
+  transition: opacity 0.18s, transform 0.18s, box-shadow 0.18s;
   margin-top: 4px;
 }
 
-.submitBtn:hover {
+.submitBtn:hover:not(:disabled) {
+  opacity: 0.92;
   transform: translateY(-1px);
-  box-shadow: 0 8px 30px var(--accent-glow-2);
+  box-shadow: 0 8px 32px var(--accent-glow-2);
+}
+
+.submitBtn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .submitBtn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
-  transform: none;
 }
 
 .spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255,255,255,0.3);
   border-top-color: #fff;
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  animation: spin 0.65s linear infinite;
   flex-shrink: 0;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* Security note */
-.secNote {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-top: 18px;
-  padding: 10px 13px;
-  background: var(--green-glow);
-  border: 1px solid rgba(52, 211, 153, 0.2);
-  border-radius: var(--r-sm);
-}
-
-.secDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 5px var(--green);
-  flex-shrink: 0;
-  margin-top: 3px;
-}
-
-.secNote {
-  font-size: 11px;
-  color: var(--green);
-}
-
-/* Quick logins */
-.quickSection {
-  margin-top: 28px;
-  padding-top: 22px;
-  border-top: 1px solid var(--border);
-}
-
-.quickLabel {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+/* Hint text */
+.hint {
+  margin-top: 20px;
+  font-size: 12px;
   color: var(--text-3);
-  margin-bottom: 10px;
+  text-align: center;
+  line-height: 1.5;
 }
 
-.quickList {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.quickBtn {
+/* Footer */
+.formFooter {
+  position: absolute;
+  bottom: 28px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  transition: all 0.15s;
-  text-align: left;
-  width: 100%;
-  font-family: var(--font-sans);
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-3);
+  letter-spacing: 0.01em;
 }
 
-.quickBtn:hover {
-  border-color: var(--accent-border);
-  background: var(--accent-glow);
-}
-
-.quickAvatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+.footerMark {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
-  font-weight: 800;
-  color: #fff;
-  flex-shrink: 0;
-}
-
-.quickName {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 1px;
-}
-
-.quickRole {
-  font-size: 10px;
-  color: var(--text-3);
-  text-transform: capitalize;
-}
-
-.quickArrow {
-  margin-left: auto;
-  color: var(--text-3);
-  font-size: 12px;
-  transition: color 0.15s;
-}
-
-.quickBtn:hover .quickArrow {
-  color: var(--accent);
-}
-/* ── Add these to the bottom of your existing LoginPage.module.css ── */
-
-/* Back button on OTP step */
-/* ── Paste these at the bottom of your LoginPage.module.css ── */
-/* ── Paste at the bottom of LoginPage.module.css ── */
-
-/* Back button — OTP step */
-.backBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-  padding: 0;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  opacity: 0.6;
-  transition: opacity 0.15s;
-  font-family: var(--font-sans);
-}
-.backBtn:hover {
-  opacity: 1;
-}
-
-/* OTP code input */
-.otpInput {
-  font-size: 26px !important;
-  font-family: monospace !important;
-  letter-spacing: 0.45em !important;
-  text-align: center !important;
-  font-weight: 700 !important;
-}
-
-/* Dev mode OTP banner */
-.devOtpBanner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(217, 119, 6, 0.06);
-  border: 1px solid rgba(217, 119, 6, 0.3);
-  border-radius: 8px;
-  padding: 10px 14px;
-  margin-bottom: 16px;
-  font-size: 12px;
-  color: var(--text-2);
-  flex-wrap: wrap;
-}
-.devOtpLabel {
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  color: #b45309;
-  background: rgba(217, 119, 6, 0.12);
-  border: 1px solid rgba(217, 119, 6, 0.25);
-  border-radius: 4px;
-  padding: 2px 6px;
-}
-.devOtpCode {
-  font-size: 20px;
-  font-weight: 900;
-  font-family: monospace;
-  letter-spacing: 0.2em;
-  color: #b45309;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-.devOtpCode:hover {
-  opacity: 0.65;
-}
-.devOtpHint {
-  font-size: 10px;
-  opacity: 0.4;
-  font-style: italic;
-}
-
-/* Resend inline link-button */
-.resendBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: inherit;
-  font-weight: 600;
-  color: var(--accent);
-  padding: 0;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  font-family: var(--font-sans);
-}
-.resendBtn:hover {
-  opacity: 0.75;
-}
-.resendBtn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-/* Feature icon in left panel list */
-.featureIcon {
-  font-size: 15px;
-  width: 22px;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-/* Bottom branding strip */
-.bottomBrand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 36px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
   font-size: 11px;
-  font-weight: 500;
-  color: var(--text-3);
-  letter-spacing: 0.01em;
-}
-.bottomLogoMark {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
-  background: linear-gradient(135deg, var(--accent), #818cf8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
   font-weight: 900;
   color: #fff;
   flex-shrink: 0;
 }
-.bottomLogoName {
-  font-weight: 700;
+
+.footerName {
+  font-weight: 600;
   color: var(--text-2);
 }
-.bottomDot {
-  opacity: 0.3;
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .left { display: none; }
+  .right { justify-content: center; padding: 40px 24px; }
+}
+
+@media (max-width: 480px) {
+  .right { padding: 32px 20px; }
+  .formTitle { font-size: 22px; }
 }

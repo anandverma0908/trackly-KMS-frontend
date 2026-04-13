@@ -1,0 +1,209 @@
+import { useState, useEffect, useRef } from "react";
+import { semanticSearch, novaQuery } from "@/services/api";
+import type { SearchResult, NovaQueryResponse } from "@/types";
+import styles from "./SearchModal.module.css";
+
+interface Props {
+  onClose: () => void;
+}
+
+type SearchMode = "semantic" | "nova";
+
+export default function SearchModal({ onClose }: Props) {
+  const [query, setQuery]             = useState("");
+  const [mode, setMode]               = useState<SearchMode>("semantic");
+  const [results, setResults]         = useState<SearchResult[]>([]);
+  const [novaResponse, setNovaResponse] = useState<NovaQueryResponse | null>(null);
+  const [loading, setLoading]         = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Focus input on mount
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  // Close on Escape
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  // Keyboard navigation
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIdx((i) => Math.min(i + 1, results.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIdx((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter" && results[selectedIdx]) {
+      handleResultClick(results[selectedIdx]);
+    }
+  }
+
+  function handleResultClick(r: SearchResult) {
+    if (r.url) window.open(r.url, "_blank");
+    onClose();
+  }
+
+  async function doSearch(q: string) {
+    if (!q.trim()) {
+      setResults([]);
+      setNovaResponse(null);
+      return;
+    }
+    setLoading(true);
+    try {
+      if (mode === "nova") {
+        const res = await novaQuery(q);
+        setNovaResponse(res);
+        setResults(res.citations ?? []);
+      } else {
+        const res = await semanticSearch(q);
+        setResults(res);
+        setNovaResponse(null);
+      }
+      setSelectedIdx(0);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value;
+    setQuery(v);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => doSearch(v), 400);
+  }
+
+  return (
+    <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className={styles.modal}>
+        {/* Search Input */}
+        <div className={styles.inputRow}>
+          <span className={styles.searchIcon}>🔍</span>
+          <input
+            ref={inputRef}
+            className={styles.input}
+            placeholder="Search tickets, pages, or ask NOVA…"
+            value={query}
+            onChange={handleInput}
+            onKeyDown={handleKeyDown}
+          />
+          {loading && <span className={styles.spinner} />}
+          <div className={styles.modes}>
+            <button
+              className={`${styles.modeBtn} ${mode === "semantic" ? styles.modeBtnActive : ""}`}
+              onClick={() => { setMode("semantic"); doSearch(query); }}
+            >
+              Semantic
+            </button>
+            <button
+              className={`${styles.modeBtn} ${mode === "nova" ? styles.modeBtnActive : ""}`}
+              onClick={() => { setMode("nova"); doSearch(query); }}
+            >
+              <span className={styles.novaGlow} />
+              NOVA
+            </button>
+          </div>
+        </div>
+
+        {/* NOVA Answer */}
+        {novaResponse && (
+          <div className={styles.novaAnswer}>
+            <div className={styles.novaBadge}>
+              <span className={styles.novaGlow} />
+              Powered by NOVA
+            </div>
+            <p className={styles.answerText}>{novaResponse.answer}</p>
+          </div>
+        )}
+
+        {/* Results */}
+        {results.length > 0 && (
+          <div className={styles.results}>
+            <div className={styles.resultsHeader}>
+              {results.length} result{results.length > 1 ? "s" : ""}
+            </div>
+            {results.map((r, i) => (
+              <SearchResultItem
+                key={`${r.type}-${r.id}`}
+                result={r}
+                active={i === selectedIdx}
+                onClick={() => handleResultClick(r)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && query && results.length === 0 && (
+          <div className={styles.empty}>
+            <span className={styles.emptyIcon}>🔍</span>
+            <span>No results for "<strong>{query}</strong>"</span>
+          </div>
+        )}
+
+        {/* Hint */}
+        {!query && (
+          <div className={styles.hint}>
+            <div className={styles.hintRow}>
+              <kbd>↑↓</kbd> navigate
+              <kbd>↵</kbd> open
+              <kbd>Esc</kbd> close
+            </div>
+            <div className={styles.hintRow}>
+              <span>Switch to <button className={styles.hintBtn} onClick={() => setMode(mode === "nova" ? "semantic" : "nova")}>
+                {mode === "nova" ? "Semantic" : "NOVA"}
+              </button> mode</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SearchResultItem({
+  result, active, onClick,
+}: {
+  result:  SearchResult;
+  active:  boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`${styles.result} ${active ? styles.resultActive : ""}`}
+      onClick={onClick}
+    >
+      <span className={styles.resultIcon}>
+        {result.type === "ticket" ? "🎫" : "📄"}
+      </span>
+      <div className={styles.resultBody}>
+        <div className={styles.resultTitle}>
+          {result.key && <span className={styles.resultKey}>{result.key}</span>}
+          {result.title}
+        </div>
+        {result.snippet && (
+          <p className={styles.resultSnippet}>{result.snippet}</p>
+        )}
+        {result.space && (
+          <span className={styles.resultSpace}>{result.space}</span>
+        )}
+      </div>
+      <div className={styles.resultMeta}>
+        <span className={`badge ${result.type === "ticket" ? "badge-blue" : "badge-purple"}`}>
+          {result.type}
+        </span>
+        <span className={styles.resultScore}>{(result.score * 100).toFixed(0)}%</span>
+      </div>
+    </button>
+  );
+}

@@ -1,0 +1,173 @@
+.page {
+  padding: 32px;
+  max-width: 820px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: 0.88rem;
+  color: var(--text-2);
+  margin-top: 4px;
+}
+
+/* Global bar */
+.globalBar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.globalItem {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.globalLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+}
+
+.globalDesc {
+  font-size: 0.78rem;
+  color: var(--text-3);
+}
+
+/* Table */
+.tableWrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.thLabel {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.thChannel {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  width: 110px;
+}
+
+.row {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+.row:last-child { border-bottom: none; }
+.row:hover      { background: var(--surface-2); }
+
+.labelCell {
+  padding: 14px 20px;
+}
+
+.prefLabel {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.prefDesc {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+.channelCell {
+  text-align: center;
+  padding: 14px 20px;
+}
+
+/* Toggle switch */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  position: relative;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.toggleOn {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggleDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toggleThumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  transition: transform 0.2s;
+  transform: translateX(2px);
+  display: block;
+}
+
+.toggleOn .toggleThumb {
+  transform: translateX(20px);
+}
+
+.note {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .page    { padding: 20px 16px; }
+  .globalBar { flex-direction: column; }
+  .header  { flex-direction: column; }
+}

@@ -11,6 +11,14 @@ import SettingsPage from "@/features/settings/SettingsPage";
 import ManualEntryPage from "@/features/manual-entry/ManualEntryPage";
 import UsersPage from "@/features/settings/UsersPage";
 import ChangePasswordPage from "@/features/settings/ChangePasswordPage";
+import WikiPage from "@/features/wiki/WikiPage";
+import KanbanBoard from "@/features/kanban/KanbanBoard";
+import SprintPage from "@/features/sprint/SprintPage";
+import StandupPage from "@/features/standup/StandupPage";
+import AnalyticsPage from "@/features/analytics/AnalyticsPage";
+import BurnRatePage from "@/features/settings/BurnRatePage";
+import NotificationPrefsPage from "@/features/settings/NotificationPrefsPage";
+import WeeklyTimeGrid from "@/features/timetrack/WeeklyTimeGrid";
 
 export default function App() {
   return (
@@ -28,12 +36,20 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route element={<RequireRole />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/tickets" element={<TicketsPage />} />
-            <Route path="/team" element={<TeamPage />} />
-            <Route path="/export" element={<ExportPage />} />
+            <Route path="/dashboard"   element={<DashboardPage />} />
+            <Route path="/tickets"     element={<TicketsPage />} />
+            <Route path="/kanban"      element={<KanbanBoard />} />
+            <Route path="/sprints"     element={<SprintPage />} />
+            <Route path="/wiki"        element={<WikiPage />} />
+            <Route path="/standup"     element={<StandupPage />} />
+            <Route path="/analytics"   element={<AnalyticsPage />} />
+            <Route path="/team"        element={<TeamPage />} />
+            <Route path="/export"      element={<ExportPage />} />
             <Route path="/manual-entry" element={<ManualEntryPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings"    element={<SettingsPage />} />
+            <Route path="/settings/budget" element={<BurnRatePage />} />
+            <Route path="/settings/notifications" element={<NotificationPrefsPage />} />
+            <Route path="/timesheets/weekly" element={<WeeklyTimeGrid />} />
             <Route path="/admin/users" element={<UsersPage />} />
           </Route>
         </Route>
