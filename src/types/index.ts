@@ -239,15 +239,18 @@ export interface RelatedDoc {
 export type SprintStatus = 'planning' | 'active' | 'completed'
 
 export interface Sprint {
-  id:           number
-  name:         string
-  goal?:        string
-  start_date:   string
-  end_date:     string
-  status:       SprintStatus
-  total_points: number
-  done_points:  number
-  tickets?:     Ticket[]
+  id:              string
+  name:            string
+  goal?:           string
+  start_date:      string
+  end_date:        string
+  status:          SprintStatus
+  total_points:    number
+  done_points:     number
+  ticket_count?:   number
+  completion_pct?: number
+  velocity?:       number | null
+  tickets?:        Ticket[]
 }
 
 export interface BurndownPoint {

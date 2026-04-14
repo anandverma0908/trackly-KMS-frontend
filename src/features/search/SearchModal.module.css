@@ -13,7 +13,7 @@
 .modal {
   background: var(--surface);
   border: 1px solid var(--border-2);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   width: 100%;
   max-width: 640px;
   box-shadow: var(--shadow-lg), 0 0 60px rgba(79,126,255,0.1);

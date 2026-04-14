@@ -473,7 +473,7 @@ export function buildProjectFromAPI(
   }));
 
   const projectSprint: ProjectSprint | undefined = activeSprint ? {
-    id:          activeSprint.id,
+    id:          String(activeSprint.id),
     name:        activeSprint.name,
     status:      activeSprint.status as ProjectSprint["status"],
     startDate:   activeSprint.start_date ?? "",

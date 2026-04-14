@@ -1,6 +1,6 @@
 .card {
   background: var(--bgrnd);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   padding: 18px;
   display: flex;
   flex-direction: column;

@@ -19,7 +19,7 @@
 .modal {
   background: var(--surface);
   border: 1px solid var(--border-2);
-  border-radius: var(--r-lg, 16px);
+  border-radius: var(--r-xl, 16px);
   padding: 40px 44px 32px;
   max-width: 480px;
   width: 100%;

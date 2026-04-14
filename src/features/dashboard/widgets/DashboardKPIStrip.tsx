@@ -43,15 +43,20 @@ function KPICard({ kpi, delay }: { kpi: KPI; delay: number }) {
   return (
     <div
       className={`${styles.card} fade-up-${delay}`}
-      // style={{ "--kc": kpi.color, "--kg": kpi.glow } as React.CSSProperties}
+      // style={{
+      //   "--kc": kpi.color,
+      //   "--kg": `color-mix(in srgb, ${kpi.color} 10%, transparent)`,
+      //   "--kb": `color-mix(in srgb, ${kpi.color} 20%, transparent)`,
+      // } as React.CSSProperties}
     >
       <div className={styles.topRow}>
         <div className={styles.label}>{kpi.label}</div>
-
         <span className={styles.iconWrap}>{kpi.icon}</span>
+      </div>
+      <div className={styles.bottomRow}>
+        <div className={styles.value}>{kpi.value}</div>
         <Trend pct={kpi.trend ?? null} />
       </div>
-      <div className={styles.value}>{kpi.value}</div>
       {kpi.sub && <div className={styles.sub}>{kpi.sub}</div>}
     </div>
   );

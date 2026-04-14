@@ -71,23 +71,23 @@ export default function SprintPage() {
   });
 
   const startMut = useMutation({
-    mutationFn: (id: number) => startSprint(id),
+    mutationFn: (id: string) => startSprint(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sprints"] }); toast.success("Sprint started!"); },
   });
 
   const completeMut = useMutation({
-    mutationFn: (id: number) => completeSprint(id),
+    mutationFn: (id: string) => completeSprint(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sprints"] }); toast.success("Sprint completed!"); },
   });
 
   const addToSprintMut = useMutation({
-    mutationFn: ({ sprintId, ticketKey }: { sprintId: number; ticketKey: string }) =>
+    mutationFn: ({ sprintId, ticketKey }: { sprintId: string; ticketKey: string }) =>
       addTicketToSprint(sprintId, ticketKey),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["sprint", activeSprint?.id] }),
   });
 
   const removeFromSprintMut = useMutation({
-    mutationFn: ({ sprintId, ticketKey }: { sprintId: number; ticketKey: string }) =>
+    mutationFn: ({ sprintId, ticketKey }: { sprintId: string; ticketKey: string }) =>
       removeTicketFromSprint(sprintId, ticketKey),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["sprint", activeSprint?.id] }),
   });

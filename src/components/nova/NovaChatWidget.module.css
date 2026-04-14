@@ -46,7 +46,7 @@
   height: 520px;
   background: var(--surface);
   border: 1px solid var(--border-2);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   box-shadow: var(--shadow-lg), 0 0 40px rgba(79,126,255,0.1);
   display: flex;
   flex-direction: column;

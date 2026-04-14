@@ -2,7 +2,7 @@
   padding: 22px 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 30px;
 }
 
 /* ── Header ── */
@@ -12,7 +12,7 @@
   justify-content: space-between;
   gap: 16px;
   background: var(--bgrnd);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   padding: 15px;
 }
 
@@ -67,20 +67,48 @@
 .kpiStrip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  gap: 30px;
 }
 
 .kpiCard {
-  background: var(--bgrnd);
-  border-radius: var(--r-lg);
-  padding: 20px 22px;
+  background: var(--kpi);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  min-height: 106px;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  transition: border-color 0.2s;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s, border-color 0.2s;
 }
+/* .kpiCard::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--kc, #4f7eff);
+  opacity: 0.55;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+} */
 .kpiCard:hover {
-  border-color: var(--border-3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+}
+
+.kpiTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kpiLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  line-height: 1.3;
 }
 
 .kpiIcon {
@@ -90,8 +118,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface-2);
   flex-shrink: 0;
+  background: rgba(79, 126, 255, 0.1);
+  border: 1px solid rgba(79, 126, 255, 0.18);
+  color: #4f7eff;
+}
+
+.kpiBottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .kpiVal {
@@ -103,13 +140,9 @@
   animation: kpiIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.kpiLabel {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-3);
-  /* text-transform: uppercase; */
-  letter-spacing: 0.07em;
-  margin-top: 5px;
+@keyframes kpiIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Filter Row ── */
@@ -197,14 +230,14 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 30px;
 }
 
 /* ── Card ── */
 .card {
   background: var(--bgrnd);
   /* border: 1px solid var(--border-2); */
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   padding: 18px 18px 14px;
   cursor: pointer;
   transition:
@@ -236,7 +269,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
 }
 
 .cardTop {
@@ -607,4 +640,13 @@
   .kpiStrip {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+  color: var(--text-3);
+  font-size: 14px;
 }

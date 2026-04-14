@@ -1,57 +1,59 @@
 /* ── KPI card — one card, rendered by parent in a grid ── */
 .card {
-  background: var(--bgrnd);
-  /* border: 1px solid var(--border-2); */
-  border-radius: var(--r-lg);
-  padding: 20px 22px;
+  background: var(--kpi);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  min-height: 106px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  justify-content: space-between;
   position: relative;
   overflow: hidden;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
+  transition: box-shadow 0.2s, border-color 0.2s;
   cursor: default;
 }
 
-.card:hover {
-  border-color: var(--kc, var(--border-2));
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.14);
-}
-
-/* Subtle top accent line */
-.card::after {
+/* .card::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 0; left: 0; right: 0;
   height: 2px;
-  background: var(--kc, transparent);
+  background: var(--kc, #4f7eff);
   opacity: 0.55;
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+} */
+
+.card:hover {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
 }
 
-/* ── Top row: icon left, trend right ── */
+/* ── Top row: label left, icon right ── */
 .topRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 10px;
+  gap: 8px;
+}
+
+/* ── Bottom row: value left, trend right ── */
+.bottomRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .iconWrap {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--kg, var(--surface-2));
-  border: 1px solid var(--border);
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--kg, rgba(79, 126, 255, 0.1));
+  border: 1px solid var(--kb, rgba(79, 126, 255, 0.18));
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
-  color: var(--kc, var(--text-2));
+  font-size: 16px;
+  color: var(--kc, #4f7eff);
   flex-shrink: 0;
 }
 
@@ -64,6 +66,7 @@
   padding: 3px 8px;
   border-radius: 20px;
   white-space: nowrap;
+  margin-bottom: 2px;
 }
 
 .trendUp {
@@ -93,10 +96,12 @@
 
 /* ── Label ── */
 .label {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-3);
-  margin-top: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  line-height: 1.3;
 }
 
 /* ── Sub note ── */

@@ -182,7 +182,7 @@
 .editModal {
   background: var(--surface);
   border: 1px solid var(--border-2);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   padding: 24px;
   width: 520px;
   box-shadow: var(--shadow-lg);

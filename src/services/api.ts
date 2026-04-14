@@ -277,7 +277,7 @@ export async function fetchSprints(): Promise<Sprint[]> {
   return data?.sprints ?? data ?? [];
 }
 
-export async function fetchSprint(id: number): Promise<Sprint> {
+export async function fetchSprint(id: string): Promise<Sprint> {
   const { data } = await api.get(`/sprints/${id}`);
   return data;
 }
@@ -287,26 +287,26 @@ export async function createSprint(payload: { name: string; goal?: string; start
   return data;
 }
 
-export async function startSprint(id: number): Promise<Sprint> {
+export async function startSprint(id: string): Promise<Sprint> {
   const { data } = await api.post(`/sprints/${id}/start`);
   return data;
 }
 
-export async function completeSprint(id: number): Promise<Sprint> {
+export async function completeSprint(id: string): Promise<Sprint> {
   const { data } = await api.post(`/sprints/${id}/complete`);
   return data;
 }
 
-export async function addTicketToSprint(sprintId: number, ticketKey: string) {
+export async function addTicketToSprint(sprintId: string, ticketKey: string) {
   const { data } = await api.post(`/sprints/${sprintId}/tickets`, { ticket_key: ticketKey });
   return data;
 }
 
-export async function removeTicketFromSprint(sprintId: number, ticketKey: string) {
+export async function removeTicketFromSprint(sprintId: string, ticketKey: string) {
   await api.delete(`/sprints/${sprintId}/tickets/${ticketKey}`);
 }
 
-export async function fetchBurndown(sprintId: number): Promise<BurndownPoint[]> {
+export async function fetchBurndown(sprintId: string): Promise<BurndownPoint[]> {
   const { data } = await api.get(`/sprints/${sprintId}/burndown`);
   return data?.data ?? data ?? [];
 }
@@ -316,12 +316,12 @@ export async function fetchVelocity(): Promise<VelocityPoint[]> {
   return data?.data ?? data ?? [];
 }
 
-export async function generateSprintRetro(sprintId: number) {
+export async function generateSprintRetro(sprintId: string) {
   const { data } = await api.post(`/nova/sprint-retro/${sprintId}`);
   return data;
 }
 
-export async function generateReleaseNotes(sprintId: number) {
+export async function generateReleaseNotes(sprintId: string) {
   const { data } = await api.post(`/nova/release-notes/${sprintId}`);
   return data;
 }
