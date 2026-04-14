@@ -26,14 +26,14 @@ function getAuthHeader() {
 /* ── Types ── */
 interface ActivityItem {
   id: string;
-  source: "jira" | "manual";
+  source: "ticket" | "manual";
   date: string;
   activity: string;
   hours: number;
   pod: string | null;
   client: string | null;
   entry_type: string | null;
-  jira_key: string | null;
+  ticket_key: string | null;
   notes: string | null;
   user_name: string;
 }
@@ -308,7 +308,7 @@ export default function MyTimesheets() {
                           className={styles.entryDot}
                           style={{
                             background:
-                              e.source === "jira" ? "var(--accent)" : "#A78BFA",
+                              e.source === "ticket" ? "var(--accent)" : "#A78BFA",
                           }}
                         />
                       ))}
@@ -341,7 +341,7 @@ export default function MyTimesheets() {
           { color: "rgba(52,211,153,0.6)", label: "≥ 8h — Full day" },
           { color: "rgba(251,191,36,0.6)", label: "1–7h — Partial" },
           { color: "var(--border-2)", label: "0h — Not logged" },
-          { color: "var(--accent)", label: "Jira entry" },
+          { color: "var(--accent)", label: "Ticket entry" },
           { color: "#A78BFA", label: "Manual entry" },
         ].map((l) => (
           <div key={l.label} className={styles.legendItem}>

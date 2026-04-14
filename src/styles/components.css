@@ -64,12 +64,77 @@
   margin-bottom: var(--space-4);
 }
 .card-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: -0.03em;
-  margin-bottom: 3px;
+  letter-spacing: -0.02em;
+  color: var(--text);
 }
-.card-subtitle { font-size: 11px; color: var(--text-2); }
+.card-subtitle { font-size: 11px; color: var(--text-3); }
+
+/* ─────────────────────────────────────────────
+   WIDGET CARD  (dashboard panels)
+   ───────────────────────────────────────────── */
+.widget-card {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.widget-card:hover {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+}
+
+/* Consistent widget header row */
+.widget-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Small square icon badge */
+.widget-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+
+.widget-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  flex: 1;
+}
+
+.widget-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 20px;
+  padding: 2px 8px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+[data-mode="light"] .widget-card {
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+[data-mode="light"] .widget-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
 
 /* ─────────────────────────────────────────────
    BADGE

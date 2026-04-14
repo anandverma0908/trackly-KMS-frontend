@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { FilterState, ThemeId, ColorMode, JiraConfig, TimerState } from "@/types";
+import type { FilterState, ThemeId, ColorMode, TimerState } from "@/types";
 import { applyTheme, DEFAULT_THEME, DEFAULT_MODE } from "@/config/themes";
 import { getPresetDates } from "@/config/queryKeys";
 
@@ -104,28 +104,6 @@ export const useThemeStore = create<ThemeStore>()(
       },
     }),
     { name: "eap-theme" },
-  ),
-);
-
-/* ─────────────────────────────────────────────
-   SETTINGS STORE — persisted to localStorage
-   ───────────────────────────────────────────── */
-interface SettingsStore {
-  jiraConfig: JiraConfig | null;
-  isConnected: boolean;
-  setJiraConfig: (config: JiraConfig) => void;
-  clearConfig: () => void;
-}
-
-export const useSettingsStore = create<SettingsStore>()(
-  persist(
-    (set) => ({
-      jiraConfig: null,
-      isConnected: false,
-      setJiraConfig: (config) => set({ jiraConfig: config, isConnected: true }),
-      clearConfig: () => set({ jiraConfig: null, isConnected: false }),
-    }),
-    { name: "eap-settings" },
   ),
 );
 

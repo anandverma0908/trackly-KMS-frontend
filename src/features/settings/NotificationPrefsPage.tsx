@@ -1,13 +1,14 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
+import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
 import styles from "./NotificationPrefsPage.module.css";
 
 interface PrefRow {
-  id:       string;
-  label:    string;
-  desc:     string;
-  inApp:    boolean;
-  email:    boolean;
+  id:     string;
+  label:  string;
+  desc:   string;
+  inApp:  boolean;
+  email:  boolean;
 }
 
 const DEFAULT_PREFS: PrefRow[] = [
@@ -24,8 +25,8 @@ const DEFAULT_PREFS: PrefRow[] = [
 ];
 
 export default function NotificationPrefsPage() {
-  const [prefs, setPrefs]     = useState<PrefRow[]>(DEFAULT_PREFS);
-  const [saving, setSaving]   = useState(false);
+  const [prefs, setPrefs]             = useState<PrefRow[]>(DEFAULT_PREFS);
+  const [saving, setSaving]           = useState(false);
   const [globalEmail, setGlobalEmail] = useState(true);
   const [globalInApp, setGlobalInApp] = useState(true);
 
@@ -41,9 +42,8 @@ export default function NotificationPrefsPage() {
 
   async function handleSave() {
     setSaving(true);
-    // Persist to backend — endpoint: POST /api/notifications/preferences
     try {
-      await new Promise((r) => setTimeout(r, 500)); // optimistic — wire to real endpoint
+      await new Promise((r) => setTimeout(r, 500));
       toast.success("Preferences saved!");
     } catch {
       toast.error("Failed to save preferences");
@@ -51,6 +51,45 @@ export default function NotificationPrefsPage() {
       setSaving(false);
     }
   }
+
+  const COLUMNS: Column<PrefRow>[] = [
+    {
+      key: "label",
+      label: "Notification Type",
+      render: (row) => (
+        <div>
+          <div style={{ fontSize: "0.88rem", fontWeight: 500, color: "var(--text)" }}>{row.label}</div>
+          <div style={{ fontSize: "0.78rem", color: "var(--text-3)", marginTop: 2 }}>{row.desc}</div>
+        </div>
+      ),
+    },
+    {
+      key: "inApp",
+      label: "In-App",
+      width: 110,
+      align: "center",
+      render: (row) => (
+        <Toggle
+          checked={row.inApp && globalInApp}
+          onChange={() => toggle(row.id, "inApp")}
+          disabled={!globalInApp}
+        />
+      ),
+    },
+    {
+      key: "email",
+      label: "Email",
+      width: 110,
+      align: "center",
+      render: (row) => (
+        <Toggle
+          checked={row.email && globalEmail}
+          onChange={() => toggle(row.id, "email")}
+          disabled={!globalEmail}
+        />
+      ),
+    },
+  ];
 
   return (
     <div className={styles.page}>
@@ -69,56 +108,27 @@ export default function NotificationPrefsPage() {
         <div className={styles.globalItem}>
           <div className={styles.globalLabel}>In-App Notifications</div>
           <div className={styles.globalDesc}>Bell icon in the top-right</div>
-          <Toggle
-            checked={globalInApp}
-            onChange={(v) => toggleAll("inApp", v)}
-          />
+          <Toggle checked={globalInApp} onChange={(v) => toggleAll("inApp", v)} />
         </div>
         <div className={styles.globalItem}>
           <div className={styles.globalLabel}>Email Notifications</div>
           <div className={styles.globalDesc}>Sent to your account email</div>
-          <Toggle
-            checked={globalEmail}
-            onChange={(v) => toggleAll("email", v)}
-          />
+          <Toggle checked={globalEmail} onChange={(v) => toggleAll("email", v)} />
         </div>
       </div>
 
-      {/* Per-type table */}
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th className={styles.thLabel}>Notification Type</th>
-              <th className={styles.thChannel}>In-App</th>
-              <th className={styles.thChannel}>Email</th>
-            </tr>
-          </thead>
-          <tbody>
-            {prefs.map((pref) => (
-              <tr key={pref.id} className={styles.row}>
-                <td className={styles.labelCell}>
-                  <div className={styles.prefLabel}>{pref.label}</div>
-                  <div className={styles.prefDesc}>{pref.desc}</div>
-                </td>
-                <td className={styles.channelCell}>
-                  <Toggle
-                    checked={pref.inApp && globalInApp}
-                    onChange={() => toggle(pref.id, "inApp")}
-                    disabled={!globalInApp}
-                  />
-                </td>
-                <td className={styles.channelCell}>
-                  <Toggle
-                    checked={pref.email && globalEmail}
-                    onChange={() => toggle(pref.id, "email")}
-                    disabled={!globalEmail}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Per-type grid */}
+      <div style={{ marginBottom: 20 }}>
+        <LatticeGrid<PrefRow>
+          columns={COLUMNS}
+          rows={prefs}
+          rowKey="id"
+          virtualize={false}
+          rowHeight={60}
+          emptyIcon="🔕"
+          emptyTitle="No preferences"
+          emptyDesc=""
+        />
       </div>
 
       <p className={styles.note}>
@@ -130,8 +140,8 @@ export default function NotificationPrefsPage() {
 }
 
 function Toggle({ checked, onChange, disabled }: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
+  checked:   boolean;
+  onChange:  (v: boolean) => void;
   disabled?: boolean;
 }) {
   return (

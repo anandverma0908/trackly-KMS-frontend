@@ -4,14 +4,14 @@ import styles from "@/components/ui/SideDrawer.module.css";
 
 interface ActivityItem {
   id: string;
-  source: "jira" | "manual";
+  source: "ticket" | "manual";
   date: string;
   activity: string;
   hours: number;
   pod: string | null;
   client: string | null;
   entry_type: string | null;
-  jira_key: string | null;
+  ticket_key: string | null;
   notes: string | null;
 }
 
@@ -98,20 +98,20 @@ export default function DayDrawer({ date, entries, onClose }: Props) {
                 className={styles.sourceTag}
                 style={{
                   background:
-                    entry.source === "jira"
+                    entry.source === "ticket"
                       ? "rgba(79,126,255,0.12)"
                       : "rgba(167,139,250,0.12)",
-                  color: entry.source === "jira" ? "var(--accent)" : "#A78BFA",
+                  color: entry.source === "ticket" ? "var(--accent)" : "#A78BFA",
                 }}
               >
-                {entry.source === "jira" ? "⬡ Jira" : "✦ Manual"}
+                {entry.source === "ticket" ? "⬡ Ticket" : "✦ Manual"}
               </span>
 
               <div className={styles.entryMain}>
                 <div className={styles.entryTitle}>{entry.activity}</div>
                 <div className={styles.entryMeta}>
-                  {entry.jira_key && (
-                    <span className={styles.chipAccent}>{entry.jira_key}</span>
+                  {entry.ticket_key && (
+                    <span className={styles.chipAccent}>{entry.ticket_key}</span>
                   )}
                   {entry.pod && (
                     <span className={styles.chip}>{entry.pod}</span>

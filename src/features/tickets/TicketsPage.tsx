@@ -6,7 +6,7 @@ import { QUERY_KEYS } from "@/config/queryKeys";
 import { useDebounce } from "@/hooks";
 import { formatDate, formatHours } from "@/utils/formatters";
 import { IssueTypeBadge, StatusBadge, PODBadge } from "@/components/ui/Badge";
-import DataTable, { Column } from "@/components/ui/DataTable";
+import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
 import TicketCreateModal from "./TicketCreateModal";
 import TicketDetailDrawer from "./TicketDetailDrawer";
 import type { Ticket } from "@/types";
@@ -205,7 +205,7 @@ export default function TicketsPage() {
 
       {/* Table */}
       <div className="fade-up-3">
-        <DataTable<Ticket>
+        <LatticeGrid<Ticket>
           columns={COLUMNS}
           rows={tickets}
           rowKey="key"
@@ -214,6 +214,7 @@ export default function TicketsPage() {
           emptyIcon="📭"
           emptyTitle="No tickets found"
           emptyDesc="Try adjusting your filters or create a new ticket."
+          striped
           footerLeft={
             !isLoading && tickets.length > 0
               ? `Showing ${tickets.length.toLocaleString()} of ${(data?.total ?? 0).toLocaleString()} tickets`

@@ -355,13 +355,6 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
               </MetaField>
             )}
 
-            {ticket.url && (
-              <div className={styles.jiraLink}>
-                <a href={ticket.url} target="_blank" rel="noopener noreferrer" className={styles.jiraBtn}>
-                  Open in Jira ↗
-                </a>
-              </div>
-            )}
           </div>
         </div>
       </div>

@@ -38,7 +38,7 @@ export default function AppShell() {
           onNotifToggle={() => setNotifOpen((v) => !v)}
         />
         <main className={styles.main}>
-          {/* <Outlet /> */}
+          <Outlet />
         </main>
       </div>
 

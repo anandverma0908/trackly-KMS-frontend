@@ -26,7 +26,6 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   admin: [
     "manage:all",
     "manage:settings",
-    "manage:jira_config",
     "manage:users",
     "view:all",
     "view:teams",

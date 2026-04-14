@@ -1,0 +1,61 @@
+.bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.action {
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  position: relative;
+  overflow: hidden;
+}
+
+.action::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--ag);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.action:hover {
+  border-color: var(--ac);
+  color: var(--text);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px var(--ag);
+}
+
+.action:hover::before {
+  opacity: 1;
+}
+
+.action:active {
+  transform: translateY(0);
+}
+
+.actionIcon {
+  font-size: 18px;
+  color: var(--ac);
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.actionLabel {
+  position: relative;
+}

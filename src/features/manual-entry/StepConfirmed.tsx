@@ -1,6 +1,6 @@
 import type { ManualEntry } from "./types";
 import { formatNumber, formatDate } from "@/utils/formatters";
-import DataTable, { Column } from "@/components/ui/DataTable";
+import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
 import { Badge } from "@/components/ui/Badge";
 import styles from "./ManualEntryPage.module.css";
 
@@ -133,7 +133,7 @@ export default function StepConfirmed({
       </div>
 
       {/* Table */}
-      <DataTable<ManualEntry>
+      <LatticeGrid<ManualEntry>
         columns={COLUMNS}
         rows={entries}
         rowKey="id"

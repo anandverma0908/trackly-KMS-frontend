@@ -103,19 +103,6 @@ export interface Theme {
   color: string   // preview swatch hex
 }
 
-/* ── Settings ── */
-export interface JiraConfig {
-  jiraUrl:    string
-  email:      string
-  apiToken:   string
-  projectKey: string
-}
-
-export interface AppSettings {
-  jiraConfig:  JiraConfig | null
-  isConnected: boolean
-}
-
 /* ── Export ── */
 export type ReportType = 'monthly' | 'fy'
 

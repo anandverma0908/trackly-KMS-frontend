@@ -10,7 +10,7 @@ import {
 } from "@/utils/formatters";
 import type { SummaryByUser, Ticket } from "@/types";
 import SideDrawer from "@/components/ui/SideDrawer";
-import DataTable, { Column } from "@/components/ui/DataTable";
+import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
 import { IssueTypeBadge, StatusBadge, PODBadge } from "@/components/ui/Badge";
 import styles from "@/components/ui/SideDrawer.module.css";
 import { getAuthHeader } from "../auth/useAuthStore";
@@ -34,7 +34,7 @@ function getColor(name: string) {
 
 interface DrawerRow {
   id: string;
-  source: "jira" | "manual";
+  source: "ticket" | "manual";
   key: string;
   summary: string;
   updated: string;
@@ -43,7 +43,6 @@ interface DrawerRow {
   issue_type: string;
   status: string;
   hours_spent: number;
-  url: string;
 }
 
 const COLUMNS: Column<DrawerRow>[] = [
@@ -59,13 +58,13 @@ const COLUMNS: Column<DrawerRow>[] = [
           padding: "2px 6px",
           borderRadius: 4,
           background:
-            r.source === "jira"
+            r.source === "ticket"
               ? "rgba(79,126,255,0.12)"
               : "rgba(167,139,250,0.12)",
-          color: r.source === "jira" ? "var(--accent)" : "#A78BFA",
+          color: r.source === "ticket" ? "var(--accent)" : "#A78BFA",
         }}
       >
-        {r.source === "jira" ? "⬡ Jira" : "✦ Manual"}
+        {r.source === "ticket" ? "⬡ Ticket" : "✦ Manual"}
       </span>
     ),
   },
@@ -74,7 +73,7 @@ const COLUMNS: Column<DrawerRow>[] = [
     label: "Key / Type",
     width: 120,
     render: (r) =>
-      r.source === "jira" ? (
+      r.source === "ticket" ? (
         <span className="key-chip">{r.key}</span>
       ) : (
         <span style={{ fontSize: 11, color: "var(--text-2)" }}>
@@ -110,7 +109,7 @@ const COLUMNS: Column<DrawerRow>[] = [
     label: "Status",
     width: 130,
     render: (r) =>
-      r.source === "jira" ? (
+      r.source === "ticket" ? (
         <StatusBadge status={r.status} />
       ) : (
         <span style={{ fontSize: 10, color: "var(--green)", fontWeight: 600 }}>
@@ -126,36 +125,11 @@ const COLUMNS: Column<DrawerRow>[] = [
     className: "hours",
     render: (r) => formatHours(r.hours_spent),
   },
-  {
-    key: "url",
-    label: "",
-    width: 36,
-    render: (r) =>
-      r.url && r.url !== "#" ? (
-        <button
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--text-3)",
-            fontSize: 13,
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            window.open(r.url, "_blank");
-          }}
-          title="Open in Jira"
-        >
-          ↗
-        </button>
-      ) : null,
-  },
 ];
 
 interface EngineerStats {
   user: string;
   hours: number;
-  jira_hours: number;
   manual_hours: number;
   tickets: number;
   manual_entries: number;
@@ -181,7 +155,7 @@ export default function EngineerDrawer({
   const scopedPod = getScopedPod();
   const effectivePods = pods.length > 0 ? pods : scopedPod ? [scopedPod] : [];
 
-  /* Jira tickets */
+  /* Tickets */
   const { data: ticketData, isLoading: ticketsLoading } = useQuery({
     queryKey: [
       "engineer-tickets",
@@ -255,7 +229,7 @@ export default function EngineerDrawer({
   const jiraRows: DrawerRow[] = (ticketData?.tickets ?? []).map(
     (t: Ticket) => ({
       id: t.key,
-      source: "jira",
+      source: "ticket" as const,
       key: t.key,
       summary: t.summary,
       updated: t.updated,
@@ -264,7 +238,6 @@ export default function EngineerDrawer({
       issue_type: t.issue_type,
       status: t.status,
       hours_spent: t.hours_spent,
-      url: t.url,
     }),
   );
 
@@ -272,7 +245,7 @@ export default function EngineerDrawer({
     Array.isArray(manualData) ? manualData : []
   ).map((m: any) => ({
     id: m.id,
-    source: "manual",
+    source: "manual" as const,
     key: "",
     summary: m.activity,
     updated: m.entry_date,
@@ -281,7 +254,6 @@ export default function EngineerDrawer({
     issue_type: m.entry_type ?? "Manual",
     status: "confirmed",
     hours_spent: m.hours,
-    url: "",
   }));
 
   const allRows: DrawerRow[] = [...jiraRows, ...manualRows].sort((a, b) =>
@@ -312,10 +284,6 @@ export default function EngineerDrawer({
           color,
         },
         {
-          label: "Jira",
-          value: `${formatNumber(Math.round((stats?.jira_hours ?? 0) * 4) / 4)}h`,
-        },
-        {
           label: "Manual",
           value: `${formatNumber(Math.round((stats?.manual_hours ?? 0) * 4) / 4)}h`,
         },
@@ -323,13 +291,13 @@ export default function EngineerDrawer({
       ]}
       footer={
         <p className={styles.footerNote}>
-          <strong>{engineer?.user}</strong> — {stats?.tickets ?? 0} Jira tickets
+          <strong>{engineer?.user}</strong> — {stats?.tickets ?? 0} tickets
           · {stats?.manual_entries ?? 0} manual entries ·{" "}
           {formatNumber(Math.round((stats?.hours ?? 0) * 4) / 4)}h total.
         </p>
       }
     >
-      <DataTable<DrawerRow>
+      <LatticeGrid<DrawerRow>
         columns={COLUMNS}
         rows={allRows}
         rowKey="id"
@@ -339,7 +307,7 @@ export default function EngineerDrawer({
         stickyHeader
         emptyIcon="📭"
         emptyTitle="No activity found"
-        emptyDesc="No Jira tickets or manual entries for this date range."
+        emptyDesc="No tickets or manual entries for this date range."
       />
     </SideDrawer>
   );

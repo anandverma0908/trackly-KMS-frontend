@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useAuthStore, getAuthHeader } from "@/features/auth/useAuthStore";
 import { initials } from "@/utils/formatters";
-import DataTable, { Column } from "@/components/ui/DataTable";
+import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
 import styles from "./UsersPage.module.css";
 import { MdModeEdit } from "react-icons/md";
 import { TbKeyFilled } from "react-icons/tb";
@@ -378,7 +378,7 @@ export default function UsersPage() {
       </div>
 
       {/* Table */}
-      <DataTable<UserRow>
+      <LatticeGrid<UserRow>
         columns={COLUMNS}
         rows={filtered}
         rowKey="id"

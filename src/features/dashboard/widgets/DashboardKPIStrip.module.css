@@ -1,0 +1,139 @@
+/* ── KPI card — one card, rendered by parent in a grid ── */
+.card {
+  background: var(--bgrnd);
+  /* border: 1px solid var(--border-2); */
+  border-radius: var(--r-lg);
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  overflow: hidden;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  cursor: default;
+}
+
+.card:hover {
+  border-color: var(--kc, var(--border-2));
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.14);
+}
+
+/* Subtle top accent line */
+.card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--kc, transparent);
+  opacity: 0.55;
+  border-radius: 12px 12px 0 0;
+}
+
+/* ── Top row: icon left, trend right ── */
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.iconWrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--kg, var(--surface-2));
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  color: var(--kc, var(--text-2));
+  flex-shrink: 0;
+}
+
+.trend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.trendUp {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--green);
+}
+
+.trendDown {
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--red, #f87171);
+}
+
+.trendFlat {
+  background: var(--surface-2);
+  color: var(--text-3);
+}
+
+/* ── Value ── */
+.value {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  color: var(--text);
+  animation: kpiIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Label ── */
+.label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  margin-top: 5px;
+}
+
+/* ── Sub note ── */
+.sub {
+  font-size: 10px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+/* ── Skeleton ── */
+.skeletonCard {
+  background: var(--bgrnd);
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@keyframes kpiIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Light mode ──
+[data-mode="light"] .card {
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+[data-mode="light"] .card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+} */
