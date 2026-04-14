@@ -90,10 +90,10 @@ export default function DashboardPage() {
 
       {/* ── Main row: primary chart + active tickets panel ── */}
       <div className={`${styles.mainRow} fade-up-2`}>
-        <RecentActivity limit={12} />
-
         {/* Right: active tickets for everyone */}
         <MyActiveTickets />
+
+        <RecentActivity limit={12} />
       </div>
 
       {/* ── Mid row: heatmap + velocity/sprint ── */}
