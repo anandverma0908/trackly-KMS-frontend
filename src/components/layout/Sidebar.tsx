@@ -22,6 +22,7 @@ import GroupsIcon from "@mui/icons-material/Groups";
 import TableChartIcon from "@mui/icons-material/TableChart";
 import GridViewIcon from "@mui/icons-material/GridView";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import SettingsIcon from "@mui/icons-material/Settings";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import NotificationsIcon from "@mui/icons-material/Notifications";
@@ -279,18 +280,20 @@ export default function Sidebar({
       <div className={styles.body}>
         {/* ── Primary nav ── */}
         {nav(<DashboardIcon fontSize="small" />, "Dashboard", "/dashboard")}
+        {nav(<RocketLaunchIcon fontSize="small" />, "Spaces", "/spaces")}
+
         {nav(
           <ConfirmationNumberIcon fontSize="small" />,
           "Tickets",
           "/tickets",
           can("view:tickets"),
         )}
-        {nav(
+        {/* {nav(
           <ViewKanbanIcon fontSize="small" />,
           "Kanban",
           "/kanban",
           can("view:tickets"),
-        )}
+        )} */}
         {nav(
           <SpeedIcon fontSize="small" />,
           "Sprints",
@@ -316,7 +319,7 @@ export default function Sidebar({
           <TableChartIcon fontSize="small" />,
           "Timesheets",
           "/manual-entry",
-          can("entry:manual"),
+          // can("entry:manual"),
         )}
         {nav(
           <GridViewIcon fontSize="small" />,
@@ -417,10 +420,15 @@ function NavItem({
       <span className={styles.itemIcon}>{icon}</span>
       <motion.span
         className={styles.label}
-        initial={collapsed ? { opacity: 0, display: "none", width: 0 } : { opacity: 1, display: "block", width: 50 }}
-        animate={collapsed
-          ? { opacity: 0, transitionEnd: { display: "none", width: 0 } }
-          : { display: "block", opacity: 1, width: 50 }
+        initial={
+          collapsed
+            ? { opacity: 0, display: "none", width: 0 }
+            : { opacity: 1, display: "block", width: 50 }
+        }
+        animate={
+          collapsed
+            ? { opacity: 0, transitionEnd: { display: "none", width: 0 } }
+            : { display: "block", opacity: 1, width: 50 }
         }
         transition={{ duration: 0.15 }}
       >

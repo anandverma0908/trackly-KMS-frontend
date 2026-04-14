@@ -1,0 +1,471 @@
+.tab {
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── KPI Row ── */
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.kpiCard {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.kpiCard:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  border-color: var(--border-3);
+}
+
+.kpiIconWrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kpiBody { flex: 1; min-width: 0; }
+
+.kpiVal {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  font-family: var(--font-mono);
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.kpiLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.kpiSub {
+  font-size: 10px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+/* ── Row 2: 3-col charts ── */
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  gap: 12px;
+}
+
+/* ── Row 3: 2-col wide ── */
+.row3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ── Row 4: 3 col ── */
+.row4 {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 12px;
+}
+
+/* ── Generic chart card ── */
+.chartCard {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chartCardWide {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 16px;
+}
+
+.cardTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.cardTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+/* ── Pie chart ── */
+.pieWrap {
+  flex: 1;
+}
+
+.pieLegend {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.legendName {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.legendVal {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+/* ── Sprint rows ── */
+.sprintRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sprintName {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  width: 80px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sprintPct {
+  font-size: 12px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  width: 38px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.sprintPts {
+  font-size: 10px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  width: 55px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Member list ── */
+.memberList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.memberRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.memberAvatarSm {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.memberInfo { flex: 1; min-width: 0; }
+.memberName {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.memberRole {
+  font-size: 9px;
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+.memberPct {
+  font-size: 12px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.memberTasks {
+  font-size: 10px;
+  color: var(--text-3);
+  width: 45px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Health score ── */
+.healthScore {
+  font-size: 28px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+.healthScoreUnit {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+/* ── Radar dimensions ── */
+.radarDimensions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.radarDim {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.radarDimLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  width: 60px;
+  flex-shrink: 0;
+}
+
+.radarDimBar {
+  flex: 1;
+  height: 4px;
+  background: var(--surface-2);
+  border-radius: 100px;
+  overflow: hidden;
+}
+.radarDimFill {
+  height: 100%;
+  border-radius: 100px;
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+
+.radarDimVal {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-2);
+  width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Insights card ── */
+.insightsCard {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 16px;
+}
+
+.aiBadge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 100px;
+  background: var(--accent-glow);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  letter-spacing: 0.08em;
+}
+
+.insightsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.insightItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  transition: border-color 0.15s;
+}
+.insightItem:hover { border-color: var(--border-3); }
+
+.insightIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.insightContent { flex: 1; }
+.insightTitle {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.insightDesc {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+/* ── Risk card ── */
+.riskCard {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 16px;
+}
+
+.riskList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+  margin-top: 8px;
+}
+
+.riskItem {}
+
+.riskHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.riskLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.riskBadge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 100px;
+  letter-spacing: 0.06em;
+}
+
+.riskBarWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.riskVal {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* ── Quick stats grid ── */
+.quickStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.qStat {
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+
+.qStatVal {
+  font-size: 20px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 3px;
+}
+
+.qStatLbl {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+  .row4 { grid-template-columns: 1fr 1fr; }
+  .row4 > :last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 900px) {
+  .kpiRow { grid-template-columns: repeat(2, 1fr); }
+  .row2 { grid-template-columns: 1fr; }
+  .row3 { grid-template-columns: 1fr; }
+  .row4 { grid-template-columns: 1fr; }
+}

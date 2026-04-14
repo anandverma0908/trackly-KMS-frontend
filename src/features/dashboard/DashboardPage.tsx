@@ -57,7 +57,7 @@ export default function DashboardPage() {
   return (
     <div className={styles.page}>
       {/* ── Header ── */}
-      <div className={`${styles.header} fade-up`}>
+      {/* <div className={`${styles.header} fade-up`}>
         <div className={styles.titleRow}>
           <h1 className={styles.title}>
             {greeting}, {firstName}
@@ -71,17 +71,8 @@ export default function DashboardPage() {
             <RiCalendarLine size={13} />
             {TODAY}
           </span>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => {
-              refetch();
-              toast.success("Refreshed");
-            }}
-          >
-            <RiRefreshLine size={14} /> Refresh
-          </button>
         </div>
-      </div>
+      </div> */}
 
       {/* ── KPI Strip ── */}
       <div className={`${styles.kpiRow} fade-up-1`}>

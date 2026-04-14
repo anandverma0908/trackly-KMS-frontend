@@ -6,7 +6,7 @@
   padding: 20px 22px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 12px;
   position: relative;
   overflow: hidden;
   transition:
@@ -93,7 +93,7 @@
 
 /* ── Label ── */
 .label {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-3);
   margin-top: 5px;

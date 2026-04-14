@@ -1,0 +1,373 @@
+.tab {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 16px 24px;
+}
+
+/* ── Toolbar ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.searchWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  transition: border-color 0.15s;
+  flex: 1;
+  max-width: 340px;
+}
+.searchWrap:focus-within { border-color: var(--accent-border); }
+
+.searchInput {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  font-family: var(--font-sans);
+  flex: 1;
+}
+.searchInput::placeholder { color: var(--text-3); }
+
+.clearBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--text-3);
+  padding: 0;
+  transition: color 0.12s;
+  font-family: var(--font-sans);
+}
+.clearBtn:hover { color: var(--text); }
+
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.selectWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  padding: 7px 11px;
+  color: var(--text-3);
+}
+
+.select {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+.select option { background: var(--surface-2); }
+
+/* ── Stats strip ── */
+.statsStrip {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 9px;
+  padding: 10px 16px;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.stripItem {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.stripVal {
+  font-size: 16px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  letter-spacing: -0.03em;
+}
+
+.stripLbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.stripDivider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-2);
+  flex-shrink: 0;
+}
+
+/* ── Table header ── */
+.tableHeader {
+  display: grid;
+  grid-template-columns: 28px 90px 1fr 80px 90px 110px 50px 40px 70px;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 8px 8px 0 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.thCheck { }
+.thKey { }
+.thTitle { }
+.thType { }
+.thPriority { }
+.thStatus { }
+.thAssignee { }
+.thSP { text-align: center; }
+.thDue { }
+
+/* ── Groups ── */
+.groups {
+  border: 1px solid var(--border-2);
+  border-top: none;
+  border-radius: 0 0 9px 9px;
+  overflow: hidden;
+}
+
+.group {
+  border-bottom: 1px solid var(--border);
+}
+.group:last-child { border-bottom: none; }
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--surface-2);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: var(--font-sans);
+  text-align: left;
+}
+.groupHeader:hover { background: var(--surface-3); }
+
+.groupArrow {
+  font-size: 16px;
+  color: var(--text-3);
+  transition: transform 0.15s;
+  line-height: 1;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.groupLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+}
+
+.groupCount {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  background: var(--surface-3);
+  padding: 1px 7px;
+  border-radius: 100px;
+}
+
+.groupSP {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+}
+
+/* ── Row ── */
+.rows { background: var(--surface); }
+
+.row {
+  display: grid;
+  grid-template-columns: 28px 90px 1fr 80px 90px 110px 50px 40px 70px;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.row:last-of-type { border-bottom: none; }
+.row:hover { background: var(--surface-2); }
+.rowSelected { background: var(--accent-glow) !important; }
+
+.tdCheck { display: flex; align-items: center; }
+.checkbox {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.tdKey { }
+.keyBadge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  background: var(--accent-glow);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.tdTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.issueTypeIcon { font-size: 12px; flex-shrink: 0; }
+
+.titleText {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.labelTag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 100px;
+  background: var(--surface-3);
+  color: var(--text-3);
+  border: 1px solid var(--border-2);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tdType { }
+.typeChip {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  background: var(--surface-2);
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.tdPriority {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.priorityDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.priorityLabel {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tdStatus { }
+.statusChip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
+.tdAssignee { display: flex; align-items: center; }
+.assigneeAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 800;
+  color: #fff;
+  cursor: default;
+}
+
+.tdSP { text-align: center; }
+.spBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 800;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+}
+
+.tdDue { }
+.dueDate {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.noDue {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* Add row */
+.addRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-top: 1px dashed var(--border-2);
+}
+.addRow:hover { background: var(--surface-2); }
+.addRowText {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  font-family: var(--font-sans);
+}
+.addRow:hover .addRowText { color: var(--text); }

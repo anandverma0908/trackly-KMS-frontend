@@ -1,0 +1,385 @@
+.tab {
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* ── Summary row ── */
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.summaryCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 12px 16px;
+}
+
+.summaryVal {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.summaryLbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-top: 1px;
+}
+
+/* ── Gantt wrap ── */
+.ganttWrap {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+/* Labels column */
+.labelsCol {
+  width: 200px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-2);
+}
+
+.labelsHeader {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border-2);
+  background: var(--surface-2);
+}
+
+.labelSection {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.labelSection:last-child { border-bottom: none; }
+
+.sectionLabel {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 4px 14px 2px;
+}
+
+.rowLabel {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  height: 36px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rowLabel span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.epicDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.sprintDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Chart area */
+.chartArea {
+  flex: 1;
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.monthHeaders {
+  display: flex;
+  height: 36px;
+  border-bottom: 1px solid var(--border-2);
+  background: var(--surface-2);
+}
+
+.monthHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  flex: 1;
+  min-width: 60px;
+}
+.monthHeader:last-child { border-right: none; }
+
+.chartBody {
+  position: relative;
+  min-height: 200px;
+}
+
+/* Grid lines */
+.gridLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+  pointer-events: none;
+}
+
+/* Today line */
+.todayLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  opacity: 0.7;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.todayLabel {
+  position: absolute;
+  top: 0;
+  left: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* Chart sections */
+.chartSection {
+  border-bottom: 1px solid var(--border);
+  padding: 6px 0;
+}
+.chartSection:last-child { border-bottom: none; }
+
+.chartSectionLabel {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 4px 14px 2px;
+}
+
+.chartRow {
+  height: 36px;
+  position: relative;
+}
+
+/* Epic bar */
+.epicBar {
+  position: absolute;
+  top: 6px;
+  height: 22px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  opacity: 0.85;
+  min-width: 4px;
+}
+.epicBar:hover { opacity: 1; }
+
+.epicBarFill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  border-radius: 5px;
+}
+
+/* Sprint bar */
+.sprintBar {
+  position: absolute;
+  top: 6px;
+  height: 22px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1.5px solid;
+  background: var(--surface-2);
+  min-width: 4px;
+  transition: opacity 0.15s;
+}
+.sprintBar:hover { opacity: 0.85; }
+
+.sprintBarFill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  border-radius: 3px;
+}
+
+.barLabel {
+  position: relative;
+  z-index: 1;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  padding: 0 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* ── Epic detail cards ── */
+.epicCards {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 16px;
+}
+
+.epicCardsTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 12px;
+}
+
+.epicCardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.epicCard {
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 9px;
+  padding: 12px;
+}
+
+.epicCardTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.epicColorBar {
+  width: 3px;
+  height: 30px;
+  border-radius: 100px;
+  flex-shrink: 0;
+}
+
+.epicCardInfo { flex: 1; min-width: 0; }
+
+.epicCardTitle {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.epicCardDates {
+  font-size: 10px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+}
+
+.epicCardPct {
+  font-size: 14px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.epicCardStats {
+  font-size: 10px;
+  color: var(--text-3);
+  margin-top: 6px;
+}
+
+@media (max-width: 900px) {
+  .summaryRow { grid-template-columns: repeat(2, 1fr); }
+}

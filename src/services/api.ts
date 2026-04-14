@@ -362,6 +362,46 @@ export async function detectKnowledgeGaps() {
   return data;
 }
 
+/* ── Pod Analytics ── */
+export interface PodSummary {
+  pod: string;
+  statuses: Record<string, number>;
+  total_hours: number;
+}
+
+export async function fetchPodSummary(): Promise<PodSummary[]> {
+  const { data } = await api.get<PodSummary[]>("/analytics/pod-summary");
+  return data ?? [];
+}
+
+/* ── Sprint Detail (with tickets) ── */
+export interface SprintTicket {
+  id: string;
+  jira_key: string;
+  summary: string;
+  status: string;
+  assignee: string | null;
+  story_points: number | null;
+  issue_type: string | null;
+  priority: string;
+}
+
+export interface SprintDetail {
+  id: string;
+  name: string;
+  goal: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: string;
+  velocity: number | null;
+  tickets: SprintTicket[];
+}
+
+export async function fetchSprintDetail(id: string): Promise<SprintDetail> {
+  const { data } = await api.get<SprintDetail>(`/sprints/${id}`);
+  return data;
+}
+
 /* ── Notifications ── */
 export async function fetchNotifications(): Promise<Notification[]> {
   const { data } = await api.get("/notifications");

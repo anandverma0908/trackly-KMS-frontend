@@ -1,7 +1,6 @@
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r);
+  background: var(--bgrnd);
+  border-radius: var(--r-lg);
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -119,7 +118,6 @@
 
 .textarea {
   background: var(--surface-2);
-  border: 1px solid var(--border-2);
   border-radius: var(--r-sm);
   color: var(--text);
   font-family: var(--font-sans);

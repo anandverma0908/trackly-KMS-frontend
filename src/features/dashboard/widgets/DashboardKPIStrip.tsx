@@ -46,11 +46,12 @@ function KPICard({ kpi, delay }: { kpi: KPI; delay: number }) {
       // style={{ "--kc": kpi.color, "--kg": kpi.glow } as React.CSSProperties}
     >
       <div className={styles.topRow}>
+        <div className={styles.label}>{kpi.label}</div>
+
         <span className={styles.iconWrap}>{kpi.icon}</span>
         <Trend pct={kpi.trend ?? null} />
       </div>
       <div className={styles.value}>{kpi.value}</div>
-      <div className={styles.label}>{kpi.label}</div>
       {kpi.sub && <div className={styles.sub}>{kpi.sub}</div>}
     </div>
   );

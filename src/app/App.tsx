@@ -19,6 +19,8 @@ import AnalyticsPage from "@/features/analytics/AnalyticsPage";
 import BurnRatePage from "@/features/settings/BurnRatePage";
 import NotificationPrefsPage from "@/features/settings/NotificationPrefsPage";
 import WeeklyTimeGrid from "@/features/timetrack/WeeklyTimeGrid";
+import SpacesPage from "@/features/spaces/SpacesPage";
+import ProjectDetailPage from "@/features/spaces/ProjectDetailPage";
 
 export default function App() {
   return (
@@ -38,7 +40,7 @@ export default function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard"   element={<DashboardPage />} />
             <Route path="/tickets"     element={<TicketsPage />} />
-            <Route path="/kanban"      element={<KanbanBoard />} />
+            {/* <Route path="/kanban"      element={<KanbanBoard />} /> */}
             <Route path="/sprints"     element={<SprintPage />} />
             <Route path="/wiki"        element={<WikiPage />} />
             <Route path="/standup"     element={<StandupPage />} />
@@ -51,6 +53,8 @@ export default function App() {
             <Route path="/settings/notifications" element={<NotificationPrefsPage />} />
             <Route path="/timesheets/weekly" element={<WeeklyTimeGrid />} />
             <Route path="/admin/users" element={<UsersPage />} />
+            <Route path="/spaces"             element={<SpacesPage />} />
+            <Route path="/spaces/:projectId"  element={<ProjectDetailPage />} />
           </Route>
         </Route>
       </Route>
