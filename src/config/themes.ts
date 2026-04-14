@@ -19,22 +19,12 @@ export function applyTheme(themeId: ThemeId, mode: ColorMode) {
 
 /* ── POD colors — consistent across charts & cards ── */
 export const POD_COLORS: Record<string, string> = {
-  DPAI:    "#4F7EFF",
-  DevOps:  "#34D399",
-  EDM:     "#FBBF24",
-  SNP:     "#A78BFA",
-  SNOP:    "#A78BFA",
-  Infosec: "#F87171",
-  RiskAI:  "#22D3EE",
-  DS:      "#94A3B8",
-  TMS:     "#64748B",
-  CARX:    "#FB923C",
-  DE:      "#22D3EE",
-  IAM:     "#F43F5E",
-  DO:      "#4ADE80",
-  RPPAN:   "#E879F9",
-  SAF:     "#38BDF8",
-  ELC:     "#A3E635",
+  DPAI:       "#4F7EFF",
+  SNOP:       "#A78BFA",
+  EDM:        "#FBBF24",
+  PLAT:       "#34D399",
+  SNOE:       "#22D3EE",
+  PA:           "#F87171",
 };
 
 export function getPodColor(pod: string): string {

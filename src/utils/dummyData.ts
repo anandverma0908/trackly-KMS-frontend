@@ -7,22 +7,20 @@ export const DUMMY_FILTERS: FiltersResponse = {
     'Niral','Shivam','Deepak Kumar','Akash Kumar',
   ],
   clients: ['Colgate','Jockey','SAAS','BSV','ReckittBenckiser','Henkel','Unilever'],
-  pods:    ['DPAI','DevOps','EDM','SNP','Infosec','RiskAI','DS','TMS'],
-  projects:['DPAI','DEVOPS','EDM','SNP','INFOSEC','RISKAI'],
+  pods:    ['DPAI','SNOP','EDM','PLAT','SNOE','PA'],
+  projects:['DPAI','SNOP','EDM','PLAT','SNOE','PA'],
 }
 
 export const DUMMY_SUMMARY: SummaryResponse = {
   total_hours:   8420,
   total_tickets: 1847,
   by_pod: [
-    { pod: 'DPAI',    hours: 2108, tickets: 412, clients: ['Colgate','Jockey'] },
-    { pod: 'DevOps',  hours: 1580, tickets: 298, clients: ['SAAS','Colgate']  },
-    { pod: 'EDM',     hours: 1302, tickets: 241, clients: ['SAAS','BSV']      },
-    { pod: 'SNP',     hours: 1024, tickets: 198, clients: ['BSV','Jockey']    },
-    { pod: 'Infosec', hours:  791, tickets: 142, clients: ['SAAS']            },
-    { pod: 'RiskAI',  hours:  604, tickets: 118, clients: ['Colgate']         },
-    { pod: 'DS',      hours:  418, tickets:  87, clients: ['SAAS','Jockey']   },
-    { pod: 'TMS',     hours:  232, tickets:  51, clients: ['SAAS']            },
+    { pod: 'DPAI',       hours: 2108, tickets: 412, clients: ['Colgate','Jockey'] },
+    { pod: 'SNOP',       hours: 1580, tickets: 298, clients: ['SAAS','Colgate']  },
+    { pod: 'EDM',        hours: 1302, tickets: 241, clients: ['SAAS','BSV']      },
+    { pod: 'PLAT',       hours: 1024, tickets: 198, clients: ['BSV','Jockey']    },
+    { pod: 'SNOE',       hours:  791, tickets: 142, clients: ['SAAS']            },
+    { pod: 'PA',         hours:  604, tickets: 118, clients: ['Colgate']         },
   ],
   by_client: [
     { client: 'Colgate',          hours: 1480, tickets: 312, users: ['Anand Verma','Rahul Sharma'] },
