@@ -15,33 +15,41 @@ import SortIcon from "@mui/icons-material/Sort";
 import AddIcon from "@mui/icons-material/Add";
 
 const ISSUE_TYPE_ICONS: Record<string, string> = {
-  Story:   "🟢",
-  Bug:     "🔴",
-  Task:    "🔵",
-  Epic:    "⚡",
+  Story: "🟢",
+  Bug: "🔴",
+  Task: "🔵",
+  Epic: "⚡",
   Subtask: "◾",
 };
 
 type GroupBy = "status" | "priority" | "assignee" | "type" | "none";
-type SortBy  = "priority" | "created" | "updated" | "points" | "key";
+type SortBy = "priority" | "created" | "updated" | "points" | "key";
 
 const STATUS_ORDER = ["To Do", "In Progress", "In Review", "Blocked", "Done"];
 const PRIORITY_ORDER = ["Critical", "High", "Medium", "Low"];
 
 export default function BacklogTab({ project }: { project: Project }) {
   const qc = useQueryClient();
-  const [search, setSearch]   = useState("");
+  const [search, setSearch] = useState("");
   const [groupBy, setGroupBy] = useState<GroupBy>("status");
-  const [sortBy, setSortBy]   = useState<SortBy>("priority");
+  const [sortBy, setSortBy] = useState<SortBy>("priority");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(STATUS_ORDER));
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    new Set(STATUS_ORDER),
+  );
   const [showCreateDrawer, setShowCreateDrawer] = useState(false);
-  const [createDefaultStatus] = useState("Backlog");
+  const [createDefaultStatus] = useState("To Do");
   const [localTasks, setLocalTasks] = useState<ProjectTask[]>([]);
+  const [viewingTask, setViewingTask] = useState<ProjectTask | null>(null);
 
   const moveMut = useMutation({
-    mutationFn: ({ sprintId, ticketKey }: { sprintId: string; ticketKey: string }) =>
-      addTicketToSprint(sprintId, ticketKey),
+    mutationFn: ({
+      sprintId,
+      ticketKey,
+    }: {
+      sprintId: string;
+      ticketKey: string;
+    }) => addTicketToSprint(sprintId, ticketKey),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["space-project", project.key] });
       toast.success("Moved to sprint");
@@ -74,7 +82,9 @@ export default function BacklogTab({ project }: { project: Project }) {
     Promise.all(keys.map((k) => addTicketToSprint(sprintId, k)))
       .then(() => {
         qc.invalidateQueries({ queryKey: ["space-project", project.key] });
-        toast.success(`Moved ${keys.length} ticket${keys.length > 1 ? "s" : ""} to sprint`);
+        toast.success(
+          `Moved ${keys.length} ticket${keys.length > 1 ? "s" : ""} to sprint`,
+        );
         setSelected(new Set());
       })
       .catch((e) => toast.error(e.message));
@@ -84,9 +94,10 @@ export default function BacklogTab({ project }: { project: Project }) {
 
   // Prefer dedicated backlog tasks; fall back to all sprint tasks for compatibility
   const allTasks: ProjectTask[] = useMemo(() => {
-    const base = project.backlogTasks && project.backlogTasks.length > 0
-      ? project.backlogTasks
-      : project.sprints.flatMap((s) => s.tasks);
+    const base =
+      project.backlogTasks && project.backlogTasks.length > 0
+        ? project.backlogTasks
+        : project.sprints.flatMap((s) => s.tasks);
     return [...localTasks, ...base];
   }, [project, localTasks]);
 
@@ -106,9 +117,12 @@ export default function BacklogTab({ project }: { project: Project }) {
     // Sort
     tasks = [...tasks].sort((a, b) => {
       if (sortBy === "priority")
-        return PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority);
+        return (
+          PRIORITY_ORDER.indexOf(a.priority) -
+          PRIORITY_ORDER.indexOf(b.priority)
+        );
       if (sortBy === "points") return b.storyPoints - a.storyPoints;
-      if (sortBy === "key")    return a.key.localeCompare(b.key);
+      if (sortBy === "key") return a.key.localeCompare(b.key);
       return 0;
     });
 
@@ -125,16 +139,19 @@ export default function BacklogTab({ project }: { project: Project }) {
     }
 
     const keys =
-      groupBy === "status"   ? STATUS_ORDER :
-      groupBy === "priority" ? PRIORITY_ORDER :
-      groupBy === "type"     ? ["Story", "Bug", "Task", "Epic", "Subtask"] :
-      [...new Set(backlogTasks.map((t) => t.assignee || "—"))].sort();
+      groupBy === "status"
+        ? STATUS_ORDER
+        : groupBy === "priority"
+          ? PRIORITY_ORDER
+          : groupBy === "type"
+            ? ["Story", "Bug", "Task", "Epic", "Subtask"]
+            : [...new Set(backlogTasks.map((t) => t.assignee || "—"))].sort();
 
     keys.forEach((k) => {
       const tasks = backlogTasks.filter((t) => {
-        if (groupBy === "status")   return t.status === k;
+        if (groupBy === "status") return t.status === k;
         if (groupBy === "priority") return t.priority === k;
-        if (groupBy === "type")     return t.type === k;
+        if (groupBy === "type") return t.type === k;
         return (t.assignee || "—") === k;
       });
       if (tasks.length > 0) map.set(k, tasks);
@@ -174,7 +191,9 @@ export default function BacklogTab({ project }: { project: Project }) {
             onChange={(e) => setSearch(e.target.value)}
           />
           {search && (
-            <button className={styles.clearBtn} onClick={() => setSearch("")}>✕</button>
+            <button className={styles.clearBtn} onClick={() => setSearch("")}>
+              ✕
+            </button>
           )}
         </div>
 
@@ -220,16 +239,21 @@ export default function BacklogTab({ project }: { project: Project }) {
               >
                 <option value="">Move to sprint…</option>
                 {sprints.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
                 ))}
               </select>
             </div>
           )}
 
-          <button className="btn btn-primary btn-sm" onClick={() => setShowCreateDrawer(true)}>
+          {/* <button
+            className="btn btn-primary btn-sm"
+            onClick={() => setShowCreateDrawer(true)}
+          >
             <AddIcon sx={{ fontSize: 15 }} />
             Create Issue
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -242,14 +266,14 @@ export default function BacklogTab({ project }: { project: Project }) {
         <div className={styles.stripDivider} />
         <div className={styles.stripItem}>
           <span className={styles.stripVal} style={{ color: "var(--amber)" }}>
-            {backlogTasks.filter(t => t.status === "In Progress").length}
+            {backlogTasks.filter((t) => t.status === "In Progress").length}
           </span>
           <span className={styles.stripLbl}>In Progress</span>
         </div>
         <div className={styles.stripDivider} />
         <div className={styles.stripItem}>
           <span className={styles.stripVal} style={{ color: "var(--red)" }}>
-            {backlogTasks.filter(t => t.status === "Blocked").length}
+            {backlogTasks.filter((t) => t.status === "Blocked").length}
           </span>
           <span className={styles.stripLbl}>Blocked</span>
         </div>
@@ -262,7 +286,12 @@ export default function BacklogTab({ project }: { project: Project }) {
           <>
             <div className={styles.stripDivider} />
             <div className={styles.stripItem}>
-              <span className={styles.stripVal} style={{ color: "var(--accent)" }}>{selected.size}</span>
+              <span
+                className={styles.stripVal}
+                style={{ color: "var(--accent)" }}
+              >
+                {selected.size}
+              </span>
               <span className={styles.stripLbl}>Selected</span>
             </div>
           </>
@@ -287,7 +316,7 @@ export default function BacklogTab({ project }: { project: Project }) {
       <div className={styles.groups}>
         {Array.from(grouped.entries()).map(([groupKey, tasks]) => {
           const isExpanded = expandedGroups.has(groupKey);
-          const groupSP    = tasks.reduce((s, t) => s + t.storyPoints, 0);
+          const groupSP = tasks.reduce((s, t) => s + t.storyPoints, 0);
 
           return (
             <div key={groupKey} className={styles.group}>
@@ -318,6 +347,7 @@ export default function BacklogTab({ project }: { project: Project }) {
                       onSelect={() => toggleSelect(task.id)}
                       sprints={sprints}
                       onMoveToSprint={handleMoveToSprint}
+                      onClick={() => setViewingTask(task)}
                     />
                   ))}
                   {/* Add issue row */}
@@ -332,6 +362,29 @@ export default function BacklogTab({ project }: { project: Project }) {
         })}
       </div>
 
+      {viewingTask && (
+        <CreateTicketDrawer
+          open={Boolean(viewingTask)}
+          onClose={() => {
+            setViewingTask(null);
+            qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+          }}
+          ticketKey={viewingTask.key}
+          initialData={{
+            title: viewingTask.title,
+            description: viewingTask.description,
+            issue_type: viewingTask.type,
+            priority: viewingTask.priority,
+            status: viewingTask.status,
+            assignee: viewingTask.assignee,
+            story_points: viewingTask.storyPoints,
+            labels: viewingTask.labels,
+            due_date: viewingTask.dueDate,
+          }}
+          members={project.members}
+        />
+      )}
+
       <CreateTicketDrawer
         open={showCreateDrawer}
         onClose={() => setShowCreateDrawer(false)}
@@ -345,7 +398,9 @@ export default function BacklogTab({ project }: { project: Project }) {
             priority: data.priority || "Medium",
             assignee: data.assignee,
             pod: project.key,
-            story_points: data.story_points ? Number(data.story_points) : undefined,
+            story_points: data.story_points
+              ? Number(data.story_points)
+              : undefined,
             labels: data.labels,
             status: data.status || createDefaultStatus,
           };
@@ -357,8 +412,12 @@ export default function BacklogTab({ project }: { project: Project }) {
             priority: (payload.priority || "Medium") as ProjectTask["priority"],
             type: _normalizeType(payload.issue_type) as ProjectTask["type"],
             assignee: payload.assignee || project.members[0]?.name || "",
-            assigneeInitials: _initials(payload.assignee || project.members[0]?.name),
-            assigneeColor: _hashColor(payload.assignee || project.members[0]?.name || ""),
+            assigneeInitials: _initials(
+              payload.assignee || project.members[0]?.name,
+            ),
+            assigneeColor: _hashColor(
+              payload.assignee || project.members[0]?.name || "",
+            ),
             storyPoints: payload.story_points || 0,
             createdAt: new Date().toISOString().split("T")[0],
             updatedAt: new Date().toISOString().split("T")[0],
@@ -393,7 +452,9 @@ function _normalizeType(t: string | undefined): string {
 function _initials(name: string | undefined): string {
   if (!name) return "??";
   const parts = name.trim().split(" ");
-  return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase();
 }
 function _hashColor(name: string): string {
   const MEMBER_COLORS = [
@@ -412,20 +473,26 @@ function _hashColor(name: string): string {
 }
 
 const TaskRow = React.memo(function TaskRow({
-  task, selected, onSelect, sprints, onMoveToSprint,
+  task,
+  selected,
+  onSelect,
+  sprints,
+  onMoveToSprint,
+  onClick,
 }: {
   task: ProjectTask;
   selected: boolean;
   onSelect: () => void;
   sprints: Project["sprints"];
   onMoveToSprint: (sprintId: string, ticketKey: string) => void;
+  onClick?: () => void;
 }) {
   const priorityColor = getPriorityColor(task.priority);
-  const statusColor   = getTaskStatusColor(task.status);
+  const statusColor = getTaskStatusColor(task.status);
 
   return (
-    <div className={`${styles.row} ${selected ? styles.rowSelected : ""}`}>
-      <div className={styles.tdCheck}>
+    <div className={`${styles.row} ${selected ? styles.rowSelected : ""}`} onClick={onClick}>
+      <div className={styles.tdCheck} onClick={(e) => e.stopPropagation()}>
         <input
           type="checkbox"
           className={styles.checkbox}
@@ -437,23 +504,36 @@ const TaskRow = React.memo(function TaskRow({
         <span className={styles.keyBadge}>{task.key}</span>
       </div>
       <div className={styles.tdTitle}>
-        <span className={styles.issueTypeIcon}>{ISSUE_TYPE_ICONS[task.type] ?? "🔵"}</span>
+        <span className={styles.issueTypeIcon}>
+          {ISSUE_TYPE_ICONS[task.type] ?? "🔵"}
+        </span>
         <span className={styles.titleText}>{task.title}</span>
         {task.labels?.map((l) => (
-          <span key={l} className={styles.labelTag}>{l}</span>
+          <span key={l} className={styles.labelTag}>
+            {l}
+          </span>
         ))}
       </div>
       <div className={styles.tdType}>
         <span className={styles.typeChip}>{task.type}</span>
       </div>
       <div className={styles.tdPriority}>
-        <span className={styles.priorityDot} style={{ background: priorityColor }} />
-        <span className={styles.priorityLabel} style={{ color: priorityColor }}>{task.priority}</span>
+        <span
+          className={styles.priorityDot}
+          style={{ background: priorityColor }}
+        />
+        <span className={styles.priorityLabel} style={{ color: priorityColor }}>
+          {task.priority}
+        </span>
       </div>
       <div className={styles.tdStatus}>
         <span
           className={styles.statusChip}
-          style={{ color: statusColor, background: `${statusColor}18`, border: `1px solid ${statusColor}33` }}
+          style={{
+            color: statusColor,
+            background: `${statusColor}18`,
+            border: `1px solid ${statusColor}33`,
+          }}
         >
           {task.status}
         </span>
@@ -476,22 +556,33 @@ const TaskRow = React.memo(function TaskRow({
           <span
             className={styles.dueDate}
             style={{
-              color: new Date(task.dueDate) < new Date() ? "var(--red)" : "var(--text-2)",
+              color:
+                new Date(task.dueDate) < new Date()
+                  ? "var(--red)"
+                  : "var(--text-2)",
             }}
           >
-            {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            {new Date(task.dueDate).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}
           </span>
         ) : (
           <span className={styles.noDue}>—</span>
         )}
       </div>
-      <div className={styles.tdAction} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div
+        className={styles.tdAction}
+        style={{ display: "flex", alignItems: "center", gap: 8 }}
+      >
         {sprints.length > 0 && (
           <select
             className={styles.select}
             style={{ fontSize: 11, padding: "2px 6px" }}
             value=""
+            onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
+              e.stopPropagation();
               if (e.target.value) {
                 onMoveToSprint(e.target.value, task.key);
               }
@@ -499,7 +590,9 @@ const TaskRow = React.memo(function TaskRow({
           >
             <option value="">To sprint…</option>
             {sprints.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
             ))}
           </select>
         )}

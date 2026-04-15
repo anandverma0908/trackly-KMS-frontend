@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import {
-  createTicket, analyzeTicketNL, fetchFilters,
-} from "@/services/api";
+import { createTicket, updateTicket, analyzeTicketNL, fetchFilters } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import SideDrawer from "@/components/ui/SideDrawer";
 import type { TicketCreate, NLAnalysisResult, DuplicateTicket } from "@/types";
@@ -44,74 +42,147 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 /* ── Config ── */
 const ISSUE_TYPES = [
-  { value: "Story",       label: "Story",       color: "#4F7EFF", icon: <BookmarkIcon sx={{ fontSize: 14 }} /> },
-  { value: "Bug",         label: "Bug",         color: "#F87171", icon: <BugReportIcon sx={{ fontSize: 14 }} /> },
-  { value: "Task",        label: "Task",        color: "#A78BFA", icon: <CheckBoxOutlinedIcon sx={{ fontSize: 14 }} /> },
-  { value: "Epic",        label: "Epic",        color: "#FBBF24", icon: <BoltIcon sx={{ fontSize: 14 }} /> },
-  { value: "Subtask",     label: "Subtask",     color: "#94A3B8", icon: <SubdirectoryArrowRightIcon sx={{ fontSize: 14 }} /> },
-  { value: "Improvement", label: "Improvement", color: "#34D399", icon: <TrendingUpIcon sx={{ fontSize: 14 }} /> },
+  {
+    value: "Story",
+    label: "Story",
+    color: "#4F7EFF",
+    icon: <BookmarkIcon sx={{ fontSize: 14 }} />,
+  },
+  {
+    value: "Bug",
+    label: "Bug",
+    color: "#F87171",
+    icon: <BugReportIcon sx={{ fontSize: 14 }} />,
+  },
+  {
+    value: "Task",
+    label: "Task",
+    color: "#A78BFA",
+    icon: <CheckBoxOutlinedIcon sx={{ fontSize: 14 }} />,
+  },
+  {
+    value: "Epic",
+    label: "Epic",
+    color: "#FBBF24",
+    icon: <BoltIcon sx={{ fontSize: 14 }} />,
+  },
+  {
+    value: "Subtask",
+    label: "Subtask",
+    color: "#94A3B8",
+    icon: <SubdirectoryArrowRightIcon sx={{ fontSize: 14 }} />,
+  },
+  {
+    value: "Improvement",
+    label: "Improvement",
+    color: "#34D399",
+    icon: <TrendingUpIcon sx={{ fontSize: 14 }} />,
+  },
 ];
 
 const PRIORITIES = [
-  { value: "Highest", label: "Highest", color: "#F87171", icon: <KeyboardDoubleArrowUpIcon sx={{ fontSize: 14 }} /> },
-  { value: "High",    label: "High",    color: "#FB923C", icon: <KeyboardArrowUpIcon sx={{ fontSize: 14 }} /> },
-  { value: "Medium",  label: "Medium",  color: "#FBBF24", icon: <DragHandleIcon sx={{ fontSize: 14 }} /> },
-  { value: "Low",     label: "Low",     color: "#94A3B8", icon: <KeyboardArrowDownIcon sx={{ fontSize: 14 }} /> },
-  { value: "Lowest",  label: "Lowest",  color: "#64748B", icon: <KeyboardDoubleArrowDownIcon sx={{ fontSize: 14 }} /> },
+  {
+    value: "Highest",
+    label: "Highest",
+    color: "#F87171",
+    icon: <KeyboardDoubleArrowUpIcon sx={{ fontSize: 14 }} />,
+  },
+  {
+    value: "High",
+    label: "High",
+    color: "#FB923C",
+    icon: <KeyboardArrowUpIcon sx={{ fontSize: 14 }} />,
+  },
+  {
+    value: "Medium",
+    label: "Medium",
+    color: "#FBBF24",
+    icon: <DragHandleIcon sx={{ fontSize: 14 }} />,
+  },
+  {
+    value: "Low",
+    label: "Low",
+    color: "#94A3B8",
+    icon: <KeyboardArrowDownIcon sx={{ fontSize: 14 }} />,
+  },
+  {
+    value: "Lowest",
+    label: "Lowest",
+    color: "#64748B",
+    icon: <KeyboardDoubleArrowDownIcon sx={{ fontSize: 14 }} />,
+  },
 ];
 
 const STATUSES = [
-  { value: "To Do",       label: "To Do",       color: "#64748B" },
+  { value: "To Do", label: "To Do", color: "#64748B" },
   { value: "In Progress", label: "In Progress", color: "#FBBF24" },
-  { value: "In Review",   label: "In Review",   color: "#A78BFA" },
-  { value: "Blocked",     label: "Blocked",     color: "#F87171" },
-  { value: "Done",        label: "Done",        color: "#34D399" },
+  { value: "In Review", label: "In Review", color: "#A78BFA" },
+  { value: "Blocked", label: "Blocked", color: "#F87171" },
+  { value: "Done", label: "Done", color: "#34D399" },
 ];
 
-const LINK_TYPES = ["blocks", "is blocked by", "relates to", "duplicates", "is duplicated by", "cloned from"];
+const LINK_TYPES = [
+  "blocks",
+  "is blocked by",
+  "relates to",
+  "duplicates",
+  "is duplicated by",
+  "cloned from",
+];
 const STORY_POINTS = [1, 2, 3, 5, 8, 13, 21];
 
 /* ── Types ── */
 interface LinkedIssue {
   type: string;
-  key:  string;
+  key: string;
 }
 
 interface FormState extends TicketCreate {
-  status:     string;
-  reporter:   string;
-  epic:       string;
-  parent:     string;
+  status: string;
+  reporter: string;
+  epic: string;
+  parent: string;
   originalEst: string;
-  timeSpent:  string;
-  remaining:  string;
+  timeSpent: string;
+  remaining: string;
   linkedIssues: LinkedIssue[];
   attachments: File[];
 }
 
 export interface CreateTicketDrawerProps {
-  open:         boolean;
-  onClose:      () => void;
+  open: boolean;
+  onClose: () => void;
   defaultStatus?: string;
-  sprintName?:  string;
-  sprintId?:    number;
-  members?:     ProjectMember[];
+  sprintName?: string;
+  sprintId?: number;
+  members?: ProjectMember[];
   /** If provided, called instead of API (for local/mock data flows) */
-  onCreated?:   (data: Partial<FormState>) => void;
+  onCreated?: (data: Partial<FormState>) => void;
+  /** Edit mode: key of the ticket being viewed/edited */
+  ticketKey?: string;
+  /** Edit mode: initial form values to populate */
+  initialData?: Partial<FormState>;
 }
 
 /* ────────────────────────────────────────── */
 export default function CreateTicketDrawer({
-  open, onClose, defaultStatus = "To Do", sprintName, sprintId,
-  members = [], onCreated,
+  open,
+  onClose,
+  defaultStatus = "To Do",
+  sprintName,
+  sprintId,
+  members = [],
+  onCreated,
+  ticketKey,
+  initialData,
 }: CreateTicketDrawerProps) {
   const qc = useQueryClient();
 
   /* NOVA */
-  const [novaOpen,   setNovaOpen]   = useState(true);
-  const [nlText,     setNlText]     = useState("");
-  const [analyzing,  setAnalyzing]  = useState(false);
-  const [enhancing,  setEnhancing]  = useState(false);
+  const [novaOpen, setNovaOpen] = useState(true);
+  const [nlText, setNlText] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
   const [confidence, setConfidence] = useState<number | null>(null);
   const [duplicates, setDuplicates] = useState<DuplicateTicket[]>([]);
 
@@ -123,29 +194,76 @@ export default function CreateTicketDrawer({
 
   /* Link input */
   const [newLinkType, setNewLinkType] = useState(LINK_TYPES[0]);
-  const [newLinkKey,  setNewLinkKey]  = useState("");
+  const [newLinkKey, setNewLinkKey] = useState("");
 
   /* File drag */
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* Form */
   const [form, setForm] = useState<FormState>({
-    title: "", description: "", issue_type: "Task", priority: "Medium",
-    status: defaultStatus, reporter: "", epic: "", parent: "",
-    originalEst: "", timeSpent: "", remaining: "", linkedIssues: [], attachments: [],
+    title: "",
+    description: "",
+    issue_type: "Task",
+    priority: "Medium",
+    status: defaultStatus,
+    reporter: "",
+    epic: "",
+    parent: "",
+    originalEst: "",
+    timeSpent: "",
+    remaining: "",
+    linkedIssues: [],
+    attachments: [],
     labels: [],
   });
 
-  // Reset form when drawer opens
+  const isEdit = Boolean(ticketKey);
+
+  // Reset/prefill form when drawer opens
   useEffect(() => {
     if (open) {
-      setForm({
-        title: "", description: "", issue_type: "Task", priority: "Medium",
-        status: defaultStatus, reporter: "", epic: "", parent: "",
-        originalEst: "", timeSpent: "", remaining: "", linkedIssues: [], attachments: [],
-        labels: [],
-      });
-      setNovaOpen(true);
+      if (isEdit && initialData) {
+        setForm({
+          title: initialData.title || "",
+          description: initialData.description || "",
+          issue_type: initialData.issue_type || "Task",
+          priority: initialData.priority || "Medium",
+          status: initialData.status || defaultStatus,
+          reporter: initialData.reporter || "",
+          epic: initialData.epic || "",
+          parent: initialData.parent || "",
+          originalEst: initialData.originalEst || "",
+          timeSpent: initialData.timeSpent || "",
+          remaining: initialData.remaining || "",
+          linkedIssues: initialData.linkedIssues || [],
+          attachments: initialData.attachments || [],
+          labels: initialData.labels || [],
+          assignee: initialData.assignee,
+          pod: initialData.pod,
+          client: initialData.client,
+          story_points: initialData.story_points,
+          due_date: initialData.due_date,
+        });
+        setNovaOpen(false);
+      } else {
+        setForm({
+          title: "",
+          description: "",
+          issue_type: "Task",
+          priority: "Medium",
+          status: defaultStatus,
+          reporter: "",
+          epic: "",
+          parent: "",
+          originalEst: "",
+          timeSpent: "",
+          remaining: "",
+          linkedIssues: [],
+          attachments: [],
+          labels: [],
+        });
+        setNovaOpen(true);
+      }
       setNlText("");
       setConfidence(null);
       setDuplicates([]);
@@ -154,7 +272,7 @@ export default function CreateTicketDrawer({
       setNewLinkType(LINK_TYPES[0]);
       setNewLinkKey("");
     }
-  }, [open, defaultStatus]);
+  }, [open, defaultStatus, isEdit, initialData]);
 
   const set = (k: keyof FormState, v: unknown) =>
     setForm((p) => ({ ...p, [k]: v }));
@@ -162,10 +280,10 @@ export default function CreateTicketDrawer({
   /* Filters */
   const { data: filtersData } = useQuery({
     queryKey: QUERY_KEYS.filters(),
-    queryFn:  fetchFilters,
+    queryFn: fetchFilters,
   });
-  const users   = filtersData?.users   ?? members.map((m) => m.name);
-  const pods    = filtersData?.pods    ?? [];
+  const users = filtersData?.users ?? members.map((m) => m.name);
+  const pods = filtersData?.pods ?? [];
   const clients = filtersData?.clients ?? [];
 
   /* Create mutation */
@@ -181,6 +299,19 @@ export default function CreateTicketDrawer({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  /* Update mutation */
+  const updateMut = useMutation({
+    mutationFn: (payload: Partial<TicketCreate>) => updateTicket(ticketKey!, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      qc.invalidateQueries({ queryKey: ["new-tickets"] });
+      toast.success("Ticket updated!");
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   /* ── NOVA: analyze NL ── */
   async function handleAnalyze() {
     if (!nlText.trim()) return;
@@ -189,15 +320,15 @@ export default function CreateTicketDrawer({
       const r: NLAnalysisResult = await analyzeTicketNL(nlText);
       setForm((p) => ({
         ...p,
-        title:        r.title        ?? p.title,
-        description:  r.description  ?? p.description,
-        pod:          r.pod          ?? p.pod,
-        client:       r.client       ?? p.client,
-        issue_type:   r.issue_type   ?? p.issue_type,
-        priority:     r.priority     ?? p.priority,
+        title: r.title ?? p.title,
+        description: r.description ?? p.description,
+        pod: r.pod ?? p.pod,
+        client: r.client ?? p.client,
+        issue_type: r.issue_type ?? p.issue_type,
+        priority: r.priority ?? p.priority,
         story_points: r.story_points ?? p.story_points,
-        assignee:     r.assignee     ?? p.assignee,
-        labels:       r.labels       ?? p.labels,
+        assignee: r.assignee ?? p.assignee,
+        labels: r.labels ?? p.labels,
       }));
       setConfidence(r.confidence ?? null);
       if (r.duplicates?.length) setDuplicates(r.duplicates);
@@ -212,11 +343,14 @@ export default function CreateTicketDrawer({
 
   /* ── NOVA: enhance description ── */
   async function handleEnhanceDesc() {
-    if (!form.title.trim()) { toast.error("Add a title first"); return; }
+    if (!form.title.trim()) {
+      toast.error("Add a title first");
+      return;
+    }
     setEnhancing(true);
     try {
       const r: NLAnalysisResult = await analyzeTicketNL(
-        `Improve and expand this description for a ${form.issue_type} ticket titled "${form.title}": ${form.description || "(no description yet)"}`
+        `Improve and expand this description for a ${form.issue_type} ticket titled "${form.title}": ${form.description || "(no description yet)"}`,
       );
       if (r.description) set("description", r.description);
       toast.success("Description enhanced by NOVA");
@@ -239,11 +373,17 @@ export default function CreateTicketDrawer({
   /* ── Linked issues ── */
   function addLink() {
     if (!newLinkKey.trim()) return;
-    set("linkedIssues", [...form.linkedIssues, { type: newLinkType, key: newLinkKey.trim().toUpperCase() }]);
+    set("linkedIssues", [
+      ...form.linkedIssues,
+      { type: newLinkType, key: newLinkKey.trim().toUpperCase() },
+    ]);
     setNewLinkKey("");
   }
   function removeLink(i: number) {
-    set("linkedIssues", form.linkedIssues.filter((_, idx) => idx !== i));
+    set(
+      "linkedIssues",
+      form.linkedIssues.filter((_, idx) => idx !== i),
+    );
   }
 
   /* ── Attachments ── */
@@ -252,31 +392,50 @@ export default function CreateTicketDrawer({
     set("attachments", [...form.attachments, ...Array.from(files)]);
   }
   function removeAttachment(i: number) {
-    set("attachments", form.attachments.filter((_, idx) => idx !== i));
+    set(
+      "attachments",
+      form.attachments.filter((_, idx) => idx !== i),
+    );
   }
 
   /* ── Submit ── */
   function handleSubmit() {
-    if (!form.title.trim()) { toast.error("Summary is required"); return; }
+    if (!form.title.trim()) {
+      toast.error("Summary is required");
+      return;
+    }
     if (onCreated) {
       onCreated({ ...form });
       onClose();
       return;
     }
     const payload: TicketCreate = {
-      title: form.title, description: form.description,
-      issue_type: form.issue_type, priority: form.priority,
-      assignee: form.assignee, pod: form.pod, client: form.client,
-      story_points: form.story_points, labels: form.labels,
+      title: form.title,
+      description: form.description,
+      issue_type: form.issue_type,
+      priority: form.priority,
+      status: form.status,
+      assignee: form.assignee,
+      pod: form.pod,
+      client: form.client,
+      story_points: form.story_points,
+      labels: form.labels,
       due_date: form.due_date,
     };
-    if (sprintId) payload.sprint_id = sprintId;
-    createMut.mutate(payload);
+    if (sprintId) payload.sprint_id = String(sprintId);
+    if (isEdit) {
+      updateMut.mutate(payload);
+    } else {
+      createMut.mutate(payload);
+    }
   }
 
-  const typeConfig     = ISSUE_TYPES.find((t) => t.value === form.issue_type) ?? ISSUE_TYPES[2];
-  const priorityConfig = PRIORITIES.find((p)  => p.value  === form.priority)  ?? PRIORITIES[2];
-  const statusConfig   = STATUSES.find((s)    => s.value  === form.status)    ?? STATUSES[0];
+  const typeConfig =
+    ISSUE_TYPES.find((t) => t.value === form.issue_type) ?? ISSUE_TYPES[2];
+  const priorityConfig =
+    PRIORITIES.find((p) => p.value === form.priority) ?? PRIORITIES[2];
+  const statusConfig =
+    STATUSES.find((s) => s.value === form.status) ?? STATUSES[0];
 
   /* ── Footer ── */
   const footer = (
@@ -287,17 +446,25 @@ export default function CreateTicketDrawer({
       <button
         className={styles.btnPrimary}
         onClick={handleSubmit}
-        disabled={createMut.isPending}
+        disabled={createMut.isPending || updateMut.isPending}
       >
-        {createMut.isPending ? (
+        {createMut.isPending || updateMut.isPending ? (
           <>
-            <svg className={styles.spinner} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <svg
+              className={styles.spinner}
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+            >
               <path d="M21 12a9 9 0 1 1-6.219-8.56" />
             </svg>
-            Creating…
+            {isEdit ? "Saving…" : "Creating…"}
           </>
         ) : (
-          <>Create Ticket</>
+          <>{isEdit ? "Save Changes" : "Create Ticket"}</>
         )}
       </button>
     </div>
@@ -308,34 +475,56 @@ export default function CreateTicketDrawer({
       open={open}
       onClose={onClose}
       size="md"
-      title="Create Issue"
+      title={isEdit ? `Edit ${ticketKey}` : "Create Issue"}
       subtitle={sprintName ? `Sprint: ${sprintName}` : undefined}
       badge={
-        <div style={{
-          display: "flex", alignItems: "center", gap: 6,
-          background: "var(--accent-glow)", border: "1px solid var(--accent-border)",
-          color: "var(--accent)", fontSize: 10, fontWeight: 700,
-          letterSpacing: "0.08em", padding: "3px 10px", borderRadius: 99,
-        }}>
-          <span style={{
-            width: 5, height: 5, borderRadius: "50%", background: "var(--accent)",
-            boxShadow: "0 0 6px var(--accent)", animation: "pulse 2s infinite",
-          }} />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "var(--accent-glow)",
+            border: "1px solid var(--accent-border)",
+            color: "var(--accent)",
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            padding: "3px 10px",
+            borderRadius: 99,
+          }}
+        >
+          <span
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: "50%",
+              background: "var(--accent)",
+              boxShadow: "0 0 6px var(--accent)",
+              animation: "pulse 2s infinite",
+            }}
+          />
           NOVA AI
         </div>
       }
       footer={footer}
     >
       <div className={styles.drawerBody}>
-
         {/* ── NOVA AI Panel ── */}
         <div className={styles.novaPanel}>
-          <div className={styles.novaHeader} onClick={() => setNovaOpen((v) => !v)}>
+          <div
+            className={styles.novaHeader}
+            onClick={() => setNovaOpen((v) => !v)}
+          >
             <div className={styles.novaIcon}>
               <AutoAwesomeIcon sx={{ fontSize: 14 }} />
             </div>
-            <div className={styles.novaTitle}>Describe in plain English — NOVA will fill the form</div>
-            <ExpandMoreIcon className={`${styles.novaChevron} ${novaOpen ? styles.novaChevronOpen : ""}`} sx={{ fontSize: 16 }} />
+            <div className={styles.novaTitle}>
+              Describe in plain English — NOVA will fill the form
+            </div>
+            <ExpandMoreIcon
+              className={`${styles.novaChevron} ${novaOpen ? styles.novaChevronOpen : ""}`}
+              sx={{ fontSize: 16 }}
+            />
           </div>
           {novaOpen && (
             <div className={styles.novaBody}>
@@ -345,7 +534,9 @@ export default function CreateTicketDrawer({
                 placeholder='e.g. "Fix login timeout in DPAI — high priority bug, affects Colgate users, ~3 story points"'
                 value={nlText}
                 onChange={(e) => setNlText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && e.ctrlKey && handleAnalyze()}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && e.ctrlKey && handleAnalyze()
+                }
               />
               <div className={styles.novaActions}>
                 <button
@@ -356,7 +547,15 @@ export default function CreateTicketDrawer({
                 >
                   {analyzing ? (
                     <>
-                      <svg className={styles.spinner} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <svg
+                        className={styles.spinner}
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                      >
                         <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                       </svg>
                       Analyzing…
@@ -368,7 +567,10 @@ export default function CreateTicketDrawer({
                     </>
                   )}
                 </button>
-                <button className={styles.btnGhost} onClick={() => setNovaOpen(false)}>
+                <button
+                  className={styles.btnGhost}
+                  onClick={() => setNovaOpen(false)}
+                >
                   Fill manually
                 </button>
                 <span className={styles.novaHint}>Ctrl+Enter</span>
@@ -382,9 +584,14 @@ export default function CreateTicketDrawer({
           <div className={styles.confidenceRow}>
             <span className={styles.confidenceLabel}>NOVA confidence</span>
             <div className={styles.confidenceBar}>
-              <div className={styles.confidenceFill} style={{ width: `${confidence * 100}%` }} />
+              <div
+                className={styles.confidenceFill}
+                style={{ width: `${confidence * 100}%` }}
+              />
             </div>
-            <span className={styles.confidenceValue}>{Math.round(confidence * 100)}%</span>
+            <span className={styles.confidenceValue}>
+              {Math.round(confidence * 100)}%
+            </span>
           </div>
         )}
 
@@ -396,13 +603,20 @@ export default function CreateTicketDrawer({
                 <WarningAmberIcon sx={{ fontSize: 13 }} />
                 Similar tickets found
               </div>
-              <button className={styles.duplicateClose} onClick={() => setDuplicates([])}>✕</button>
+              <button
+                className={styles.duplicateClose}
+                onClick={() => setDuplicates([])}
+              >
+                ✕
+              </button>
             </div>
             {duplicates.map((d) => (
               <div key={d.key} className={styles.duplicateItem}>
                 <span className={styles.duplicateKey}>{d.key}</span>
                 <span className={styles.duplicateSummary}>{d.summary}</span>
-                <span className={styles.duplicateScore}>{Math.round(d.similarity * 100)}%</span>
+                <span className={styles.duplicateScore}>
+                  {Math.round(d.similarity * 100)}%
+                </span>
               </div>
             ))}
           </div>
@@ -436,7 +650,15 @@ export default function CreateTicketDrawer({
               title="Enhance description with NOVA AI"
             >
               {enhancing ? (
-                <svg className={styles.spinner} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <svg
+                  className={styles.spinner}
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                >
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
               ) : (
@@ -458,8 +680,18 @@ export default function CreateTicketDrawer({
                 renderValue={(v) => {
                   const t = ISSUE_TYPES.find((x) => x.value === v)!;
                   return (
-                    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)" }}>
-                      <span style={{ color: t.color, display: "flex" }}>{t.icon}</span>
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 13,
+                        color: "var(--text)",
+                      }}
+                    >
+                      <span style={{ color: t.color, display: "flex" }}>
+                        {t.icon}
+                      </span>
                       {t.label}
                     </span>
                   );
@@ -467,8 +699,17 @@ export default function CreateTicketDrawer({
               >
                 {ISSUE_TYPES.map((t) => (
                   <MenuItem key={t.value} value={t.value}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-                      <span style={{ color: t.color, display: "flex" }}>{t.icon}</span>
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: 13,
+                      }}
+                    >
+                      <span style={{ color: t.color, display: "flex" }}>
+                        {t.icon}
+                      </span>
                       {t.label}
                     </span>
                   </MenuItem>
@@ -485,8 +726,18 @@ export default function CreateTicketDrawer({
                 renderValue={(v) => {
                   const p = PRIORITIES.find((x) => x.value === v)!;
                   return (
-                    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)" }}>
-                      <span style={{ color: p.color, display: "flex" }}>{p.icon}</span>
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 13,
+                        color: "var(--text)",
+                      }}
+                    >
+                      <span style={{ color: p.color, display: "flex" }}>
+                        {p.icon}
+                      </span>
                       {p.label}
                     </span>
                   );
@@ -494,8 +745,17 @@ export default function CreateTicketDrawer({
               >
                 {PRIORITIES.map((p) => (
                   <MenuItem key={p.value} value={p.value}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-                      <span style={{ color: p.color, display: "flex" }}>{p.icon}</span>
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: 13,
+                      }}
+                    >
+                      <span style={{ color: p.color, display: "flex" }}>
+                        {p.icon}
+                      </span>
                       {p.label}
                     </span>
                   </MenuItem>
@@ -512,8 +772,23 @@ export default function CreateTicketDrawer({
                 renderValue={(v) => {
                   const s = STATUSES.find((x) => x.value === v)!;
                   return (
-                    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)" }}>
-                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color }} />
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 13,
+                        color: "var(--text)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
+                          background: s.color,
+                        }}
+                      />
                       {s.label}
                     </span>
                   );
@@ -521,8 +796,22 @@ export default function CreateTicketDrawer({
               >
                 {STATUSES.map((s) => (
                   <MenuItem key={s.value} value={s.value}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color }} />
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: 13,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
+                          background: s.color,
+                        }}
+                      />
                       {s.label}
                     </span>
                   </MenuItem>
@@ -553,7 +842,9 @@ export default function CreateTicketDrawer({
                   onChange={(_, v) => set("assignee", v ?? undefined)}
                   size="small"
                   fullWidth
-                  renderInput={(params) => <TextField {...params} label="Assignee" />}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Assignee" />
+                  )}
                   sx={{ "& .MuiOutlinedInput-root": { fontSize: 13 } }}
                 />
                 <Autocomplete
@@ -562,7 +853,9 @@ export default function CreateTicketDrawer({
                   onChange={(_, v) => set("reporter", v ?? "")}
                   size="small"
                   fullWidth
-                  renderInput={(params) => <TextField {...params} label="Reporter" />}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Reporter" />
+                  )}
                   sx={{ "& .MuiOutlinedInput-root": { fontSize: 13 } }}
                 />
               </div>
@@ -574,10 +867,21 @@ export default function CreateTicketDrawer({
                   <Select
                     label="Story Points"
                     value={form.story_points ?? ""}
-                    onChange={(e) => set("story_points", e.target.value ? Number(e.target.value) : undefined)}
+                    onChange={(e) =>
+                      set(
+                        "story_points",
+                        e.target.value ? Number(e.target.value) : undefined,
+                      )
+                    }
                   >
-                    <MenuItem value=""><em>None</em></MenuItem>
-                    {STORY_POINTS.map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
+                    {STORY_POINTS.map((p) => (
+                      <MenuItem key={p} value={p}>
+                        {p}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
                 <TextField
@@ -595,16 +899,36 @@ export default function CreateTicketDrawer({
               <div className={styles.formRow}>
                 <FormControl size="small" fullWidth>
                   <InputLabel>POD</InputLabel>
-                  <Select label="POD" value={form.pod ?? ""} onChange={(e) => set("pod", e.target.value || undefined)}>
-                    <MenuItem value=""><em>None</em></MenuItem>
-                    {pods.map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}
+                  <Select
+                    label="POD"
+                    value={form.pod ?? ""}
+                    onChange={(e) => set("pod", e.target.value || undefined)}
+                  >
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
+                    {pods.map((p) => (
+                      <MenuItem key={p} value={p}>
+                        {p}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
                 <FormControl size="small" fullWidth>
                   <InputLabel>Client</InputLabel>
-                  <Select label="Client" value={form.client ?? ""} onChange={(e) => set("client", e.target.value || undefined)}>
-                    <MenuItem value=""><em>None</em></MenuItem>
-                    {clients.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+                  <Select
+                    label="Client"
+                    value={form.client ?? ""}
+                    onChange={(e) => set("client", e.target.value || undefined)}
+                  >
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
+                    {clients.map((c) => (
+                      <MenuItem key={c} value={c}>
+                        {c}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </div>
@@ -618,7 +942,12 @@ export default function CreateTicketDrawer({
                       {l}
                       <button
                         className={styles.labelRemove}
-                        onClick={() => set("labels", (form.labels ?? []).filter((x) => x !== l))}
+                        onClick={() =>
+                          set(
+                            "labels",
+                            (form.labels ?? []).filter((x) => x !== l),
+                          )
+                        }
                       >
                         ✕
                       </button>
@@ -670,7 +999,10 @@ export default function CreateTicketDrawer({
                   <LinkIcon sx={{ fontSize: 13, color: "var(--text-3)" }} />
                   <span className={styles.linkType}>{lnk.type}</span>
                   <span className={styles.linkKey}>{lnk.key}</span>
-                  <button className={styles.linkDelete} onClick={() => removeLink(i)}>
+                  <button
+                    className={styles.linkDelete}
+                    onClick={() => removeLink(i)}
+                  >
                     <DeleteOutlineIcon sx={{ fontSize: 14 }} />
                   </button>
                 </div>
@@ -681,7 +1013,11 @@ export default function CreateTicketDrawer({
                     value={newLinkType}
                     onChange={(e) => setNewLinkType(e.target.value)}
                   >
-                    {LINK_TYPES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+                    {LINK_TYPES.map((t) => (
+                      <MenuItem key={t} value={t}>
+                        {t}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
                 <input
@@ -750,24 +1086,48 @@ export default function CreateTicketDrawer({
                 className={styles.dropZone}
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleFiles(e.dataTransfer.files);
+                }}
               >
                 <AttachFileIcon sx={{ fontSize: 24, color: "var(--text-3)" }} />
                 <div className={styles.dropZoneText}>
-                  Drop files here or <span className={styles.dropZoneAccent}>browse</span>
+                  Drop files here or{" "}
+                  <span className={styles.dropZoneAccent}>browse</span>
                 </div>
                 <div className={styles.dropZoneHint}>Max 25 MB per file</div>
               </div>
-              <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => handleFiles(e.target.files)} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                hidden
+                onChange={(e) => handleFiles(e.target.files)}
+              />
 
               {form.attachments.length > 0 && (
-                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+                <div
+                  style={{
+                    marginTop: 10,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                  }}
+                >
                   {form.attachments.map((f, i) => (
                     <div key={i} className={styles.fileItem}>
-                      <AttachFileIcon sx={{ fontSize: 14, color: "var(--text-3)" }} />
+                      <AttachFileIcon
+                        sx={{ fontSize: 14, color: "var(--text-3)" }}
+                      />
                       <span className={styles.fileName}>{f.name}</span>
-                      <span className={styles.fileSize}>{(f.size / 1024).toFixed(0)} KB</span>
-                      <button className={styles.linkDelete} onClick={() => removeAttachment(i)}>
+                      <span className={styles.fileSize}>
+                        {(f.size / 1024).toFixed(0)} KB
+                      </span>
+                      <button
+                        className={styles.linkDelete}
+                        onClick={() => removeAttachment(i)}
+                      >
                         <DeleteOutlineIcon sx={{ fontSize: 14 }} />
                       </button>
                     </div>
@@ -782,37 +1142,52 @@ export default function CreateTicketDrawer({
         <div className={styles.summaryBar}>
           <span
             className={styles.summaryChip}
-            style={{ background: `${typeConfig.color}18`, color: typeConfig.color, borderColor: `${typeConfig.color}44` }}
+            style={{
+              background: `${typeConfig.color}18`,
+              color: typeConfig.color,
+              borderColor: `${typeConfig.color}44`,
+            }}
           >
             <span style={{ display: "flex" }}>{typeConfig.icon}</span>
             {typeConfig.label}
           </span>
           <span
             className={styles.summaryChip}
-            style={{ background: `${priorityConfig.color}18`, color: priorityConfig.color, borderColor: `${priorityConfig.color}44` }}
+            style={{
+              background: `${priorityConfig.color}18`,
+              color: priorityConfig.color,
+              borderColor: `${priorityConfig.color}44`,
+            }}
           >
             <span style={{ display: "flex" }}>{priorityConfig.icon}</span>
             {priorityConfig.label}
           </span>
           <span
             className={styles.summaryChip}
-            style={{ background: `${statusConfig.color}18`, color: statusConfig.color, borderColor: `${statusConfig.color}44` }}
+            style={{
+              background: `${statusConfig.color}18`,
+              color: statusConfig.color,
+              borderColor: `${statusConfig.color}44`,
+            }}
           >
             <FiberManualRecordIcon sx={{ fontSize: "8px !important" }} />
             {statusConfig.label}
           </span>
           {form.assignee && (
-            <span className={`${styles.summaryChip} ${styles.summaryChipDefault}`}>
+            <span
+              className={`${styles.summaryChip} ${styles.summaryChipDefault}`}
+            >
               @ {form.assignee}
             </span>
           )}
           {form.story_points && (
-            <span className={`${styles.summaryChip} ${styles.summaryChipDefault}`}>
+            <span
+              className={`${styles.summaryChip} ${styles.summaryChipDefault}`}
+            >
               {form.story_points} pts
             </span>
           )}
         </div>
-
       </div>
     </SideDrawer>
   );

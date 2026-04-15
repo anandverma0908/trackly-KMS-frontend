@@ -1,5 +1,6 @@
 import axios from "axios";
 import type {
+  Ticket,
   TicketsResponse,
   SummaryResponse,
   FiltersResponse,
@@ -91,6 +92,12 @@ export async function fetchTickets(filters: MultiFilters): Promise<TicketsRespon
   return data;
 }
 
+export async function fetchTicket(key: string): Promise<Ticket> {
+  if (mock()) return mock().fetchTicket(key);
+  const { data } = await api.get<Ticket>(`/tickets/${key}`);
+  return data;
+}
+
 export async function fetchSummary(filters: MultiFilters): Promise<SummaryResponse> {
   if (mock()) return mock().fetchSummary(filters);
   const { data } = await api.get<SummaryResponse>("/summary", {
@@ -167,8 +174,22 @@ export async function updateTicketStatus(key: string, status: string) {
 }
 
 export async function analyzeTicketNL(text: string): Promise<NLAnalysisResult> {
-  const { data } = await api.post("/tickets/nl-create", { text });
-  return data;
+  if (mock()?.analyzeTicketNL) return mock().analyzeTicketNL(text);
+  const { data } = await api.post("/tickets/ai-analyze", { text });
+  const fields = data.fields ?? {};
+  return {
+    title: fields.title,
+    description: fields.description,
+    pod: fields.pod,
+    client: fields.client,
+    issue_type: fields.issue_type,
+    priority: fields.priority,
+    story_points: fields.story_points,
+    assignee: fields.assignee,
+    labels: fields.labels,
+    duplicates: data.duplicates,
+    confidence: data.confidence,
+  };
 }
 
 export async function analyzeTicket(key: string): Promise<NLAnalysisResult> {

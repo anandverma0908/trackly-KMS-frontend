@@ -35,7 +35,7 @@ function _normalizeType(t: string | null | undefined): string {
   return 'Task'
 }
 function _initials(name: string | null | undefined): string {
-  if (!name) return '??'
+  if (!name) return ''
   const parts = name.trim().split(' ')
   return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase()
 }
@@ -128,6 +128,13 @@ export function enableMocks() {
     fetchSprints: async ()                         => { await delay(300); return DUMMY_SPRINTS },
     fetchSprint: async (id: string)                => { await delay(250); return DUMMY_SPRINTS.find((s) => s.id === id) ?? DUMMY_SPRINTS[0] },
     fetchProject: async (pod: string)              => { await delay(350); return _buildMockProject(pod) },
+
+    fetchTicket: async (key: string) => {
+      await delay(300)
+      const t = DUMMY_TICKETS.tickets.find((x: any) => x.key === key || x.jira_key === key)
+      if (!t) throw new Error('Ticket not found')
+      return t
+    },
 
     createTicket: async (payload: TicketCreate) => {
       await delay(400)

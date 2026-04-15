@@ -32,7 +32,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     label: "Backlog",
     icon: <AssignmentIcon sx={{ fontSize: 15 }} />,
   },
-  { id: "roadmap", label: "Roadmap", icon: <MapIcon sx={{ fontSize: 15 }} /> },
+  // { id: "roadmap", label: "Roadmap", icon: <MapIcon sx={{ fontSize: 15 }} /> },
   {
     id: "active-sprints",
     label: "Active Sprints",
@@ -50,7 +50,7 @@ const TODAY = new Date().toLocaleDateString("en-US", {
 export default function ProjectDetailPage() {
   const { projectId: pod } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<Tab>("summary");
+  const [activeTab, setActiveTab] = useState<Tab>("active-sprints");
 
   /* ── Fetch project data ── */
   const { data: project, isLoading } = useQuery({
@@ -209,7 +209,7 @@ export default function ProjectDetailPage() {
       <div className={styles.tabContent}>
         {activeTab === "summary" && <SummaryTab project={project} />}
         {activeTab === "backlog" && <BacklogTab project={project} />}
-        {activeTab === "roadmap" && <RoadmapTab project={project} />}
+        {/* {activeTab === "roadmap" && <RoadmapTab project={project} />} */}
         {activeTab === "active-sprints" && (
           <ActiveSprintsTab project={project} />
         )}
