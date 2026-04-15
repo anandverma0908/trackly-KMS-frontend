@@ -1,5 +1,6 @@
 .page {
   display: flex;
+  padding: 22px 24px;
   flex-direction: column;
   height: 100%;
   min-height: 0;
@@ -11,8 +12,10 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 24px 0;
+  padding: 18px 24px;
   flex-wrap: wrap;
+  border-radius: var(--r-xl);
+  background: var(--bgrnd);
 }
 
 .headerLeft {
@@ -150,12 +153,15 @@
   flex-shrink: 0;
   transition: transform 0.15s;
 }
-.memberAvatar:hover { transform: translateY(-2px); z-index: 30 !important; }
+.memberAvatar:hover {
+  transform: translateY(-2px);
+  z-index: 30 !important;
+}
 
 /* Accent line */
 .accentLine {
   height: 2px;
-  margin: 14px 24px 0;
+  margin: 0 24px;
   border-radius: 100px;
   opacity: 0.5;
 }
@@ -166,12 +172,14 @@
   align-items: center;
   gap: 0;
   padding: 0 24px;
-  border-bottom: 1px solid var(--border-2);
+  /* border-bottom: 1px solid var(--border-2); */
   margin-top: 6px;
   overflow-x: auto;
   scrollbar-width: none;
 }
-.tabBar::-webkit-scrollbar { display: none; }
+.tabBar::-webkit-scrollbar {
+  display: none;
+}
 
 .tab {
   display: flex;
@@ -188,10 +196,13 @@
   font-family: var(--font-sans);
   transition: all 0.15s;
   white-space: nowrap;
-  margin-bottom: -1px;
 }
-.tab:hover { color: var(--text); }
-.tabActive { color: var(--accent); }
+.tab:hover {
+  color: var(--text);
+}
+.tabActive {
+  color: var(--accent);
+}
 
 /* ── Tab Content ── */
 .tabContent {
@@ -209,5 +220,13 @@
   padding: 100px 24px;
   text-align: center;
 }
-.notFoundIcon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
-.notFoundTitle { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+.notFoundIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+.notFoundTitle {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}

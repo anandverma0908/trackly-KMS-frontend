@@ -1,9 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { AuthUser, UserRole } from "./types";
-import { ROUTE_PERMISSIONS } from "./types";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 interface LoginPayload {
   email: string;
@@ -59,7 +57,7 @@ export const useAuthStore = create<AuthStore>()(
       isLoggedIn: false,
 
       login: async ({ email, password }: LoginPayload) => {
-        const res = await fetch(`${API}/api/auth/login`, {
+        const res = await fetch(`/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
@@ -77,7 +75,7 @@ export const useAuthStore = create<AuthStore>()(
       logout: () => {
         const { token } = get();
         if (token) {
-          fetch(`${API}/api/auth/logout`, {
+          fetch(`/api/auth/logout`, {
             method: "POST",
             headers: { Authorization: `Bearer ${token}` },
           }).catch(() => {});
@@ -92,12 +90,10 @@ export const useAuthStore = create<AuthStore>()(
         return perms.includes(action);
       },
 
-      canAccessRoute: (path: string) => {
+      canAccessRoute: (_path: string) => {
         const { user } = get();
         if (!user) return false;
-        const allowed = ROUTE_PERMISSIONS[path];
-        if (!allowed) return true;
-        return allowed.includes(user.role);
+        return true;
       },
 
       getScopedPod: () => {

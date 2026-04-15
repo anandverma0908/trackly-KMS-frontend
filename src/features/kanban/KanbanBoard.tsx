@@ -2,13 +2,15 @@ import { useState, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
+  closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
   DragStartEvent,
   DragEndEvent,
+  DragOverEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -21,7 +23,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchTickets, updateTicketStatus } from "@/services/api";
 import { IssueTypeBadge } from "@/components/ui/Badge";
 import TicketDetailDrawer from "@/features/tickets/TicketDetailDrawer";
-import TicketCreateModal from "@/features/tickets/TicketCreateModal";
+import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
 import type { Ticket } from "@/types";
 import styles from "./KanbanBoard.module.css";
 
@@ -33,6 +35,8 @@ const COLUMNS = [
   { id: "Done",        label: "Done",        color: "var(--green)" },
 ];
 
+const COLUMN_IDS = new Set(COLUMNS.map((c) => c.id));
+
 type Swimlane = "none" | "assignee" | "priority" | "pod";
 const SWIMLANE_OPTIONS: { value: Swimlane; label: string }[] = [
   { value: "none",     label: "No grouping" },
@@ -43,39 +47,60 @@ const SWIMLANE_OPTIONS: { value: Swimlane; label: string }[] = [
 
 export default function KanbanBoard() {
   const qc = useQueryClient();
-  const [swimlane, setSwimlane] = useState<Swimlane>("none");
-  const [dragging, setDragging]           = useState<Ticket | null>(null);
-  const [detailTicket, setDetailTicket]   = useState<Ticket | null>(null);
-  const [showCreate, setShowCreate]       = useState(false);
+  const [swimlane, setSwimlane]         = useState<Swimlane>("none");
+  const [dragging, setDragging]         = useState<Ticket | null>(null);
+  const [overColumnId, setOverColumnId] = useState<string | null>(null);
+  const [detailTicket, setDetailTicket] = useState<Ticket | null>(null);
+  const [showCreate, setShowCreate]     = useState(false);
+
+  // Optimistic local status overrides — applied immediately on drop
+  const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const { data, isLoading } = useQuery({
     queryKey: ["kanban-tickets"],
-    queryFn: () => fetchTickets({}),
+    queryFn:  () => fetchTickets({}),
   });
 
   const statusMut = useMutation({
     mutationFn: ({ key, status }: { key: string; status: string }) =>
       updateTicketStatus(key, status),
-    onSettled: () => qc.invalidateQueries({ queryKey: ["kanban-tickets"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+    },
+    onError: (_err, { key }) => {
+      // Revert optimistic update
+      setLocalStatuses((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    },
   });
 
-  const tickets = data?.tickets ?? [];
+  // Merge server data with local optimistic overrides
+  const tickets = useMemo(
+    () =>
+      (data?.tickets ?? []).map((t) => ({
+        ...t,
+        status: localStatuses[t.key] ?? t.status,
+      })),
+    [data, localStatuses],
+  );
 
-  // Group by swimlane
   const groups = useMemo(() => {
     if (swimlane === "none") return [{ key: "all", label: null, tickets }];
     const map = new Map<string, Ticket[]>();
     tickets.forEach((t) => {
-      const k = (t as any)[swimlane] || "Unassigned";
+      const k = (t as Record<string, unknown>)[swimlane] as string || "—";
       if (!map.has(k)) map.set(k, []);
       map.get(k)!.push(t);
     });
-    return Array.from(map.entries()).map(([key, tickets]) => ({ key, label: key, tickets }));
+    return Array.from(map.entries()).map(([key, tix]) => ({ key, label: key, tickets: tix }));
   }, [tickets, swimlane]);
 
   function handleDragStart(event: DragStartEvent) {
@@ -83,25 +108,45 @@ export default function KanbanBoard() {
     if (t) setDragging(t);
   }
 
+  function handleDragOver(event: DragOverEvent) {
+    const { over } = event;
+    if (!over) { setOverColumnId(null); return; }
+    const overId = over.id as string;
+    if (COLUMN_IDS.has(overId)) {
+      setOverColumnId(overId);
+    } else {
+      // over a ticket — find which column it belongs to
+      const target = tickets.find((t) => t.key === overId);
+      setOverColumnId(target?.status ?? null);
+    }
+  }
+
   function handleDragEnd(event: DragEndEvent) {
-    setDragging(null);
     const { active, over } = event;
+    setDragging(null);
+    setOverColumnId(null);
     if (!over) return;
+
     const ticketKey = active.id as string;
     const overId    = over.id as string;
+    const current   = tickets.find((t) => t.key === ticketKey);
 
-    // If dropped over a column header
-    const col = COLUMNS.find((c) => c.id === overId);
-    if (col) {
-      statusMut.mutate({ key: ticketKey, status: col.id });
-      return;
+    let newStatus: string | null = null;
+
+    if (COLUMN_IDS.has(overId)) {
+      // Dropped directly on a column droppable
+      if (overId !== current?.status) newStatus = overId;
+    } else {
+      // Dropped on a ticket — adopt its column status
+      const target = tickets.find((t) => t.key === overId);
+      if (target && target.status !== current?.status) newStatus = target.status;
     }
 
-    // If dropped over another ticket — move to same column
-    const targetTicket = tickets.find((t) => t.key === overId);
-    if (targetTicket && targetTicket.status !== tickets.find((t) => t.key === ticketKey)?.status) {
-      statusMut.mutate({ key: ticketKey, status: targetTicket.status });
-    }
+    if (!newStatus) return;
+
+    // Apply optimistically
+    setLocalStatuses((prev) => ({ ...prev, [ticketKey]: newStatus! }));
+    statusMut.mutate({ key: ticketKey, status: newStatus });
   }
 
   if (isLoading) {
@@ -118,7 +163,9 @@ export default function KanbanBoard() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Kanban Board</h1>
-          <p className={styles.subtitle}>{tickets.length} tickets across {COLUMNS.length} columns</p>
+          <p className={styles.subtitle}>
+            {tickets.length} tickets across {COLUMNS.length} columns
+          </p>
         </div>
         <div className={styles.controls}>
           <div className={styles.swimlaneControl}>
@@ -142,8 +189,9 @@ export default function KanbanBoard() {
       {/* Board */}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={closestCenter}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <div className={styles.boardWrap}>
@@ -160,7 +208,10 @@ export default function KanbanBoard() {
                       key={col.id}
                       column={col}
                       tickets={colTickets}
-                      onTicketClick={setDetailTicket}
+                      isOver={overColumnId === col.id}
+                      onTicketClick={(t) => {
+                        if (!dragging) setDetailTicket(t);
+                      }}
                     />
                   );
                 })}
@@ -169,7 +220,7 @@ export default function KanbanBoard() {
           ))}
         </div>
 
-        <DragOverlay>
+        <DragOverlay dropAnimation={{ duration: 150, easing: "ease" }}>
           {dragging && <TicketCardContent ticket={dragging} />}
         </DragOverlay>
       </DndContext>
@@ -177,23 +228,33 @@ export default function KanbanBoard() {
       {detailTicket && (
         <TicketDetailDrawer ticket={detailTicket} onClose={() => setDetailTicket(null)} />
       )}
-      {showCreate && (
-        <TicketCreateModal onClose={() => setShowCreate(false)} />
-      )}
+      <CreateTicketDrawer
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+      />
     </div>
   );
 }
 
 /* ── Column ── */
 function KanbanColumn({
-  column, tickets, onTicketClick,
+  column,
+  tickets,
+  isOver,
+  onTicketClick,
 }: {
   column: { id: string; label: string; color: string };
   tickets: Ticket[];
+  isOver: boolean;
   onTicketClick: (t: Ticket) => void;
 }) {
+  const { setNodeRef } = useDroppable({ id: column.id });
+
   return (
-    <div className={styles.column} id={column.id}>
+    <div
+      className={styles.column}
+      style={isOver ? { borderColor: column.color, boxShadow: `0 0 0 1px ${column.color}33` } : {}}
+    >
       <div className={styles.columnHeader}>
         <span className={styles.columnDot} style={{ background: column.color }} />
         <span className={styles.columnLabel}>{column.label}</span>
@@ -204,12 +265,21 @@ function KanbanColumn({
         items={tickets.map((t) => t.key)}
         strategy={verticalListSortingStrategy}
       >
-        <div className={styles.cards}>
+        <div
+          ref={setNodeRef}
+          className={styles.cards}
+          style={isOver ? { background: `${column.color}0d` } : {}}
+        >
           {tickets.map((t) => (
             <SortableCard key={t.key} ticket={t} onClick={() => onTicketClick(t)} />
           ))}
           {tickets.length === 0 && (
-            <div className={styles.emptyCol}>Drop here</div>
+            <div
+              className={styles.emptyCol}
+              style={isOver ? { borderColor: column.color, color: column.color } : {}}
+            >
+              Drop here
+            </div>
           )}
         </div>
       </SortableContext>
@@ -219,18 +289,27 @@ function KanbanColumn({
 
 /* ── Sortable Card ── */
 function SortableCard({ ticket, onClick }: { ticket: Ticket; onClick: () => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: ticket.key,
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
     transition,
-    opacity: isDragging ? 0.4 : 1,
-  };
+    isDragging,
+  } = useSortable({ id: ticket.key });
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity:   isDragging ? 0 : 1,
+        cursor:    "grab",
+      }}
+      {...attributes}
+      {...listeners}
+    >
       <TicketCardContent ticket={ticket} onClick={onClick} />
     </div>
   );
@@ -238,7 +317,7 @@ function SortableCard({ ticket, onClick }: { ticket: Ticket; onClick: () => void
 
 /* ── Card Content ── */
 function TicketCardContent({ ticket, onClick }: { ticket: Ticket; onClick?: () => void }) {
-  const initials = ticket.assignee?.split(" ").map((n) => n[0]).join("").slice(0, 2) ?? "?";
+  const initials = (ticket.assignee || "").split(" ").map((n) => n[0]).join("").slice(0, 2);
   const priorityColor: Record<string, string> = {
     Highest: "var(--red)",
     High:    "var(--amber)",
@@ -248,7 +327,13 @@ function TicketCardContent({ ticket, onClick }: { ticket: Ticket; onClick?: () =
   };
 
   return (
-    <div className={styles.card} onClick={onClick}>
+    <div
+      className={styles.card}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
+    >
       <div className={styles.cardHeader}>
         <span className={styles.cardKey}>{ticket.key}</span>
         <IssueTypeBadge type={ticket.issue_type} />

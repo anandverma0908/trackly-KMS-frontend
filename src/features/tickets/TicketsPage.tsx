@@ -7,7 +7,7 @@ import { useDebounce } from "@/hooks";
 import { formatDate, formatHours } from "@/utils/formatters";
 import { IssueTypeBadge, StatusBadge, PODBadge } from "@/components/ui/Badge";
 import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
-import TicketCreateModal from "./TicketCreateModal";
+import CreateTicketDrawer from "./CreateTicketDrawer";
 import TicketDetailDrawer from "./TicketDetailDrawer";
 import type { Ticket } from "@/types";
 import styles from "./TicketsPage.module.css";
@@ -235,10 +235,12 @@ export default function TicketsPage() {
         />
       </div>
 
-      {/* Create Modal */}
-      {showCreate && (
-        <TicketCreateModal onClose={() => setShowCreate(false)} />
-      )}
+      {/* Create Drawer */}
+      <CreateTicketDrawer
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        defaultStatus="To Do"
+      />
 
       {/* Detail Drawer */}
       {selectedTicket && (

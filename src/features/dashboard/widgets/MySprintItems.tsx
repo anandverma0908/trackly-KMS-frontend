@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchSprints } from "@/services/api";
+import { fetchSprint, fetchSprints } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import Skeleton from "@/components/ui/Skeleton";
 import styles from "./MySprintItems.module.css";
@@ -12,13 +12,21 @@ const STATUS_ORDER = ["In Progress", "In Review", "To Do", "Done"];
 export default function MySprintItems() {
   const user = useAuthStore((s) => s.user);
 
-  const { data: sprints, isLoading } = useQuery({
+  const { data: sprints, isLoading: sprintsLoading } = useQuery({
     queryKey: ["sprints"],
     queryFn: fetchSprints,
   });
 
   const activeSprint = sprints?.find((s) => s.status === "active");
-  const myTickets = (activeSprint?.tickets ?? [])
+
+  // Fetch active sprint details to get tickets
+  const { data: sprintDetail, isLoading: detailLoading } = useQuery({
+    queryKey: ["sprint", activeSprint?.id],
+    queryFn: () => fetchSprint(activeSprint!.id),
+    enabled: !!activeSprint?.id,
+  });
+
+  const myTickets = (sprintDetail?.tickets ?? [])
     .filter((t) => t.assignee === user?.name || t.assignee_email === user?.email)
     .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
 
@@ -29,6 +37,8 @@ export default function MySprintItems() {
   const daysLeft = activeSprint
     ? Math.max(0, Math.ceil((new Date(activeSprint.end_date).getTime() - Date.now()) / 86_400_000))
     : null;
+
+  const isLoading = sprintsLoading || detailLoading;
 
   if (isLoading) {
     return (

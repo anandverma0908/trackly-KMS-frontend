@@ -2,8 +2,13 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Tooltip from "@mui/material/Tooltip";
 import LinearProgress from "@mui/material/LinearProgress";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import type { Project, ProjectTask, ProjectSprint } from "../spacesData";
 import { getPriorityColor } from "../spacesData";
+import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
+import { createTicket, updateTicketStatus } from "@/services/api";
+import type { TicketCreate } from "@/types";
 import styles from "./ActiveSprintsTab.module.css";
 
 import SearchIcon from "@mui/icons-material/Search";
@@ -16,7 +21,6 @@ import BugReportIcon from "@mui/icons-material/BugReport";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import BlockIcon from "@mui/icons-material/Block";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import CloseIcon from "@mui/icons-material/Close";
 
 const COLUMNS = [
   { id: "To Do",       label: "To Do",       color: "var(--text-3)",  emoji: "📋" },
@@ -35,107 +39,9 @@ const AI_FILTERS: { id: AIFilter; label: string; icon: React.ReactNode; color: s
   { id: "bugs",          label: "Bugs Only",     icon: <BugReportIcon sx={{ fontSize: 12 }} />,  color: "var(--purple)" },
 ];
 
-interface CreateTaskModalProps {
-  sprintName: string;
-  columnStatus: string;
-  project: Project;
-  onClose: () => void;
-  onCreate: (task: Partial<ProjectTask> & { status: string }) => void;
-}
-
-function CreateTaskModal({ sprintName, columnStatus, project, onClose, onCreate }: CreateTaskModalProps) {
-  const [title, setTitle]         = useState("");
-  const [type, setType]           = useState("Task");
-  const [priority, setPriority]   = useState("Medium");
-  const [assignee, setAssignee]   = useState("");
-  const [points, setPoints]       = useState(3);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!title.trim()) return;
-    onCreate({ title, type: type as any, priority: priority as any, assignee, storyPoints: points, status: columnStatus as any });
-    onClose();
-  }
-
-  return (
-    <div className={styles.modalOverlay} onClick={onClose}>
-      <motion.div
-        className={styles.modal}
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className={styles.modalHeader}>
-          <div className={styles.modalTitle}>Create Issue</div>
-          <div className={styles.modalSub}>{sprintName} · {columnStatus}</div>
-          <button className={styles.modalClose} onClick={onClose}>
-            <CloseIcon sx={{ fontSize: 16 }} />
-          </button>
-        </div>
-        <form className={styles.modalBody} onSubmit={handleSubmit}>
-          <div className={styles.formField}>
-            <label className={styles.formLabel}>Summary *</label>
-            <input
-              className={styles.formInput}
-              placeholder="Short description of the issue…"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              autoFocus
-              required
-            />
-          </div>
-          <div className={styles.formRow}>
-            <div className={styles.formField}>
-              <label className={styles.formLabel}>Type</label>
-              <select className={styles.formSelect} value={type} onChange={(e) => setType(e.target.value)}>
-                {["Story", "Bug", "Task", "Epic", "Subtask"].map(t => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div className={styles.formField}>
-              <label className={styles.formLabel}>Priority</label>
-              <select className={styles.formSelect} value={priority} onChange={(e) => setPriority(e.target.value)}>
-                {["Critical", "High", "Medium", "Low"].map(p => (
-                  <option key={p}>{p}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className={styles.formRow}>
-            <div className={styles.formField}>
-              <label className={styles.formLabel}>Assignee</label>
-              <select className={styles.formSelect} value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-                <option value="">Unassigned</option>
-                {project.members.map(m => (
-                  <option key={m.id} value={m.name}>{m.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className={styles.formField}>
-              <label className={styles.formLabel}>Story Points</label>
-              <input
-                className={styles.formInput}
-                type="number"
-                min={1}
-                max={21}
-                value={points}
-                onChange={(e) => setPoints(Number(e.target.value))}
-              />
-            </div>
-          </div>
-          <div className={styles.modalActions}>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary btn-sm">Create Issue</button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
-  );
-}
 
 export default function ActiveSprintsTab({ project }: { project: Project }) {
+  const qc = useQueryClient();
   const activeSprints = useMemo(
     () => project.sprints.filter(s => s.status === "active" || s.status === "planning"),
     [project]
@@ -148,15 +54,53 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
   const [aiFilter, setAiFilter]               = useState<AIFilter>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createColumn, setCreateColumn]       = useState("To Do");
+  // Optimistic local status overrides for drag-and-drop
+  const [localStatuses, setLocalStatuses]     = useState<Record<string, ProjectTask["status"]>>({});
+  // Temporary buffer for optimistically created tasks
   const [localTasks, setLocalTasks]           = useState<ProjectTask[]>([]);
   const [draggedTask, setDraggedTask]         = useState<ProjectTask | null>(null);
   const [dragOverCol, setDragOverCol]         = useState<string | null>(null);
 
-  // Combine sprint tasks + locally created tasks
+  const statusMut = useMutation({
+    mutationFn: ({ key, status }: { key: string; status: string }) =>
+      updateTicketStatus(key, status),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+    },
+    onError: (_err, { key }) => {
+      setLocalStatuses((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      toast.error("Failed to update status");
+    },
+  });
+
+  const createMut = useMutation({
+    mutationFn: createTicket,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+      qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+      toast.success("Ticket created!");
+      setShowCreateModal(false);
+      setTimeout(() => setLocalTasks([]), 400);
+    },
+    onError: (e: Error) => {
+      toast.error(e.message);
+      setLocalTasks([]);
+    },
+  });
+
+  // Combine sprint tasks with optimistic status overrides + locally created tasks
   const allSprintTasks = useMemo(() => {
     if (!selectedSprint) return [];
-    return [...selectedSprint.tasks, ...localTasks.filter(t => t.sprint === selectedSprint.id)];
-  }, [selectedSprint, localTasks]);
+    const sprintTasks = selectedSprint.tasks.map((t) => ({
+      ...t,
+      status: (localStatuses[t.key] ?? t.status) as ProjectTask["status"],
+    }));
+    return [...sprintTasks, ...localTasks.filter((t) => t.sprint === selectedSprint.id)];
+  }, [selectedSprint, localStatuses, localTasks]);
 
   function toggleMember(name: string) {
     setSelectedMembers(prev => {
@@ -181,7 +125,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
       tasks = tasks.filter(t =>
         t.title.toLowerCase().includes(q) ||
         t.key.toLowerCase().includes(q) ||
-        t.assignee.toLowerCase().includes(q)
+        (t.assignee || "").toLowerCase().includes(q)
       );
     }
 
@@ -218,40 +162,79 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
   function handleDrop(e: React.DragEvent, colId: string) {
     e.preventDefault();
     if (!draggedTask) return;
-    // Update task status (in local state if it's a local task, otherwise note it)
-    setLocalTasks(prev => {
-      const existing = prev.find(t => t.id === draggedTask.id);
-      if (existing) {
-        return prev.map(t => t.id === draggedTask.id ? { ...t, status: colId as any } : t);
-      }
-      // Clone from sprint tasks with new status
-      return [...prev, { ...draggedTask, id: `${draggedTask.id}-moved`, status: colId as any }];
-    });
+    const newStatus = colId as ProjectTask["status"];
+    if (draggedTask.status === newStatus) {
+      setDraggedTask(null);
+      setDragOverCol(null);
+      return;
+    }
+    setLocalStatuses((prev) => ({ ...prev, [draggedTask.key]: newStatus }));
+    statusMut.mutate({ key: draggedTask.key, status: newStatus });
     setDraggedTask(null);
     setDragOverCol(null);
   }
 
-  function handleCreateTask(data: Partial<ProjectTask> & { status: string }) {
-    const newTask: ProjectTask = {
+  function handleCreateTask(data: Partial<ProjectTask> & { status: string; title: string }) {
+    const payload: TicketCreate = {
+      title: data.title || "",
+      description: data.description || "",
+      issue_type: (data.type as string) || "Task",
+      priority: (data.priority as string) || "Medium",
+      assignee: data.assignee,
+      pod: project.key,
+      story_points: data.storyPoints ? Number(data.storyPoints) : undefined,
+      labels: data.labels,
+      status: data.status,
+      sprint_id: selectedSprint?.id,
+    };
+    const tempTask: ProjectTask = {
       id: `local-${Date.now()}`,
       key: `${project.key}-L${Date.now() % 1000}`,
-      title: data.title ?? "New Issue",
-      status: data.status as any,
-      priority: data.priority as any ?? "Medium",
-      type: data.type as any ?? "Task",
-      assignee: data.assignee ?? project.members[0]?.name ?? "",
-      assigneeInitials: data.assignee
-        ? (project.members.find(m => m.name === data.assignee)?.initials ?? "??")
-        : project.members[0]?.initials ?? "??",
-      assigneeColor: data.assignee
-        ? (project.members.find(m => m.name === data.assignee)?.color ?? "var(--accent)")
-        : project.members[0]?.color ?? "var(--accent)",
-      storyPoints: data.storyPoints ?? 3,
+      title: payload.title,
+      status: payload.status as ProjectTask["status"],
+      priority: (payload.priority || "Medium") as ProjectTask["priority"],
+      type: _normalizeType(payload.issue_type) as ProjectTask["type"],
+      assignee: payload.assignee || project.members[0]?.name || "",
+      assigneeInitials: _initials(payload.assignee || project.members[0]?.name),
+      assigneeColor: _hashColor(payload.assignee || project.members[0]?.name || ""),
+      storyPoints: payload.story_points || 0,
       createdAt: new Date().toISOString().split("T")[0],
       updatedAt: new Date().toISOString().split("T")[0],
       sprint: selectedSprint?.id,
+      labels: payload.labels || [],
     };
-    setLocalTasks(prev => [...prev, newTask]);
+    setLocalTasks((prev) => [...prev, tempTask]);
+    createMut.mutate(payload);
+  }
+
+  function _normalizeType(t: string | undefined): string {
+    if (!t) return "Task";
+    const l = t.toLowerCase();
+    if (l.includes("bug")) return "Bug";
+    if (l.includes("story")) return "Story";
+    if (l.includes("epic")) return "Epic";
+    if (l.includes("subtask")) return "Subtask";
+    return "Task";
+  }
+  function _initials(name: string | undefined): string {
+    if (!name) return "??";
+    const parts = name.trim().split(" ");
+    return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+  }
+  function _hashColor(name: string): string {
+    const MEMBER_COLORS = [
+      "linear-gradient(135deg,#4F7EFF,#818CF8)",
+      "linear-gradient(135deg,#34D399,#10B981)",
+      "linear-gradient(135deg,#FBBF24,#F59E0B)",
+      "linear-gradient(135deg,#F87171,#FCA5A5)",
+      "linear-gradient(135deg,#A78BFA,#C4B5FD)",
+      "linear-gradient(135deg,#22D3EE,#67E8F9)",
+      "linear-gradient(135deg,#64748B,#94A3B8)",
+      "linear-gradient(135deg,#FB923C,#FDBA74)",
+    ];
+    let h = 0;
+    for (const c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
+    return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length];
   }
 
   const sprintPct = selectedSprint
@@ -516,18 +499,27 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
         ))}
       </div>
 
-      {/* ── Create task modal ── */}
-      <AnimatePresence>
-        {showCreateModal && (
-          <CreateTaskModal
-            sprintName={selectedSprint.name}
-            columnStatus={createColumn}
-            project={project}
-            onClose={() => setShowCreateModal(false)}
-            onCreate={handleCreateTask}
-          />
-        )}
-      </AnimatePresence>
+      {/* ── Create task drawer ── */}
+      <CreateTicketDrawer
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        defaultStatus={createColumn}
+        sprintName={selectedSprint.name}
+        members={project.members}
+        onCreated={(data) => {
+          handleCreateTask({
+            title: data.title || "",
+            description: data.description || "",
+            type: data.issue_type as any,
+            priority: data.priority as any,
+            assignee: data.assignee,
+            storyPoints: data.story_points ? Number(data.story_points) : undefined,
+            status: (data.status ?? createColumn) as ProjectTask["status"],
+            dueDate: data.due_date,
+            labels: data.labels,
+          });
+        }}
+      />
     </div>
   );
 }

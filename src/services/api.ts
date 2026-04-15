@@ -26,6 +26,7 @@ import type {
   BurnRateAlert,
   WorkloadEntry,
 } from "@/types";
+import type { Project } from "@/features/spaces/spacesData";
 import { getAuthHeader } from "@/features/auth/useAuthStore";
 
 const api = axios.create({
@@ -143,20 +144,24 @@ function _download(blob: Blob, filename: string) {
 
 /* ── Ticket Management ── */
 export async function createTicket(payload: TicketCreate) {
+  if (mock()?.createTicket) return mock().createTicket(payload);
   const { data } = await api.post("/tickets", payload);
   return data;
 }
 
 export async function updateTicket(key: string, payload: Partial<TicketCreate>) {
+  if (mock()?.updateTicket) return mock().updateTicket(key, payload);
   const { data } = await api.put(`/tickets/${key}`, payload);
   return data;
 }
 
 export async function deleteTicket(key: string) {
+  if (mock()?.deleteTicket) return mock().deleteTicket(key);
   await api.delete(`/tickets/${key}`);
 }
 
 export async function updateTicketStatus(key: string, status: string) {
+  if (mock()?.updateTicketStatus) return mock().updateTicketStatus(key, status);
   const { data } = await api.post(`/tickets/${key}/status`, { status });
   return data;
 }
@@ -273,11 +278,13 @@ export async function novaQuery(query: string, scope?: 'all' | 'wiki'): Promise<
 
 /* ── Sprints ── */
 export async function fetchSprints(): Promise<Sprint[]> {
+  if (mock()?.fetchSprints) return mock().fetchSprints();
   const { data } = await api.get("/sprints");
   return data?.sprints ?? data ?? [];
 }
 
 export async function fetchSprint(id: string): Promise<Sprint> {
+  if (mock()?.fetchSprint) return mock().fetchSprint(id);
   const { data } = await api.get(`/sprints/${id}`);
   return data;
 }
@@ -399,6 +406,13 @@ export interface SprintDetail {
 
 export async function fetchSprintDetail(id: string): Promise<SprintDetail> {
   const { data } = await api.get<SprintDetail>(`/sprints/${id}`);
+  return data;
+}
+
+/* ── Spaces / Projects ── */
+export async function fetchProject(pod: string): Promise<Project> {
+  if (mock()?.fetchProject) return mock().fetchProject(pod);
+  const { data } = await api.get<Project>(`/spaces/${pod}/project`);
   return data;
 }
 

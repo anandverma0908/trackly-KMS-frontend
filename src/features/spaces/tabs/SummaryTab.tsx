@@ -108,10 +108,11 @@ export default function SummaryTab({ project }: { project: Project }) {
   const workloadData = useMemo(() => {
     const map: Record<string, { done: number; inProgress: number; todo: number }> = {};
     allTasks.forEach(t => {
-      if (!map[t.assignee]) map[t.assignee] = { done: 0, inProgress: 0, todo: 0 };
-      if (t.status === "Done")         map[t.assignee].done++;
-      else if (t.status === "In Progress") map[t.assignee].inProgress++;
-      else                             map[t.assignee].todo++;
+      const who = t.assignee || "—";
+      if (!map[who]) map[who] = { done: 0, inProgress: 0, todo: 0 };
+      if (t.status === "Done")         map[who].done++;
+      else if (t.status === "In Progress") map[who].inProgress++;
+      else                             map[who].todo++;
     });
     return Object.entries(map).map(([name, v]) => ({
       name: name.split(" ")[0],

@@ -1,4 +1,4 @@
-import type { TicketsResponse, SummaryResponse, FiltersResponse } from '@/types'
+import type { TicketsResponse, SummaryResponse, FiltersResponse, Sprint } from '@/types'
 
 export const DUMMY_FILTERS: FiltersResponse = {
   users: [
@@ -14,6 +14,12 @@ export const DUMMY_FILTERS: FiltersResponse = {
 export const DUMMY_SUMMARY: SummaryResponse = {
   total_hours:   8420,
   total_tickets: 1847,
+  by_issue_type: [
+    { issue_type: 'Feature', tickets: 920, hours: 4200, pct: 49.8 },
+    { issue_type: 'Bug', tickets: 580, hours: 2100, pct: 31.4 },
+    { issue_type: 'Task', tickets: 240, hours: 1300, pct: 13.0 },
+    { issue_type: 'Meeting', tickets: 107, hours: 820, pct: 5.8 },
+  ],
   by_pod: [
     { pod: 'DPAI',       hours: 2108, tickets: 412, clients: ['Colgate','Jockey'] },
     { pod: 'SNOP',       hours: 1580, tickets: 298, clients: ['SAAS','Colgate']  },
@@ -48,6 +54,9 @@ export const DUMMY_SUMMARY: SummaryResponse = {
 
 export const DUMMY_TICKETS: TicketsResponse = {
   count: 1847,
+  total: 1847,
+  limit: 20,
+  offset: 0,
   tickets: [
     { key:'DPAI-6998', project_key:'DPAI', project_name:'DPAI', summary:'ML pipeline for Colgate analytics dashboard', assignee:'Anand Verma', assignee_email:'anand@3sc.com', status:'Done', client:'Colgate', pod:'DPAI', hours_spent:12, original_estimate_hours:16, remaining_estimate_hours:4, created:'2026-03-01', updated:'2026-03-08', issue_type:'Feature', priority:'High', url:'#', worklogs:[] },
     { key:'DPAI-7013', project_key:'DPAI', project_name:'DPAI', summary:'Drag & Drop column resize not working in data grid', assignee:'Aastha Rai', assignee_email:'aastha@3sc.com', status:'Open', client:'Jockey', pod:'DPAI', hours_spent:0, original_estimate_hours:4, remaining_estimate_hours:4, created:'2026-03-12', updated:'2026-03-12', issue_type:'Bug', priority:'High', url:'#', worklogs:[] },
@@ -59,3 +68,49 @@ export const DUMMY_TICKETS: TicketsResponse = {
     { key:'DPAI-6930', project_key:'DPAI', project_name:'DPAI', summary:'Daily standup Sprint 42', assignee:'Anand Verma', assignee_email:'anand@3sc.com', status:'Done', client:'SAAS', pod:'DPAI', hours_spent:2.5, original_estimate_hours:0, remaining_estimate_hours:0, created:'2026-03-01', updated:'2026-03-31', issue_type:'Meeting', priority:'Low', url:'#', worklogs:[] },
   ],
 }
+
+export const DUMMY_SPRINTS: Sprint[] = [
+  {
+    id: 'sprint-42',
+    name: 'Sprint 42 — Colgate Integration',
+    goal: 'Complete Colgate analytics integration and BSV client rollout',
+    start_date: '2026-03-01',
+    end_date: '2026-04-30',
+    status: 'active',
+    total_points: 45,
+    done_points: 28,
+    ticket_count: 6,
+    completion_pct: 62,
+    velocity: 22,
+    tickets: DUMMY_TICKETS.tickets.slice(0, 6),
+    pod: 'DPAI',
+  },
+  {
+    id: 'sprint-41',
+    name: 'Sprint 41 — Security & DevOps',
+    goal: 'VAPT scans and AKS migration',
+    start_date: '2026-02-01',
+    end_date: '2026-02-28',
+    status: 'completed',
+    total_points: 38,
+    done_points: 38,
+    ticket_count: 4,
+    completion_pct: 100,
+    velocity: 19,
+    pod: 'PLAT',
+  },
+  {
+    id: 'sprint-43',
+    name: 'Sprint 43 — Forecasting Enhancements',
+    goal: 'Improve forecasting module and reporting dashboards',
+    start_date: '2026-05-01',
+    end_date: '2026-05-31',
+    status: 'planning',
+    total_points: 50,
+    done_points: 0,
+    ticket_count: 0,
+    completion_pct: 0,
+    velocity: null,
+    pod: 'DPAI',
+  },
+]

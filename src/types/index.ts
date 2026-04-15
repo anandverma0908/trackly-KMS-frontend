@@ -133,8 +133,9 @@ export interface TicketCreate {
   client?:      string
   issue_type:   string
   priority:     string
+  status?:      string
   story_points?: number
-  sprint_id?:   number
+  sprint_id?:   string
   labels?:      string[]
   due_date?:    string
 }
@@ -251,6 +252,7 @@ export interface Sprint {
   completion_pct?: number
   velocity?:       number | null
   tickets?:        Ticket[]
+  pod?:            string
 }
 
 export interface BurndownPoint {

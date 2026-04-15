@@ -3,7 +3,7 @@ import { fetchTickets } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import styles from "./RecentActivity.module.css";
 import { MdHistory } from "react-icons/md";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, parseISO } from "date-fns";
 
 interface ActivityItem {
   id: string;
@@ -22,6 +22,21 @@ const TYPE_CONFIG = {
   reviewed: { label: "Submitted review", color: "var(--amber)" },
 };
 
+function parseDateString(val: string | undefined | null): Date | null {
+  if (!val) return null;
+  // Date-only strings like "2026-03-01" parse as UTC midnight with new Date(),
+  // causing timezone offset issues. Append local time to fix that.
+  const iso = val.includes("T") ? val : `${val}T00:00:00`;
+  const d = parseISO(iso);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function formatRelative(val: string | undefined | null): string {
+  const d = parseDateString(val);
+  if (!d) return "—";
+  return formatDistanceToNow(d, { addSuffix: true });
+}
+
 export default function RecentActivity({ limit = 8 }: { limit?: number }) {
   const user = useAuthStore((s) => s.user);
   const isPersonal = useAuthStore((s) => s.can("view:own"));
@@ -33,7 +48,7 @@ export default function RecentActivity({ limit = 8 }: { limit?: number }) {
         user: isPersonal ? (user?.name ?? undefined) : undefined,
         dateFrom: null,
         dateTo: null,
-      }),
+      }), 
   });
 
   // Derive activity feed from tickets + worklogs
@@ -41,11 +56,13 @@ export default function RecentActivity({ limit = 8 }: { limit?: number }) {
 
   (data?.tickets ?? []).slice(0, 20).forEach((t) => {
     // Latest worklog → logged time
-    const wl = [...(t.worklogs ?? [])].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-    )[0];
+    const wl = [...(t.worklogs ?? [])]
+      .map((w) => ({ ...w, _date: parseDateString(w.date)?.getTime() ?? 0 }))
+      .sort((a, b) => b._date - a._date)[0];
+
     if (
       wl &&
+      wl._date > 0 &&
       (!isPersonal || wl.email === user?.email || wl.author === user?.name)
     ) {
       activities.push({
@@ -79,7 +96,8 @@ export default function RecentActivity({ limit = 8 }: { limit?: number }) {
 
   // Sort by time desc and deduplicate
   const sorted = activities
-    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+    .map((a) => ({ ...a, _time: parseDateString(a.time)?.getTime() ?? 0 }))
+    .sort((a, b) => b._time - a._time)
     .slice(0, limit);
 
   return (
@@ -108,9 +126,7 @@ export default function RecentActivity({ limit = 8 }: { limit?: number }) {
                 <span className={styles.title}>{item.title}</span>
                 {item.key && <span className={styles.key}>{item.key}</span>}
               </div>
-              <span className={styles.time}>
-                {formatDistanceToNow(new Date(item.time), { addSuffix: true })}
-              </span>
+              <span className={styles.time}>{formatRelative(item.time)}</span>
             </div>
           ))}
         </div>

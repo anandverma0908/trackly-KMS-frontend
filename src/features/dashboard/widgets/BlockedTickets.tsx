@@ -63,7 +63,7 @@ export default function BlockedTickets() {
               </div>
               <div className={styles.summary}>{t.summary}</div>
               <div className={styles.meta}>
-                <span className={styles.assignee}>👤 {t.assignee}</span>
+                {t.assignee ? <span className={styles.assignee}>👤 {t.assignee}</span> : null}
                 <span className={styles.client}>{t.client}</span>
               </div>
             </div>

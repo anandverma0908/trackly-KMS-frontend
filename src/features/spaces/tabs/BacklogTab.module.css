@@ -127,7 +127,7 @@
 /* ── Table header ── */
 .tableHeader {
   display: grid;
-  grid-template-columns: 28px 90px 1fr 80px 90px 110px 50px 40px 70px;
+  grid-template-columns: 28px 90px 1fr 80px 90px 110px 50px 40px 70px 130px;
   gap: 8px;
   padding: 6px 12px;
   background: var(--surface-2);
@@ -149,6 +149,7 @@
 .thAssignee { }
 .thSP { text-align: center; }
 .thDue { }
+.thAction { }
 
 /* ── Groups ── */
 .groups {
@@ -156,6 +157,8 @@
   border-top: none;
   border-radius: 0 0 9px 9px;
   overflow: hidden;
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
 }
 
 .group {
@@ -215,13 +218,15 @@
 
 .row {
   display: grid;
-  grid-template-columns: 28px 90px 1fr 80px 90px 110px 50px 40px 70px;
+  grid-template-columns: 28px 90px 1fr 80px 90px 110px 50px 40px 70px 130px;
   gap: 8px;
   align-items: center;
   padding: 9px 12px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.12s;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 44px;
 }
 .row:last-of-type { border-bottom: none; }
 .row:hover { background: var(--surface-2); }
@@ -343,6 +348,7 @@
 }
 
 .tdDue { }
+.tdAction { display: flex; align-items: center; }
 .dueDate {
   font-size: 11px;
   font-weight: 600;

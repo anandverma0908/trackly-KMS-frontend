@@ -1,7 +1,12 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import Tooltip from "@mui/material/Tooltip";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import type { Project, ProjectTask } from "../spacesData";
 import { getPriorityColor, getTaskStatusColor } from "../spacesData";
+import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
+import { createTicket, addTicketToSprint } from "@/services/api";
+import type { TicketCreate } from "@/types";
 import styles from "./BacklogTab.module.css";
 
 import SearchIcon from "@mui/icons-material/Search";
@@ -24,16 +29,66 @@ const STATUS_ORDER = ["To Do", "In Progress", "In Review", "Blocked", "Done"];
 const PRIORITY_ORDER = ["Critical", "High", "Medium", "Low"];
 
 export default function BacklogTab({ project }: { project: Project }) {
+  const qc = useQueryClient();
   const [search, setSearch]   = useState("");
   const [groupBy, setGroupBy] = useState<GroupBy>("status");
   const [sortBy, setSortBy]   = useState<SortBy>("priority");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(STATUS_ORDER));
+  const [showCreateDrawer, setShowCreateDrawer] = useState(false);
+  const [createDefaultStatus] = useState("Backlog");
+  const [localTasks, setLocalTasks] = useState<ProjectTask[]>([]);
 
-  // All tasks across all sprints (backlog = not in active sprint + future sprint tasks)
+  const moveMut = useMutation({
+    mutationFn: ({ sprintId, ticketKey }: { sprintId: string; ticketKey: string }) =>
+      addTicketToSprint(sprintId, ticketKey),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+      toast.success("Moved to sprint");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const createMut = useMutation({
+    mutationFn: createTicket,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+      qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+      toast.success("Ticket created!");
+      setShowCreateDrawer(false);
+      setTimeout(() => setLocalTasks([]), 400);
+    },
+    onError: (e: Error) => {
+      toast.error(e.message);
+      setLocalTasks([]);
+    },
+  });
+
+  function handleMoveToSprint(sprintId: string, ticketKey: string) {
+    moveMut.mutate({ sprintId, ticketKey });
+  }
+
+  function handleBulkMoveToSprint(sprintId: string) {
+    if (selected.size === 0) return;
+    const keys = Array.from(selected);
+    Promise.all(keys.map((k) => addTicketToSprint(sprintId, k)))
+      .then(() => {
+        qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+        toast.success(`Moved ${keys.length} ticket${keys.length > 1 ? "s" : ""} to sprint`);
+        setSelected(new Set());
+      })
+      .catch((e) => toast.error(e.message));
+  }
+
+  const sprints = project.sprints.filter((s) => s.id !== "backlog");
+
+  // Prefer dedicated backlog tasks; fall back to all sprint tasks for compatibility
   const allTasks: ProjectTask[] = useMemo(() => {
-    return project.sprints.flatMap((s) => s.tasks);
-  }, [project]);
+    const base = project.backlogTasks && project.backlogTasks.length > 0
+      ? project.backlogTasks
+      : project.sprints.flatMap((s) => s.tasks);
+    return [...localTasks, ...base];
+  }, [project, localTasks]);
 
   const backlogTasks = useMemo(() => {
     let tasks = allTasks.filter((t) => {
@@ -42,7 +97,7 @@ export default function BacklogTab({ project }: { project: Project }) {
         return (
           t.title.toLowerCase().includes(q) ||
           t.key.toLowerCase().includes(q) ||
-          t.assignee.toLowerCase().includes(q)
+          (t.assignee || "").toLowerCase().includes(q)
         );
       }
       return true;
@@ -73,14 +128,14 @@ export default function BacklogTab({ project }: { project: Project }) {
       groupBy === "status"   ? STATUS_ORDER :
       groupBy === "priority" ? PRIORITY_ORDER :
       groupBy === "type"     ? ["Story", "Bug", "Task", "Epic", "Subtask"] :
-      [...new Set(backlogTasks.map((t) => t.assignee))].sort();
+      [...new Set(backlogTasks.map((t) => t.assignee || "—"))].sort();
 
     keys.forEach((k) => {
       const tasks = backlogTasks.filter((t) => {
         if (groupBy === "status")   return t.status === k;
         if (groupBy === "priority") return t.priority === k;
         if (groupBy === "type")     return t.type === k;
-        return t.assignee === k;
+        return (t.assignee || "—") === k;
       });
       if (tasks.length > 0) map.set(k, tasks);
     });
@@ -155,7 +210,23 @@ export default function BacklogTab({ project }: { project: Project }) {
             </select>
           </div>
 
-          <button className="btn btn-primary btn-sm">
+          {selected.size > 0 && sprints.length > 0 && (
+            <div className={styles.selectWrap}>
+              <select
+                className={styles.select}
+                value=""
+                onChange={(e) => handleBulkMoveToSprint(e.target.value)}
+                disabled={moveMut.isPending}
+              >
+                <option value="">Move to sprint…</option>
+                {sprints.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <button className="btn btn-primary btn-sm" onClick={() => setShowCreateDrawer(true)}>
             <AddIcon sx={{ fontSize: 15 }} />
             Create Issue
           </button>
@@ -209,6 +280,7 @@ export default function BacklogTab({ project }: { project: Project }) {
         <div className={styles.thAssignee}>Assignee</div>
         <div className={styles.thSP}>SP</div>
         <div className={styles.thDue}>Due</div>
+        <div className={styles.thAction} />
       </div>
 
       {/* ── Groups ── */}
@@ -244,6 +316,8 @@ export default function BacklogTab({ project }: { project: Project }) {
                       task={task}
                       selected={selected.has(task.id)}
                       onSelect={() => toggleSelect(task.id)}
+                      sprints={sprints}
+                      onMoveToSprint={handleMoveToSprint}
                     />
                   ))}
                   {/* Add issue row */}
@@ -257,16 +331,94 @@ export default function BacklogTab({ project }: { project: Project }) {
           );
         })}
       </div>
+
+      <CreateTicketDrawer
+        open={showCreateDrawer}
+        onClose={() => setShowCreateDrawer(false)}
+        defaultStatus={createDefaultStatus}
+        members={project.members}
+        onCreated={(data) => {
+          const payload: TicketCreate = {
+            title: data.title || "",
+            description: data.description || "",
+            issue_type: data.issue_type || "Task",
+            priority: data.priority || "Medium",
+            assignee: data.assignee,
+            pod: project.key,
+            story_points: data.story_points ? Number(data.story_points) : undefined,
+            labels: data.labels,
+            status: data.status || createDefaultStatus,
+          };
+          const tempTask: ProjectTask = {
+            id: `local-${Date.now()}`,
+            key: `${project.key}-L${Date.now() % 1000}`,
+            title: payload.title,
+            status: _normalizeStatus(payload.status) as ProjectTask["status"],
+            priority: (payload.priority || "Medium") as ProjectTask["priority"],
+            type: _normalizeType(payload.issue_type) as ProjectTask["type"],
+            assignee: payload.assignee || project.members[0]?.name || "",
+            assigneeInitials: _initials(payload.assignee || project.members[0]?.name),
+            assigneeColor: _hashColor(payload.assignee || project.members[0]?.name || ""),
+            storyPoints: payload.story_points || 0,
+            createdAt: new Date().toISOString().split("T")[0],
+            updatedAt: new Date().toISOString().split("T")[0],
+            labels: payload.labels || [],
+          };
+          setLocalTasks((prev) => [...prev, tempTask]);
+          createMut.mutate(payload);
+        }}
+      />
     </div>
   );
 }
 
-function TaskRow({
-  task, selected, onSelect,
+function _normalizeStatus(s: string | undefined): string {
+  if (!s) return "To Do";
+  const l = s.toLowerCase();
+  if (["done", "closed", "resolved"].includes(l)) return "Done";
+  if (l === "blocked") return "Blocked";
+  if (l.includes("review") || l.includes("qa")) return "In Review";
+  if (l.includes("progress") || l.includes("development")) return "In Progress";
+  return "To Do";
+}
+function _normalizeType(t: string | undefined): string {
+  if (!t) return "Task";
+  const l = t.toLowerCase();
+  if (l.includes("bug")) return "Bug";
+  if (l.includes("story")) return "Story";
+  if (l.includes("epic")) return "Epic";
+  if (l.includes("subtask")) return "Subtask";
+  return "Task";
+}
+function _initials(name: string | undefined): string {
+  if (!name) return "??";
+  const parts = name.trim().split(" ");
+  return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+}
+function _hashColor(name: string): string {
+  const MEMBER_COLORS = [
+    "linear-gradient(135deg,#4F7EFF,#818CF8)",
+    "linear-gradient(135deg,#34D399,#10B981)",
+    "linear-gradient(135deg,#FBBF24,#F59E0B)",
+    "linear-gradient(135deg,#F87171,#FCA5A5)",
+    "linear-gradient(135deg,#A78BFA,#C4B5FD)",
+    "linear-gradient(135deg,#22D3EE,#67E8F9)",
+    "linear-gradient(135deg,#64748B,#94A3B8)",
+    "linear-gradient(135deg,#FB923C,#FDBA74)",
+  ];
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
+  return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length];
+}
+
+const TaskRow = React.memo(function TaskRow({
+  task, selected, onSelect, sprints, onMoveToSprint,
 }: {
   task: ProjectTask;
   selected: boolean;
   onSelect: () => void;
+  sprints: Project["sprints"];
+  onMoveToSprint: (sprintId: string, ticketKey: string) => void;
 }) {
   const priorityColor = getPriorityColor(task.priority);
   const statusColor   = getTaskStatusColor(task.status);
@@ -333,6 +485,25 @@ function TaskRow({
           <span className={styles.noDue}>—</span>
         )}
       </div>
+      <div className={styles.tdAction} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {sprints.length > 0 && (
+          <select
+            className={styles.select}
+            style={{ fontSize: 11, padding: "2px 6px" }}
+            value=""
+            onChange={(e) => {
+              if (e.target.value) {
+                onMoveToSprint(e.target.value, task.key);
+              }
+            }}
+          >
+            <option value="">To sprint…</option>
+            {sprints.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
     </div>
   );
-}
+});

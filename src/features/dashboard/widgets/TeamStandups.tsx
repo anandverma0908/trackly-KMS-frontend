@@ -59,14 +59,15 @@ export default function TeamStandups() {
           {all.map((s) => {
             const hasDone    = !!s.today;
             const hasBlocker = !!s.blockers && s.blockers.toLowerCase() !== "none";
-            const initials   = s.engineer.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+            const name       = s.engineer || "—";
+            const initials   = name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 
             return (
               <div key={s.id} className={`${styles.standupCard} ${!hasDone ? styles.missing : ""}`}>
                 <div className={styles.avatar} style={{ opacity: hasDone ? 1 : 0.4 }}>
                   {initials}
                 </div>
-                <div className={styles.name}>{s.engineer.split(" ")[0]}</div>
+                <div className={styles.name}>{name.split(" ")[0]}</div>
                 {!hasDone && <div className={styles.missingLabel}>Not submitted</div>}
                 {hasDone && hasBlocker && (
                   <div className={styles.blockerDot} title={`Blocker: ${s.blockers}`} />

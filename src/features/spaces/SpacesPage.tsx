@@ -41,7 +41,8 @@ function buildPodCard(p: PodSummary, sprints: Sprint[]): PodCard {
   const active = ACTIVE_KEYS.reduce((a, k) => a + (p.statuses[k] ?? 0), 0);
   const blocked = BLOCK_KEYS.reduce((a, k) => a + (p.statuses[k] ?? 0), 0);
   const progress = total > 0 ? Math.round((done / total) * 100) : 0;
-  const activeSprint = sprints.find((s) => s.status === "active");
+  const podSprints = sprints.filter((s) => s.pod === p.pod);
+  const activeSprint = podSprints.find((s) => s.status === "active");
   return {
     pod: p.pod,
     color: getPodColor(p.pod),

@@ -66,7 +66,7 @@ export default function StandupPage() {
 
   // Group by POD for manager view
   const grouped = teamStandups.reduce<Record<string, Standup[]>>((acc, s) => {
-    const pod = s.pod || "Unknown";
+    const pod = s.pod || "—";
     if (!acc[pod]) acc[pod] = [];
     acc[pod].push(s);
     return acc;
@@ -214,14 +214,14 @@ export default function StandupPage() {
 }
 
 function StandupCard({ standup, onEdit, showEdit }: { standup: Standup; onEdit: () => void; showEdit?: boolean }) {
-  const initials = standup.engineer.split(" ").map((n) => n[0]).join("").slice(0, 2);
+  const initials = (standup.engineer || "").split(" ").map((n) => n[0]).join("").slice(0, 2);
   return (
     <div className={styles.standupCard}>
       <div className={styles.cardHeader}>
-        <div className={styles.avatar}>{initials}</div>
+        <div className={styles.avatar}>{initials || "—"}</div>
         <div className={styles.cardMeta}>
-          <span className={styles.engineer}>{standup.engineer}</span>
-          <span className={styles.pod}>{standup.pod}</span>
+          <span className={styles.engineer}>{standup.engineer || "—"}</span>
+          {standup.pod ? <span className={styles.pod}>{standup.pod}</span> : null}
         </div>
         <div className={styles.cardActions}>
           {standup.shared && <span className={styles.sharedBadge}>Shared</span>}

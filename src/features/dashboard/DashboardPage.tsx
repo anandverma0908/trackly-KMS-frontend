@@ -84,7 +84,7 @@ export default function DashboardPage() {
         {/* Right: active tickets for everyone */}
         <MyActiveTickets />
 
-        <RecentActivity limit={12} />
+        <RecentActivity limit={5} />
       </div>
 
       {/* ── Mid row: heatmap + velocity/sprint ── */}
