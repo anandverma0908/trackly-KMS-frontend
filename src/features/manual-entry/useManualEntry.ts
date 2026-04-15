@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react";
-import { nanoid } from "nanoid";
 import toast from "react-hot-toast";
 import { parseTimeEntries, localParseEntries } from "./aiParser";
 import type { ManualEntry, ParsedEntry, PersonRole } from "./types";

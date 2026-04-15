@@ -100,7 +100,6 @@ export default function WorkTypeDonut({ byClient, byIssueType = [], isLoading }:
     color: getTypeColor(t.issue_type, i),
   }))
 
-  const topType    = chartData[0]
   const totalHours = byIssueType.reduce((s, t) => s + t.hours, 0)
 
   return (

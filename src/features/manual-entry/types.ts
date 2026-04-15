@@ -17,6 +17,12 @@ export type ManualEntryType =
   | 'Bugs'
   | 'Feature'
   | 'Program Management'
+  | '1:1'
+  | 'Planning'
+  | 'Review'
+  | 'Interview'
+  | 'Reporting'
+  | 'Training'
 
 export type PersonRole =
   | 'Engineering Manager'

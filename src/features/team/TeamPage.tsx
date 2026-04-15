@@ -4,7 +4,6 @@ import { useFilterStore } from "@/store";
 import { fetchSummary } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import { useDebounce } from "@/hooks";
-import { getPodColor } from "@/config/themes";
 import { initials, formatNumber } from "@/utils/formatters";
 import EmptyState from "@/components/ui/EmptyState";
 import styles from "./TeamPage.module.css";
@@ -136,7 +135,7 @@ export default function TeamPage() {
               </div>
 
               <div className={styles.name}>{eng.user}</div>
-              <div className={styles.pod}>{eng.title ?? "—"}</div>
+              <div className={styles.pod}>{eng.user}</div>
 
               <div className={styles.stats}>
                 <div className={styles.stat}>

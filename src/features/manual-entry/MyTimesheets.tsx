@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   format,
@@ -18,9 +17,9 @@ import DayDrawer from "./DayDrawer";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-function getAuthHeader() {
+function getAuthHeader(): Record<string, string> {
   const token = useAuthStore.getState().token;
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return token ? { Authorization: `Bearer ${token}` } : ({} as Record<string, string>);
 }
 
 /* ── Types ── */
@@ -91,7 +90,7 @@ export default function MyTimesheets() {
   });
 
   /* Fetch team for managers */
-  const { data: teamUsers = [] } = useQuery({
+  const { data: _teamUsers = [] } = useQuery({
     queryKey: ["team-users"],
     queryFn: fetchTeamUsers,
     enabled: isManager,

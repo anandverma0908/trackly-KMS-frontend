@@ -70,7 +70,7 @@ export const CLIENT_COLORS = [
 // src/config/muiTheme.ts
 
 export function buildMuiTheme(themeId: ThemeId, colorMode: ColorMode) {
-  const accent = THEMES.find((t) => t.id === themeId)?.color;
+  const accent = THEMES.find((t) => t.id === themeId)?.color ?? "#4F7EFF";
   const dark = colorMode === "dark";
 
   return createTheme({

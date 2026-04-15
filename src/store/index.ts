@@ -174,10 +174,10 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
    WIKI STORE
    ───────────────────────────────────────────── */
 interface WikiStore {
-  activeSpaceId:  number | null;
-  activePageId:   number | null;
-  setActiveSpace: (id: number | null) => void;
-  setActivePage:  (id: number | null) => void;
+  activeSpaceId:  string | null;
+  activePageId:   string | null;
+  setActiveSpace: (id: string | null) => void;
+  setActivePage:  (id: string | null) => void;
 }
 
 export const useWikiStore = create<WikiStore>((set) => ({

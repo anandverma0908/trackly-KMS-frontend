@@ -85,17 +85,26 @@ export interface MultiFilters extends Partial<FilterState> {
 }
 
 export async function fetchTickets(filters: MultiFilters): Promise<TicketsResponse> {
-  if (mock()) return mock().fetchTickets(filters);
-  const { data } = await api.get<TicketsResponse>("/tickets", {
+  if (mock()) {
+    const res = await mock().fetchTickets(filters);
+    return { ...res, tickets: res.tickets.map(_mapTicketOut) };
+  }
+  const { data } = await api.get<any>("/tickets", {
     params: buildParams(filters, filters.pods, filters.clients),
   });
-  return data;
+  return {
+    ...data,
+    tickets: (data.tickets || []).map(_mapTicketOut),
+  };
 }
 
 export async function fetchTicket(key: string): Promise<Ticket> {
-  if (mock()) return mock().fetchTicket(key);
-  const { data } = await api.get<Ticket>(`/tickets/${key}`);
-  return data;
+  if (mock()) {
+    const t = await mock().fetchTicket(key);
+    return _mapTicketOut(t);
+  }
+  const { data } = await api.get<any>(`/tickets/${key}`);
+  return _mapTicketOut(data);
 }
 
 export async function fetchSummary(filters: MultiFilters): Promise<SummaryResponse> {
@@ -150,16 +159,47 @@ function _download(blob: Blob, filename: string) {
 }
 
 /* ── Ticket Management ── */
+function _mapTicketIn(payload: Partial<TicketCreate>): any {
+  const mapped: any = { ...payload };
+  if ("title" in mapped) {
+    mapped.summary = mapped.title;
+    delete mapped.title;
+  }
+  if ("key" in mapped) {
+    mapped.jira_key = mapped.key;
+    delete mapped.key;
+  }
+  return mapped;
+}
+
+function _mapTicketOut(t: any): Ticket {
+  return {
+    ...t,
+    key: t.key ?? t.jira_key,
+    summary: t.summary ?? t.title ?? "",
+    created: t.created ?? t.created_at ?? t.jira_created ?? "",
+    updated: t.updated ?? t.updated_at ?? t.jira_updated ?? "",
+    hours_spent: t.hours_spent ?? 0,
+    worklogs: t.worklogs ?? [],
+  };
+}
+
 export async function createTicket(payload: TicketCreate) {
-  if (mock()?.createTicket) return mock().createTicket(payload);
-  const { data } = await api.post("/tickets", payload);
-  return data;
+  if (mock()?.createTicket) {
+    const t = await mock().createTicket(payload);
+    return _mapTicketOut(t);
+  }
+  const { data } = await api.post("/tickets", _mapTicketIn(payload));
+  return _mapTicketOut(data);
 }
 
 export async function updateTicket(key: string, payload: Partial<TicketCreate>) {
-  if (mock()?.updateTicket) return mock().updateTicket(key, payload);
-  const { data } = await api.put(`/tickets/${key}`, payload);
-  return data;
+  if (mock()?.updateTicket) {
+    const t = await mock().updateTicket(key, payload);
+    return _mapTicketOut(t);
+  }
+  const { data } = await api.put(`/tickets/${key}`, _mapTicketIn(payload));
+  return _mapTicketOut(data);
 }
 
 export async function deleteTicket(key: string) {
@@ -237,40 +277,46 @@ export async function fetchWikiSpaces(): Promise<WikiSpace[]> {
 }
 
 export async function createWikiSpace(payload: { name: string; description: string }): Promise<WikiSpace> {
-  const { data } = await api.post("/wiki/spaces", payload);
+  const slug = payload.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  const { data } = await api.post("/wiki/spaces", { ...payload, slug });
   return data;
 }
 
-export async function fetchWikiPages(spaceId?: number): Promise<WikiPage[]> {
+export async function fetchWikiPages(spaceId?: string): Promise<WikiPage[]> {
   const { data } = await api.get("/wiki/pages", { params: spaceId ? { space_id: spaceId } : {} });
   return data;
 }
 
-export async function fetchWikiPage(id: number): Promise<WikiPage> {
+export async function fetchWikiPage(id: string): Promise<WikiPage> {
   const { data } = await api.get(`/wiki/pages/${id}`);
   return data;
 }
 
-export async function createWikiPage(payload: { space_id: number; title: string; content: string; parent_id?: number }): Promise<WikiPage> {
-  const { data } = await api.post("/wiki/pages", payload);
+export async function createWikiPage(payload: { space_id: string; title: string; content: string; parent_id?: string }): Promise<WikiPage> {
+  const { data } = await api.post("/wiki/pages", { ...payload, content_md: payload.content });
   return data;
 }
 
-export async function updateWikiPage(id: number, payload: { title?: string; content?: string }): Promise<WikiPage> {
-  const { data } = await api.put(`/wiki/pages/${id}`, payload);
+export async function updateWikiPage(id: string, payload: { title?: string; content?: string }): Promise<WikiPage> {
+  const mapped: any = { ...payload };
+  if (payload.content !== undefined) {
+    mapped.content_md = payload.content;
+    delete mapped.content;
+  }
+  const { data } = await api.put(`/wiki/pages/${id}`, mapped);
   return data;
 }
 
-export async function deleteWikiPage(id: number) {
+export async function deleteWikiPage(id: string) {
   await api.delete(`/wiki/pages/${id}`);
 }
 
-export async function fetchWikiVersions(id: number): Promise<WikiVersion[]> {
+export async function fetchWikiVersions(id: string): Promise<WikiVersion[]> {
   const { data } = await api.get(`/wiki/pages/${id}/versions`);
   return data;
 }
 
-export async function restoreWikiVersion(id: number, version: number): Promise<WikiPage> {
+export async function restoreWikiVersion(id: string, version: number): Promise<WikiPage> {
   const { data } = await api.post(`/wiki/pages/${id}/restore`, null, { params: { version } });
   return data;
 }
@@ -310,7 +356,7 @@ export async function fetchSprint(id: string): Promise<Sprint> {
   return data;
 }
 
-export async function createSprint(payload: { name: string; goal?: string; start_date: string; end_date: string }): Promise<Sprint> {
+export async function createSprint(payload: { name: string; goal?: string; start_date: string; end_date: string; project_id?: string }): Promise<Sprint> {
   const { data } = await api.post("/sprints", payload);
   return data;
 }

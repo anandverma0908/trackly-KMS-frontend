@@ -1,14 +1,13 @@
 import type { ManualEntry } from "./types";
-import { formatNumber, formatDate } from "@/utils/formatters";
+import { formatNumber } from "@/utils/formatters";
 import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
-import { Badge } from "@/components/ui/Badge";
+
 import styles from "./ManualEntryPage.module.css";
 
 interface StepConfirmedProps {
   entries: ManualEntry[];
   totalHours: number;
   onAddMore: () => void;
-  onExport: () => void;
 }
 
 const COLUMNS: Column<ManualEntry>[] = [
@@ -108,7 +107,6 @@ export default function StepConfirmed({
   entries,
   totalHours,
   onAddMore,
-  onExport,
 }: StepConfirmedProps) {
   const days = [...new Set(entries.map((e) => e.date))];
 

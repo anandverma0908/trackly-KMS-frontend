@@ -7,7 +7,6 @@ import {
 import { useNotificationStore } from "@/store";
 import type { Notification } from "@/types";
 import IconButton from "@mui/material/IconButton";
-import CloseIcon from "@mui/icons-material/Close";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import SprintIcon from "@mui/icons-material/DirectionsRun";
@@ -25,7 +24,7 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
   burn_rate_warning: <LocalFireDepartmentIcon fontSize="small" />,
 };
 
-export default function NotificationPanel({ onClose }: Props) {
+export default function NotificationPanel({ onClose: _onClose }: Props) {
   const qc = useQueryClient();
   const { clearUnread } = useNotificationStore();
 

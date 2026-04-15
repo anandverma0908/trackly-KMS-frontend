@@ -4,8 +4,8 @@ import type { RelatedDoc } from "@/types";
 import styles from "./RelatedDocsWidget.module.css";
 
 interface Props {
-  pageId:   number;
-  onSelect: (id: number) => void;
+  pageId:   string;
+  onSelect: (id: string) => void;
 }
 
 export default function RelatedDocsWidget({ pageId, onSelect }: Props) {

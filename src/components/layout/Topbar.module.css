@@ -32,7 +32,7 @@
   transition: background 0.15s;
   user-select: none;
 }
-.logo:hover { background: var(--surface-2); }
+/* .logo:hover { background: var(--surface-2); } */
 
 .logoMark {
   width: 28px;

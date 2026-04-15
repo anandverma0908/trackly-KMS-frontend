@@ -7,7 +7,7 @@ export interface PageLinkOptions {
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     pageLink: {
-      insertPageLink: (id: number, title: string) => ReturnType;
+      insertPageLink: (id: string, title: string) => ReturnType;
     };
   }
 }
@@ -50,7 +50,7 @@ export const PageLinkExtension = Node.create<PageLinkOptions>({
   addCommands() {
     return {
       insertPageLink:
-        (id: number, title: string) =>
+        (id: string, title: string) =>
         ({ commands }) => {
           return commands.insertContent({
             type: this.name,

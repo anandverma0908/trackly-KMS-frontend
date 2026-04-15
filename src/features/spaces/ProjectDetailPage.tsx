@@ -6,7 +6,7 @@ import { fetchProject } from "@/services/api";
 import { getPodColor } from "@/config/themes";
 import { getStatusColor } from "./spacesData";
 import BacklogTab from "./tabs/BacklogTab";
-import RoadmapTab from "./tabs/RoadmapTab";
+
 import SummaryTab from "./tabs/SummaryTab";
 import ActiveSprintsTab from "./tabs/ActiveSprintsTab";
 import styles from "./ProjectDetailPage.module.css";
@@ -15,7 +15,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import AssignmentIcon from "@mui/icons-material/Assignment";
-import MapIcon from "@mui/icons-material/Map";
+
 import BarChartIcon from "@mui/icons-material/BarChart";
 import SpeedIcon from "@mui/icons-material/Speed";
 

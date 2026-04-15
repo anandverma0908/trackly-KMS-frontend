@@ -12,6 +12,8 @@ import PageEditor from "./PageEditor";
 import RelatedDocsWidget from "./RelatedDocsWidget";
 import styles from "./WikiPage.module.css";
 
+import { MdMenuBook, MdAdd, MdHistory, MdDeleteOutline, MdClose } from "react-icons/md";
+
 const PAGE_TEMPLATES = [
   { name: "PRD",           icon: "📋", content: "# Product Requirements Document\n\n## Overview\n\n## Goals\n\n## Non-Goals\n\n## Requirements\n\n## Success Metrics" },
   { name: "Runbook",       icon: "🔧", content: "# Runbook\n\n## Purpose\n\n## Prerequisites\n\n## Steps\n\n1. Step one\n2. Step two\n\n## Troubleshooting" },
@@ -72,7 +74,7 @@ export default function WikiPage() {
   });
 
   const createPageMut = useMutation({
-    mutationFn: (payload: { title: string; content: string; parent_id?: number }) =>
+    mutationFn: (payload: { title: string; content: string; parent_id?: string }) =>
       createWikiPage({ space_id: activeSpaceId!, ...payload }),
     onSuccess: (page) => {
       qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] });
@@ -82,7 +84,7 @@ export default function WikiPage() {
   });
 
   const updatePageMut = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: { title?: string; content?: string } }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: { title?: string; content?: string } }) =>
       updateWikiPage(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["wiki-page", activePageId] });
@@ -94,7 +96,7 @@ export default function WikiPage() {
   });
 
   const deletePageMut = useMutation({
-    mutationFn: (id: number) => deleteWikiPage(id),
+    mutationFn: (id: string) => deleteWikiPage(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] });
       setActivePage(null);
@@ -125,172 +127,211 @@ export default function WikiPage() {
 
   const activeSpace = spaces.find((s) => s.id === activeSpaceId);
   const treePages   = buildTree(pages);
-  const breadcrumbs = getBreadcrumbs(pages, activePageId ?? 0);
+  const breadcrumbs = activePageId ? getBreadcrumbs(pages, activePageId) : [];
 
   return (
-    <div className={styles.layout}>
-      {/* Sidebar */}
-      <aside className={styles.sidebar}>
-        {/* Spaces */}
-        <div className={styles.spacesHeader}>
-          <span className={styles.sidebarTitle}>Spaces</span>
-          <button className={styles.addBtn} onClick={() => setShowNewSpace(true)} title="New Space">+</button>
+    <div className={`${styles.page} fade-up`}>
+      {/* ── Dashboard-style header ── */}
+      <div className={styles.header}>
+        <div className={styles.titleRow}>
+          <h1 className={styles.title}>Wiki</h1>
+          <p className={styles.subtitle}>
+            {activeSpace ? `${activeSpace.name} — ${pages.length} pages` : "Select a space to get started"}
+          </p>
         </div>
-
-        {showNewSpace && (
-          <div className={styles.newSpaceForm}>
-            <input
-              className="input input-sm"
-              placeholder="Space name…"
-              value={newSpaceName}
-              onChange={(e) => setNewSpaceName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") createSpaceMut.mutate(); if (e.key === "Escape") setShowNewSpace(false); }}
-              autoFocus
-            />
-            <button className="btn btn-primary btn-sm" onClick={() => createSpaceMut.mutate()} disabled={!newSpaceName.trim()}>
-              Create
-            </button>
-          </div>
-        )}
-
-        <div className={styles.spacesList}>
-          {spaces.map((s) => (
-            <button
-              key={s.id}
-              className={`${styles.spaceItem} ${s.id === activeSpaceId ? styles.spaceItemActive : ""}`}
-              onClick={() => setActiveSpace(s.id)}
-            >
-              <span className={styles.spaceIcon}>📁</span>
-              <span className={styles.spaceName}>{s.name}</span>
-            </button>
-          ))}
+        <div className={styles.headerActions}>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowTemplates(true)}>
+            <MdAdd size={14} />
+            New Page
+          </button>
         </div>
+      </div>
 
-        {/* Pages tree */}
-        {activeSpaceId !== null && (
-          <>
-            <div className={styles.pagesHeader}>
-              <span className={styles.sidebarTitle}>Pages</span>
-              <button
-                className={styles.addBtn}
-                onClick={() => setShowTemplates(true)}
-                title="New Page"
-              >+</button>
+      {/* ── Layout: sidebar + content ── */}
+      <div className={styles.layout}>
+        {/* Sidebar */}
+        <aside className={`${styles.sidebar} fade-up-1`}>
+          {/* Spaces */}
+          <div>
+            <div className={styles.sectionHeader}>
+              <span className={styles.sectionTitle}>Spaces</span>
+              <button className={styles.addBtn} onClick={() => setShowNewSpace(true)} title="New Space">
+                <MdAdd size={14} />
+              </button>
             </div>
 
-            <div className={styles.pageTree}>
-              {treePages.map((p) => (
-                <PageTreeItem
-                  key={p.id}
-                  page={p}
-                  activeId={activePageId}
-                  onSelect={setActivePage}
-                  depth={0}
+            {showNewSpace && (
+              <div className={styles.newSpaceForm}>
+                <input
+                  className="input input-sm"
+                  placeholder="Space name…"
+                  value={newSpaceName}
+                  onChange={(e) => setNewSpaceName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") createSpaceMut.mutate(); if (e.key === "Escape") setShowNewSpace(false); }}
+                  autoFocus
                 />
+                <button className="btn btn-primary btn-sm" onClick={() => createSpaceMut.mutate()} disabled={!newSpaceName.trim()}>
+                  Create
+                </button>
+              </div>
+            )}
+
+            <div className={styles.spacesList}>
+              {spaces.map((s) => (
+                <button
+                  key={s.id}
+                  className={`${styles.spaceItem} ${s.id === activeSpaceId ? styles.spaceItemActive : ""}`}
+                  onClick={() => setActiveSpace(s.id)}
+                >
+                  <span className={styles.spaceIcon}>📁</span>
+                  <span className={styles.spaceName}>{s.name}</span>
+                </button>
               ))}
-              {treePages.length === 0 && (
-                <p className={styles.emptyTree}>No pages yet. Create one!</p>
+            </div>
+          </div>
+
+          {/* Pages tree */}
+          {activeSpaceId !== null && (
+            <div className={styles.pageTreeWrap}>
+              <div className={styles.sectionHeader}>
+                <span className={styles.sectionTitle}>Pages</span>
+                <button
+                  className={styles.addBtn}
+                  onClick={() => setShowTemplates(true)}
+                  title="New Page"
+                >
+                  <MdAdd size={14} />
+                </button>
+              </div>
+
+              <div className={styles.pageTree}>
+                {treePages.map((p) => (
+                  <PageTreeItem
+                    key={p.id}
+                    page={p}
+                    activeId={activePageId}
+                    onSelect={setActivePage}
+                    depth={0}
+                  />
+                ))}
+                {treePages.length === 0 && (
+                  <p className={styles.emptyTree}>No pages yet. Create one!</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Related docs for active page */}
+          {activePageId !== null && (
+            <div className={styles.relatedPanel}>
+              <div className={styles.sectionHeader} style={{ marginBottom: 8 }}>
+                <span className={styles.sectionTitle}>Related</span>
+              </div>
+              <RelatedDocsWidget pageId={activePageId} onSelect={setActivePage} />
+            </div>
+          )}
+        </aside>
+
+        {/* Main */}
+        <main className={`${styles.main} fade-up-2`}>
+          {activePage ? (
+            <>
+              {/* Main header: breadcrumb + actions */}
+              <div className={styles.mainHeader}>
+                <div className={styles.breadcrumb}>
+                  <span className={styles.breadcrumbPart}>
+                    <MdMenuBook size={14} style={{ marginRight: 6, color: "var(--accent)" }} />
+                    {activeSpace?.name}
+                  </span>
+                  {breadcrumbs.map((b) => (
+                    <span key={b.id} className={styles.breadcrumbPart}>
+                      <span className={styles.breadcrumbSep}>›</span>
+                      <button
+                        className={styles.breadcrumbLink}
+                        onClick={() => setActivePage(b.id)}
+                      >
+                        {b.title}
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
+                <div className={styles.pageActions}>
+                  <div className={styles.autoSave}>
+                    {autoSaveStatus === "saving" && <><span className={styles.savingDot} />Saving…</>}
+                    {autoSaveStatus === "saved"  && <><span className={styles.savedDot} />Saved</>}
+                  </div>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setShowVersions(!showVersions)}
+                  >
+                    <MdHistory size={14} style={{ marginRight: 4 }} />
+                    History
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => { if (confirm("Delete this page?")) deletePageMut.mutate(activePage.id); }}
+                  >
+                    <MdDeleteOutline size={14} style={{ marginRight: 4 }} />
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              {/* Version history panel */}
+              {showVersions && (
+                <div className={styles.versionsPanel}>
+                  <div className={styles.versionsPanelTitle}>Version History</div>
+                  {versions.length === 0 && <p className={styles.emptyTree}>No versions saved yet.</p>}
+                  {versions.map((v) => (
+                    <div key={v.id} className={styles.versionItem}>
+                      <div>
+                        <span className={styles.versionNum}>v{v.version}</span>
+                        <span className={styles.versionAuthor}>{v.author_name}</span>
+                        <span className={styles.versionDate}>{new Date(v.created_at).toLocaleString()}</span>
+                      </div>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => restoreMut.mutate({ versionId: v.version })}
+                      >
+                        Restore
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Editor */}
+              <div className={styles.editorWrap}>
+                <PageEditor
+                  key={activePage.id}
+                  initialTitle={activePage.title}
+                  initialContent={activePage.content_md ?? activePage.content_html ?? ""}
+                  onSave={handleSave}
+                  pages={pages}
+                />
+              </div>
+            </>
+          ) : (
+            <div className={styles.welcome}>
+              <div className={styles.welcomeIcon}>📚</div>
+              <h2 className={styles.welcomeTitle}>
+                {activeSpaceId ? "Select a page" : "Select a space"}
+              </h2>
+              <p className={styles.welcomeDesc}>
+                {activeSpaceId
+                  ? "Choose a page from the sidebar, or create a new one."
+                  : "Choose a space from the sidebar to get started."}
+              </p>
+              {activeSpaceId && (
+                <button className="btn btn-primary" onClick={() => handleNewPage()}>
+                  + Create First Page
+                </button>
               )}
             </div>
-          </>
-        )}
-        {/* Related docs for active page */}
-        {activePageId !== null && (
-          <RelatedDocsWidget pageId={activePageId} onSelect={setActivePage} />
-        )}
-      </aside>
-
-      {/* Main */}
-      <main className={styles.main}>
-        {activePage ? (
-          <>
-            {/* Breadcrumb */}
-            <div className={styles.breadcrumb}>
-              <span className={styles.breadcrumbPart}>{activeSpace?.name}</span>
-              {breadcrumbs.map((b) => (
-                <span key={b.id} className={styles.breadcrumbPart}>
-                  <span className={styles.breadcrumbSep}>›</span>
-                  <button
-                    className={styles.breadcrumbLink}
-                    onClick={() => setActivePage(b.id)}
-                  >
-                    {b.title}
-                  </button>
-                </span>
-              ))}
-            </div>
-
-            {/* Page actions */}
-            <div className={styles.pageActions}>
-              <div className={styles.autoSave}>
-                {autoSaveStatus === "saving" && <><span className={styles.savingDot} />Saving…</>}
-                {autoSaveStatus === "saved"  && <><span className={styles.savedDot} />Saved</>}
-              </div>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={() => setShowVersions(!showVersions)}
-              >
-                History
-              </button>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={() => { if (confirm("Delete this page?")) deletePageMut.mutate(activePage.id); }}
-              >
-                Delete
-              </button>
-            </div>
-
-            {/* Version history panel */}
-            {showVersions && (
-              <div className={styles.versionsPanel}>
-                <div className={styles.versionsPanelTitle}>Version History</div>
-                {versions.length === 0 && <p className={styles.emptyTree}>No versions saved yet.</p>}
-                {versions.map((v) => (
-                  <div key={v.id} className={styles.versionItem}>
-                    <div>
-                      <span className={styles.versionNum}>v{v.version}</span>
-                      <span className={styles.versionAuthor}>{v.author}</span>
-                      <span className={styles.versionDate}>{new Date(v.created_at).toLocaleString()}</span>
-                    </div>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => restoreMut.mutate({ versionId: v.version })}
-                    >
-                      Restore
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Editor */}
-            <PageEditor
-              key={activePage.id}
-              initialTitle={activePage.title}
-              initialContent={activePage.content}
-              onSave={handleSave}
-              pages={pages}
-            />
-          </>
-        ) : (
-          <div className={styles.welcome}>
-            <div className={styles.welcomeIcon}>📚</div>
-            <h2 className={styles.welcomeTitle}>
-              {activeSpaceId ? "Select a page" : "Select a space"}
-            </h2>
-            <p className={styles.welcomeDesc}>
-              {activeSpaceId
-                ? "Choose a page from the sidebar, or create a new one."
-                : "Choose a space from the sidebar to get started."}
-            </p>
-            {activeSpaceId && (
-              <button className="btn btn-primary" onClick={() => handleNewPage()}>
-                + Create First Page
-              </button>
-            )}
-          </div>
-        )}
-      </main>
+          )}
+        </main>
+      </div>
 
       {/* Template Picker Modal */}
       {showTemplates && (
@@ -298,7 +339,7 @@ export default function WikiPage() {
           <div className={styles.templateModal}>
             <div className={styles.templateHeader}>
               <h3>Choose a Template</h3>
-              <button className={styles.closeBtn} onClick={() => setShowTemplates(false)}>✕</button>
+              <button className={styles.closeBtn} onClick={() => setShowTemplates(false)}><MdClose /></button>
             </div>
             <div className={styles.templateGrid}>
               <div className={styles.templateCard} onClick={() => handleNewPage()}>
@@ -328,8 +369,8 @@ function PageTreeItem({
   page, activeId, onSelect, depth,
 }: {
   page: WikiPageType & { children?: WikiPageType[] };
-  activeId: number | null;
-  onSelect: (id: number) => void;
+  activeId: string | null;
+  onSelect: (id: string) => void;
   depth: number;
 }) {
   const [expanded, setExpanded] = useState(true);
@@ -367,7 +408,7 @@ function PageTreeItem({
 
 /* ── Helpers ── */
 function buildTree(pages: WikiPageType[]): (WikiPageType & { children: WikiPageType[] })[] {
-  const map = new Map<number, WikiPageType & { children: WikiPageType[] }>();
+  const map = new Map<string, WikiPageType & { children: WikiPageType[] }>();
   pages.forEach((p) => map.set(p.id, { ...p, children: [] }));
   const roots: (WikiPageType & { children: WikiPageType[] })[] = [];
   map.forEach((p) => {
@@ -380,7 +421,7 @@ function buildTree(pages: WikiPageType[]): (WikiPageType & { children: WikiPageT
   return roots;
 }
 
-function getBreadcrumbs(pages: WikiPageType[], pageId: number): WikiPageType[] {
+function getBreadcrumbs(pages: WikiPageType[], pageId: string): WikiPageType[] {
   const map = new Map(pages.map((p) => [p.id, p]));
   const crumbs: WikiPageType[] = [];
   let cur = map.get(pageId);

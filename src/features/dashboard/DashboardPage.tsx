@@ -1,7 +1,5 @@
-import toast from "react-hot-toast";
 import { useDashboard } from "./useDashboard";
 import { useAuthStore } from "@/features/auth/useAuthStore";
-import { RiRefreshLine, RiCalendarLine } from "react-icons/ri";
 import styles from "./DashboardPage.module.css";
 
 // Core widgets
@@ -10,7 +8,7 @@ import MyActiveTickets from "./widgets/MyActiveTickets";
 import TodayStandup from "./widgets/TodayStandup";
 import WeeklyHeatmap from "./widgets/WeeklyHeatmap";
 import RecentActivity from "./widgets/RecentActivity";
-import QuickActions from "./widgets/QuickActions";
+
 import MySprintItems from "./widgets/MySprintItems";
 
 // Lead+ widgets
@@ -28,14 +26,8 @@ import KnowledgeGapsWidget from "./widgets/KnowledgeGapsWidget";
 // Admin
 import SystemHealth from "./widgets/SystemHealth";
 
-const TODAY = new Date().toLocaleDateString("en-US", {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-});
-
 export default function DashboardPage() {
-  const { refetch } = useDashboard();
+  useDashboard();
   const user = useAuthStore((s) => s.user);
   const can = useAuthStore((s) => s.can);
 
@@ -48,11 +40,6 @@ export default function DashboardPage() {
   const isManager =
     user?.role === "engineering_manager" || user?.role === "admin";
   const isAdmin = user?.role === "admin";
-
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const firstName = user?.name?.split(" ")[0] ?? "there";
 
   return (
     <div className={styles.page}>
@@ -144,7 +131,7 @@ export default function DashboardPage() {
       <div className={`${styles.bottomRow} fade-up-3`}>
         {/* Left: lead sees TeamHours, others see sprint burndown or standup */}
         {isLead || isManager ? <TeamHoursChart /> : <TodayStandup />}
-        <QuickActions />
+        {/* <QuickActions /> */}
       </div>
     </div>
   );

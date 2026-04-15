@@ -11,7 +11,7 @@ import {
 import type { SummaryByUser, Ticket } from "@/types";
 import SideDrawer from "@/components/ui/SideDrawer";
 import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
-import { IssueTypeBadge, StatusBadge, PODBadge } from "@/components/ui/Badge";
+import { StatusBadge, PODBadge } from "@/components/ui/Badge";
 import styles from "@/components/ui/SideDrawer.module.css";
 import { getAuthHeader } from "../auth/useAuthStore";
 

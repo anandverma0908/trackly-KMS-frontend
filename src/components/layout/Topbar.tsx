@@ -9,29 +9,29 @@ import type { SearchResult } from "@/types";
 import styles from "./Topbar.module.css";
 
 /* MUI */
-import IconButton   from "@mui/material/IconButton";
-import Avatar       from "@mui/material/Avatar";
-import Tooltip      from "@mui/material/Tooltip";
-import Badge        from "@mui/material/Badge";
-import Menu         from "@mui/material/Menu";
-import MenuItem     from "@mui/material/MenuItem";
+import IconButton from "@mui/material/IconButton";
+import Avatar from "@mui/material/Avatar";
+import Tooltip from "@mui/material/Tooltip";
+import Badge from "@mui/material/Badge";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
-import Divider      from "@mui/material/Divider";
+import Divider from "@mui/material/Divider";
 import CircularProgress from "@mui/material/CircularProgress";
 
 /* MUI Icons */
-import MenuOpenIcon      from "@mui/icons-material/MenuOpen";
-import MenuIcon          from "@mui/icons-material/Menu";
-import SearchIcon        from "@mui/icons-material/Search";
+import MenuOpenIcon from "@mui/icons-material/MenuOpen";
+import MenuIcon from "@mui/icons-material/Menu";
+import SearchIcon from "@mui/icons-material/Search";
 import NotificationsIcon from "@mui/icons-material/Notifications";
-import DarkModeIcon      from "@mui/icons-material/DarkMode";
-import LightModeIcon     from "@mui/icons-material/LightMode";
-import LogoutIcon        from "@mui/icons-material/Logout";
-import PersonIcon        from "@mui/icons-material/Person";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import LogoutIcon from "@mui/icons-material/Logout";
+import PersonIcon from "@mui/icons-material/Person";
 import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
-import ArticleIcon       from "@mui/icons-material/Article";
-import AutoAwesomeIcon   from "@mui/icons-material/AutoAwesome";
-import CloseIcon         from "@mui/icons-material/Close";
+import ArticleIcon from "@mui/icons-material/Article";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import CloseIcon from "@mui/icons-material/Close";
 
 /* ── Commented out — preserved for later use ──────────────────────────────
 import DateRangePicker from "../ui/DateRangePicker";
@@ -39,11 +39,11 @@ import TimerWidget     from "@/components/nova/TimerWidget";
 ───────────────────────────────────────────────────────────────────────── */
 
 interface TopbarProps {
-  onMenuClick?:      () => void;
-  onSidebarToggle?:  () => void;
+  onMenuClick?: () => void;
+  onSidebarToggle?: () => void;
   sidebarCollapsed?: boolean;
-  notifOpen?:        boolean;
-  onNotifToggle?:    () => void;
+  notifOpen?: boolean;
+  onNotifToggle?: () => void;
 }
 
 type SearchMode = "semantic" | "nova";
@@ -52,25 +52,25 @@ export default function Topbar({
   onMenuClick,
   onSidebarToggle,
   sidebarCollapsed = false,
-  notifOpen        = false,
+  notifOpen = false,
   onNotifToggle,
 }: TopbarProps) {
   const navigate = useNavigate();
   const { colorMode, toggleMode } = useThemeStore();
-  const { user, logout }          = useAuthStore();
-  const { unreadCount }           = useNotificationStore();
+  const { user, logout } = useAuthStore();
+  const { unreadCount } = useNotificationStore();
 
-  const [anchorEl,  setAnchorEl]  = useState<null | HTMLElement>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   /* ── Search state ── */
   const [searchFocused, setSearchFocused] = useState(false);
-  const [query,     setQuery]     = useState("");
-  const [mode,      setMode]      = useState<SearchMode>("semantic");
-  const [results,   setResults]   = useState<SearchResult[]>([]);
+  const [query, setQuery] = useState("");
+  const [mode, setMode] = useState<SearchMode>("semantic");
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [novaAnswer, setNovaAnswer] = useState<string | null>(null);
-  const [loading,   setLoading]   = useState(false);
-  const [selIdx,    setSelIdx]    = useState(0);
-  const inputRef    = useRef<HTMLInputElement>(null);
+  const [loading, setLoading] = useState(false);
+  const [selIdx, setSelIdx] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -89,7 +89,10 @@ export default function Topbar({
   /* Click outside → close dropdown */
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setSearchFocused(false);
       }
     }
@@ -98,7 +101,11 @@ export default function Topbar({
   }, []);
 
   const doSearch = useCallback(async (q: string, m: SearchMode) => {
-    if (!q.trim()) { setResults([]); setNovaAnswer(null); return; }
+    if (!q.trim()) {
+      setResults([]);
+      setNovaAnswer(null);
+      return;
+    }
     setLoading(true);
     try {
       if (m === "nova") {
@@ -165,29 +172,33 @@ export default function Topbar({
     navigate("/login", { replace: true });
   }
 
-  const initials = user?.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2) ?? "?";
+  const initials =
+    user?.name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .slice(0, 2) ?? "?";
 
   const roleColor = user ? ROLE_COLORS[user.role] : undefined;
-  const isDark    = colorMode === "dark";
+  const isDark = colorMode === "dark";
   return (
     <header className={styles.topbar}>
-
       {/* ── Left ── */}
       <div className={styles.left}>
         {/* Desktop sidebar collapse toggle */}
         {/* <Tooltip title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} placement="bottom"> */}
-          <IconButton
-            size="small"
-            onClick={onSidebarToggle}
-            className={`${styles.iconBtn} ${styles.sidebarToggle}`}
-            aria-label="Toggle sidebar"
-          >
-            {sidebarCollapsed ? <MenuIcon fontSize="small" /> : <MenuOpenIcon fontSize="small" />}
-          </IconButton>
+        <IconButton
+          size="small"
+          onClick={onSidebarToggle}
+          className={`${styles.iconBtn} ${styles.sidebarToggle}`}
+          aria-label="Toggle sidebar"
+        >
+          {sidebarCollapsed ? (
+            <MenuIcon fontSize="small" />
+          ) : (
+            <MenuOpenIcon fontSize="small" />
+          )}
+        </IconButton>
         {/* </Tooltip> */}
 
         {/* Mobile hamburger */}
@@ -202,16 +213,22 @@ export default function Topbar({
           </IconButton>
         </Tooltip>
 
-        <div className={styles.logo} onClick={() => navigate("/dashboard")}>
-          <div className={styles.logoMark}>T</div>
-          <span className={styles.logoName}>Trackly</span>
-        </div>
+        {/* {sidebarCollapsed && (
+          <div className={styles.logo} onClick={() => navigate("/dashboard")}>
+            <div className={styles.logoMark}>T</div>
+            <span className={styles.logoName}>Trackly</span>
+          </div>
+        )} */}
       </div>
 
       {/* ── Centre — Inline Search ── */}
       <div className={styles.center} ref={dropdownRef}>
-        <div className={`${styles.searchBar} ${searchFocused ? styles.searchBarFocused : ""}`}>
-          <SearchIcon sx={{ fontSize: 15, color: "var(--text-3)", flexShrink: 0 }} />
+        <div
+          className={`${styles.searchBar} ${searchFocused ? styles.searchBarFocused : ""}`}
+        >
+          <SearchIcon
+            sx={{ fontSize: 15, color: "var(--text-3)", flexShrink: 0 }}
+          />
           <input
             ref={inputRef}
             className={styles.searchInput}
@@ -224,10 +241,17 @@ export default function Topbar({
             spellCheck={false}
           />
           {loading && (
-            <CircularProgress size={13} sx={{ color: "var(--accent)", flexShrink: 0 }} />
+            <CircularProgress
+              size={13}
+              sx={{ color: "var(--accent)", flexShrink: 0 }}
+            />
           )}
           {query && !loading && (
-            <button className={styles.clearBtn} onClick={clearSearch} tabIndex={-1}>
+            <button
+              className={styles.clearBtn}
+              onClick={clearSearch}
+              tabIndex={-1}
+            >
               <CloseIcon sx={{ fontSize: 13 }} />
             </button>
           )}
@@ -236,7 +260,10 @@ export default function Topbar({
           <div className={styles.modePills}>
             <button
               className={`${styles.modePill} ${mode === "semantic" ? styles.modePillActive : ""}`}
-              onMouseDown={(e) => { e.preventDefault(); handleModeSwitch("semantic"); }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleModeSwitch("semantic");
+              }}
               tabIndex={-1}
             >
               Search
@@ -271,7 +298,9 @@ export default function Topbar({
             {/* Results */}
             {results.length > 0 && (
               <div className={styles.resultsList}>
-                <div className={styles.resultsLabel}>{results.length} result{results.length !== 1 ? "s" : ""}</div>
+                <div className={styles.resultsLabel}>
+                  {results.length} result{results.length !== 1 ? "s" : ""}
+                </div>
                 {results.map((r, i) => (
                   <button
                     key={`${r.type}-${r.id}`}
@@ -279,20 +308,27 @@ export default function Topbar({
                     onMouseDown={() => handleResultClick(r)}
                   >
                     <span className={styles.resultIcon}>
-                      {r.type === "ticket"
-                        ? <ConfirmationNumberIcon sx={{ fontSize: 15 }} />
-                        : <ArticleIcon sx={{ fontSize: 15 }} />
-                      }
+                      {r.type === "ticket" ? (
+                        <ConfirmationNumberIcon sx={{ fontSize: 15 }} />
+                      ) : (
+                        <ArticleIcon sx={{ fontSize: 15 }} />
+                      )}
                     </span>
                     <div className={styles.resultBody}>
                       <div className={styles.resultTitle}>
-                        {r.key && <span className={styles.resultKey}>{r.key}</span>}
+                        {r.key && (
+                          <span className={styles.resultKey}>{r.key}</span>
+                        )}
                         <span>{r.title}</span>
                       </div>
-                      {r.snippet && <p className={styles.resultSnippet}>{r.snippet}</p>}
+                      {r.snippet && (
+                        <p className={styles.resultSnippet}>{r.snippet}</p>
+                      )}
                     </div>
-                    <span className={`badge ${r.type === "ticket" ? "badge-blue" : "badge-purple"}`}
-                      style={{ fontSize: "10px", flexShrink: 0 }}>
+                    <span
+                      className={`badge ${r.type === "ticket" ? "badge-blue" : "badge-purple"}`}
+                      style={{ fontSize: "10px", flexShrink: 0 }}
+                    >
                       {r.type}
                     </span>
                   </button>
@@ -316,7 +352,9 @@ export default function Topbar({
                   <kbd className={styles.kbdSmall}>Esc</kbd> close
                 </div>
                 <div className={styles.hintRow}>
-                  <AutoAwesomeIcon sx={{ fontSize: 12, color: "var(--accent)" }} />
+                  <AutoAwesomeIcon
+                    sx={{ fontSize: 12, color: "var(--accent)" }}
+                  />
                   <span>Switch to NOVA for AI-powered answers</span>
                 </div>
               </div>
@@ -327,7 +365,6 @@ export default function Topbar({
 
       {/* ── Right ── */}
       <div className={styles.right}>
-
         {/* ── Commented-out controls — preserved ─────────────────────────
         <TimerWidget />
         <div className={styles.sep} />
@@ -337,8 +374,16 @@ export default function Topbar({
 
         {/* Theme toggle */}
         <Tooltip title={isDark ? "Light mode" : "Dark mode"} placement="bottom">
-          <IconButton size="small" onClick={toggleMode} className={styles.iconBtn}>
-            {isDark ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+          <IconButton
+            size="small"
+            onClick={toggleMode}
+            className={styles.iconBtn}
+          >
+            {isDark ? (
+              <LightModeIcon fontSize="small" />
+            ) : (
+              <DarkModeIcon fontSize="small" />
+            )}
           </IconButton>
         </Tooltip>
 
@@ -412,15 +457,29 @@ export default function Topbar({
                 <div className={styles.menuName}>{user.name}</div>
                 <div
                   className={styles.menuRole}
-                  style={roleColor ? { color: roleColor.text, background: roleColor.bg } : {}}
+                  style={
+                    roleColor
+                      ? { color: roleColor.text, background: roleColor.bg }
+                      : {}
+                  }
                 >
                   {user.role.replace(/_/g, " ")}
                 </div>
               </div>
               <Divider sx={{ borderColor: "var(--border)" }} />
               <MenuItem
-                onClick={() => { setAnchorEl(null); navigate("/settings"); }}
-                sx={{ fontSize: "13px", color: "var(--text-2)", "&:hover": { color: "var(--text)", background: "var(--surface-2)" } }}
+                onClick={() => {
+                  setAnchorEl(null);
+                  navigate("/settings");
+                }}
+                sx={{
+                  fontSize: "13px",
+                  color: "var(--text-2)",
+                  "&:hover": {
+                    color: "var(--text)",
+                    background: "var(--surface-2)",
+                  },
+                }}
               >
                 <ListItemIcon sx={{ color: "inherit", minWidth: 32 }}>
                   <PersonIcon fontSize="small" />
@@ -429,7 +488,11 @@ export default function Topbar({
               </MenuItem>
               <MenuItem
                 onClick={handleLogout}
-                sx={{ fontSize: "13px", color: "var(--red)", "&:hover": { background: "var(--red-glow)" } }}
+                sx={{
+                  fontSize: "13px",
+                  color: "var(--red)",
+                  "&:hover": { background: "var(--red-glow)" },
+                }}
               >
                 <ListItemIcon sx={{ color: "inherit", minWidth: 32 }}>
                   <LogoutIcon fontSize="small" />

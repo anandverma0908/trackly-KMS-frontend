@@ -3,7 +3,6 @@ import { Outlet } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Topbar from "./Topbar";
 import Sidebar from "./Sidebar";
-import NovaChatWidget from "@/components/nova/NovaChatWidget";
 import OnboardingModal from "@/components/onboarding/OnboardingModal";
 import NotificationPanel from "@/components/nova/NotificationPanel";
 import styles from "./AppShell.module.css";

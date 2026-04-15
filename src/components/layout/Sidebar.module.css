@@ -8,6 +8,42 @@
   transition: transform 0.25s ease;
 }
 
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
+  transition: background 0.15s;
+  user-select: none;
+
+  height: var(--topbar-h);
+
+}
+/* .logo:hover { background: var(--surface-2); } */
+
+.logoName {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--text);
+}
+
+.logoMark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 14px;
+  color: #fff;
+  box-shadow: 0 2px 10px var(--accent-glow-2);
+  flex-shrink: 0;
+}
 
 /* Mobile close button — hidden on desktop */
 .mobileCloseBtn {
@@ -20,7 +56,9 @@
   padding: 4px 8px;
   cursor: pointer;
 }
-.mobileCloseBtn:hover { color: var(--text); }
+.mobileCloseBtn:hover {
+  color: var(--text);
+}
 
 @media (max-width: 768px) {
   .sidebar {
@@ -30,7 +68,7 @@
     bottom: 0;
     z-index: 200;
     transform: translateX(-100%);
-    box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
   }
   .sidebarOpen {
     transform: translateX(0);
@@ -57,9 +95,17 @@
   cursor: text;
   transition: border-color 0.2s;
 }
-.search:hover        { border-color: var(--border-2); }
-.searchIcon          { font-size: 13px; opacity: 0.5; }
-.searchPlaceholder   { font-size: 12px; color: var(--text-3); }
+.search:hover {
+  border-color: var(--border-2);
+}
+.searchIcon {
+  font-size: 13px;
+  opacity: 0.5;
+}
+.searchPlaceholder {
+  font-size: 12px;
+  color: var(--text-3);
+}
 
 /* Body scrolls, not the whole sidebar */
 .body {
@@ -67,15 +113,22 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 8px 8px 16px;
-  width: 228px;        /* fixed — never reflows during collapse animation */
+  width: 228px; /* fixed — never reflows during collapse animation */
   min-width: 228px;
   /* Custom scrollbar */
   scrollbar-width: thin;
   scrollbar-color: var(--border-2) transparent;
 }
-.body::-webkit-scrollbar       { width: 4px; }
-.body::-webkit-scrollbar-track { background: transparent; }
-.body::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 4px; }
+.body::-webkit-scrollbar {
+  width: 4px;
+}
+.body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.body::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 4px;
+}
 
 /* ── Section labels ── */
 .section {
@@ -112,9 +165,15 @@
   background: transparent;
   font-family: var(--font-sans);
 }
-.item:hover  { background: var(--surface-2); color: var(--text); }
-.itemActive  { background: var(--accent-glow); color: var(--accent); font-weight: 600; }
-
+.item:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.itemActive {
+  background: var(--accent-glow);
+  color: var(--accent);
+  font-weight: 600;
+}
 
 .itemIcon {
   display: flex;
@@ -130,7 +189,9 @@
   flex-shrink: 0;
   opacity: 0.7;
 }
-.itemActive .icon { opacity: 1; }
+.itemActive .icon {
+  opacity: 1;
+}
 
 .label {
   flex: 1;
@@ -164,7 +225,9 @@
   transition: background 0.15s;
   text-align: left;
 }
-.sectionToggle:hover { background: var(--surface-2); }
+.sectionToggle:hover {
+  background: var(--surface-2);
+}
 
 .sectionArrow {
   font-size: 13px;
@@ -213,7 +276,10 @@
   font-family: var(--font-sans);
   line-height: 1;
 }
-.clearBtn:hover { color: var(--text); background: var(--surface-2); }
+.clearBtn:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
 
 /* ── Filter body ── */
 .filterBody {
@@ -237,8 +303,12 @@
   box-sizing: border-box;
   transition: border-color 0.15s;
 }
-.filterInput:focus       { border-color: var(--accent); }
-.filterInput::placeholder{ color: var(--text-3); }
+.filterInput:focus {
+  border-color: var(--accent);
+}
+.filterInput::placeholder {
+  color: var(--text-3);
+}
 
 /* ── Checkbox list ── */
 .checkList {
@@ -265,8 +335,14 @@
   width: 100%;
   transition: all 0.12s;
 }
-.checkItem:hover      { background: var(--surface-2); color: var(--text); }
-.checkItemActive      { color: var(--text); font-weight: 500; }
+.checkItem:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.checkItemActive {
+  color: var(--text);
+  font-weight: 500;
+}
 
 .checkbox {
   width: 14px;
@@ -323,7 +399,9 @@
   transition: opacity 0.15s;
   font-weight: 500;
 }
-.showMoreBtn:hover { opacity: 0.75; }
+.showMoreBtn:hover {
+  opacity: 0.75;
+}
 
 /* ── Selected chips strip ── */
 .chipStrip {
@@ -361,4 +439,6 @@
   transition: opacity 0.12s;
   flex-shrink: 0;
 }
-.chipRemove:hover { opacity: 1; }
+.chipRemove:hover {
+  opacity: 1;
+}

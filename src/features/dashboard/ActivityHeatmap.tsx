@@ -61,7 +61,7 @@ export default function ActivityHeatmap({ data, month = 'March 2026' }: Activity
       .attr('rx',      3)
       .attr('fill',    d => d.hours === 0 ? 'var(--surface-2)' : colorScale(d.hours))
       .style('cursor', 'pointer')
-      .on('mouseover', function(event, d) {
+      .on('mouseover', function(_event, _d) {
         d3.select(this).attr('opacity', 0.8).attr('transform', 'scale(1.3)')
         // tooltip handled via title
       })

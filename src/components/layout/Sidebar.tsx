@@ -1,214 +1,22 @@
-import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
-import { useFilterStore } from "@/store";
-import { fetchFilters } from "@/services/api";
-import { QUERY_KEYS } from "@/config/queryKeys";
-import { getPodColor } from "@/config/themes";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import styles from "./Sidebar.module.css";
 import Tooltip from "@mui/material/Tooltip";
 
 /* MUI Icons */
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
-import ViewKanbanIcon from "@mui/icons-material/ViewKanban";
-import SpeedIcon from "@mui/icons-material/Speed";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
-import WbSunnyIcon from "@mui/icons-material/WbSunny";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import GroupsIcon from "@mui/icons-material/Groups";
 import TableChartIcon from "@mui/icons-material/TableChart";
 import GridViewIcon from "@mui/icons-material/GridView";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import SettingsIcon from "@mui/icons-material/Settings";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import LockIcon from "@mui/icons-material/Lock";
 import PeopleIcon from "@mui/icons-material/People";
 import CloseIcon from "@mui/icons-material/Close";
-
-/* ── Multi-select filter section ─────────────────────────────────────────── */
-interface FilterSectionProps {
-  title: string;
-  items: string[];
-  selected: string[];
-  onToggle: (item: string) => void;
-  onClear: () => void;
-  getColor?: (item: string) => string;
-  maxVisible?: number;
-}
-
-function FilterSection({
-  title,
-  items,
-  selected,
-  onToggle,
-  onClear,
-  getColor,
-  maxVisible = 5,
-}: FilterSectionProps) {
-  const [expanded, setExpanded] = useState(true);
-  const [showAll, setShowAll] = useState(false);
-  const [search, setSearch] = useState("");
-  const searchRef = useRef<HTMLInputElement>(null);
-
-  const filtered = items.filter((i) =>
-    i.toLowerCase().includes(search.toLowerCase()),
-  );
-  const visible = showAll ? filtered : filtered.slice(0, maxVisible);
-  const hasMore = filtered.length > maxVisible && !showAll;
-  const count = selected.length;
-
-  useEffect(() => {
-    if (showAll) searchRef.current?.focus();
-  }, [showAll]);
-
-  return (
-    <div className={styles.filterSection}>
-      <div className={styles.sectionRow}>
-        <button
-          className={styles.sectionToggle}
-          onClick={() => setExpanded((v) => !v)}
-        >
-          <span
-            className={styles.sectionArrow}
-            style={{ transform: expanded ? "rotate(90deg)" : "none" }}
-          >
-            ›
-          </span>
-          <span className={styles.sectionLabel}>{title}</span>
-        </button>
-        {count > 0 && (
-          <div className={styles.sectionRight}>
-            <span className={styles.filterBadge}>{count}</span>
-            <button
-              className={styles.clearBtn}
-              onClick={onClear}
-              title={`Clear ${title}`}
-            >
-              ✕
-            </button>
-          </div>
-        )}
-      </div>
-
-      {expanded && (
-        <div className={styles.filterBody}>
-          {(showAll || items.length > 8) && (
-            <div className={styles.filterSearchWrap}>
-              <input
-                ref={searchRef}
-                className={styles.filterInput}
-                placeholder={`Search ${title.toLowerCase()}…`}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-          )}
-
-          <div className={styles.checkList}>
-            {visible.map((item) => {
-              const isActive = selected.includes(item);
-              const color = getColor?.(item);
-              return (
-                <button
-                  key={item}
-                  className={`${styles.checkItem} ${isActive ? styles.checkItemActive : ""}`}
-                  onClick={() => onToggle(item)}
-                >
-                  <span
-                    className={styles.checkbox}
-                    style={
-                      isActive && color
-                        ? { background: color, borderColor: color }
-                        : isActive
-                          ? {
-                              background: "var(--accent)",
-                              borderColor: "var(--accent)",
-                            }
-                          : {}
-                    }
-                  >
-                    {isActive && <span className={styles.checkmark}>✓</span>}
-                  </span>
-                  {color && (
-                    <span
-                      className={styles.colorDot}
-                      style={{ background: color }}
-                    />
-                  )}
-                  <span className={styles.checkLabel}>{item}</span>
-                </button>
-              );
-            })}
-            {visible.length === 0 && (
-              <div className={styles.noResults}>
-                No {title.toLowerCase()} found
-              </div>
-            )}
-          </div>
-
-          {hasMore && (
-            <button
-              className={styles.showMoreBtn}
-              onClick={() => setShowAll(true)}
-            >
-              + {filtered.length - maxVisible} more {title.toLowerCase()}
-            </button>
-          )}
-          {showAll && filtered.length > maxVisible && (
-            <button
-              className={styles.showMoreBtn}
-              onClick={() => {
-                setShowAll(false);
-                setSearch("");
-              }}
-            >
-              ↑ Show less
-            </button>
-          )}
-
-          {count > 0 && (
-            <div className={styles.chipStrip}>
-              {selected.map((item) => {
-                const color = getColor?.(item);
-                return (
-                  <span
-                    key={item}
-                    className={styles.chip}
-                    style={
-                      color
-                        ? {
-                            borderColor: color,
-                            color,
-                            background: `${color}18`,
-                          }
-                        : {}
-                    }
-                  >
-                    {item}
-                    <button
-                      className={styles.chipRemove}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggle(item);
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </span>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ── Main Sidebar ────────────────────────────────────────────────────────── */
 interface SidebarProps {
@@ -224,18 +32,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { pods, clients, togglePod, toggleClient, clearPods, clearClients } =
-    useFilterStore();
   const { can } = useAuthStore();
-
-  const { data: filters } = useQuery({
-    queryKey: QUERY_KEYS.filters(),
-    queryFn: fetchFilters,
-    staleTime: 1000 * 60 * 10,
-  });
-
-  const allPods = filters?.pods ?? [];
-  const allClients = filters?.clients ?? [];
 
   function handleNavClick(path: string) {
     navigate(path);
@@ -264,8 +61,8 @@ export default function Sidebar({
   return (
     <motion.aside
       className={`${styles.sidebar} ${open ? styles.sidebarOpen : ""}`}
-      initial={{ width: collapsed ? 64 : 228 }}
-      animate={{ width: collapsed ? 64 : 228 }}
+      initial={{ width: collapsed ? 55 : 220 }}
+      animate={{ width: collapsed ? 55 : 220 }}
       transition={{ type: "spring", stiffness: 320, damping: 38, mass: 0.7 }}
     >
       {/* Mobile close */}
@@ -277,34 +74,42 @@ export default function Sidebar({
         <CloseIcon fontSize="small" />
       </button>
 
+      {/* <div className={styles.logo}>
+        <div className={styles.logoMark}>T</div>
+      </div> */}
+
+      <div
+        className={styles.logo}
+        onClick={() => navigate("/dashboard")}
+      >
+        <div className={styles.logoMark}>T</div>
+        {!collapsed && <span className={styles.logoName}>Trackly</span>}
+      </div>
+
       <div className={styles.body}>
         {/* ── Primary nav ── */}
+
         {nav(<DashboardIcon fontSize="small" />, "Dashboard", "/dashboard")}
         {nav(<RocketLaunchIcon fontSize="small" />, "Spaces", "/spaces")}
 
-        {nav(
+        {/* {nav(
           <ConfirmationNumberIcon fontSize="small" />,
           "Tickets",
           "/tickets",
           can("view:tickets"),
-        )}
-        {/* {nav(
-          <ViewKanbanIcon fontSize="small" />,
-          "Kanban",
-          "/kanban",
-          can("view:tickets"),
         )} */}
-        {nav(
+
+        {/* {nav(
           <SpeedIcon fontSize="small" />,
           "Sprints",
           "/sprints",
           can("view:tickets"),
-        )}
+        )} */}
 
         {/* <div className={styles.divider} /> */}
 
         {nav(<MenuBookIcon fontSize="small" />, "Wiki", "/wiki")}
-        {nav(<WbSunnyIcon fontSize="small" />, "Standup", "/standup")}
+        {/* {nav(<WbSunnyIcon fontSize="small" />, "Standup", "/standup")} */}
         {nav(<BarChartIcon fontSize="small" />, "Analytics", "/analytics")}
 
         {/* <div className={styles.divider} /> */}
@@ -327,12 +132,12 @@ export default function Sidebar({
           "/timesheets/weekly",
           can("entry:manual"),
         )}
-        {nav(
+        {/* {nav(
           <FileDownloadIcon fontSize="small" />,
           "Export",
           "/export",
           can("export:all"),
-        )}
+        )} */}
 
         {/* <div className={styles.divider} /> */}
 
@@ -367,12 +172,12 @@ export default function Sidebar({
           "/settings",
           can("manage:settings"),
         )}
-        {nav(
+        {/* {nav(
           <AutoAwesomeIcon fontSize="small" />,
           "Burn Rate",
           "/settings/budget",
           can("manage:settings"),
-        )}
+        )} */}
         {nav(
           <NotificationsIcon fontSize="small" />,
           "Notifications",

@@ -20,6 +20,9 @@ export interface Ticket {
   hours_spent:              number
   original_estimate_hours:  number
   remaining_estimate_hours: number
+  story_points?:            number
+  labels?:                  string[]
+  due_date?:                string
   created:                  string
   updated:                  string
   issue_type:               string
@@ -195,7 +198,7 @@ export interface NLAnalysisResult {
 
 /* ── Wiki ── */
 export interface WikiSpace {
-  id:          number
+  id:          string
   name:        string
   slug:        string
   description: string
@@ -204,31 +207,33 @@ export interface WikiSpace {
 }
 
 export interface WikiPage {
-  id:          number
-  space_id:    number
+  id:          string
+  space_id:    string
   space_name?: string
-  parent_id?:  number
+  parent_id?:  string
   title:       string
-  slug:        string
-  content:     string
-  author:      string
+  slug?:       string
+  content_md?: string
+  content_html?: string
+  author_name?: string
   created_at:  string
   updated_at:  string
   children?:   WikiPage[]
 }
 
 export interface WikiVersion {
-  id:          number
-  page_id:     number
+  id:          string
+  page_id:     string
   version:     number
   title:       string
-  content:     string
-  author:      string
+  content_md?: string
+  content_html?: string
+  author_name?: string
   created_at:  string
 }
 
 export interface RelatedDoc {
-  id:         number
+  id:         string
   type:       'ticket' | 'wiki'
   title:      string
   key?:       string

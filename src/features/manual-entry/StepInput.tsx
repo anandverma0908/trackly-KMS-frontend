@@ -13,14 +13,6 @@ const SUGGESTIONS = [
   "This week: 8h sprint ceremonies, 6h 1:1s DPAI, 3h interviews, 2h roadmap planning SAAS",
 ];
 
-const ROLES: PersonRole[] = [
-  "Engineering Manager",
-  "Scrum Master",
-  "Tech Lead",
-  "Director",
-  "Other",
-];
-
 interface StepInputProps {
   inputText: string;
   setInputText: (v: string) => void;
@@ -33,9 +25,9 @@ interface StepInputProps {
 export default function StepInput({
   inputText,
   setInputText,
-  selectedRole,
-  setRole,
-  personName,
+  selectedRole: _selectedRole,
+  setRole: _setRole,
+  personName: _personName,
   onParse,
 }: StepInputProps) {
   const taRef = useRef<HTMLTextAreaElement>(null);

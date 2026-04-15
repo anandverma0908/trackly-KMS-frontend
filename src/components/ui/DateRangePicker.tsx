@@ -1,13 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import {
   Box,
   Typography,
   Paper,
   Button,
   Stack,
-  Chip,
   Divider,
-  TextField,
   Popover,
 } from "@mui/material";
 import { RiArrowDownWideFill } from "react-icons/ri";
@@ -229,7 +227,7 @@ export default function DateRangePicker({
   compact = false,
 }: DateRangePickerProps) {
   const { dateFrom, dateTo, setDateRange } = useFilterStore();
-  const { themeId, colorMode } = useThemeStore.getState();
+  useThemeStore.getState();
 
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [preset, setPreset] = useState<Preset>("thisMonth");
@@ -377,9 +375,8 @@ export default function DateRangePicker({
                   cursor: "pointer",
                   fontSize: 12,
                   fontWeight: preset === p.value ? 700 : 400,
-                  color: preset === p.value ? "primary.main" : "text.primary",
-                  bgcolor: preset === p.value ? "primary.main" : "transparent",
                   color: preset === p.value ? "#fff" : "text.primary",
+                  bgcolor: preset === p.value ? "primary.main" : "transparent",
                   transition: "all .12s",
                   "&:hover": {
                     bgcolor:

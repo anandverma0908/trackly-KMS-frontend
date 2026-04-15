@@ -351,7 +351,7 @@ export default function BacklogTab({ project }: { project: Project }) {
                     />
                   ))}
                   {/* Add issue row */}
-                  <div className={styles.addRow}>
+                  <div className={styles.addRow} onClick={() => setShowCreateDrawer(true)}>
                     <AddIcon sx={{ fontSize: 13, color: "var(--text-3)" }} />
                     <span className={styles.addRowText}>Add issue</span>
                   </div>

@@ -1,15 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import toast from "react-hot-toast";
 import { fetchFilters } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import { useManualEntry } from "./useManualEntry";
-import { useAuthStore } from "@/features/auth/useAuthStore";
 import StepInput from "./StepInput";
 import StepParsing from "./StepParsing";
 import StepPreview from "./StepPreview";
 import StepConfirmed from "./StepConfirmed";
-import MyTimesheets from "./MyTimeSheets";
+import MyTimesheets from "./MyTimesheets";
 import styles from "./ManualEntryPage.module.css";
 import { BsFillCalendar2EventFill } from "react-icons/bs";
 import { PiStarFourFill } from "react-icons/pi";
@@ -21,10 +19,6 @@ type Tab = "entry" | "timesheets";
 
 export default function ManualEntryPage() {
   const [activeTab, setActiveTab] = useState<Tab>("entry");
-  const user = useAuthStore((s) => s.user);
-  const isManager =
-    user?.role === "admin" || user?.role === "engineering_manager";
-
   const { data: filtersData } = useQuery({
     queryKey: QUERY_KEYS.filters(),
     queryFn: fetchFilters,
@@ -35,7 +29,7 @@ export default function ManualEntryPage() {
 
   const {
     step,
-    setStep,
+    setStep: _setStep,
     inputText,
     setInputText,
     parsedRows,
@@ -160,7 +154,6 @@ export default function ManualEntryPage() {
                 entries={confirmedRows}
                 totalHours={totalHours}
                 onAddMore={reset}
-                onExport={() => toast.success("Exporting timesheet…")}
               />
             )}
           </div>

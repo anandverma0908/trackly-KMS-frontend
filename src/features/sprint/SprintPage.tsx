@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import type { Sprint, Ticket } from "@/types";
 import { IssueTypeBadge, StatusBadge } from "@/components/ui/Badge";
+import { useAuthStore } from "@/features/auth/useAuthStore";
 import styles from "./SprintPage.module.css";
 
 type View = "board" | "backlog" | "burndown" | "velocity";
@@ -23,7 +24,8 @@ export default function SprintPage() {
   const [showNewSprint, setShowNewSprint] = useState(false);
   const [retroText, setRetroText]     = useState("");
   const [loadingRetro, setLoadingRetro] = useState(false);
-  const [newSprint, setNewSprint] = useState({ name: "", goal: "", start_date: "", end_date: "" });
+  const scopedPod = useAuthStore((s) => s.getScopedPod());
+  const [newSprint, setNewSprint] = useState({ name: "", goal: "", start_date: "", end_date: "", project_id: scopedPod ?? "" });
 
   const { data: rawSprints = [] } = useQuery({
     queryKey: ["sprints"],
@@ -60,7 +62,7 @@ export default function SprintPage() {
   });
 
   const createMut = useMutation({
-    mutationFn: createSprint,
+    mutationFn: (payload: { name: string; goal?: string; start_date: string; end_date: string; project_id: string }) => createSprint(payload),
     onSuccess: (sprint) => {
       qc.invalidateQueries({ queryKey: ["sprints"] });
       setActiveSprint(sprint);
@@ -111,7 +113,7 @@ export default function SprintPage() {
   const backlogOnly = allBacklog.filter((t) => !sprintTicketKeys.has(t.key));
 
   // Capacity bar
-  const totalPoints = sprintTickets.length; // proxy for capacity
+  const totalPoints = sprintTickets.reduce((sum, t) => sum + (t.story_points || 0), 0);
   const CAPACITY = 40;
 
   return (
