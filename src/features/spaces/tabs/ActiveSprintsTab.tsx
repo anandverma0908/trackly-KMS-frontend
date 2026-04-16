@@ -23,43 +23,87 @@ import BlockIcon from "@mui/icons-material/Block";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 const COLUMNS = [
-  { id: "To Do",       label: "To Do",       color: "var(--text-3)",  emoji: "📋" },
-  { id: "In Progress", label: "In Progress", color: "var(--amber)",   emoji: "⚡" },
-  { id: "In Review",   label: "In Review",   color: "var(--purple)",  emoji: "👁️" },
-  { id: "Blocked",     label: "Blocked",     color: "var(--red)",     emoji: "🚫" },
-  { id: "Done",        label: "Done",        color: "var(--green)",   emoji: "✅" },
+  { id: "To Do", label: "To Do", color: "var(--text-3)", emoji: "📋" },
+  {
+    id: "In Progress",
+    label: "In Progress",
+    color: "var(--amber)",
+    emoji: "⚡",
+  },
+  { id: "In Review", label: "In Review", color: "var(--purple)", emoji: "👁️" },
+  { id: "Blocked", label: "Blocked", color: "var(--red)", emoji: "🚫" },
+  { id: "Done", label: "Done", color: "var(--green)", emoji: "✅" },
 ];
 
-type AIFilter = "blockers" | "high-priority" | "overdue" | "bugs" | "my-tasks" | null;
+type AIFilter =
+  | "blockers"
+  | "high-priority"
+  | "overdue"
+  | "bugs"
+  | "my-tasks"
+  | null;
 
-const AI_FILTERS: { id: AIFilter; label: string; icon: React.ReactNode; color: string }[] = [
-  { id: "blockers",      label: "Blockers",      icon: <BlockIcon sx={{ fontSize: 12 }} />,      color: "var(--red)" },
-  { id: "high-priority", label: "High Priority", icon: <FlagIcon sx={{ fontSize: 12 }} />,       color: "var(--amber)" },
-  { id: "overdue",       label: "Overdue",       icon: <TaskAltIcon sx={{ fontSize: 12 }} />,    color: "var(--red)" },
-  { id: "bugs",          label: "Bugs Only",     icon: <BugReportIcon sx={{ fontSize: 12 }} />,  color: "var(--purple)" },
+const AI_FILTERS: {
+  id: AIFilter;
+  label: string;
+  icon: React.ReactNode;
+  color: string;
+}[] = [
+  {
+    id: "blockers",
+    label: "Blockers",
+    icon: <BlockIcon sx={{ fontSize: 12 }} />,
+    color: "var(--red)",
+  },
+  {
+    id: "high-priority",
+    label: "High Priority",
+    icon: <FlagIcon sx={{ fontSize: 12 }} />,
+    color: "var(--amber)",
+  },
+  {
+    id: "overdue",
+    label: "Overdue",
+    icon: <TaskAltIcon sx={{ fontSize: 12 }} />,
+    color: "var(--red)",
+  },
+  {
+    id: "bugs",
+    label: "Bugs Only",
+    icon: <BugReportIcon sx={{ fontSize: 12 }} />,
+    color: "var(--purple)",
+  },
 ];
-
 
 export default function ActiveSprintsTab({ project }: { project: Project }) {
   const qc = useQueryClient();
   const activeSprints = useMemo(
-    () => project.sprints.filter(s => s.status === "active" || s.status === "planning"),
-    [project]
+    () =>
+      project.sprints.filter(
+        (s) => s.status === "active" || s.status === "planning",
+      ),
+    [project],
   );
 
-  const [selectedSprint, setSelectedSprint] = useState<ProjectSprint>(activeSprints[0] ?? project.sprints[0]);
-  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
-  const [search, setSearch]                   = useState("");
-  const [myTasksActive, setMyTasksActive]     = useState(false);
-  const [aiFilter, setAiFilter]               = useState<AIFilter>(null);
+  const [selectedSprint, setSelectedSprint] = useState<ProjectSprint>(
+    activeSprints[0] ?? project.sprints[0],
+  );
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(
+    new Set(),
+  );
+  const [search, setSearch] = useState("");
+  const [myTasksActive, setMyTasksActive] = useState(false);
+  const [aiFilter, setAiFilter] = useState<AIFilter>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createColumn, setCreateColumn]       = useState("To Do");
+  const [createColumn, setCreateColumn] = useState("To Do");
   // Optimistic local status overrides for drag-and-drop
-  const [localStatuses, setLocalStatuses]     = useState<Record<string, ProjectTask["status"]>>({});
+  const [localStatuses, setLocalStatuses] = useState<
+    Record<string, ProjectTask["status"]>
+  >({});
   // Temporary buffer for optimistically created tasks
-  const [localTasks, setLocalTasks]           = useState<ProjectTask[]>([]);
-  const [draggedTask, setDraggedTask]         = useState<ProjectTask | null>(null);
-  const [dragOverCol, setDragOverCol]         = useState<string | null>(null);
+  const [localTasks, setLocalTasks] = useState<ProjectTask[]>([]);
+  const [draggedTask, setDraggedTask] = useState<ProjectTask | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
   const statusMut = useMutation({
     mutationFn: ({ key, status }: { key: string; status: string }) =>
@@ -99,11 +143,14 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
       ...t,
       status: (localStatuses[t.key] ?? t.status) as ProjectTask["status"],
     }));
-    return [...sprintTasks, ...localTasks.filter((t) => t.sprint === selectedSprint.id)];
+    return [
+      ...sprintTasks,
+      ...localTasks.filter((t) => t.sprint === selectedSprint.id),
+    ];
   }, [selectedSprint, localStatuses, localTasks]);
 
   function toggleMember(name: string) {
-    setSelectedMembers(prev => {
+    setSelectedMembers((prev) => {
       const next = new Set(prev);
       next.has(name) ? next.delete(name) : next.add(name);
       return next;
@@ -116,45 +163,66 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
 
     // Member filter
     if (selectedMembers.size > 0) {
-      tasks = tasks.filter(t => selectedMembers.has(t.assignee));
+      tasks = tasks.filter((t) => selectedMembers.has(t.assignee));
     }
 
     // Search
     if (search) {
       const q = search.toLowerCase();
-      tasks = tasks.filter(t =>
-        t.title.toLowerCase().includes(q) ||
-        t.key.toLowerCase().includes(q) ||
-        (t.assignee || "").toLowerCase().includes(q)
+      tasks = tasks.filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          t.key.toLowerCase().includes(q) ||
+          (t.assignee || "").toLowerCase().includes(q),
       );
     }
 
     // My tasks (mock — use first member as "me")
     if (myTasksActive) {
       const me = project.members[0]?.name ?? "";
-      tasks = tasks.filter(t => t.assignee === me);
+      tasks = tasks.filter((t) => t.assignee === me);
     }
 
     // AI filters
-    if (aiFilter === "blockers")      tasks = tasks.filter(t => t.status === "Blocked");
-    if (aiFilter === "high-priority") tasks = tasks.filter(t => t.priority === "Critical" || t.priority === "High");
-    if (aiFilter === "overdue")       tasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "Done");
-    if (aiFilter === "bugs")          tasks = tasks.filter(t => t.type === "Bug");
+    if (aiFilter === "blockers")
+      tasks = tasks.filter((t) => t.status === "Blocked");
+    if (aiFilter === "high-priority")
+      tasks = tasks.filter(
+        (t) => t.priority === "Critical" || t.priority === "High",
+      );
+    if (aiFilter === "overdue")
+      tasks = tasks.filter(
+        (t) =>
+          t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "Done",
+      );
+    if (aiFilter === "bugs") tasks = tasks.filter((t) => t.type === "Bug");
 
     return tasks;
-  }, [allSprintTasks, selectedMembers, search, myTasksActive, aiFilter, project]);
+  }, [
+    allSprintTasks,
+    selectedMembers,
+    search,
+    myTasksActive,
+    aiFilter,
+    project,
+  ]);
 
   // Group by column
   const columns = useMemo(() => {
-    return COLUMNS.map(col => ({
+    return COLUMNS.map((col) => ({
       ...col,
-      tasks: filteredTasks.filter(t => t.status === col.id),
+      tasks: filteredTasks.filter((t) => t.status === col.id),
     }));
   }, [filteredTasks]);
 
   // Drag handlers
-  function handleDragStart(task: ProjectTask) { setDraggedTask(task); }
-  function handleDragEnd()                     { setDraggedTask(null); setDragOverCol(null); }
+  function handleDragStart(task: ProjectTask) {
+    setDraggedTask(task);
+  }
+  function handleDragEnd() {
+    setDraggedTask(null);
+    setDragOverCol(null);
+  }
   function handleDragOver(e: React.DragEvent, colId: string) {
     e.preventDefault();
     setDragOverCol(colId);
@@ -174,7 +242,9 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
     setDragOverCol(null);
   }
 
-  function handleCreateTask(data: Partial<ProjectTask> & { status: string; title: string }) {
+  function handleCreateTask(
+    data: Partial<ProjectTask> & { status: string; title: string },
+  ) {
     const payload: TicketCreate = {
       title: data.title || "",
       description: data.description || "",
@@ -196,7 +266,9 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
       type: _normalizeType(payload.issue_type) as ProjectTask["type"],
       assignee: payload.assignee || project.members[0]?.name || "",
       assigneeInitials: _initials(payload.assignee || project.members[0]?.name),
-      assigneeColor: _hashColor(payload.assignee || project.members[0]?.name || ""),
+      assigneeColor: _hashColor(
+        payload.assignee || project.members[0]?.name || "",
+      ),
       storyPoints: payload.story_points || 0,
       createdAt: new Date().toISOString().split("T")[0],
       updatedAt: new Date().toISOString().split("T")[0],
@@ -219,7 +291,9 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
   function _initials(name: string | undefined): string {
     if (!name) return "??";
     const parts = name.trim().split(" ");
-    return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+    return parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : name.slice(0, 2).toUpperCase();
   }
   function _hashColor(name: string): string {
     const MEMBER_COLORS = [
@@ -238,7 +312,10 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
   }
 
   const sprintPct = selectedSprint
-    ? Math.round((selectedSprint.donePoints / Math.max(selectedSprint.totalPoints, 1)) * 100)
+    ? Math.round(
+        (selectedSprint.donePoints / Math.max(selectedSprint.totalPoints, 1)) *
+          100,
+      )
     : 0;
 
   if (!selectedSprint) {
@@ -246,7 +323,9 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
       <div className={styles.empty}>
         <span style={{ fontSize: 40 }}>🏃</span>
         <div className={styles.emptyTitle}>No active sprints</div>
-        <div className={styles.emptyDesc}>Start a sprint from the Backlog tab to see tasks here.</div>
+        <div className={styles.emptyDesc}>
+          Start a sprint from the Backlog tab to see tasks here.
+        </div>
       </div>
     );
   }
@@ -262,12 +341,16 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
                 className={styles.sprintDropdown}
                 value={selectedSprint.id}
                 onChange={(e) => {
-                  const s = project.sprints.find(sp => sp.id === e.target.value);
+                  const s = project.sprints.find(
+                    (sp) => sp.id === e.target.value,
+                  );
                   if (s) setSelectedSprint(s);
                 }}
               >
-                {activeSprints.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                {activeSprints.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
                 ))}
               </select>
               <ExpandMoreIcon sx={{ fontSize: 16, color: "var(--text-3)" }} />
@@ -284,17 +367,29 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
         <div className={styles.sprintRight}>
           <div className={styles.sprintStats}>
             <div className={styles.sStat}>
-              <span className={styles.sStatVal} style={{ color: "var(--green)" }}>{selectedSprint.donePoints}</span>
+              <span
+                className={styles.sStatVal}
+                style={{ color: "var(--green)" }}
+              >
+                {selectedSprint.donePoints}
+              </span>
               <span className={styles.sStatLbl}>Done pts</span>
             </div>
             <div className={styles.sStatDiv} />
             <div className={styles.sStat}>
-              <span className={styles.sStatVal}>{selectedSprint.totalPoints}</span>
+              <span className={styles.sStatVal}>
+                {selectedSprint.totalPoints}
+              </span>
               <span className={styles.sStatLbl}>Total pts</span>
             </div>
             <div className={styles.sStatDiv} />
             <div className={styles.sStat}>
-              <span className={styles.sStatVal} style={{ color: project.color }}>{sprintPct}%</span>
+              <span
+                className={styles.sStatVal}
+                style={{ color: project.color }}
+              >
+                {sprintPct}%
+              </span>
               <span className={styles.sStatLbl}>Complete</span>
             </div>
           </div>
@@ -319,18 +414,25 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
       <div className={styles.toolbar}>
         {/* Member avatar filter chips */}
         <div className={styles.memberChips}>
-          {project.members.map((m) => {
+          {project.members.slice(0, 6).map((m, idx) => {
             const isActive = selectedMembers.has(m.name);
             return (
-              <Tooltip key={m.id} title={`Filter by ${m.name}`} arrow>
+              <Tooltip key={m.id} title={`${m.name} · ${m.role}`} arrow placement="bottom">
                 <button
                   className={`${styles.memberChip} ${isActive ? styles.memberChipActive : ""}`}
                   onClick={() => toggleMember(m.name)}
-                  style={isActive ? { outline: `2px solid ${project.color}`, outlineOffset: 2 } : {}}
+                  style={{
+                    marginLeft: idx === 0 ? 0 : -10,
+                    zIndex: isActive ? 30 : 20 - idx,
+                  }}
                 >
                   <div
                     className={styles.memberChipAvatar}
-                    style={{ background: m.color }}
+                    style={{
+                      background: m.color,
+                      outline: isActive ? `2px solid ${project.color}` : undefined,
+                      outlineOffset: 2,
+                    }}
                   >
                     {m.initials}
                   </div>
@@ -338,6 +440,20 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
               </Tooltip>
             );
           })}
+          {project.members.length > 6 && (
+            <div
+              className={styles.memberChipAvatar}
+              style={{
+                background: "var(--surface-2)",
+                marginLeft: -10,
+                zIndex: 0,
+                color: "var(--text-2)",
+                fontSize: 11,
+              }}
+            >
+              +{project.members.length - 6}
+            </div>
+          )}
           {selectedMembers.size > 0 && (
             <button
               className={styles.clearMembersBtn}
@@ -359,7 +475,12 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
               onChange={(e) => setSearch(e.target.value)}
             />
             {search && (
-              <button className={styles.searchClear} onClick={() => setSearch("")}>✕</button>
+              <button
+                className={styles.searchClear}
+                onClick={() => setSearch("")}
+              >
+                ✕
+              </button>
             )}
           </div>
 
@@ -367,7 +488,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
           <Tooltip title="Show only my tasks" arrow>
             <button
               className={`${styles.myTasksBtn} ${myTasksActive ? styles.myTasksBtnActive : ""}`}
-              onClick={() => setMyTasksActive(v => !v)}
+              onClick={() => setMyTasksActive((v) => !v)}
             >
               <PersonIcon sx={{ fontSize: 14 }} />
               <span>My Tasks</span>
@@ -382,7 +503,15 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
               <button
                 key={f.id}
                 className={`${styles.aiChip} ${aiFilter === f.id ? styles.aiChipActive : ""}`}
-                style={aiFilter === f.id ? { color: f.color, borderColor: f.color, background: `${f.color}18` } : {}}
+                style={
+                  aiFilter === f.id
+                    ? {
+                        color: f.color,
+                        borderColor: f.color,
+                        background: `${f.color}18`,
+                      }
+                    : {}
+                }
                 onClick={() => setAiFilter(aiFilter === f.id ? null : f.id)}
               >
                 {f.icon}
@@ -394,7 +523,10 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
           {/* Create task */}
           <button
             className="btn btn-primary btn-sm"
-            onClick={() => { setCreateColumn("To Do"); setShowCreateModal(true); }}
+            onClick={() => {
+              setCreateColumn("To Do");
+              setShowCreateModal(true);
+            }}
           >
             <AddIcon sx={{ fontSize: 15 }} />
             Create Task
@@ -412,10 +544,18 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
               {selectedMembers.size} member{selectedMembers.size > 1 ? "s" : ""}
             </span>
           )}
-          {myTasksActive && <span className={styles.activeFilterChip}>My Tasks</span>}
-          {aiFilter && <span className={styles.activeFilterChip}>{aiFilter}</span>}
-          {search && <span className={styles.activeFilterChip}>"{search}"</span>}
-          <span className={styles.activeFilterCount}>{filteredTasks.length} tasks shown</span>
+          {myTasksActive && (
+            <span className={styles.activeFilterChip}>My Tasks</span>
+          )}
+          {aiFilter && (
+            <span className={styles.activeFilterChip}>{aiFilter}</span>
+          )}
+          {search && (
+            <span className={styles.activeFilterChip}>"{search}"</span>
+          )}
+          <span className={styles.activeFilterCount}>
+            {filteredTasks.length} tasks shown
+          </span>
           <button
             className={styles.clearAllBtn}
             onClick={() => {
@@ -444,15 +584,23 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
             <div className={styles.colHeader}>
               <div className={styles.colHeaderLeft}>
                 <span className={styles.colEmoji}>{col.emoji}</span>
-                <span className={styles.colLabel} style={{ color: col.color }}>{col.label}</span>
-                <span className={styles.colCount} style={{ background: `${col.color}22`, color: col.color }}>
+                <span className={styles.colLabel} style={{ color: col.color }}>
+                  {col.label}
+                </span>
+                <span
+                  className={styles.colCount}
+                  style={{ background: `${col.color}22`, color: col.color }}
+                >
                   {col.tasks.length}
                 </span>
               </div>
               <Tooltip title={`Add to ${col.label}`} arrow>
                 <button
                   className={styles.colAddBtn}
-                  onClick={() => { setCreateColumn(col.id); setShowCreateModal(true); }}
+                  onClick={() => {
+                    setCreateColumn(col.id);
+                    setShowCreateModal(true);
+                  }}
                 >
                   <AddIcon sx={{ fontSize: 14 }} />
                 </button>
@@ -464,9 +612,14 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
               <div
                 className={styles.colBarFill}
                 style={{
-                  width: `${allSprintTasks.length > 0
-                    ? (allSprintTasks.filter(t => t.status === col.id).length / allSprintTasks.length) * 100
-                    : 0}%`,
+                  width: `${
+                    allSprintTasks.length > 0
+                      ? (allSprintTasks.filter((t) => t.status === col.id)
+                          .length /
+                          allSprintTasks.length) *
+                        100
+                      : 0
+                  }%`,
                   background: col.color,
                 }}
               />
@@ -488,10 +641,11 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
 
               {col.tasks.length === 0 && (
                 <div className={styles.emptyCol}>
-                  {dragOverCol === col.id
-                    ? <span style={{ color: col.color }}>Drop here</span>
-                    : "No tasks"
-                  }
+                  {dragOverCol === col.id ? (
+                    <span style={{ color: col.color }}>Drop here</span>
+                  ) : (
+                    "No tasks"
+                  )}
                 </div>
               )}
             </div>
@@ -513,7 +667,9 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
             type: data.issue_type as any,
             priority: data.priority as any,
             assignee: data.assignee,
-            storyPoints: data.story_points ? Number(data.story_points) : undefined,
+            storyPoints: data.story_points
+              ? Number(data.story_points)
+              : undefined,
             status: (data.status ?? createColumn) as ProjectTask["status"],
             dueDate: data.due_date,
             labels: data.labels,
@@ -526,7 +682,9 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
 
 /* ── Kanban Card ── */
 function KanbanCard({
-  task, onDragStart, onDragEnd,
+  task,
+  onDragStart,
+  onDragEnd,
 }: {
   task: ProjectTask;
   projectColor?: string;
@@ -536,7 +694,11 @@ function KanbanCard({
   const priorityColor = getPriorityColor(task.priority);
 
   const typeIcons: Record<string, string> = {
-    Story: "🟢", Bug: "🔴", Task: "🔵", Epic: "⚡", Subtask: "◾",
+    Story: "🟢",
+    Bug: "🔴",
+    Task: "🔵",
+    Epic: "⚡",
+    Subtask: "◾",
   };
 
   return (
@@ -552,12 +714,17 @@ function KanbanCard({
       whileHover={{ y: -2, boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
     >
       {/* Priority indicator */}
-      <div className={styles.cardPriorityBar} style={{ background: priorityColor }} />
+      <div
+        className={styles.cardPriorityBar}
+        style={{ background: priorityColor }}
+      />
 
       {/* Header */}
       <div className={styles.cardHeader}>
         <span className={styles.cardKey}>{task.key}</span>
-        <span className={styles.cardTypeIcon}>{typeIcons[task.type] ?? "🔵"}</span>
+        <span className={styles.cardTypeIcon}>
+          {typeIcons[task.type] ?? "🔵"}
+        </span>
       </div>
 
       {/* Title */}
@@ -566,8 +733,10 @@ function KanbanCard({
       {/* Labels */}
       {task.labels && task.labels.length > 0 && (
         <div className={styles.cardLabels}>
-          {task.labels.map(l => (
-            <span key={l} className={styles.cardLabel}>{l}</span>
+          {task.labels.map((l) => (
+            <span key={l} className={styles.cardLabel}>
+              {l}
+            </span>
           ))}
         </div>
       )}
@@ -585,11 +754,16 @@ function KanbanCard({
             <span
               className={styles.dueBadge}
               style={{
-                color: new Date(task.dueDate) < new Date() && task.status !== "Done"
-                  ? "var(--red)" : "var(--text-3)",
+                color:
+                  new Date(task.dueDate) < new Date() && task.status !== "Done"
+                    ? "var(--red)"
+                    : "var(--text-3)",
               }}
             >
-              {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              {new Date(task.dueDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
             </span>
           )}
         </div>
@@ -608,9 +782,7 @@ function KanbanCard({
 
       {/* Blocked banner */}
       {task.status === "Blocked" && (
-        <div className={styles.blockedBanner}>
-          🚫 Blocked
-        </div>
+        <div className={styles.blockedBanner}>🚫 Blocked</div>
       )}
     </motion.div>
   );

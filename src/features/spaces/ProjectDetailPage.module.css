@@ -196,6 +196,7 @@
   font-family: var(--font-sans);
   transition: all 0.15s;
   white-space: nowrap;
+  margin-bottom: -1px;
 }
 .tab:hover {
   color: var(--text);
