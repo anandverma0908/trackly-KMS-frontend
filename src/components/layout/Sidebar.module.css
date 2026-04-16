@@ -110,6 +110,8 @@
 /* Body scrolls, not the whole sidebar */
 .body {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 8px 8px 16px;
@@ -128,6 +130,18 @@
 .body::-webkit-scrollbar-thumb {
   background: var(--border-2);
   border-radius: 4px;
+}
+
+.navGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.navGroupBottom {
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;
+  padding-top: 8px;
 }
 
 /* ── Section labels ── */

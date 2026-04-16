@@ -9,13 +9,10 @@ import { getPodColor } from "@/config/themes";
 import type { Sprint } from "@/types";
 import styles from "./SpacesPage.module.css";
 
-import FolderIcon from "@mui/icons-material/Folder";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import SearchIcon from "@mui/icons-material/Search";
 import GridViewIcon from "@mui/icons-material/GridView";
 import TableRowsIcon from "@mui/icons-material/TableRows";
-import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
+import SpacesKPIStrip from "./SpacesKPIStrip";
 
 /* ── Derived pod card data ── */
 interface PodCard {
@@ -90,6 +87,7 @@ export default function SpacesPage() {
       withSprints: cards.filter((c) => c.hasActiveSprint).length,
       totalHours: Math.round(cards.reduce((a, c) => a + c.totalHours, 0)),
       totalTickets: cards.reduce((a, c) => a + c.totalTickets, 0),
+      blockedTickets: cards.reduce((a, c) => a + c.blockedTickets, 0),
     }),
     [cards],
   );
@@ -147,55 +145,7 @@ export default function SpacesPage() {
 
       {/* ── KPI Strip ── */}
       <div className={`${styles.kpiStrip} fade-up`}>
-        {[
-          {
-            icon: <FolderIcon sx={{ fontSize: 16 }} />,
-            val: stats.total,
-            label: "Total Pods",
-            color: "var(--accent)",
-          },
-          {
-            icon: <RocketLaunchIcon sx={{ fontSize: 16 }} />,
-            val: stats.withSprints,
-            label: "In Sprint",
-            color: "var(--green)",
-          },
-          {
-            icon: <TrendingUpIcon sx={{ fontSize: 16 }} />,
-            val: stats.totalTickets.toLocaleString(),
-            label: "Total Tickets",
-            color: "var(--amber)",
-          },
-          {
-            icon: <CheckCircleOutlineIcon sx={{ fontSize: 16 }} />,
-            val: `${stats.totalHours.toLocaleString()}h`,
-            label: "Hours Logged",
-            color: "var(--purple)",
-          },
-        ].map((k) => (
-          <div
-            key={k.label}
-            className={styles.kpiCard}
-            // style={{ "--kc": k.color } as React.CSSProperties}
-          >
-            <div className={styles.kpiTop}>
-              <div className={styles.kpiLabel}>{k.label}</div>
-              <div
-                className={styles.kpiIcon}
-                // style={{
-                //   color: k.color,
-                //   background: `color-mix(in srgb, ${k.color} 10%, transparent)`,
-                //   borderColor: `color-mix(in srgb, ${k.color} 20%, transparent)`,
-                // }}
-              >
-                {k.icon}
-              </div>
-            </div>
-            <div className={styles.kpiBottom}>
-              <div className={styles.kpiVal}>{k.val}</div>
-            </div>
-          </div>
-        ))}
+        <SpacesKPIStrip stats={stats} loading={loadingPods} />
       </div>
 
       {/* ── Grid / List ── */}

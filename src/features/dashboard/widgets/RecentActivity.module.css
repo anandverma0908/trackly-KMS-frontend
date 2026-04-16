@@ -18,13 +18,11 @@
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: rgba(52, 211, 153, 0.12);
-  border: 1px solid rgba(52, 211, 153, 0.22);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
-  color: rgba(52, 211, 153, 1);
+  font-size: 22px;
+  color: var(--text);
   flex-shrink: 0;
 }
 

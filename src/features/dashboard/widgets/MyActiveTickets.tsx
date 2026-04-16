@@ -218,7 +218,7 @@ export default function MyActiveTickets() {
         <span className={styles.iconWrap}>
           <RiTicketLine />
         </span>
-        <span className={styles.title}>My Active Tickets</span>
+        <span className={styles.title}>Active Tickets</span>
         {!isLoading && (
           <span
             className={`${styles.countBadge} ${hasBlocked ? styles.countBadgeAlert : ""}`}
@@ -265,7 +265,6 @@ export default function MyActiveTickets() {
         <div className={styles.empty}>
           {activeTab === "all" ? (
             <>
-              <span className={styles.emptyIcon}>🎉</span>
               <span className={styles.emptyTitle}>All clear!</span>
               <span className={styles.emptyDesc}>
                 No open tickets assigned to you right now.
@@ -345,7 +344,7 @@ export default function MyActiveTickets() {
       )}
 
       {/* Footer */}
-      {showViewAll && (
+      {/* {showViewAll && (
         <div className={styles.footer}>
           <span className={styles.footerNote}>
             {sorted.length} of {tickets.length} open
@@ -357,7 +356,7 @@ export default function MyActiveTickets() {
             View all <RiArrowRightLine size={12} />
           </button>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

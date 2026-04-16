@@ -7,13 +7,8 @@ import Tooltip from "@mui/material/Tooltip";
 /* MUI Icons */
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
-import BarChartIcon from "@mui/icons-material/BarChart";
 import GroupsIcon from "@mui/icons-material/Groups";
-import TableChartIcon from "@mui/icons-material/TableChart";
-import GridViewIcon from "@mui/icons-material/GridView";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
-import SettingsIcon from "@mui/icons-material/Settings";
-import NotificationsIcon from "@mui/icons-material/Notifications";
 import LockIcon from "@mui/icons-material/Lock";
 import PeopleIcon from "@mui/icons-material/People";
 import CloseIcon from "@mui/icons-material/Close";
@@ -78,123 +73,124 @@ export default function Sidebar({
         <div className={styles.logoMark}>T</div>
       </div> */}
 
-      <div
-        className={styles.logo}
-        onClick={() => navigate("/dashboard")}
-      >
+      <div className={styles.logo} onClick={() => navigate("/dashboard")}>
         <div className={styles.logoMark}>T</div>
         {!collapsed && <span className={styles.logoName}>Trackly</span>}
       </div>
 
       <div className={styles.body}>
-        {/* ── Primary nav ── */}
+        <div className={styles.navGroup}>
+          {/* ── Primary nav ── */}
+          {nav(<DashboardIcon fontSize="small" />, "Dashboard", "/dashboard")}
+          {nav(<RocketLaunchIcon fontSize="small" />, "Spaces", "/spaces")}
 
-        {nav(<DashboardIcon fontSize="small" />, "Dashboard", "/dashboard")}
-        {nav(<RocketLaunchIcon fontSize="small" />, "Spaces", "/spaces")}
+          {/* {nav(
+            <ConfirmationNumberIcon fontSize="small" />,
+            "Tickets",
+            "/tickets",
+            can("view:tickets"),
+          )} */}
 
-        {/* {nav(
-          <ConfirmationNumberIcon fontSize="small" />,
-          "Tickets",
-          "/tickets",
-          can("view:tickets"),
-        )} */}
+          {/* {nav(
+            <SpeedIcon fontSize="small" />,
+            "Sprints",
+            "/sprints",
+            can("view:tickets"),
+          )} */}
 
-        {/* {nav(
-          <SpeedIcon fontSize="small" />,
-          "Sprints",
-          "/sprints",
-          can("view:tickets"),
-        )} */}
+          {/* <div className={styles.divider} /> */}
 
-        {/* <div className={styles.divider} /> */}
+          {nav(<MenuBookIcon fontSize="small" />, "Wiki", "/wiki")}
+          {/* {nav(<WbSunnyIcon fontSize="small" />, "Standup", "/standup")} */}
+          {/* {nav(<BarChartIcon fontSize="small" />, "Analytics", "/analytics")} */}
 
-        {nav(<MenuBookIcon fontSize="small" />, "Wiki", "/wiki")}
-        {/* {nav(<WbSunnyIcon fontSize="small" />, "Standup", "/standup")} */}
-        {nav(<BarChartIcon fontSize="small" />, "Analytics", "/analytics")}
+          {/* <div className={styles.divider} /> */}
 
-        {/* <div className={styles.divider} /> */}
-
-        {nav(
-          <GroupsIcon fontSize="small" />,
-          "Team",
-          "/team",
-          can("view:teams"),
-        )}
-        {nav(
-          <TableChartIcon fontSize="small" />,
-          "Timesheets",
-          "/manual-entry",
-          // can("entry:manual"),
-        )}
-        {nav(
-          <GridViewIcon fontSize="small" />,
-          "Weekly Grid",
-          "/timesheets/weekly",
-          can("entry:manual"),
-        )}
-        {/* {nav(
-          <FileDownloadIcon fontSize="small" />,
-          "Export",
-          "/export",
-          can("export:all"),
-        )} */}
-
-        {/* <div className={styles.divider} /> */}
-
-        {/* Filters — hidden when collapsed */}
-        {/* {!collapsed && (
-          <>
-            <FilterSection
-              title="Projects"
-              items={allPods}
-              selected={pods}
-              onToggle={togglePod}
-              onClear={clearPods}
-              getColor={getPodColor}
-              maxVisible={5}
-            />
-            <div className={styles.divider} />
-            <FilterSection
-              title="Clients"
-              items={allClients}
-              selected={clients}
-              onToggle={toggleClient}
-              onClear={clearClients}
-              maxVisible={5}
-            />
-            <div className={styles.divider} />
-          </>
-        )} */}
-
-        {nav(
-          <SettingsIcon fontSize="small" />,
-          "Settings",
-          "/settings",
-          can("manage:settings"),
-        )}
-        {/* {nav(
-          <AutoAwesomeIcon fontSize="small" />,
-          "Burn Rate",
-          "/settings/budget",
-          can("manage:settings"),
-        )} */}
-        {nav(
-          <NotificationsIcon fontSize="small" />,
-          "Notifications",
-          "/settings/notifications",
-        )}
-        {!can("manage:users") &&
-          nav(
-            <LockIcon fontSize="small" />,
-            "Change Password",
-            "/settings/password",
+          {nav(
+            <GroupsIcon fontSize="small" />,
+            "Team",
+            "/team",
+            can("view:teams"),
           )}
-        {nav(
-          <PeopleIcon fontSize="small" />,
-          "Users",
-          "/admin/users",
-          can("manage:users"),
-        )}
+          {/* {nav(
+            <TableChartIcon fontSize="small" />,
+            "Timesheets",
+            "/manual-entry",
+            // can("entry:manual"),
+          )} */}
+          {/* {nav(
+            <GridViewIcon fontSize="small" />,
+            "Weekly Grid",
+            "/timesheets/weekly",
+            can("entry:manual"),
+          )} */}
+          {/* {nav(
+            <FileDownloadIcon fontSize="small" />,
+            "Export",
+            "/export",
+            can("export:all"),
+          )} */}
+
+          {/* <div className={styles.divider} /> */}
+
+          {/* Filters — hidden when collapsed */}
+          {/* {!collapsed && (
+            <>
+              <FilterSection
+                title="Projects"
+                items={allPods}
+                selected={pods}
+                onToggle={togglePod}
+                onClear={clearPods}
+                getColor={getPodColor}
+                maxVisible={5}
+              />
+              <div className={styles.divider} />
+              <FilterSection
+                title="Clients"
+                items={allClients}
+                selected={clients}
+                onToggle={toggleClient}
+                onClear={clearClients}
+                maxVisible={5}
+              />
+              <div className={styles.divider} />
+            </>
+          )} */}
+
+          {/* {nav(
+            <SettingsIcon fontSize="small" />,
+            "Settings",
+            "/settings",
+            can("manage:settings"),
+          )} */}
+          {/* {nav(
+            <AutoAwesomeIcon fontSize="small" />,
+            "Burn Rate",
+            "/settings/budget",
+            can("manage:settings"),
+          )} */}
+          {/* {nav(
+            <NotificationsIcon fontSize="small" />,
+            "Notifications",
+            "/settings/notifications",
+          )} */}
+        </div>
+
+        <div className={styles.navGroupBottom}>
+          {!can("manage:users") &&
+            nav(
+              <LockIcon fontSize="small" />,
+              "Change Password",
+              "/settings/password",
+            )}
+          {nav(
+            <PeopleIcon fontSize="small" />,
+            "Users",
+            "/admin/users",
+            can("manage:users"),
+          )}
+        </div>
       </div>
     </motion.aside>
   );

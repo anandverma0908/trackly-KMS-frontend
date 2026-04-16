@@ -9,14 +9,11 @@ import LinearProgress from "@mui/material/LinearProgress";
 import type { Project, ProjectTask } from "../spacesData";
 import styles from "./SummaryTab.module.css";
 
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import UpdateIcon from "@mui/icons-material/Update";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import BoltIcon from "@mui/icons-material/Bolt";
 import ShieldIcon from "@mui/icons-material/Shield";
 import PsychologyIcon from "@mui/icons-material/Psychology";
+import SummaryKPIStrip from "./SummaryKPIStrip";
 
 /* ── Custom pie label ── */
 const RADIAN = Math.PI / 180;
@@ -153,44 +150,11 @@ export default function SummaryTab({ project }: { project: Project }) {
     <div className={styles.tab}>
       {/* ── KPI Row ── */}
       <div className={styles.kpiRow}>
-        {[
-          {
-            icon: <CheckCircleIcon sx={{ fontSize: 18 }} />,
-            val: kpis.done, label: "Tasks Complete",
-            sub: `${allTasks.length > 0 ? Math.round((kpis.done/allTasks.length)*100) : 0}% completion rate`,
-            color: "var(--green)", bg: "var(--green-glow)",
-          },
-          {
-            icon: <AddCircleOutlineIcon sx={{ fontSize: 18 }} />,
-            val: allTasks.length, label: "Tasks Created",
-            sub: `Across ${project.sprints.length} sprint${project.sprints.length !== 1 ? "s" : ""}`,
-            color: "var(--accent)", bg: "var(--accent-glow)",
-          },
-          {
-            icon: <UpdateIcon sx={{ fontSize: 18 }} />,
-            val: kpis.updated, label: "Updated Recently",
-            sub: "Last 30 days",
-            color: "var(--purple)", bg: "var(--purple-glow)",
-          },
-          {
-            icon: <WarningAmberIcon sx={{ fontSize: 18 }} />,
-            val: kpis.overdue, label: "Due / Overdue",
-            sub: `${kpis.blocked} currently blocked`,
-            color: kpis.overdue > 0 ? "var(--red)" : "var(--green)",
-            bg: kpis.overdue > 0 ? "var(--red-glow)" : "var(--green-glow)",
-          },
-        ].map((k) => (
-          <div key={k.label} className={styles.kpiCard} style={{ borderColor: `${k.color}33` }}>
-            <div className={styles.kpiIconWrap} style={{ background: k.bg, color: k.color }}>
-              {k.icon}
-            </div>
-            <div className={styles.kpiBody}>
-              <div className={styles.kpiVal} style={{ color: k.color }}>{k.val}</div>
-              <div className={styles.kpiLabel}>{k.label}</div>
-              <div className={styles.kpiSub}>{k.sub}</div>
-            </div>
-          </div>
-        ))}
+        <SummaryKPIStrip
+          kpis={kpis}
+          allTasksCount={allTasks.length}
+          sprintsCount={project.sprints.length}
+        />
       </div>
 
       {/* ── Row 2: Status Pie + Priority Pie + Activity ── */}

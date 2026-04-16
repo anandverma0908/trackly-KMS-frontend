@@ -48,7 +48,7 @@ export default function RecentActivity({ limit = 8 }: { limit?: number }) {
         user: isPersonal ? (user?.name ?? undefined) : undefined,
         dateFrom: null,
         dateTo: null,
-      }), 
+      }),
   });
 
   // Derive activity feed from tickets + worklogs

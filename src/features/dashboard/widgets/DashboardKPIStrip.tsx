@@ -13,6 +13,8 @@ import {
   RiGroupLine,
   RiFileList3Line,
   RiBarChartBoxLine,
+  RiForbid2Line,
+  RiRocketLine,
 } from "react-icons/ri";
 
 /* ── Trend indicator ── */
@@ -66,7 +68,7 @@ function KPICard({ kpi, delay }: { kpi: KPI; delay: number }) {
 function KPISkeleton() {
   return (
     <>
-      {[0, 1, 2, 3].map((i) => (
+      {[0, 1, 2, 3, 4].map((i) => (
         <div key={i} className={styles.skeletonCard}>
           <div
             style={{
@@ -147,24 +149,24 @@ export default function DashboardKPIStrip() {
   const clients = [...new Set(summary?.by_client.map((c) => c.client) ?? [])]
     .length;
 
+  const activeSprintCount = sprints.filter((s) => s.status === "active").length;
+
   const kpis: KPI[] = isOwn
     ? [
         {
           icon: <RiTicketLine />,
           label: "Open Tickets",
           value: String(openTickets.length),
-          sub: `${blocked.length > 0 ? `${blocked.length} blocked · ` : ""}assigned to me`,
+          sub: "Assigned backlog + active",
           color: "var(--accent)",
-          // glow: "var(--accent-glow)",
           trend: null,
         },
         {
           icon: <RiTimeLine />,
           label: "Hours This Month",
           value: `${formatNumber(Math.round(totalHours))}h`,
-          sub: "My logged hours",
+          sub: "Billable hours · this period",
           color: "var(--green)",
-          // glow: "var(--green-glow)",
           trend: null,
         },
         {
@@ -173,19 +175,25 @@ export default function DashboardKPIStrip() {
           value: sprintPct !== null ? `${sprintPct}%` : "—",
           sub:
             daysLeft !== null
-              ? `${daysLeft} days remaining`
-              : "No active sprint",
+              ? `Timebox: ${daysLeft}d left`
+              : "No committed iteration",
           color: "var(--amber)",
-          // glow: "var(--amber-glow)",
           trend: null,
         },
         {
           icon: <RiFileList3Line />,
           label: "In Review",
           value: String(inReview.length),
-          sub: "Awaiting review",
+          sub: "Pending peer review",
           color: "var(--purple)",
-          // glow: "var(--purple-glow)",
+          trend: null,
+        },
+        {
+          icon: <RiForbid2Line />,
+          label: "Blocked",
+          value: String(blocked.length),
+          sub: blocked.length > 0 ? "Impediments flagged" : "No impediments",
+          color: "var(--red)",
           trend: null,
         },
       ]
@@ -194,18 +202,16 @@ export default function DashboardKPIStrip() {
           icon: <RiTimeLine />,
           label: "Total Hours",
           value: `${formatNumber(Math.round(totalHours))}h`,
-          sub: "This period",
+          sub: "Aggregate engineer utilization",
           color: "var(--accent)",
-          // glow: "var(--accent-glow)",
           trend: null,
         },
         {
           icon: <RiTicketLine />,
           label: "Open Tickets",
           value: formatNumber(summary?.total_tickets ?? 0),
-          sub: "Open + active",
+          sub: "Open + active org-wide",
           color: "var(--green)",
-          // glow: "var(--green-glow)",
           trend: null,
         },
         {
@@ -214,7 +220,6 @@ export default function DashboardKPIStrip() {
           value: formatNumber(engineers),
           sub: `${pods} PODs · ${clients} clients`,
           color: "var(--amber)",
-          // glow: "var(--amber-glow)",
           trend: null,
         },
         {
@@ -222,9 +227,16 @@ export default function DashboardKPIStrip() {
           label: "Sprint Progress",
           value: sprintPct !== null ? `${sprintPct}%` : "—",
           sub:
-            daysLeft !== null ? `${daysLeft}d remaining` : "No active sprint",
+            daysLeft !== null ? `Timebox: ${daysLeft}d left` : "No committed iteration",
           color: "var(--purple)",
-          // glow: "var(--purple-glow)",
+          trend: null,
+        },
+        {
+          icon: <RiRocketLine />,
+          label: "Active Sprints",
+          value: String(activeSprintCount),
+          sub: "Current iteration velocity",
+          color: "var(--red)",
           trend: null,
         },
       ];

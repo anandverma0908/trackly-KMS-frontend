@@ -8,57 +8,8 @@
 /* ── KPI Row ── */
 .kpiRow {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
-}
-
-.kpiCard {
-  background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r);
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.kpiCard:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-  border-color: var(--border-3);
-}
-
-.kpiIconWrap {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.kpiBody { flex: 1; min-width: 0; }
-
-.kpiVal {
-  font-size: 26px;
-  font-weight: 900;
-  letter-spacing: -0.05em;
-  font-family: var(--font-mono);
-  line-height: 1;
-  margin-bottom: 2px;
-}
-
-.kpiLabel {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 2px;
-}
-
-.kpiSub {
-  font-size: 10px;
-  color: var(--text-3);
-  font-weight: 500;
 }
 
 /* ── Row 2: 3-col charts ── */
