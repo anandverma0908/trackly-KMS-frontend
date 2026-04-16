@@ -268,14 +268,14 @@ export default function Topbar({
             >
               Search
             </button>
-            {/* <button
+            <button
               className={`${styles.modePill} ${mode === "nova" ? styles.modePillActive : ""}`}
               onMouseDown={(e) => { e.preventDefault(); handleModeSwitch("nova"); }}
               tabIndex={-1}
             >
               <span className={styles.novaGlow} />
               EOS
-            </button> */}
+            </button>
           </div>
 
           {!searchFocused && <kbd className={styles.kbd}>⌘K</kbd>}
