@@ -195,7 +195,7 @@ export default function SprintPage() {
         <div className={styles.retroPanel}>
           <div className={styles.novaBadge}>
             <span className={styles.novaGlow} />
-            NOVA Sprint Retrospective
+            EOS Sprint Retrospective
           </div>
           <pre className={styles.retroText}>{retroText}</pre>
         </div>

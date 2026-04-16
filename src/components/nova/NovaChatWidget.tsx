@@ -46,10 +46,10 @@ export default function NovaChatWidget() {
   return (
     <>
       {/* Toggle button */}
-      <button className={styles.toggleBtn} onClick={() => setOpen((v) => !v)} title="NOVA Assistant">
+      <button className={styles.toggleBtn} onClick={() => setOpen((v) => !v)} title="EOS Assistant">
         <span className={styles.toggleGlow} />
         <span className={styles.toggleIcon}>{open ? "✕" : "✦"}</span>
-        {!open && <span className={styles.toggleLabel}>NOVA</span>}
+        {!open && <span className={styles.toggleLabel}>EOS</span>}
       </button>
 
       {/* Chat panel */}
@@ -59,7 +59,7 @@ export default function NovaChatWidget() {
             <div className={styles.headerLeft}>
               <span className={styles.headerGlow} />
               <div>
-                <div className={styles.headerTitle}>NOVA Assistant</div>
+                <div className={styles.headerTitle}>EOS Assistant</div>
                 <div className={styles.headerSub}>Powered by Llama 3.1 · 100% Local</div>
               </div>
             </div>
@@ -85,7 +85,7 @@ export default function NovaChatWidget() {
             {messages.map((m, i) => (
               <div key={i} className={`${styles.message} ${m.role === "user" ? styles.userMsg : styles.novaMsg}`}>
                 {m.role === "nova" && (
-                  <div className={styles.msgBadge}>✦ NOVA</div>
+                  <div className={styles.msgBadge}>✦ EOS</div>
                 )}
                 <p className={styles.msgText}>{m.content}</p>
                 {m.citations && m.citations.length > 0 && (
@@ -103,7 +103,7 @@ export default function NovaChatWidget() {
             ))}
             {loading && (
               <div className={`${styles.message} ${styles.novaMsg}`}>
-                <div className={styles.msgBadge}>✦ NOVA</div>
+                <div className={styles.msgBadge}>✦ EOS</div>
                 <div className={styles.typingDots}>
                   <span /><span /><span />
                 </div>
@@ -115,7 +115,7 @@ export default function NovaChatWidget() {
           <div className={styles.inputRow}>
             <input
               className={styles.input}
-              placeholder="Ask NOVA…"
+              placeholder="Ask EOS…"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}

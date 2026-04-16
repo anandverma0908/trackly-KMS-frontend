@@ -274,7 +274,7 @@ export default function Topbar({
               tabIndex={-1}
             >
               <span className={styles.novaGlow} />
-              NOVA
+              EOS
             </button> */}
           </div>
 
@@ -289,7 +289,7 @@ export default function Topbar({
               <div className={styles.novaAnswer}>
                 <div className={styles.novaBadge}>
                   <AutoAwesomeIcon sx={{ fontSize: 11 }} />
-                  NOVA
+                  EOS
                 </div>
                 <p className={styles.novaText}>{novaAnswer}</p>
               </div>
@@ -355,7 +355,7 @@ export default function Topbar({
                   <AutoAwesomeIcon
                     sx={{ fontSize: 12, color: "var(--accent)" }}
                   />
-                  <span>Switch to NOVA for AI-powered answers</span>
+                  <span>Switch to EOS for AI-powered answers</span>
                 </div>
               </div>
             )}

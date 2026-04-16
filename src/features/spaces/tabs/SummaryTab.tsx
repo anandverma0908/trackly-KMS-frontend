@@ -443,7 +443,7 @@ export default function SummaryTab({ project }: { project: Project }) {
               <PsychologyIcon sx={{ fontSize: 16, color: "var(--accent)" }} />
               AI Insights
             </div>
-            <span className={styles.aiBadge}>NOVA</span>
+            <span className={styles.aiBadge}>EOS</span>
           </div>
           <div className={styles.insightsList}>
             {[

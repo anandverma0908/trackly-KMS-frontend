@@ -99,7 +99,7 @@ export default function AnalyticsPage() {
           <div className={styles.gapActions}>
             <div className={styles.novaBadge}>
               <span className={styles.novaGlow} />
-              NOVA-powered
+              EOS-powered
             </div>
             <button
               className="btn btn-ghost btn-sm"

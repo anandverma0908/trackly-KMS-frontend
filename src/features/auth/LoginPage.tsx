@@ -65,21 +65,21 @@ export default function LoginPage() {
               </h1>
               <p className={styles.heroSub}>
                 Trackly is your AI-powered command centre. Plan sprints, document
-                decisions, and let NOVA reason across your codebase, tickets, and
+                decisions, and let EOS reason across your codebase, tickets, and
                 team velocity — all in one place.
               </p>
             </div>
 
             {/* Pills */}
             <div className={styles.pills}>
-              {["NOVA AI", "Code-aware context", "Predictive insights"].map((p) => (
+              {["EOS AI", "Code-aware context", "Predictive insights"].map((p) => (
                 <span key={p} className={styles.pill}>{p}</span>
               ))}
             </div>
 
             {/* Showcase cards */}
             <div className={styles.showcase}>
-              {/* Large NOVA preview card */}
+              {/* Large EOS preview card */}
               <div className={styles.novaCard}>
                 <div className={styles.novaVisual}>
                   <div className={styles.novaCore} />
@@ -89,7 +89,7 @@ export default function LoginPage() {
                   <div className={styles.novaParticle2} />
                 </div>
                 <div className={styles.novaContent}>
-                  <div className={styles.novaLabel}>NOVA AI · LOCAL LLM</div>
+                  <div className={styles.novaLabel}>EOS AI · LOCAL LLM</div>
                   <h3 className={styles.novaTitle}>
                     Ask anything. Get answers rooted in your actual work.
                   </h3>
@@ -128,7 +128,7 @@ export default function LoginPage() {
           </div>
 
           <div className={styles.footer}>
-            POWERED BY NOVA · BUILT FOR ENGINEERING TEAMS
+            POWERED BY EOS · BUILT FOR ENGINEERING TEAMS
           </div>
         </div>
 

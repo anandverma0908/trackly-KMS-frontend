@@ -31,7 +31,7 @@ export default function SystemHealth() {
   const items: HealthItem[] = [
     {
       icon: <TbRobot />,
-      label: "NOVA AI",
+      label: "EOS AI",
       status: novaOnline ? "online" : "offline",
       detail: novaOnline ? "All systems operational" : "Service unavailable",
     },

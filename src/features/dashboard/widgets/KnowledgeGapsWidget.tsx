@@ -19,7 +19,7 @@ export default function KnowledgeGapsWidget() {
         <div className={styles.header}>
           <span className={styles.icon}><TbBrain /></span>
           <div className="card-title">Knowledge Gaps</div>
-          <span className={styles.badge}>NOVA</span>
+          <span className={styles.badge}>EOS</span>
         </div>
         <div className={styles.list}>
           {[1, 2, 3].map((i) => (
@@ -38,7 +38,7 @@ export default function KnowledgeGapsWidget() {
       <div className={styles.header}>
         <span className={styles.icon}><TbBrain /></span>
         <div className="card-title">Knowledge Gaps</div>
-        <span className={styles.badge}>NOVA</span>
+        <span className={styles.badge}>EOS</span>
         {sorted.length > 0 && (
           <span className={styles.count}>{gaps.length} detected</span>
         )}

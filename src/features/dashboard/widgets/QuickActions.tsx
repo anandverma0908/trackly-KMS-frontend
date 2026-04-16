@@ -41,7 +41,7 @@ export default function QuickActions({ onAskNova }: QuickActionsProps) {
     },
     {
       icon:    <MdAutoAwesome />,
-      label:   "Ask NOVA",
+      label:   "Ask EOS",
       color:   "var(--cyan)",
       glow:    "var(--cyan-glow)",
       onClick: onAskNova ?? (() => {

@@ -60,7 +60,7 @@ export default function BurnRatePage() {
         </div>
         <div className={styles.novaBadge}>
           <span className={styles.novaGlow} />
-          NOVA Burn Monitoring
+          EOS Burn Monitoring
         </div>
       </div>
 

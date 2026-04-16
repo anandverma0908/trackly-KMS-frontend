@@ -38,7 +38,7 @@ export default function OnboardingModal() {
     {
       icon:  "🔐",
       title: `Welcome to Trackly, ${user?.name?.split(" ")[0] ?? "there"}!`,
-      desc:  "Trackly is your team's AI-powered work OS — tickets, wiki, sprints, and standups all in one place, powered by NOVA AI.",
+      desc:  "Trackly is your team's AI-powered work OS — tickets, wiki, sprints, and standups all in one place, powered by EOS.",
       cta:   "Let's go",
       secondary: null,
     },
@@ -52,7 +52,7 @@ export default function OnboardingModal() {
     {
       icon:  "🎫",
       title: "Create your first ticket",
-      desc:  "Try NOVA's AI ticket creation — describe an issue in plain English and NOVA will extract the title, priority, POD, client, and story points for you.",
+      desc:  "Try EOS AI ticket creation — describe an issue in plain English and EOS will extract the title, priority, POD, client, and story points for you.",
       cta:   "Create a Ticket →",
       secondary: "Maybe later",
     },
@@ -99,8 +99,8 @@ export default function OnboardingModal() {
         {step === 0 && (
           <div className={styles.novaBadge}>
             <span className={styles.novaGlow} />
-            <span className={styles.novaText}>✦ NOVA AI</span>
-            <span className={styles.novaDesc}>Neural Orchestration &amp; Velocity Assistant — 100% local, zero external APIs</span>
+            <span className={styles.novaText}>✦ EOS</span>
+            <span className={styles.novaDesc}>EOS AI — 100% local, zero external APIs</span>
           </div>
         )}
 

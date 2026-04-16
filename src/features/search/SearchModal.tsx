@@ -92,7 +92,7 @@ export default function SearchModal({ onClose }: Props) {
           <input
             ref={inputRef}
             className={styles.input}
-            placeholder="Search tickets, pages, or ask NOVA…"
+            placeholder="Search tickets, pages, or ask EOS…"
             value={query}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
@@ -110,7 +110,7 @@ export default function SearchModal({ onClose }: Props) {
               onClick={() => { setMode("nova"); doSearch(query); }}
             >
               <span className={styles.novaGlow} />
-              NOVA
+              EOS
             </button>
           </div>
         </div>
@@ -120,7 +120,7 @@ export default function SearchModal({ onClose }: Props) {
           <div className={styles.novaAnswer}>
             <div className={styles.novaBadge}>
               <span className={styles.novaGlow} />
-              Powered by NOVA
+              Powered by EOS
             </div>
             <p className={styles.answerText}>{novaResponse.answer}</p>
           </div>
@@ -161,7 +161,7 @@ export default function SearchModal({ onClose }: Props) {
             </div>
             <div className={styles.hintRow}>
               <span>Switch to <button className={styles.hintBtn} onClick={() => setMode(mode === "nova" ? "semantic" : "nova")}>
-                {mode === "nova" ? "Semantic" : "NOVA"}
+                {mode === "nova" ? "Semantic" : "EOS"}
               </button> mode</span>
             </div>
           </div>

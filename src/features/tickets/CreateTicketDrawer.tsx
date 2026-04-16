@@ -333,9 +333,9 @@ export default function CreateTicketDrawer({
       setConfidence(r.confidence ?? null);
       if (r.duplicates?.length) setDuplicates(r.duplicates);
       setNovaOpen(false);
-      toast.success("NOVA filled the form!");
+      toast.success("EOS filled the form!");
     } catch {
-      toast.error("NOVA analysis failed");
+      toast.error("EOS analysis failed");
     } finally {
       setAnalyzing(false);
     }
@@ -353,7 +353,7 @@ export default function CreateTicketDrawer({
         `Improve and expand this description for a ${form.issue_type} ticket titled "${form.title}": ${form.description || "(no description yet)"}`,
       );
       if (r.description) set("description", r.description);
-      toast.success("Description enhanced by NOVA");
+      toast.success("Description enhanced by EOS");
     } catch {
       toast.error("Enhancement failed");
     } finally {
@@ -503,7 +503,7 @@ export default function CreateTicketDrawer({
               animation: "pulse 2s infinite",
             }}
           />
-          NOVA AI
+          EOS AI
         </div>
       }
       footer={footer}
@@ -519,7 +519,7 @@ export default function CreateTicketDrawer({
               <AutoAwesomeIcon sx={{ fontSize: 14 }} />
             </div>
             <div className={styles.novaTitle}>
-              Describe in plain English — NOVA will fill the form
+              Describe in plain English — EOS will fill the form
             </div>
             <ExpandMoreIcon
               className={`${styles.novaChevron} ${novaOpen ? styles.novaChevronOpen : ""}`}
@@ -563,7 +563,7 @@ export default function CreateTicketDrawer({
                   ) : (
                     <>
                       <AutoAwesomeIcon sx={{ fontSize: 12 }} />
-                      Analyze with NOVA
+                      Analyze with EOS
                     </>
                   )}
                 </button>
@@ -582,7 +582,7 @@ export default function CreateTicketDrawer({
         {/* ── NOVA Confidence ── */}
         {confidence !== null && (
           <div className={styles.confidenceRow}>
-            <span className={styles.confidenceLabel}>NOVA confidence</span>
+            <span className={styles.confidenceLabel}>EOS confidence</span>
             <div className={styles.confidenceBar}>
               <div
                 className={styles.confidenceFill}
@@ -647,7 +647,7 @@ export default function CreateTicketDrawer({
               className={styles.enhanceBtn}
               disabled={enhancing}
               onClick={handleEnhanceDesc}
-              title="Enhance description with NOVA AI"
+              title="Enhance description with EOS AI"
             >
               {enhancing ? (
                 <svg

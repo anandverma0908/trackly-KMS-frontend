@@ -14,13 +14,13 @@ interface PrefRow {
 const DEFAULT_PREFS: PrefRow[] = [
   { id: "sprint_started",     label: "Sprint Started",          desc: "When a sprint transitions to Active",          inApp: true,  email: false },
   { id: "sprint_completed",   label: "Sprint Completed",         desc: "When a sprint is marked Complete",             inApp: true,  email: false },
-  { id: "standup_ready",      label: "Standup Ready",            desc: "When NOVA generates your daily standup",       inApp: true,  email: false },
+  { id: "standup_ready",      label: "Standup Ready",            desc: "When EOS generates your daily standup",       inApp: true,  email: false },
   { id: "ticket_assigned",    label: "Ticket Assigned to You",   desc: "When a ticket is assigned to you",             inApp: true,  email: true  },
   { id: "ticket_commented",   label: "Comment on Your Ticket",   desc: "When someone comments on your ticket",         inApp: true,  email: true  },
   { id: "burn_rate_warning",  label: "Burn Rate Warning",        desc: "Client hours at 70% / 85% / 100% / 110%",     inApp: true,  email: true  },
   { id: "mention",            label: "@Mention",                 desc: "When you are @mentioned in a comment",        inApp: true,  email: true  },
   { id: "wiki_updated",       label: "Wiki Page Updated",        desc: "Changes to pages you're watching",            inApp: true,  email: false },
-  { id: "knowledge_gap",      label: "Knowledge Gap Detected",   desc: "NOVA finds an undocumented topic cluster",     inApp: true,  email: false },
+  { id: "knowledge_gap",      label: "Knowledge Gap Detected",   desc: "EOS finds an undocumented topic cluster",     inApp: true,  email: false },
   { id: "release_notes",      label: "Release Notes Generated",  desc: "When release notes are ready for a sprint",   inApp: true,  email: false },
 ];
 
