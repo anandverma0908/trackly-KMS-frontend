@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Tooltip from "@mui/material/Tooltip";
-import LinearProgress from "@mui/material/LinearProgress";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import type { Project, ProjectTask, ProjectSprint } from "../spacesData";
@@ -302,12 +302,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
     return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length];
   }
 
-  const sprintPct = selectedSprint
-    ? Math.round(
-        (selectedSprint.donePoints / Math.max(selectedSprint.totalPoints, 1)) *
-          100,
-      )
-    : 0;
+
 
   if (!selectedSprint) {
     return (
@@ -323,83 +318,30 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
 
   return (
     <div className={styles.tab}>
-      {/* ── Sprint selector + info ── */}
-      <div className={styles.sprintBar}>
-        <div className={styles.sprintLeft}>
-          {activeSprints.length > 1 ? (
-            <div className={styles.sprintSelect}>
-              <select
-                className={styles.sprintDropdown}
-                value={selectedSprint.id}
-                onChange={(e) => {
-                  const s = project.sprints.find(
-                    (sp) => sp.id === e.target.value,
-                  );
-                  if (s) setSelectedSprint(s);
-                }}
-              >
-                {activeSprints.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-              <RiArrowDownSLine size={16} color="var(--text-3)" />
-            </div>
-          ) : (
-            <div className={styles.sprintName}>{selectedSprint.name}</div>
-          )}
-          <div className={styles.sprintDates}>
-            {selectedSprint.startDate} → {selectedSprint.endDate}
+      {/* ── Sprint selector ── */}
+      {activeSprints.length > 1 && (
+        <div className={styles.sprintSelectorRow}>
+          <div className={styles.sprintSelect}>
+            <select
+              className={styles.sprintDropdown}
+              value={selectedSprint.id}
+              onChange={(e) => {
+                const s = project.sprints.find(
+                  (sp) => sp.id === e.target.value,
+                );
+                if (s) setSelectedSprint(s);
+              }}
+            >
+              {activeSprints.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <RiArrowDownSLine size={16} color="var(--text-3)" />
           </div>
-          <div className={styles.sprintGoal}>Goal: {selectedSprint.goal}</div>
         </div>
-
-        <div className={styles.sprintRight}>
-          <div className={styles.sprintStats}>
-            <div className={styles.sStat}>
-              <span
-                className={styles.sStatVal}
-                style={{ color: "var(--green)" }}
-              >
-                {selectedSprint.donePoints}
-              </span>
-              <span className={styles.sStatLbl}>Done pts</span>
-            </div>
-            <div className={styles.sStatDiv} />
-            <div className={styles.sStat}>
-              <span className={styles.sStatVal}>
-                {selectedSprint.totalPoints}
-              </span>
-              <span className={styles.sStatLbl}>Total pts</span>
-            </div>
-            <div className={styles.sStatDiv} />
-            <div className={styles.sStat}>
-              <span
-                className={styles.sStatVal}
-                style={{ color: project.color }}
-              >
-                {sprintPct}%
-              </span>
-              <span className={styles.sStatLbl}>Complete</span>
-            </div>
-          </div>
-          <LinearProgress
-            variant="determinate"
-            value={sprintPct}
-            sx={{
-              width: 160,
-              height: 5,
-              borderRadius: 100,
-              backgroundColor: "var(--surface-2)",
-              "& .MuiLinearProgress-bar": {
-                background: `linear-gradient(90deg, ${project.color}, ${project.color}aa)`,
-                borderRadius: 100,
-              },
-            }}
-          />
-        </div>
-      </div>
+      )}
 
       {/* ── Toolbar: member chips + search + my tasks + AI filters + create ── */}
       <div className={styles.toolbar}>

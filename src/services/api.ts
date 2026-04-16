@@ -483,6 +483,24 @@ export async function fetchProject(pod: string): Promise<Project> {
   return data;
 }
 
+export async function createSpace(payload: {
+  key: string;
+  name: string;
+  description: string;
+  category: string;
+  color: string;
+}) {
+  if (mock()?.createSpace) return mock().createSpace(payload);
+  const { data } = await api.post("/spaces", payload);
+  return data;
+}
+
+export async function deleteSpace(pod: string) {
+  if (mock()?.deleteSpace) return mock().deleteSpace(pod);
+  const { data } = await api.delete(`/spaces/${pod}`);
+  return data;
+}
+
 /* ── Notifications ── */
 export async function fetchNotifications(): Promise<Notification[]> {
   const { data } = await api.get("/notifications");

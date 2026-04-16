@@ -5,7 +5,7 @@ import { fetchTickets } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import styles from "./MyActiveTickets.module.css";
 
-import { RiTicketLine, RiArrowRightLine, RiTimeLine } from "react-icons/ri";
+import { RiArrowRightLine, RiTimeLine } from "react-icons/ri";
 
 /* ── Constants ── */
 

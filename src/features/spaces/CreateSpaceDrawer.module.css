@@ -1,0 +1,170 @@
+.drawerBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: var(--accent-glow);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+}
+
+.templatesSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.templatesRow {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.templatesRow::-webkit-scrollbar {
+  display: none;
+}
+
+.templateCard {
+  flex: 0 0 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.templateCard:hover {
+  background: var(--surface-2);
+  border-color: var(--border-3);
+}
+
+.templateCardActive {
+  background: var(--accent-glow);
+  border-width: 2px;
+}
+
+.templateIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.templateName {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.templateKey {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.input,
+.textarea {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: var(--accent);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.hint {
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+.colorRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.colorDot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.colorDot:hover {
+  transform: scale(1.1);
+}
+
+.colorDotActive {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}

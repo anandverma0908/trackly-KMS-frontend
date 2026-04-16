@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchTickets } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import styles from "./RecentActivity.module.css";
-import { MdHistory } from "react-icons/md";
+
 import { formatDistanceToNow, parseISO } from "date-fns";
 
 interface ActivityItem {

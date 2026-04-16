@@ -1,7 +1,6 @@
 import { useDashboard } from "../useDashboard";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import styles from "./WeeklyHeatmap.module.css";
-import { BsCalendarWeek } from "react-icons/bs";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 const TARGET_HOURS = 8;

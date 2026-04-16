@@ -1,16 +1,18 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Tooltip from "@mui/material/Tooltip";
 import LinearProgress from "@mui/material/LinearProgress";
-import { fetchPodSummary, fetchSprints, type PodSummary } from "@/services/api";
+import { fetchPodSummary, fetchSprints, deleteSpace, type PodSummary } from "@/services/api";
+import { useAuthStore } from "@/features/auth/useAuthStore";
 import { getPodColor } from "@/config/themes";
 import type { Sprint } from "@/types";
 import styles from "./SpacesPage.module.css";
 
-import { RiSearchLine, RiGridLine, RiTableLine } from "react-icons/ri";
+import { RiSearchLine, RiGridLine, RiTableLine, RiAddLine, RiDeleteBinLine } from "react-icons/ri";
 import SpacesKPIStrip from "./SpacesKPIStrip";
+import CreateSpaceDrawer from "./CreateSpaceDrawer";
 
 /* ── Derived pod card data ── */
 interface PodCard {
@@ -54,8 +56,21 @@ function buildPodCard(p: PodSummary, sprints: Sprint[]): PodCard {
 
 export default function SpacesPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const can = useAuthStore((s) => s.can);
+  const canManage = can("manage:all");
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [showCreateDrawer, setShowCreateDrawer] = useState(false);
+
+  const deleteMut = useMutation({
+    mutationFn: deleteSpace,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pod-summary"] });
+      qc.invalidateQueries({ queryKey: ["sprints"] });
+    },
+    onError: (e: Error) => alert(e.message),
+  });
 
   const { data: podSummaries = [], isLoading: loadingPods } = useQuery({
     queryKey: ["pod-summary"],
@@ -129,6 +144,15 @@ export default function SpacesPage() {
             gap: 10,
           }}
         >
+          {canManage && (
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => setShowCreateDrawer(true)}
+            >
+              <RiAddLine size={16} />
+              Create Space
+            </button>
+          )}
           <div className={styles.headerActions}>
             <div className={styles.viewToggle}>
               <Tooltip title="Grid view" arrow>
@@ -157,7 +181,6 @@ export default function SpacesPage() {
         <div className={styles.loading}>Loading spaces…</div>
       ) : cards.length === 0 ? (
         <div className={styles.empty}>
-          {/* <div className={styles.emptyIcon}>🗂️</div> */}
           <div className={styles.emptyTitle}>No spaces found</div>
           <div className={styles.emptyDesc}>Try a different search</div>
         </div>
@@ -169,6 +192,12 @@ export default function SpacesPage() {
               card={card}
               delay={Math.min(i * 0.05, 0.4)}
               onClick={() => navigate(`/spaces/${card.pod}`)}
+              canDelete={canManage}
+              onDelete={() => {
+                if (confirm(`Delete space "${card.pod}"? This will remove all tickets, sprints, and epics.`)) {
+                  deleteMut.mutate(card.pod);
+                }
+              }}
             />
           ))}
         </div>
@@ -179,10 +208,18 @@ export default function SpacesPage() {
               key={card.pod}
               card={card}
               onClick={() => navigate(`/spaces/${card.pod}`)}
+              canDelete={canManage}
+              onDelete={() => {
+                if (confirm(`Delete space "${card.pod}"? This will remove all tickets, sprints, and epics.`)) {
+                  deleteMut.mutate(card.pod);
+                }
+              }}
             />
           ))}
         </div>
       )}
+
+      <CreateSpaceDrawer open={showCreateDrawer} onClose={() => setShowCreateDrawer(false)} />
     </div>
   );
 }
@@ -192,10 +229,14 @@ function PodCard({
   card,
   delay,
   onClick,
+  canDelete,
+  onDelete,
 }: {
   card: PodCard;
   delay: number;
   onClick: () => void;
+  canDelete?: boolean;
+  onDelete?: () => void;
 }) {
   const { color } = card;
   const sprintColor = card.hasActiveSprint ? "var(--green)" : "var(--text-3)";
@@ -211,21 +252,11 @@ function PodCard({
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
       onClick={onClick}
     >
-      {/* <div className={styles.cardAccent} style={{ background: color }} /> */}
-
       <div className={styles.cardTop}>
-        {/* <div
-          className={styles.cardIcon}
-          style={{ background: `${color}22`, border: `1px solid ${color}44` }}
-        >
-          <span style={{ fontSize: 20 }}>📦</span>
-        </div> */}
-
         <div>
           <div className={styles.cardTitle}>{card.pod}</div>
           <div className={styles.cardDesc}>
             {card.totalTickets.toLocaleString()} total tickets ·{" "}
-            {/* {Math.round(card.totalHours).toLocaleString()}h logged */}
           </div>
         </div>
 
@@ -236,16 +267,24 @@ function PodCard({
           >
             {card.hasActiveSprint ? "Active Sprint" : "No Sprint"}
           </span>
-          {/* <span
-            className={styles.cardKey}
-            style={{ color, background: `${color}18` }}
-          >
-            {card.pod}
-          </span> */}
 
           <span className={styles.leadName}>
             {Math.round(card.totalHours).toLocaleString()}h
           </span>
+
+          {canDelete && (
+            <Tooltip title="Delete space" arrow>
+              <button
+                className={styles.deleteBtn}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.();
+                }}
+              >
+                <RiDeleteBinLine size={14} />
+              </button>
+            </Tooltip>
+          )}
         </div>
       </div>
 
@@ -350,7 +389,17 @@ function PodCard({
 }
 
 /* ── Pod Row (list view) ── */
-function PodRow({ card, onClick }: { card: PodCard; onClick: () => void }) {
+function PodRow({
+  card,
+  onClick,
+  canDelete,
+  onDelete,
+}: {
+  card: PodCard;
+  onClick: () => void;
+  canDelete?: boolean;
+  onDelete?: () => void;
+}) {
   const { color } = card;
   return (
     <div className={styles.listRow} onClick={onClick}>
@@ -400,6 +449,19 @@ function PodRow({ card, onClick }: { card: PodCard; onClick: () => void }) {
         >
           {card.progress}%
         </span>
+        {canDelete && (
+          <Tooltip title="Delete space" arrow>
+            <button
+              className={styles.deleteBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete?.();
+              }}
+            >
+              <RiDeleteBinLine size={14} />
+            </button>
+          </Tooltip>
+        )}
       </div>
     </div>
   );
