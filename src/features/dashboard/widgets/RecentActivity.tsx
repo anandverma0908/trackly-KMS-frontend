@@ -103,9 +103,9 @@ export default function RecentActivity({ limit = 8 }: { limit?: number }) {
   return (
     <div className={styles.card}>
       <div className={styles.header}>
-        <span className={styles.icon}>
+        {/* <span className={styles.icon}>
           <MdHistory />
-        </span>
+        </span> */}
         <div className="card-title">Recent Activity</div>
       </div>
 

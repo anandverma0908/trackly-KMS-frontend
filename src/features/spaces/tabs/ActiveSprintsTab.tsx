@@ -11,16 +11,7 @@ import { createTicket, updateTicketStatus } from "@/services/api";
 import type { TicketCreate } from "@/types";
 import styles from "./ActiveSprintsTab.module.css";
 
-import SearchIcon from "@mui/icons-material/Search";
-import AddIcon from "@mui/icons-material/Add";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import PersonIcon from "@mui/icons-material/Person";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import FlagIcon from "@mui/icons-material/Flag";
-import BugReportIcon from "@mui/icons-material/BugReport";
-import TaskAltIcon from "@mui/icons-material/TaskAlt";
-import BlockIcon from "@mui/icons-material/Block";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { RiSearchLine, RiAddLine, RiSparklingLine, RiUserLine, RiFilter3Line, RiFlagLine, RiBugLine, RiCheckboxCircleLine, RiForbid2Line, RiArrowDownSLine } from "react-icons/ri";
 
 const COLUMNS = [
   { id: "To Do", label: "To Do", color: "var(--text-3)", emoji: "📋" },
@@ -52,25 +43,25 @@ const AI_FILTERS: {
   {
     id: "blockers",
     label: "Blockers",
-    icon: <BlockIcon sx={{ fontSize: 12 }} />,
+    icon: <RiForbid2Line size={12} />,
     color: "var(--red)",
   },
   {
     id: "high-priority",
     label: "High Priority",
-    icon: <FlagIcon sx={{ fontSize: 12 }} />,
+    icon: <RiFlagLine size={12} />,
     color: "var(--amber)",
   },
   {
     id: "overdue",
     label: "Overdue",
-    icon: <TaskAltIcon sx={{ fontSize: 12 }} />,
+    icon: <RiCheckboxCircleLine size={12} />,
     color: "var(--red)",
   },
   {
     id: "bugs",
     label: "Bugs Only",
-    icon: <BugReportIcon sx={{ fontSize: 12 }} />,
+    icon: <RiBugLine size={12} />,
     color: "var(--purple)",
   },
 ];
@@ -353,7 +344,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
                   </option>
                 ))}
               </select>
-              <ExpandMoreIcon sx={{ fontSize: 16, color: "var(--text-3)" }} />
+              <RiArrowDownSLine size={16} color="var(--text-3)" />
             </div>
           ) : (
             <div className={styles.sprintName}>{selectedSprint.name}</div>
@@ -467,7 +458,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
         <div className={styles.toolbarRight}>
           {/* Search */}
           <div className={styles.searchWrap}>
-            <SearchIcon sx={{ fontSize: 14, opacity: 0.5 }} />
+            <RiSearchLine size={14} style={{ opacity: 0.5 }} />
             <input
               className={styles.searchInput}
               placeholder="Search tasks…"
@@ -490,14 +481,14 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
               className={`${styles.myTasksBtn} ${myTasksActive ? styles.myTasksBtnActive : ""}`}
               onClick={() => setMyTasksActive((v) => !v)}
             >
-              <PersonIcon sx={{ fontSize: 14 }} />
+              <RiUserLine size={14} />
               <span>My Tasks</span>
             </button>
           </Tooltip>
 
           {/* AI filters */}
           <div className={styles.aiFiltersWrap}>
-            <AutoAwesomeIcon sx={{ fontSize: 13, color: "var(--accent)" }} />
+            <RiSparklingLine size={13} color="var(--accent)" />
             <span className={styles.aiLabel}>AI:</span>
             {AI_FILTERS.map((f) => (
               <button
@@ -528,7 +519,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
               setShowCreateModal(true);
             }}
           >
-            <AddIcon sx={{ fontSize: 15 }} />
+            <RiAddLine size={15} />
             Create Task
           </button>
         </div>
@@ -537,7 +528,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
       {/* ── Active filters summary ── */}
       {(selectedMembers.size > 0 || myTasksActive || aiFilter || search) && (
         <div className={styles.activeFilters}>
-          <FilterListIcon sx={{ fontSize: 13, color: "var(--text-3)" }} />
+          <RiFilter3Line size={13} color="var(--text-3)" />
           <span className={styles.activeFiltersLabel}>Filtering:</span>
           {selectedMembers.size > 0 && (
             <span className={styles.activeFilterChip}>
@@ -602,7 +593,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
                     setShowCreateModal(true);
                   }}
                 >
-                  <AddIcon sx={{ fontSize: 14 }} />
+                  <RiAddLine size={14} />
                 </button>
               </Tooltip>
             </div>

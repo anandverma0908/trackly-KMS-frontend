@@ -4,8 +4,7 @@ import Tooltip from "@mui/material/Tooltip";
 import type { Project, ProjectEpic, ProjectSprint } from "../spacesData";
 import styles from "./RoadmapTab.module.css";
 
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
-import TimelineIcon from "@mui/icons-material/Timeline";
+import { RiCalendarLine, RiHistoryLine } from "react-icons/ri";
 
 type _ViewMode = "quarter" | "month";
 
@@ -93,7 +92,7 @@ export default function RoadmapTab({ project }: { project: Project }) {
       {/* ── Header ── */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <TimelineIcon sx={{ fontSize: 16, color: "var(--accent)" }} />
+          <RiHistoryLine size={16} color="var(--accent)" />
           <span className={styles.headerTitle}>Project Roadmap</span>
         </div>
         <div className={styles.headerRight}>
@@ -115,7 +114,7 @@ export default function RoadmapTab({ project }: { project: Project }) {
       {/* ── Summary cards ── */}
       <div className={styles.summaryRow}>
         <div className={styles.summaryCard}>
-          <CalendarTodayIcon sx={{ fontSize: 14, color: "var(--accent)" }} />
+          <RiCalendarLine size={14} color="var(--accent)" />
           <div>
             <div className={styles.summaryVal}>
               {new Date(project.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}

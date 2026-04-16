@@ -7,11 +7,7 @@ import {
 import { useNotificationStore } from "@/store";
 import type { Notification } from "@/types";
 import IconButton from "@mui/material/IconButton";
-import DoneAllIcon from "@mui/icons-material/DoneAll";
-import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
-import SprintIcon from "@mui/icons-material/DirectionsRun";
-import WbSunnyIcon from "@mui/icons-material/WbSunny";
-import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
+import { RiCheckboxMultipleLine, RiNotificationOffLine, RiRunLine, RiSunLine, RiFireLine } from "react-icons/ri";
 import styles from "./NotificationPanel.module.css";
 
 interface Props {
@@ -19,9 +15,9 @@ interface Props {
 }
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
-  sprint_started: <SprintIcon fontSize="small" />,
-  standup_ready: <WbSunnyIcon fontSize="small" />,
-  burn_rate_warning: <LocalFireDepartmentIcon fontSize="small" />,
+  sprint_started: <RiRunLine size={18} />,
+  standup_ready: <RiSunLine size={18} />,
+  burn_rate_warning: <RiFireLine size={18} />,
 };
 
 export default function NotificationPanel({ onClose: _onClose }: Props) {
@@ -70,7 +66,7 @@ export default function NotificationPanel({ onClose: _onClose }: Props) {
                 "&:hover": { color: "var(--accent)" },
               }}
             >
-              <DoneAllIcon fontSize="small" />
+              <RiCheckboxMultipleLine size={18} />
             </IconButton>
           )}
           {/* <IconButton
@@ -87,9 +83,7 @@ export default function NotificationPanel({ onClose: _onClose }: Props) {
       <div className={styles.list}>
         {notifications.length === 0 ? (
           <div className={styles.empty}>
-            <NotificationsNoneIcon
-              sx={{ fontSize: 36, color: "var(--text-3)" }}
-            />
+            <RiNotificationOffLine size={36} color="var(--text-3)" />
             <p>You're all caught up</p>
           </div>
         ) : (
@@ -104,7 +98,7 @@ export default function NotificationPanel({ onClose: _onClose }: Props) {
             >
               <span className={styles.itemIcon}>
                 {TYPE_ICON[n.type] ?? (
-                  <NotificationsNoneIcon fontSize="small" />
+                  <RiNotificationOffLine size={18} />
                 )}
               </span>
               <div className={styles.itemBody}>

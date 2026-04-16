@@ -11,13 +11,7 @@ import SummaryTab from "./tabs/SummaryTab";
 import ActiveSprintsTab from "./tabs/ActiveSprintsTab";
 import styles from "./ProjectDetailPage.module.css";
 
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
-import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-
-import BarChartIcon from "@mui/icons-material/BarChart";
-import SpeedIcon from "@mui/icons-material/Speed";
+import { RiArrowLeftLine, RiCalendarLine, RiTeamLine, RiTaskLine, RiBarChartBoxLine, RiFlashlightLine } from "react-icons/ri";
 
 type Tab = "summary" | "backlog" | "roadmap" | "active-sprints";
 
@@ -25,18 +19,18 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   {
     id: "summary",
     label: "Summary",
-    icon: <BarChartIcon sx={{ fontSize: 15 }} />,
+    icon: <RiBarChartBoxLine size={15} />,
   },
   {
     id: "backlog",
     label: "Backlog",
-    icon: <AssignmentIcon sx={{ fontSize: 15 }} />,
+    icon: <RiTaskLine size={15} />,
   },
   // { id: "roadmap", label: "Roadmap", icon: <MapIcon sx={{ fontSize: 15 }} /> },
   {
     id: "active-sprints",
     label: "Active Sprints",
-    icon: <SpeedIcon sx={{ fontSize: 15 }} />,
+    icon: <RiFlashlightLine size={15} />,
   },
 ];
 
@@ -97,7 +91,7 @@ export default function ProjectDetailPage() {
             className={styles.backBtn}
             onClick={() => navigate("/spaces")}
           >
-            <ArrowBackIcon sx={{ fontSize: 16 }} />
+            <RiArrowLeftLine size={16} />
           </button>
 
           <div className={styles.projectInfo}>
@@ -123,14 +117,12 @@ export default function ProjectDetailPage() {
         <div className={styles.headerRight}>
           <div className={styles.headerMeta}>
             <div className={styles.metaItem}>
-              <CalendarTodayIcon
-                sx={{ fontSize: 13, color: "var(--text-3)" }}
-              />
+              <RiCalendarLine size={13} color="var(--text-3)" />
               <span className={styles.metaLabel}>{TODAY}</span>
             </div>
             {project.members.length > 0 && (
               <div className={styles.metaItem}>
-                <PeopleAltIcon sx={{ fontSize: 13, color: "var(--text-3)" }} />
+                <RiTeamLine size={13} color="var(--text-3)" />
                 <span className={styles.metaLabel}>
                   {project.members.length} assignees
                 </span>

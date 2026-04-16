@@ -4,14 +4,7 @@ import { useAuthStore } from "@/features/auth/useAuthStore";
 import styles from "./Sidebar.module.css";
 import Tooltip from "@mui/material/Tooltip";
 
-/* MUI Icons */
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import GroupsIcon from "@mui/icons-material/Groups";
-import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
-import LockIcon from "@mui/icons-material/Lock";
-import PeopleIcon from "@mui/icons-material/People";
-import CloseIcon from "@mui/icons-material/Close";
+import { RiDashboardLine, RiBookOpenLine, RiTeamLine, RiRocketLine, RiLockLine, RiUserSettingsLine, RiCloseLine } from "react-icons/ri";
 
 /* ── Main Sidebar ────────────────────────────────────────────────────────── */
 interface SidebarProps {
@@ -66,7 +59,7 @@ export default function Sidebar({
         onClick={onClose}
         aria-label="Close menu"
       >
-        <CloseIcon fontSize="small" />
+        <RiCloseLine size={20} />
       </button>
 
       {/* <div className={styles.logo}>
@@ -81,8 +74,8 @@ export default function Sidebar({
       <div className={styles.body}>
         <div className={styles.navGroup}>
           {/* ── Primary nav ── */}
-          {nav(<DashboardIcon fontSize="small" />, "Dashboard", "/dashboard")}
-          {nav(<RocketLaunchIcon fontSize="small" />, "Spaces", "/spaces")}
+          {nav(<RiDashboardLine size={20} />, "Dashboard", "/dashboard")}
+          {nav(<RiRocketLine size={20} />, "Spaces", "/spaces")}
 
           {/* {nav(
             <ConfirmationNumberIcon fontSize="small" />,
@@ -100,14 +93,14 @@ export default function Sidebar({
 
           {/* <div className={styles.divider} /> */}
 
-          {nav(<MenuBookIcon fontSize="small" />, "Wiki", "/wiki")}
+          {nav(<RiBookOpenLine size={20} />, "Wiki", "/wiki")}
           {/* {nav(<WbSunnyIcon fontSize="small" />, "Standup", "/standup")} */}
           {/* {nav(<BarChartIcon fontSize="small" />, "Analytics", "/analytics")} */}
 
           {/* <div className={styles.divider} /> */}
 
           {nav(
-            <GroupsIcon fontSize="small" />,
+            <RiTeamLine size={20} />,
             "Team",
             "/team",
             can("view:teams"),
@@ -180,12 +173,12 @@ export default function Sidebar({
         <div className={styles.navGroupBottom}>
           {!can("manage:users") &&
             nav(
-              <LockIcon fontSize="small" />,
+              <RiLockLine size={20} />,
               "Change Password",
               "/settings/password",
             )}
           {nav(
-            <PeopleIcon fontSize="small" />,
+            <RiUserSettingsLine size={20} />,
             "Users",
             "/admin/users",
             can("manage:users"),

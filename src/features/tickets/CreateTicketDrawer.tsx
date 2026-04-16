@@ -18,27 +18,7 @@ import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Autocomplete from "@mui/material/Autocomplete";
 
-// Icons
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import AttachFileIcon from "@mui/icons-material/AttachFile";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import LinkIcon from "@mui/icons-material/Link";
-import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import BugReportIcon from "@mui/icons-material/BugReport";
-import BookmarkIcon from "@mui/icons-material/Bookmark";
-import CheckBoxOutlinedIcon from "@mui/icons-material/CheckBoxOutlined";
-import BoltIcon from "@mui/icons-material/Bolt";
-import SubdirectoryArrowRightIcon from "@mui/icons-material/SubdirectoryArrowRight";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import KeyboardDoubleArrowUpIcon from "@mui/icons-material/KeyboardDoubleArrowUp";
-import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
-import DragHandleIcon from "@mui/icons-material/DragHandle";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import KeyboardDoubleArrowDownIcon from "@mui/icons-material/KeyboardDoubleArrowDown";
-import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import { RiSparklingLine, RiAttachmentLine, RiTimeLine, RiLink, RiAddLine, RiDeleteBinLine, RiBugLine, RiBookmarkLine, RiCheckboxLine, RiFlashlightLine, RiCornerDownRightLine, RiArrowUpLine, RiArrowUpDoubleLine, RiArrowUpSLine, RiDragMoveLine, RiArrowDownSLine, RiArrowDownDoubleLine, RiCheckboxBlankCircleFill, RiArrowDownWideFill, RiAlertLine } from "react-icons/ri";
 
 /* ── Config ── */
 const ISSUE_TYPES = [
@@ -46,37 +26,37 @@ const ISSUE_TYPES = [
     value: "Story",
     label: "Story",
     color: "#4F7EFF",
-    icon: <BookmarkIcon sx={{ fontSize: 14 }} />,
+    icon: <RiBookmarkLine size={14} />,
   },
   {
     value: "Bug",
     label: "Bug",
     color: "#F87171",
-    icon: <BugReportIcon sx={{ fontSize: 14 }} />,
+    icon: <RiBugLine size={14} />,
   },
   {
     value: "Task",
     label: "Task",
     color: "#A78BFA",
-    icon: <CheckBoxOutlinedIcon sx={{ fontSize: 14 }} />,
+    icon: <RiCheckboxLine size={14} />,
   },
   {
     value: "Epic",
     label: "Epic",
     color: "#FBBF24",
-    icon: <BoltIcon sx={{ fontSize: 14 }} />,
+    icon: <RiFlashlightLine size={14} />,
   },
   {
     value: "Subtask",
     label: "Subtask",
     color: "#94A3B8",
-    icon: <SubdirectoryArrowRightIcon sx={{ fontSize: 14 }} />,
+    icon: <RiCornerDownRightLine size={14} />,
   },
   {
     value: "Improvement",
     label: "Improvement",
     color: "#34D399",
-    icon: <TrendingUpIcon sx={{ fontSize: 14 }} />,
+    icon: <RiArrowUpLine size={14} />,
   },
 ];
 
@@ -85,31 +65,31 @@ const PRIORITIES = [
     value: "Highest",
     label: "Highest",
     color: "#F87171",
-    icon: <KeyboardDoubleArrowUpIcon sx={{ fontSize: 14 }} />,
+    icon: <RiArrowUpDoubleLine size={14} />,
   },
   {
     value: "High",
     label: "High",
     color: "#FB923C",
-    icon: <KeyboardArrowUpIcon sx={{ fontSize: 14 }} />,
+    icon: <RiArrowUpSLine size={14} />,
   },
   {
     value: "Medium",
     label: "Medium",
     color: "#FBBF24",
-    icon: <DragHandleIcon sx={{ fontSize: 14 }} />,
+    icon: <RiDragMoveLine size={14} />,
   },
   {
     value: "Low",
     label: "Low",
     color: "#94A3B8",
-    icon: <KeyboardArrowDownIcon sx={{ fontSize: 14 }} />,
+    icon: <RiArrowDownSLine size={14} />,
   },
   {
     value: "Lowest",
     label: "Lowest",
     color: "#64748B",
-    icon: <KeyboardDoubleArrowDownIcon sx={{ fontSize: 14 }} />,
+    icon: <RiArrowDownDoubleLine size={14} />,
   },
 ];
 
@@ -516,14 +496,14 @@ export default function CreateTicketDrawer({
             onClick={() => setNovaOpen((v) => !v)}
           >
             <div className={styles.novaIcon}>
-              <AutoAwesomeIcon sx={{ fontSize: 14 }} />
+              <RiSparklingLine size={14} />
             </div>
             <div className={styles.novaTitle}>
               Describe in plain English — EOS will fill the form
             </div>
-            <ExpandMoreIcon
+            <RiArrowDownWideFill
+              size={16}
               className={`${styles.novaChevron} ${novaOpen ? styles.novaChevronOpen : ""}`}
-              sx={{ fontSize: 16 }}
             />
           </div>
           {novaOpen && (
@@ -562,7 +542,7 @@ export default function CreateTicketDrawer({
                     </>
                   ) : (
                     <>
-                      <AutoAwesomeIcon sx={{ fontSize: 12 }} />
+                      <RiSparklingLine size={12} />
                       Analyze with EOS
                     </>
                   )}
@@ -600,7 +580,7 @@ export default function CreateTicketDrawer({
           <div className={styles.duplicateAlert}>
             <div className={styles.duplicateHeader}>
               <div className={styles.duplicateTitle}>
-                <WarningAmberIcon sx={{ fontSize: 13 }} />
+                <RiAlertLine size={13} />
                 Similar tickets found
               </div>
               <button
@@ -662,7 +642,7 @@ export default function CreateTicketDrawer({
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
               ) : (
-                <AutoAwesomeIcon sx={{ fontSize: 14 }} />
+                <RiSparklingLine size={14} />
               )}
             </button>
           </div>
@@ -996,14 +976,14 @@ export default function CreateTicketDrawer({
               <div className={styles.sectionTitle}>Linked Issues</div>
               {form.linkedIssues.map((lnk, i) => (
                 <div key={i} className={styles.linkItem}>
-                  <LinkIcon sx={{ fontSize: 13, color: "var(--text-3)" }} />
+                  <RiLink size={13} color="var(--text-3)" />
                   <span className={styles.linkType}>{lnk.type}</span>
                   <span className={styles.linkKey}>{lnk.key}</span>
                   <button
                     className={styles.linkDelete}
                     onClick={() => removeLink(i)}
                   >
-                    <DeleteOutlineIcon sx={{ fontSize: 14 }} />
+                    <RiDeleteBinLine size={14} />
                   </button>
                 </div>
               ))}
@@ -1028,7 +1008,7 @@ export default function CreateTicketDrawer({
                   onKeyDown={(e) => e.key === "Enter" && addLink()}
                 />
                 <button className={styles.iconBtn} onClick={addLink}>
-                  <AddIcon sx={{ fontSize: 16 }} />
+                  <RiAddLine size={16} />
                 </button>
               </div>
             </div>
@@ -1041,7 +1021,7 @@ export default function CreateTicketDrawer({
             {/* Time fields */}
             <div>
               <div className={styles.sectionHeader}>
-                <AccessTimeIcon sx={{ fontSize: 14, color: "var(--text-3)" }} />
+                <RiTimeLine size={14} color="var(--text-3)" />
                 <span className={styles.sectionHeaderText}>Time Tracking</span>
               </div>
               <div className={styles.formRow3}>
@@ -1078,7 +1058,7 @@ export default function CreateTicketDrawer({
             {/* Attachments */}
             <div>
               <div className={styles.sectionHeader}>
-                <AttachFileIcon sx={{ fontSize: 14, color: "var(--text-3)" }} />
+                <RiAttachmentLine size={14} color="var(--text-3)" />
                 <span className={styles.sectionHeaderText}>Attachments</span>
               </div>
 
@@ -1091,7 +1071,7 @@ export default function CreateTicketDrawer({
                   handleFiles(e.dataTransfer.files);
                 }}
               >
-                <AttachFileIcon sx={{ fontSize: 24, color: "var(--text-3)" }} />
+                <RiAttachmentLine size={24} color="var(--text-3)" />
                 <div className={styles.dropZoneText}>
                   Drop files here or{" "}
                   <span className={styles.dropZoneAccent}>browse</span>
@@ -1117,9 +1097,7 @@ export default function CreateTicketDrawer({
                 >
                   {form.attachments.map((f, i) => (
                     <div key={i} className={styles.fileItem}>
-                      <AttachFileIcon
-                        sx={{ fontSize: 14, color: "var(--text-3)" }}
-                      />
+                      <RiAttachmentLine size={14} color="var(--text-3)" />
                       <span className={styles.fileName}>{f.name}</span>
                       <span className={styles.fileSize}>
                         {(f.size / 1024).toFixed(0)} KB
@@ -1128,7 +1106,7 @@ export default function CreateTicketDrawer({
                         className={styles.linkDelete}
                         onClick={() => removeAttachment(i)}
                       >
-                        <DeleteOutlineIcon sx={{ fontSize: 14 }} />
+                        <RiDeleteBinLine size={14} />
                       </button>
                     </div>
                   ))}
@@ -1170,7 +1148,7 @@ export default function CreateTicketDrawer({
               borderColor: `${statusConfig.color}44`,
             }}
           >
-            <FiberManualRecordIcon sx={{ fontSize: "8px !important" }} />
+            <RiCheckboxBlankCircleFill size={8} />
             {statusConfig.label}
           </span>
           {form.assignee && (

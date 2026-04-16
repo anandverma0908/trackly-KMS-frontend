@@ -9,10 +9,7 @@ import LinearProgress from "@mui/material/LinearProgress";
 import type { Project, ProjectTask } from "../spacesData";
 import styles from "./SummaryTab.module.css";
 
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import BoltIcon from "@mui/icons-material/Bolt";
-import ShieldIcon from "@mui/icons-material/Shield";
-import PsychologyIcon from "@mui/icons-material/Psychology";
+import { RiArrowUpLine, RiFlashlightLine, RiShieldCheckLine, RiLightbulbFlashLine } from "react-icons/ri";
 import SummaryKPIStrip from "./SummaryKPIStrip";
 
 /* ── Custom pie label ── */
@@ -404,7 +401,7 @@ export default function SummaryTab({ project }: { project: Project }) {
         <div className={styles.insightsCard}>
           <div className={styles.cardTitleRow}>
             <div className={styles.cardTitle}>
-              <PsychologyIcon sx={{ fontSize: 16, color: "var(--accent)" }} />
+              <span style={{ fontSize: 16, color: "var(--accent)", display: "inline-flex" }}><RiLightbulbFlashLine /></span>
               AI Insights
             </div>
             <span className={styles.aiBadge}>EOS</span>
@@ -412,19 +409,19 @@ export default function SummaryTab({ project }: { project: Project }) {
           <div className={styles.insightsList}>
             {[
               {
-                icon: <TrendingUpIcon sx={{ fontSize: 14 }} />,
+                icon: <RiArrowUpLine size={14} />,
                 color: "var(--green)",
                 title: "Velocity on track",
                 desc: `Sprint completion rate is ${healthScore.doneRate}% — ahead of historical average for this team.`,
               },
               {
-                icon: <BoltIcon sx={{ fontSize: 14 }} />,
+                icon: <RiFlashlightLine size={14} />,
                 color: "var(--amber)",
                 title: "Scope creep risk",
                 desc: `${allTasks.filter(t => t.type === "Bug").length} bugs detected this sprint. Consider a bug bash before next sprint planning.`,
               },
               {
-                icon: <ShieldIcon sx={{ fontSize: 14 }} />,
+                icon: <RiShieldCheckLine size={14} />,
                 color: kpis.blocked > 2 ? "var(--red)" : "var(--green)",
                 title: kpis.blocked > 2 ? "Blockers need attention" : "Low blocker count",
                 desc: kpis.blocked > 2
@@ -432,7 +429,7 @@ export default function SummaryTab({ project }: { project: Project }) {
                   : "Dependency health looks good. Team is unblocked and moving forward.",
               },
               {
-                icon: <PsychologyIcon sx={{ fontSize: 14 }} />,
+                icon: <RiLightbulbFlashLine size={14} />,
                 color: "var(--accent)",
                 title: "Knowledge concentration",
                 desc: `${workloadData[0]?.name ?? "Top member"} holds ${workloadData[0]?.total ?? 0} tasks — consider load balancing in next sprint.`,

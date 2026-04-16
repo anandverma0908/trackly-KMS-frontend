@@ -74,7 +74,7 @@ export default function MySprintItems() {
   return (
     <div className={styles.card}>
       <div className={styles.header}>
-        <span className={styles.icon}><FiZap /></span>
+        {/* <span className={styles.icon}><FiZap /></span> */}
         <div className="card-title">My Sprint Items</div>
         <div className={styles.meta}>
           {daysLeft !== null && (

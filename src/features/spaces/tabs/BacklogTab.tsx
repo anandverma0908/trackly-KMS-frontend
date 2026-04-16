@@ -9,10 +9,7 @@ import { createTicket, addTicketToSprint } from "@/services/api";
 import type { TicketCreate } from "@/types";
 import styles from "./BacklogTab.module.css";
 
-import SearchIcon from "@mui/icons-material/Search";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import SortIcon from "@mui/icons-material/Sort";
-import AddIcon from "@mui/icons-material/Add";
+import { RiSearchLine, RiFilter3Line, RiArrowUpDownLine, RiAddLine } from "react-icons/ri";
 
 const ISSUE_TYPE_ICONS: Record<string, string> = {
   Story: "🟢",
@@ -183,7 +180,7 @@ export default function BacklogTab({ project }: { project: Project }) {
       {/* ── Toolbar ── */}
       <div className={styles.toolbar}>
         <div className={styles.searchWrap}>
-          <SearchIcon sx={{ fontSize: 15, opacity: 0.5 }} />
+          <RiSearchLine size={15} style={{ opacity: 0.5 }} />
           <input
             className={styles.searchInput}
             placeholder="Search tasks, keys, assignees…"
@@ -200,7 +197,7 @@ export default function BacklogTab({ project }: { project: Project }) {
         <div className={styles.toolbarRight}>
           {/* Group by */}
           <div className={styles.selectWrap}>
-            <FilterListIcon sx={{ fontSize: 14 }} />
+            <RiFilter3Line size={14} />
             <select
               className={styles.select}
               value={groupBy}
@@ -216,7 +213,7 @@ export default function BacklogTab({ project }: { project: Project }) {
 
           {/* Sort by */}
           <div className={styles.selectWrap}>
-            <SortIcon sx={{ fontSize: 14 }} />
+            <RiArrowUpDownLine size={14} />
             <select
               className={styles.select}
               value={sortBy}
@@ -251,7 +248,7 @@ export default function BacklogTab({ project }: { project: Project }) {
             className="btn btn-primary btn-sm"
             onClick={() => setShowCreateDrawer(true)}
           >
-            <AddIcon sx={{ fontSize: 15 }} />
+            <RiAddLine size={15} />
             Create Issue
           </button> */}
         </div>
@@ -352,7 +349,7 @@ export default function BacklogTab({ project }: { project: Project }) {
                   ))}
                   {/* Add issue row */}
                   <div className={styles.addRow} onClick={() => setShowCreateDrawer(true)}>
-                    <AddIcon sx={{ fontSize: 13, color: "var(--text-3)" }} />
+                    <RiAddLine size={13} color="var(--text-3)" />
                     <span className={styles.addRowText}>Add issue</span>
                   </div>
                 </div>

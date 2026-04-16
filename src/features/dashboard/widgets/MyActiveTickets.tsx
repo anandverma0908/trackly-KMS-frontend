@@ -209,15 +209,14 @@ export default function MyActiveTickets() {
   });
 
   const hasBlocked = tabCounts.blocked > 0;
-  const showViewAll = tickets.length > 0;
 
   return (
     <div className={styles.card}>
       {/* Header */}
       <div className={styles.header}>
-        <span className={styles.iconWrap}>
+        {/* <span className={styles.iconWrap}>
           <RiTicketLine />
-        </span>
+        </span> */}
         <span className={styles.title}>Active Tickets</span>
         {!isLoading && (
           <span

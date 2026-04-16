@@ -19,19 +19,7 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import Divider from "@mui/material/Divider";
 import CircularProgress from "@mui/material/CircularProgress";
 
-/* MUI Icons */
-import MenuOpenIcon from "@mui/icons-material/MenuOpen";
-import MenuIcon from "@mui/icons-material/Menu";
-import SearchIcon from "@mui/icons-material/Search";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
-import LightModeIcon from "@mui/icons-material/LightMode";
-import LogoutIcon from "@mui/icons-material/Logout";
-import PersonIcon from "@mui/icons-material/Person";
-import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
-import ArticleIcon from "@mui/icons-material/Article";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import CloseIcon from "@mui/icons-material/Close";
+import { RiMenuFoldLine, RiMenuLine, RiSearchLine, RiNotification3Line, RiMoonLine, RiSunLine, RiLogoutBoxRLine, RiUserLine, RiTicketLine, RiArticleLine, RiSparklingLine, RiCloseLine } from "react-icons/ri";
 
 /* ── Commented out — preserved for later use ──────────────────────────────
 import DateRangePicker from "../ui/DateRangePicker";
@@ -194,9 +182,9 @@ export default function Topbar({
           aria-label="Toggle sidebar"
         >
           {sidebarCollapsed ? (
-            <MenuIcon fontSize="small" />
+            <RiMenuLine size={20} />
           ) : (
-            <MenuOpenIcon fontSize="small" />
+            <RiMenuFoldLine size={20} />
           )}
         </IconButton>
         {/* </Tooltip> */}
@@ -209,7 +197,7 @@ export default function Topbar({
             className={`${styles.iconBtn} ${styles.hamburger}`}
             aria-label="Open menu"
           >
-            <MenuIcon fontSize="small" />
+            <RiMenuLine size={20} />
           </IconButton>
         </Tooltip>
 
@@ -226,9 +214,7 @@ export default function Topbar({
         <div
           className={`${styles.searchBar} ${searchFocused ? styles.searchBarFocused : ""}`}
         >
-          <SearchIcon
-            sx={{ fontSize: 15, color: "var(--text-3)", flexShrink: 0 }}
-          />
+          <RiSearchLine size={15} color="var(--text-3)" style={{ flexShrink: 0 }} />
           <input
             ref={inputRef}
             className={styles.searchInput}
@@ -252,7 +238,7 @@ export default function Topbar({
               onClick={clearSearch}
               tabIndex={-1}
             >
-              <CloseIcon sx={{ fontSize: 13 }} />
+              <RiCloseLine size={13} />
             </button>
           )}
 
@@ -288,7 +274,7 @@ export default function Topbar({
             {novaAnswer && (
               <div className={styles.novaAnswer}>
                 <div className={styles.novaBadge}>
-                  <AutoAwesomeIcon sx={{ fontSize: 11 }} />
+                  <RiSparklingLine size={11} />
                   EOS
                 </div>
                 <p className={styles.novaText}>{novaAnswer}</p>
@@ -309,9 +295,9 @@ export default function Topbar({
                   >
                     <span className={styles.resultIcon}>
                       {r.type === "ticket" ? (
-                        <ConfirmationNumberIcon sx={{ fontSize: 15 }} />
+                        <RiTicketLine size={15} />
                       ) : (
-                        <ArticleIcon sx={{ fontSize: 15 }} />
+                        <RiArticleLine size={15} />
                       )}
                     </span>
                     <div className={styles.resultBody}>
@@ -352,9 +338,7 @@ export default function Topbar({
                   <kbd className={styles.kbdSmall}>Esc</kbd> close
                 </div>
                 <div className={styles.hintRow}>
-                  <AutoAwesomeIcon
-                    sx={{ fontSize: 12, color: "var(--accent)" }}
-                  />
+                  <RiSparklingLine size={12} color="var(--accent)" />
                   <span>Switch to EOS for AI-powered answers</span>
                 </div>
               </div>
@@ -380,9 +364,9 @@ export default function Topbar({
             className={styles.iconBtn}
           >
             {isDark ? (
-              <LightModeIcon fontSize="small" />
+              <RiSunLine size={20} />
             ) : (
-              <DarkModeIcon fontSize="small" />
+              <RiMoonLine size={20} />
             )}
           </IconButton>
         </Tooltip>
@@ -408,7 +392,7 @@ export default function Topbar({
                 },
               }}
             >
-              <NotificationsIcon fontSize="small" />
+              <RiNotification3Line size={20} />
             </Badge>
           </IconButton>
         </Tooltip>
@@ -482,7 +466,7 @@ export default function Topbar({
                 }}
               >
                 <ListItemIcon sx={{ color: "inherit", minWidth: 32 }}>
-                  <PersonIcon fontSize="small" />
+                  <RiUserLine size={20} />
                 </ListItemIcon>
                 Settings
               </MenuItem>
@@ -495,7 +479,7 @@ export default function Topbar({
                 }}
               >
                 <ListItemIcon sx={{ color: "inherit", minWidth: 32 }}>
-                  <LogoutIcon fontSize="small" />
+                  <RiLogoutBoxRLine size={20} />
                 </ListItemIcon>
                 Sign out
               </MenuItem>

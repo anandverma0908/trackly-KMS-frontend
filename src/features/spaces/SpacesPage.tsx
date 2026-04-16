@@ -9,9 +9,7 @@ import { getPodColor } from "@/config/themes";
 import type { Sprint } from "@/types";
 import styles from "./SpacesPage.module.css";
 
-import SearchIcon from "@mui/icons-material/Search";
-import GridViewIcon from "@mui/icons-material/GridView";
-import TableRowsIcon from "@mui/icons-material/TableRows";
+import { RiSearchLine, RiGridLine, RiTableLine } from "react-icons/ri";
 import SpacesKPIStrip from "./SpacesKPIStrip";
 
 /* ── Derived pod card data ── */
@@ -95,19 +93,22 @@ export default function SpacesPage() {
   return (
     <div className={styles.page}>
       {/* ── Header ── */}
-      <div className={`${styles.header} fade-up`}>
+      <div className={`fade-up`}>
         <div>
           <h1 className={styles.title}>Spaces</h1>
         </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 10,
-          }}
-        >
+      </div>
+
+      {/* ── KPI Strip ── */}
+      <div className={`${styles.kpiStrip} fade-up`}>
+        <SpacesKPIStrip stats={stats} loading={loadingPods} />
+      </div>
+
+      {/* ── Header ── */}
+      <div className={`${styles.header} fade-up`}>
+        <div>
           <div className={styles.searchWrap}>
-            <SearchIcon sx={{ fontSize: 16, opacity: 0.5 }} />
+            <RiSearchLine size={16} style={{ opacity: 0.5 }} />
             <input
               className={styles.searchInput}
               placeholder="Search pods…"
@@ -120,6 +121,14 @@ export default function SpacesPage() {
               </button>
             )}
           </div>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 10,
+          }}
+        >
           <div className={styles.headerActions}>
             <div className={styles.viewToggle}>
               <Tooltip title="Grid view" arrow>
@@ -127,7 +136,7 @@ export default function SpacesPage() {
                   className={`${styles.viewBtn} ${viewMode === "grid" ? styles.viewBtnActive : ""}`}
                   onClick={() => setViewMode("grid")}
                 >
-                  <GridViewIcon fontSize="small" />
+                  <RiGridLine size={20} />
                 </button>
               </Tooltip>
               <Tooltip title="List view" arrow>
@@ -135,17 +144,12 @@ export default function SpacesPage() {
                   className={`${styles.viewBtn} ${viewMode === "list" ? styles.viewBtnActive : ""}`}
                   onClick={() => setViewMode("list")}
                 >
-                  <TableRowsIcon fontSize="small" />
+                  <RiTableLine size={20} />
                 </button>
               </Tooltip>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* ── KPI Strip ── */}
-      <div className={`${styles.kpiStrip} fade-up`}>
-        <SpacesKPIStrip stats={stats} loading={loadingPods} />
       </div>
 
       {/* ── Grid / List ── */}
