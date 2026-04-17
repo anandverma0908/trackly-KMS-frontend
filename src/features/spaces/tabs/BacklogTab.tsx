@@ -614,11 +614,9 @@ export default function BacklogTab({ project }: { project: Project }) {
       {viewingTask && (
         <CreateTicketDrawer
           open={Boolean(viewingTask)}
-          onClose={() => {
-            setViewingTask(null);
-            qc.invalidateQueries({ queryKey: ["space-project", project.key] });
-          }}
+          onClose={() => setViewingTask(null)}
           ticketKey={viewingTask.key}
+          defaultPod={project.key}
           initialData={{
             title: viewingTask.title,
             description: viewingTask.description,
@@ -629,8 +627,12 @@ export default function BacklogTab({ project }: { project: Project }) {
             story_points: viewingTask.storyPoints,
             labels: viewingTask.labels,
             due_date: viewingTask.dueDate,
+            pod: project.key,
           }}
           members={project.members}
+          onSuccess={() => {
+            qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+          }}
         />
       )}
 
@@ -642,6 +644,7 @@ export default function BacklogTab({ project }: { project: Project }) {
           setCreateForSprint(undefined);
         }}
         defaultStatus="To Do"
+        defaultPod={project.key}
         members={project.members}
         onCreated={(data) => {
           const payload: TicketCreate = {

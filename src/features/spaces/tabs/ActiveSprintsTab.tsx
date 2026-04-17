@@ -61,8 +61,9 @@ export default function ActiveSprintsTab({
     [project],
   );
 
-  const [selectedSprint] = useState<ProjectSprint>(
-    activeSprints[0] ?? project.sprints[0],
+  const selectedSprint = useMemo(
+    () => activeSprints[0] ?? project.sprints[0],
+    [activeSprints, project],
   );
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(
     new Set(),
@@ -86,7 +87,12 @@ export default function ActiveSprintsTab({
   const statusMut = useMutation({
     mutationFn: ({ key, status }: { key: string; status: string }) =>
       updateTicketStatus(key, status),
-    onSuccess: () => {
+    onSuccess: (_data, { key }) => {
+      setLocalStatuses((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
       qc.invalidateQueries({ queryKey: ["space-project", project.key] });
     },
     onError: (_err, { key }) => {
@@ -102,11 +108,11 @@ export default function ActiveSprintsTab({
   const createMut = useMutation({
     mutationFn: createTicket,
     onSuccess: () => {
+      setLocalTasks([]);
       qc.invalidateQueries({ queryKey: ["space-project", project.key] });
       qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
       toast.success("Ticket created!");
       setShowCreateModal(false);
-      setTimeout(() => setLocalTasks([]), 400);
     },
     onError: (e: Error) => {
       toast.error(e.message);
@@ -625,6 +631,7 @@ export default function ActiveSprintsTab({
           setExternalCreateOpen?.(false);
         }}
         defaultStatus={createColumn}
+        defaultPod={project.key}
         sprintName={selectedSprint.name}
         members={project.members}
         onCreated={(data) => {
@@ -647,6 +654,7 @@ export default function ActiveSprintsTab({
         open={Boolean(viewTicket)}
         onClose={() => setViewTicket(null)}
         ticketKey={viewTicket?.key}
+        defaultPod={project.key}
         initialData={
           viewTicket
             ? {
@@ -662,11 +670,15 @@ export default function ActiveSprintsTab({
                 labels: viewTicket.labels,
                 story_points: viewTicket.storyPoints,
                 due_date: viewTicket.dueDate,
+                pod: project.key,
               }
             : undefined
         }
         members={project.members}
         sprintName={selectedSprint.name}
+        onSuccess={() => {
+          qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+        }}
       />
     </div>
   );

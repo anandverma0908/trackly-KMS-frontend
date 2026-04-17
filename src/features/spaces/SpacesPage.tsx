@@ -97,6 +97,7 @@ export default function SpacesPage() {
 
   const cards = useMemo<PodCard[]>(() => {
     return podSummaries
+      .filter((p) => p.pod && p.pod.trim().length > 0)
       .map((p) => buildPodCard(p, sprints))
       .filter(
         (c) => !search || c.pod.toLowerCase().includes(search.toLowerCase()),

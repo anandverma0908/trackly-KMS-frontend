@@ -172,11 +172,14 @@ export interface CreateTicketDrawerProps {
   open: boolean;
   onClose: () => void;
   defaultStatus?: string;
+  defaultPod?: string;
   sprintName?: string;
   sprintId?: number;
   members?: ProjectMember[];
   /** If provided, called instead of API (for local/mock data flows) */
   onCreated?: (data: Partial<FormState>) => void;
+  /** Called after a successful create or update (in addition to onCreated) */
+  onSuccess?: () => void;
   /** Edit mode: key of the ticket being viewed/edited */
   ticketKey?: string;
   /** Edit mode: initial form values to populate */
@@ -190,10 +193,12 @@ export default function CreateTicketDrawer({
   open,
   onClose,
   defaultStatus = "To Do",
+  defaultPod,
   sprintName,
   sprintId,
   members = [],
   onCreated,
+  onSuccess,
   ticketKey,
   initialData,
   readOnly = false,
@@ -317,7 +322,7 @@ export default function CreateTicketDrawer({
       setWlComment("");
       setWlDate(new Date().toISOString().split("T")[0]);
     } else if (!isEdit) {
-      // Create mode — blank form
+      // Create mode — blank form, pre-fill pod from context if provided
       hasInitialized.current = true;
       setForm({
         title: "",
@@ -334,6 +339,7 @@ export default function CreateTicketDrawer({
         linkedIssues: [],
         attachments: [],
         labels: [],
+        pod: defaultPod,
       });
       setNovaOpen(true);
       setNlText("");
@@ -472,7 +478,11 @@ export default function CreateTicketDrawer({
       qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
       qc.invalidateQueries({ queryKey: ["tickets"] });
       qc.invalidateQueries({ queryKey: ["new-tickets"] });
+      if (defaultPod) {
+        qc.invalidateQueries({ queryKey: ["space-project", defaultPod] });
+      }
       toast.success("Ticket created!");
+      onSuccess?.();
       onClose();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -486,7 +496,11 @@ export default function CreateTicketDrawer({
       qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
       qc.invalidateQueries({ queryKey: ["tickets"] });
       qc.invalidateQueries({ queryKey: ["new-tickets"] });
+      if (defaultPod) {
+        qc.invalidateQueries({ queryKey: ["space-project", defaultPod] });
+      }
       toast.success("Ticket updated!");
+      onSuccess?.();
       onClose();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -1115,23 +1129,31 @@ export default function CreateTicketDrawer({
 
               {/* POD + Client */}
               <div className={styles.formRow}>
-                <FormControl size="small" fullWidth disabled={readOnly}>
-                  <InputLabel>POD</InputLabel>
-                  <Select
-                    label="POD"
-                    value={form.pod ?? ""}
-                    onChange={(e) => set("pod", e.target.value || undefined)}
-                  >
-                    <MenuItem value="">
-                      <em>None</em>
-                    </MenuItem>
-                    {pods.map((p) => (
-                      <MenuItem key={p} value={p}>
-                        {p}
+                {/* Hide POD selector when it's auto-set from the current space context */}
+                {(!defaultPod || isEdit) ? (
+                  <FormControl size="small" fullWidth disabled={readOnly}>
+                    <InputLabel>POD</InputLabel>
+                    <Select
+                      label="POD"
+                      value={form.pod ?? ""}
+                      onChange={(e) => set("pod", e.target.value || undefined)}
+                    >
+                      <MenuItem value="">
+                        <em>None</em>
                       </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                      {pods.map((p) => (
+                        <MenuItem key={p} value={p}>
+                          {p}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-2)", padding: "6px 0" }}>
+                    <span style={{ fontWeight: 600, color: "var(--accent)" }}>POD:</span>
+                    <span style={{ background: "var(--accent-glow)", border: "1px solid var(--accent-border)", color: "var(--accent)", borderRadius: 6, padding: "2px 8px", fontWeight: 700, fontSize: 11 }}>{defaultPod}</span>
+                  </div>
+                )}
                 <FormControl size="small" fullWidth disabled={readOnly}>
                   <InputLabel>Client</InputLabel>
                   <Select
