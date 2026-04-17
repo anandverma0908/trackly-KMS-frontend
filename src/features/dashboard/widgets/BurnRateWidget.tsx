@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchBurnRates } from "@/services/api";
 import Skeleton from "@/components/ui/Skeleton";
 import styles from "./BurnRateWidget.module.css";
-import { MdOutlineShowChart } from "react-icons/md";
+// import { MdOutlineShowChart } from "react-icons/md";
 
 const STATUS_CONFIG = {
   on_track:   { color: "var(--green)",  label: "On Track"   },

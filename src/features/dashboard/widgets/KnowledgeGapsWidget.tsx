@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchKnowledgeGaps } from "@/services/api";
 import Skeleton from "@/components/ui/Skeleton";
 import styles from "./KnowledgeGapsWidget.module.css";
-import { TbBrain } from "react-icons/tb";
+// import { TbBrain } from "react-icons/tb";
 import { MdWarning } from "react-icons/md";
 
 export default function KnowledgeGapsWidget() {

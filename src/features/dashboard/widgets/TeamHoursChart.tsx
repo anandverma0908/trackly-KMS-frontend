@@ -6,7 +6,7 @@ import {
 import { fetchWorkload } from "@/services/api";
 import Skeleton from "@/components/ui/Skeleton";
 import styles from "./TeamHoursChart.module.css";
-import { RiTeamFill } from "react-icons/ri";
+// import { RiTeamFill } from "react-icons/ri";
 
 const TARGET = 160; // hours per month target
 

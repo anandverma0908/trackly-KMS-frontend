@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, Cell,
 } from "recharts";
 import styles from "./TicketsByStatus.module.css";
-import { HiOutlineChartBar } from "react-icons/hi";
+// import { HiOutlineChartBar } from "react-icons/hi";
 
 const STATUS_MAP: Record<string, { color: string; order: number }> = {
   "To Do":       { color: "var(--text-3)",  order: 0 },

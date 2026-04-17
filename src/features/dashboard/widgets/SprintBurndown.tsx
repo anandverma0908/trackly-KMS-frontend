@@ -6,7 +6,7 @@ import {
 import { fetchSprints, fetchBurndown } from "@/services/api";
 import Skeleton from "@/components/ui/Skeleton";
 import styles from "./SprintBurndown.module.css";
-import { TbChartLine } from "react-icons/tb";
+// import { TbChartLine } from "react-icons/tb";
 
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;

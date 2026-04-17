@@ -9,8 +9,6 @@ import {
   RiBookOpenLine,
   RiTeamLine,
   RiRocketLine,
-  RiLockLine,
-  RiUserSettingsLine,
   RiCloseLine,
 } from "react-icons/ri";
 
@@ -174,18 +172,7 @@ export default function Sidebar({
         </div>
 
         <div className={styles.navGroupBottom}>
-          {!can("manage:users") &&
-            nav(
-              <RiLockLine size={20} />,
-              "Change Password",
-              "/settings/password",
-            )}
-          {nav(
-            <RiUserSettingsLine size={20} />,
-            "Users",
-            "/admin/users",
-            can("manage:users"),
-          )}
+          {/* Settings-related items moved to the Settings page */}
         </div>
       </div>
     </motion.aside>

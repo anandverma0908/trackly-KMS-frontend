@@ -3,7 +3,7 @@ import { fetchSprint, fetchSprints } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import Skeleton from "@/components/ui/Skeleton";
 import styles from "./MySprintItems.module.css";
-import { FiZap } from "react-icons/fi";
+// import { FiZap } from "react-icons/fi";
 import { MdCheckCircle, MdRadioButtonUnchecked } from "react-icons/md";
 
 const STATUS_DONE  = ["Done", "Closed", "Resolved"];

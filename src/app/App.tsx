@@ -11,15 +11,14 @@ import TeamPage from "@/features/team/TeamPage";
 import ExportPage from "@/features/export/ExportPage";
 import SettingsPage from "@/features/settings/SettingsPage";
 import ManualEntryPage from "@/features/manual-entry/ManualEntryPage";
-import UsersPage from "@/features/settings/UsersPage";
-import ChangePasswordPage from "@/features/settings/ChangePasswordPage";
+
+
 import WikiPage from "@/features/wiki/WikiPage";
 import KanbanBoard from "@/features/kanban/KanbanBoard";
 import SprintPage from "@/features/sprint/SprintPage";
 import StandupPage from "@/features/standup/StandupPage";
 import AnalyticsPage from "@/features/analytics/AnalyticsPage";
-import BurnRatePage from "@/features/settings/BurnRatePage";
-import NotificationPrefsPage from "@/features/settings/NotificationPrefsPage";
+
 import WeeklyTimeGrid from "@/features/timetrack/WeeklyTimeGrid";
 import SpacesPage from "@/features/spaces/SpacesPage";
 import ProjectDetailPage from "@/features/spaces/ProjectDetailPage";
@@ -96,17 +95,6 @@ function AnimatedRoutes() {
           }
         />
 
-        {/* Requires login but NO shell — full screen */}
-        <Route
-          element={
-            <PageTransition>
-              <RequireAuth />
-            </PageTransition>
-          }
-        >
-          <Route path="/settings/password" element={<ChangePasswordPage />} />
-        </Route>
-
         {/* All app routes — require login + shell */}
         <Route
           element={
@@ -135,10 +123,8 @@ function AnimatedRoutes() {
               <Route path="/export" element={<ExportPage />} />
               <Route path="/manual-entry" element={<ManualEntryPage />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/settings/budget" element={<BurnRatePage />} />
-              <Route path="/settings/notifications" element={<NotificationPrefsPage />} />
               <Route path="/timesheets/weekly" element={<WeeklyTimeGrid />} />
-              <Route path="/admin/users" element={<UsersPage />} />
+              <Route path="/admin/users" element={<Navigate to="/settings" replace />} />
               <Route path="/spaces" element={<SpacesPage />} />
               <Route path="/spaces/:projectId" element={<ProjectDetailPage />} />
             </Route>

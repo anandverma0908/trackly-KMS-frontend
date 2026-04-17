@@ -8,7 +8,7 @@ import {
 } from "@/services/api";
 import Skeleton from "@/components/ui/Skeleton";
 import styles from "./TodayStandup.module.css";
-import { TbRobot } from "react-icons/tb";
+// import { TbRobot } from "react-icons/tb";
 import { MdEdit, MdShare, MdAutoAwesome } from "react-icons/md";
 
 export default function TodayStandup() {

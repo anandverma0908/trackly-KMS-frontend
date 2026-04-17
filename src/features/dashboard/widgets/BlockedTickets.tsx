@@ -3,7 +3,7 @@ import { fetchTickets } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import Skeleton from "@/components/ui/Skeleton";
 import styles from "./BlockedTickets.module.css";
-import { MdBlock } from "react-icons/md";
+// import { MdBlock } from "react-icons/md";
 
 export default function BlockedTickets() {
   const scopedPod = useAuthStore((s) => s.getScopedPod());
