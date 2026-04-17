@@ -409,6 +409,67 @@
   letter-spacing: 0.07em;
 }
 
+/* ── EOS AI Insights (live) ── */
+.eosInsightsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 8px;
+}
+
+.eosInsightLine {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+.eosInsightLine:last-child { border-bottom: none; }
+
+.eosInsightEmoji { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+.eosLoading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.eosDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 1.2s infinite;
+}
+
+.eosError {
+  font-size: 11px;
+  color: var(--text-3);
+  padding: 12px 0;
+  text-align: center;
+}
+
+.refreshBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  padding: 3px 5px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  transition: all 0.12s;
+  font-family: var(--font-sans);
+}
+.refreshBtn:hover { color: var(--text); background: var(--surface-2); }
+
 /* ── Responsive ── */
 @media (max-width: 1200px) {
   .row4 { grid-template-columns: 1fr 1fr; }

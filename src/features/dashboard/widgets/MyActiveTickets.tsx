@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { fetchTickets } from "@/services/api";
+import { fetchTickets, fetchTicket } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
+import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
 import styles from "./MyActiveTickets.module.css";
 
 import { RiArrowRightLine, RiTimeLine } from "react-icons/ri";
@@ -152,8 +152,14 @@ function SkeletonList() {
 /* ── Main component ── */
 export default function MyActiveTickets() {
   const user = useAuthStore((s) => s.user);
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<FilterKey>("all");
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  const { data: selectedTicketData } = useQuery({
+    queryKey: ["ticket", selectedKey],
+    queryFn: () => fetchTicket(selectedKey!),
+    enabled: !!selectedKey,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["my-active-tickets", user?.name],
@@ -290,7 +296,7 @@ export default function MyActiveTickets() {
                 key={t.key}
                 className={styles.ticket}
                 style={{ "--tc": sm.color } as React.CSSProperties}
-                onClick={() => navigate(`/tickets?key=${t.key}`)}
+                onClick={() => setSelectedKey(t.key)}
                 title={t.summary}
               >
                 <div className={styles.ticketBody}>
@@ -342,20 +348,40 @@ export default function MyActiveTickets() {
         </div>
       )}
 
-      {/* Footer */}
-      {/* {showViewAll && (
-        <div className={styles.footer}>
-          <span className={styles.footerNote}>
-            {sorted.length} of {tickets.length} open
-          </span>
-          <button
-            className={styles.viewAll}
-            onClick={() => navigate("/tickets")}
-          >
-            View all <RiArrowRightLine size={12} />
-          </button>
-        </div>
-      )} */}
+      {selectedKey && (
+        <CreateTicketDrawer
+          open
+          onClose={() => setSelectedKey(null)}
+          ticketKey={selectedKey}
+          initialData={
+            selectedTicketData
+              ? {
+                  title: selectedTicketData.summary,
+                  description: (selectedTicketData as any).description ?? "",
+                  issue_type: selectedTicketData.issue_type,
+                  priority: selectedTicketData.priority,
+                  status: selectedTicketData.status,
+                  assignee: selectedTicketData.assignee,
+                  reporter: (selectedTicketData as any).reporter ?? "",
+                  pod: selectedTicketData.pod,
+                  client: selectedTicketData.client,
+                  story_points: selectedTicketData.story_points,
+                  labels: selectedTicketData.labels,
+                  due_date: selectedTicketData.due_date,
+                  originalEst: selectedTicketData.original_estimate_hours
+                    ? String(selectedTicketData.original_estimate_hours)
+                    : "",
+                  timeSpent: selectedTicketData.hours_spent
+                    ? String(selectedTicketData.hours_spent)
+                    : "",
+                  remaining: selectedTicketData.remaining_estimate_hours
+                    ? String(selectedTicketData.remaining_estimate_hours)
+                    : "",
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }

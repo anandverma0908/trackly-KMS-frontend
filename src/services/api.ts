@@ -391,11 +391,25 @@ export async function fetchVelocity(): Promise<VelocityPoint[]> {
 }
 
 export async function generateSprintRetro(sprintId: string) {
+  if (mock()?.generateSprintRetro) return mock().generateSprintRetro(sprintId);
+  if (mock()) {
+    await new Promise((r) => setTimeout(r, 1000));
+    return {
+      retro: `**Sprint Retrospective (Demo Mode)**\n\n✅ What went well: Team maintained steady velocity and delivered key features on time.\n\n⚠️ What could improve: A few tickets were blocked longer than expected — improve early escalation.\n\n💡 Action items:\n- Schedule a mid-sprint sync to catch blockers early\n- Break large stories into smaller sub-tasks\n- Update ticket estimates before sprint start\n\n_EOS AI is in demo mode. Connect the backend for real retrospective analysis._`,
+    };
+  }
   const { data } = await api.post(`/nova/sprint-retro/${sprintId}`);
   return data;
 }
 
 export async function generateReleaseNotes(sprintId: string) {
+  if (mock()?.generateReleaseNotes) return mock().generateReleaseNotes(sprintId);
+  if (mock()) {
+    await new Promise((r) => setTimeout(r, 1000));
+    return {
+      notes: `**Release Notes (Demo Mode)**\n\n## What's New\n- Implemented kanban board with drag-and-drop support\n- Added sprint burndown chart and velocity tracking\n- Introduced EOS AI assistant for smart insights\n\n## Bug Fixes\n- Resolved ticket status sync issues\n- Fixed member filter in active sprints view\n\n## Improvements\n- Improved dashboard load performance\n- Enhanced ticket detail drawer with comment threading\n\n_EOS AI is in demo mode. Connect the backend for real release notes._`,
+    };
+  }
   const { data } = await api.post(`/nova/release-notes/${sprintId}`);
   return data;
 }

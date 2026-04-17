@@ -5,11 +5,18 @@ import toast from "react-hot-toast";
 import type { Project, ProjectTask } from "../spacesData";
 import { getPriorityColor, getTaskStatusColor } from "../spacesData";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
-import { createTicket, addTicketToSprint } from "@/services/api";
+import { createTicket, addTicketToSprint, novaQuery } from "@/services/api";
 import type { TicketCreate } from "@/types";
 import styles from "./BacklogTab.module.css";
 
-import { RiSearchLine, RiFilter3Line, RiArrowUpDownLine, RiAddLine } from "react-icons/ri";
+import {
+  RiSearchLine,
+  RiFilter3Line,
+  RiArrowUpDownLine,
+  RiAddLine,
+  RiSparklingLine,
+  RiCloseLine,
+} from "react-icons/ri";
 
 const ISSUE_TYPE_ICONS: Record<string, string> = {
   Story: "🟢",
@@ -38,6 +45,36 @@ export default function BacklogTab({ project }: { project: Project }) {
   const [createDefaultStatus] = useState("To Do");
   const [localTasks, setLocalTasks] = useState<ProjectTask[]>([]);
   const [viewingTask, setViewingTask] = useState<ProjectTask | null>(null);
+
+  /* ── AI Prioritize ── */
+  const [aiPriLoading, setAiPriLoading] = useState(false);
+  const [aiPriResult, setAiPriResult] = useState<string | null>(null);
+
+  async function handleAiPrioritize() {
+    if (backlogTasks.length === 0) {
+      toast.error("No backlog tasks to prioritize");
+      return;
+    }
+    setAiPriLoading(true);
+    setAiPriResult(null);
+    try {
+      const taskList = backlogTasks
+        .slice(0, 30)
+        .map(
+          (t, i) =>
+            `${i + 1}. [${t.key}] ${t.title} (${t.priority}, ${t.type}, ${t.storyPoints}pts, ${t.status})`,
+        )
+        .join("\n");
+      const res = await novaQuery(
+        `You are a sprint planning assistant. Suggest a priority order for this backlog.\n\nBacklog:\n${taskList}\n\nRespond with a numbered list: the ticket key, then one sentence explaining why it should be prioritized. Focus on blockers, high priority, and bugs first.`,
+      );
+      setAiPriResult(res.answer);
+    } catch {
+      toast.error("EOS prioritization failed");
+    } finally {
+      setAiPriLoading(false);
+    }
+  }
 
   const moveMut = useMutation({
     mutationFn: ({
@@ -244,15 +281,41 @@ export default function BacklogTab({ project }: { project: Project }) {
             </div>
           )}
 
-          {/* <button
-            className="btn btn-primary btn-sm"
-            onClick={() => setShowCreateDrawer(true)}
+          <button
+            className={styles.aiPriBtn}
+            onClick={handleAiPrioritize}
+            disabled={aiPriLoading}
           >
-            <RiAddLine size={15} />
-            Create Issue
-          </button> */}
+            {aiPriLoading ? (
+              <>
+                <span className={styles.aiPriSpinner} /> Analysing…
+              </>
+            ) : (
+              <>
+                <RiSparklingLine size={12} /> AI Prioritize
+              </>
+            )}
+          </button>
         </div>
       </div>
+
+      {/* ── AI Priority Panel ── */}
+      {aiPriResult && (
+        <div className={styles.aiPriPanel}>
+          <div className={styles.aiPriHeader}>
+            <span className={styles.aiPriTitle}>
+              <RiSparklingLine size={13} /> EOS Priority Suggestion
+            </span>
+            <button
+              className={styles.aiPriClose}
+              onClick={() => setAiPriResult(null)}
+            >
+              <RiCloseLine size={16} />
+            </button>
+          </div>
+          <div className={styles.aiPriText}>{aiPriResult}</div>
+        </div>
+      )}
 
       {/* ── Stats strip ── */}
       <div className={styles.statsStrip}>
@@ -348,7 +411,10 @@ export default function BacklogTab({ project }: { project: Project }) {
                     />
                   ))}
                   {/* Add issue row */}
-                  <div className={styles.addRow} onClick={() => setShowCreateDrawer(true)}>
+                  <div
+                    className={styles.addRow}
+                    onClick={() => setShowCreateDrawer(true)}
+                  >
                     <RiAddLine size={13} color="var(--text-3)" />
                     <span className={styles.addRowText}>Add issue</span>
                   </div>
@@ -488,7 +554,10 @@ const TaskRow = React.memo(function TaskRow({
   const statusColor = getTaskStatusColor(task.status);
 
   return (
-    <div className={`${styles.row} ${selected ? styles.rowSelected : ""}`} onClick={onClick}>
+    <div
+      className={`${styles.row} ${selected ? styles.rowSelected : ""}`}
+      onClick={onClick}
+    >
       <div className={styles.tdCheck} onClick={(e) => e.stopPropagation()}>
         <input
           type="checkbox"

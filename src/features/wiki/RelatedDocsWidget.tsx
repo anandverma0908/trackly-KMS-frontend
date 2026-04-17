@@ -3,16 +3,20 @@ import { fetchRelatedDocs } from "@/services/api";
 import type { RelatedDoc } from "@/types";
 import styles from "./RelatedDocsWidget.module.css";
 
+import { TbFolder,TbFileText } from "react-icons/tb";
+
+
+
 interface Props {
-  pageId:   string;
+  pageId: string;
   onSelect: (id: string) => void;
 }
 
 export default function RelatedDocsWidget({ pageId, onSelect }: Props) {
   const { data: rawDocs = [], isLoading } = useQuery({
     queryKey: ["related-docs", pageId],
-    queryFn:  () => fetchRelatedDocs("wiki", pageId),
-    enabled:  !!pageId,
+    queryFn: () => fetchRelatedDocs("wiki", pageId),
+    enabled: !!pageId,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -46,13 +50,11 @@ export default function RelatedDocsWidget({ pageId, onSelect }: Props) {
             onClick={() => doc.type === "wiki" && onSelect(doc.id)}
           >
             <span className={styles.itemIcon}>
-              {doc.type === "wiki" ? "📄" : "🎫"}
+              {doc.type === "wiki" ? <TbFileText /> : <TbFolder />}
             </span>
             <span className={styles.itemBody}>
               <span className={styles.itemTitle}>{doc.title}</span>
-              {doc.key && (
-                <span className={styles.itemSnippet}>{doc.key}</span>
-              )}
+              {doc.key && <span className={styles.itemSnippet}>{doc.key}</span>}
             </span>
             <span className={styles.itemScore}>
               {Math.round(doc.similarity * 100)}%

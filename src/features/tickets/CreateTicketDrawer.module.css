@@ -771,3 +771,188 @@
 .spinner {
   animation: spin 1s linear infinite;
 }
+
+/* ── Comments ── */
+.commentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.commentItem {
+  display: flex;
+  gap: 10px;
+}
+.replyItem {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  padding-left: 4px;
+  border-left: 2px solid var(--border);
+}
+.commentAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.commentBody {
+  flex: 1;
+  min-width: 0;
+}
+.commentMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.commentAuthor {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.commentDate {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.commentAction {
+  font-size: 11px;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0.7;
+}
+.commentAction:hover { opacity: 1; }
+.commentText {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.commentCompose {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 12px;
+}
+.replyIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--accent);
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: var(--accent-glow);
+  border-radius: 4px;
+}
+.cancelReply {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 12px;
+  padding: 0 2px;
+}
+.emptyHint {
+  font-size: 13px;
+  color: var(--text-3);
+  text-align: center;
+  padding: 20px 0;
+  margin: 0;
+}
+
+/* ── Activity Timeline ── */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.activityEntry {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.activityIcon {
+  font-size: 14px;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+.activityContent {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+  flex: 1;
+}
+.activityActor {
+  font-weight: 600;
+  color: var(--text);
+}
+.activityTime {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+/* ── Worklogs ── */
+.worklogForm {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.worklogList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.worklogItem {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+}
+.worklogHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.worklogAuthor {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.worklogDate {
+  font-size: 11px;
+  color: var(--text-3);
+  flex: 1;
+}
+.worklogHours {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.worklogComment {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-top: 4px;
+}

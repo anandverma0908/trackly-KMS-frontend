@@ -86,6 +86,11 @@ export default function BurnRateWidget() {
                   <span>{b.hours_used.toFixed(0)}h used</span>
                   <span>{b.budget_hours}h budget</span>
                 </div>
+                {b.nova_summary && (b.status === "critical" || b.status === "warning" || b.status === "over_budget") && (
+                  <div className={styles.novaSummary}>
+                    ✦ {b.nova_summary}
+                  </div>
+                )}
               </div>
             );
           })}

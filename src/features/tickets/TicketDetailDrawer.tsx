@@ -1,14 +1,14 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
   fetchTicketComments, createComment, deleteComment,
   fetchTicketActivity, fetchTicketAttachments, uploadAttachment,
-  updateTicket, updateTicketStatus,
+  updateTicket, updateTicketStatus, logTime, novaQuery,
 } from "@/services/api";
 import { formatDate } from "@/utils/formatters";
 import { IssueTypeBadge, StatusBadge, PODBadge } from "@/components/ui/Badge";
-import type { Ticket, TicketComment, TicketActivity } from "@/types";
+import type { Ticket, TicketComment, TicketActivity, Worklog } from "@/types";
 import styles from "./TicketDetailDrawer.module.css";
 
 const STATUS_TRANSITIONS: Record<string, string[]> = {
@@ -19,7 +19,7 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
   "Done":        ["In Progress"],
 };
 
-type Tab = "comments" | "activity" | "attachments";
+type Tab = "comments" | "activity" | "attachments" | "worklogs";
 
 interface Props {
   ticket:  Ticket;
@@ -36,6 +36,34 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Worklog form
+  const [wlHours, setWlHours] = useState("");
+  const [wlComment, setWlComment] = useState("");
+  const [wlDate, setWlDate] = useState(new Date().toISOString().split("T")[0]);
+
+  // Comment summarizer
+  const [summaryText, setSummaryText] = useState<string | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
+
+  async function handleSummarizeThread() {
+    if (comments.length === 0) { toast.error("No comments to summarize"); return; }
+    setSummarizing(true);
+    setSummaryText(null);
+    try {
+      const thread = comments.map((c, i) =>
+        `${i + 1}. ${c.author} (${c.created_at.slice(0, 10)}): ${c.content}`
+      ).join("\n");
+      const res = await novaQuery(
+        `Summarize this ticket comment thread in 2–3 sentences. Highlight key decisions, blockers, and the current status.\n\nTicket: ${ticket.key} — ${ticket.summary}\n\nComments:\n${thread}`
+      );
+      setSummaryText(res.answer);
+    } catch {
+      toast.error("EOS summarization failed");
+    } finally {
+      setSummarizing(false);
+    }
+  }
+
   // Comments
   const { data: comments = [] } = useQuery({
     queryKey: ["ticket-comments", ticket.key],
@@ -43,7 +71,7 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
   });
 
   // Activity
-  const { data: activity = [] } = useQuery({
+  const { data: serverActivity = [] } = useQuery({
     queryKey: ["ticket-activity", ticket.key],
     queryFn: () => fetchTicketActivity(ticket.key),
     enabled: tab === "activity",
@@ -98,6 +126,20 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const logTimeMut = useMutation({
+    mutationFn: ({ hours, comment, date }: { hours: number; comment: string; date: string }) =>
+      logTime(ticket.key, hours, comment, date),
+    onSuccess: () => {
+      toast.success("Time logged");
+      setWlHours("");
+      setWlComment("");
+      qc.invalidateQueries({ queryKey: ["ticket", ticket.key] });
+      qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   function startEdit(field: string, value: string) {
     setEditingField(field);
     setEditValue(value);
@@ -119,6 +161,31 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
     const file = e.target.files?.[0];
     if (file) uploadMut.mutate(file);
   }
+
+  function handleLogTime() {
+    const hours = parseFloat(wlHours);
+    if (!hours || hours <= 0) {
+      toast.error("Enter valid hours");
+      return;
+    }
+    logTimeMut.mutate({ hours, comment: wlComment, date: wlDate });
+  }
+
+  // Merge server activity with worklog-derived activity
+  const activity = useMemo<TicketActivity[]>(() => {
+    const worklogActivity: TicketActivity[] = (ticket.worklogs ?? []).map((wl, idx) => ({
+      id: -1000 - idx,
+      ticket_key: ticket.key,
+      actor: wl.author,
+      action: "logged time",
+      field: `${wl.hours}h`,
+      new_value: wl.comment || undefined,
+      created_at: wl.date,
+    }));
+    const combined = [...serverActivity, ...worklogActivity];
+    combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return combined;
+  }, [serverActivity, ticket.worklogs, ticket.key]);
 
   // Top-level comments
   const topLevel = comments.filter((c) => !c.parent_id);
@@ -182,9 +249,9 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
               ) : (
                 <div
                   className={styles.descText}
-                  onClick={() => startEdit("description", "")}
+                  onClick={() => startEdit("description", (ticket as any).description || "")}
                 >
-                  {ticket.summary || <span className={styles.placeholder}>Click to add description…</span>}
+                  {(ticket as any).description || <span className={styles.placeholder}>Click to add description…</span>}
                   <span className={styles.editHint}>✏</span>
                 </div>
               )}
@@ -192,7 +259,7 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
 
             {/* Tabs */}
             <div className={styles.tabs}>
-              {(["comments", "activity", "attachments"] as Tab[]).map((t) => (
+              {(["comments", "activity", "worklogs", "attachments"] as Tab[]).map((t) => (
                 <button
                   key={t}
                   className={`${styles.tab} ${tab === t ? styles.tabActive : ""}`}
@@ -205,6 +272,9 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
                   {t === "attachments" && attachments.length > 0 && (
                     <span className={styles.tabBadge}>{attachments.length}</span>
                   )}
+                  {t === "worklogs" && (ticket.worklogs?.length ?? 0) > 0 && (
+                    <span className={styles.tabBadge}>{ticket.worklogs!.length}</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -212,6 +282,31 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
             {/* Comments Tab */}
             {tab === "comments" && (
               <div className={styles.tabContent}>
+                {/* EOS Summarize thread */}
+                {comments.length > 1 && (
+                  <div className={styles.summarizeRow}>
+                    <button
+                      className={styles.summarizeBtn}
+                      onClick={handleSummarizeThread}
+                      disabled={summarizing}
+                    >
+                      {summarizing ? (
+                        <><span className={styles.sumSpinner} /> Summarizing…</>
+                      ) : (
+                        <>✦ Summarize thread</>
+                      )}
+                    </button>
+                    {summaryText && (
+                      <button className={styles.summarizeClear} onClick={() => setSummaryText(null)}>✕</button>
+                    )}
+                  </div>
+                )}
+                {summaryText && (
+                  <div className={styles.summaryCallout}>
+                    <div className={styles.summaryCalloutLabel}>✦ EOS Summary</div>
+                    <div className={styles.summaryCalloutText}>{summaryText}</div>
+                  </div>
+                )}
                 {topLevel.map((c) => (
                   <CommentItem
                     key={c.id}
@@ -254,9 +349,69 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
             {tab === "activity" && (
               <div className={styles.tabContent}>
                 {activity.length === 0 && <p className={styles.empty}>No activity yet.</p>}
-                {activity.map((a) => (
-                  <ActivityEntry key={a.id} entry={a} />
-                ))}
+                <div className={styles.timeline}>
+                  {activity.map((a) => (
+                    <ActivityEntry key={`${a.id}-${a.created_at}`} entry={a} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Worklogs Tab */}
+            {tab === "worklogs" && (
+              <div className={styles.tabContent}>
+                {/* Add worklog */}
+                <div className={styles.worklogForm}>
+                  <div className={styles.formRow2}>
+                    <input
+                      type="number"
+                      step="0.1"
+                      className="input input-sm"
+                      placeholder="Hours"
+                      value={wlHours}
+                      onChange={(e) => setWlHours(e.target.value)}
+                    />
+                    <input
+                      type="date"
+                      className="input input-sm"
+                      value={wlDate}
+                      onChange={(e) => setWlDate(e.target.value)}
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    className="input input-sm"
+                    placeholder="Comment (optional)"
+                    value={wlComment}
+                    onChange={(e) => setWlComment(e.target.value)}
+                  />
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={handleLogTime}
+                    disabled={logTimeMut.isPending}
+                  >
+                    {logTimeMut.isPending ? "Logging…" : "Log Time"}
+                  </button>
+                </div>
+
+                {/* Existing worklogs */}
+                <div className={styles.worklogList}>
+                  {(ticket.worklogs ?? []).length === 0 && (
+                    <p className={styles.empty}>No time logged yet.</p>
+                  )}
+                  {(ticket.worklogs ?? []).slice().sort((a, b) =>
+                    new Date(b.date).getTime() - new Date(a.date).getTime()
+                  ).map((wl, idx) => (
+                    <div key={idx} className={styles.worklogItem}>
+                      <div className={styles.worklogHeader}>
+                        <span className={styles.worklogAuthor}>{wl.author}</span>
+                        <span className={styles.worklogDate}>{formatDate(wl.date)}</span>
+                        <span className={styles.worklogHours}>{wl.hours}h</span>
+                      </div>
+                      {wl.comment && <div className={styles.worklogComment}>{wl.comment}</div>}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -404,22 +559,53 @@ function CommentItem({
 }
 
 function ActivityEntry({ entry }: { entry: TicketActivity }) {
+  const icon = getActivityIcon(entry.action);
+  const text = getActivityText(entry);
+
   return (
     <div className={styles.activityEntry}>
-      <div className={styles.activityDot} />
+      <div className={styles.activityIcon}>{icon}</div>
       <div className={styles.activityContent}>
         <span className={styles.activityActor}>{entry.actor}</span>
-        {" "}{entry.action}
-        {entry.field && (
-          <> <span className={styles.activityField}>{entry.field}</span>
-            {entry.old_value && <> from <span className={styles.activityOld}>{entry.old_value}</span></>}
-            {entry.new_value && <> to <span className={styles.activityNew}>{entry.new_value}</span></>}
-          </>
-        )}
+        {" "}{text}
         <span className={styles.activityTime}>{formatDate(entry.created_at)}</span>
       </div>
     </div>
   );
+}
+
+function getActivityIcon(action: string): string {
+  const map: Record<string, string> = {
+    created: "🆕",
+    updated: "✏️",
+    changed: "📝",
+    assigned: "👤",
+    "logged time": "⏱️",
+    commented: "💬",
+    deleted: "🗑️",
+    moved: "➡️",
+    transitioned: "➡️",
+  };
+  for (const key of Object.keys(map)) {
+    if (action.toLowerCase().includes(key)) return map[key];
+  }
+  return "•";
+}
+
+function getActivityText(entry: TicketActivity): string {
+  if (entry.action === "logged time") {
+    return `logged ${entry.field || "time"}${entry.new_value ? ` — "${entry.new_value}"` : ""}`;
+  }
+  if (entry.action === "created") {
+    return `created this ticket`;
+  }
+  if (entry.field) {
+    let txt = `${entry.action} ${entry.field}`;
+    if (entry.old_value) txt += ` from "${entry.old_value}"`;
+    if (entry.new_value) txt += ` to "${entry.new_value}"`;
+    return txt;
+  }
+  return entry.action;
 }
 
 function MetaField({ label, children }: { label: string; children: React.ReactNode }) {

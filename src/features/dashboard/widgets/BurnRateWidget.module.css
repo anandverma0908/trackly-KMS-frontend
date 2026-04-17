@@ -118,3 +118,15 @@
   flex-direction: column;
   gap: 6px;
 }
+
+.novaSummary {
+  font-size: 10px;
+  color: var(--text-3);
+  line-height: 1.6;
+  padding: 6px 9px;
+  background: var(--surface-2);
+  border-radius: 6px;
+  border-left: 2px solid var(--accent);
+  margin-top: 2px;
+  font-style: italic;
+}

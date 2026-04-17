@@ -290,3 +290,79 @@
   transition: all 0.15s;
 }
 .transitionBtn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+/* ── Comment Thread Summarizer ── */
+.summarizeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.summarizeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  border-radius: 100px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all 0.15s;
+}
+.summarizeBtn:hover { background: var(--accent); color: #fff; }
+.summarizeBtn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+.sumSpinner {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: sumSpin 0.7s linear infinite;
+}
+@keyframes sumSpin { to { transform: rotate(360deg); } }
+
+.summarizeClear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  transition: all 0.12s;
+}
+.summarizeClear:hover { color: var(--text); background: var(--surface-2); }
+
+.summaryCallout {
+  background: var(--surface-2);
+  border: 1px solid var(--accent-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summaryCalloutLabel {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.summaryCalloutText {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.65;
+}

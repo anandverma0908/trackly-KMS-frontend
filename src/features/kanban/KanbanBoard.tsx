@@ -20,50 +20,59 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchTickets, updateTicketStatus } from "@/services/api";
+import { fetchTickets, updateTicketStatus, fetchTicket } from "@/services/api";
 import { IssueTypeBadge } from "@/components/ui/Badge";
-import TicketDetailDrawer from "@/features/tickets/TicketDetailDrawer";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
 import type { Ticket } from "@/types";
 import styles from "./KanbanBoard.module.css";
 
 const COLUMNS = [
-  { id: "To Do",       label: "To Do",       color: "var(--text-3)" },
+  { id: "To Do", label: "To Do", color: "var(--text-3)" },
   { id: "In Progress", label: "In Progress", color: "var(--amber)" },
-  { id: "In Review",   label: "In Review",   color: "var(--purple)" },
-  { id: "Blocked",     label: "Blocked",     color: "var(--red)" },
-  { id: "Done",        label: "Done",        color: "var(--green)" },
+  { id: "In Review", label: "In Review", color: "var(--purple)" },
+  { id: "Blocked", label: "Blocked", color: "var(--red)" },
+  { id: "Done", label: "Done", color: "var(--green)" },
 ];
 
 const COLUMN_IDS = new Set(COLUMNS.map((c) => c.id));
 
 type Swimlane = "none" | "assignee" | "priority" | "pod";
 const SWIMLANE_OPTIONS: { value: Swimlane; label: string }[] = [
-  { value: "none",     label: "No grouping" },
+  { value: "none", label: "No grouping" },
   { value: "assignee", label: "By Assignee" },
   { value: "priority", label: "By Priority" },
-  { value: "pod",      label: "By POD" },
+  { value: "pod", label: "By POD" },
 ];
 
 export default function KanbanBoard() {
   const qc = useQueryClient();
-  const [swimlane, setSwimlane]         = useState<Swimlane>("none");
-  const [dragging, setDragging]         = useState<Ticket | null>(null);
+  const [swimlane, setSwimlane] = useState<Swimlane>("none");
+  const [dragging, setDragging] = useState<Ticket | null>(null);
   const [overColumnId, setOverColumnId] = useState<string | null>(null);
-  const [detailTicket, setDetailTicket] = useState<Ticket | null>(null);
-  const [showCreate, setShowCreate]     = useState(false);
+  const [editTicketKey, setEditTicketKey] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   // Optimistic local status overrides — applied immediately on drop
-  const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
+  const [localStatuses, setLocalStatuses] = useState<Record<string, string>>(
+    {},
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const { data, isLoading } = useQuery({
     queryKey: ["kanban-tickets"],
-    queryFn:  () => fetchTickets({}),
+    queryFn: () => fetchTickets({}),
+  });
+
+  const { data: editTicketData } = useQuery({
+    queryKey: ["ticket", editTicketKey],
+    queryFn: () => fetchTicket(editTicketKey!),
+    enabled: !!editTicketKey,
   });
 
   const statusMut = useMutation({
@@ -96,11 +105,15 @@ export default function KanbanBoard() {
     if (swimlane === "none") return [{ key: "all", label: null, tickets }];
     const map = new Map<string, Ticket[]>();
     tickets.forEach((t) => {
-      const k = (t as Record<string, unknown>)[swimlane] as string || "—";
+      const k = ((t as Record<string, unknown>)[swimlane] as string) || "—";
       if (!map.has(k)) map.set(k, []);
       map.get(k)!.push(t);
     });
-    return Array.from(map.entries()).map(([key, tix]) => ({ key, label: key, tickets: tix }));
+    return Array.from(map.entries()).map(([key, tix]) => ({
+      key,
+      label: key,
+      tickets: tix,
+    }));
   }, [tickets, swimlane]);
 
   function handleDragStart(event: DragStartEvent) {
@@ -110,7 +123,10 @@ export default function KanbanBoard() {
 
   function handleDragOver(event: DragOverEvent) {
     const { over } = event;
-    if (!over) { setOverColumnId(null); return; }
+    if (!over) {
+      setOverColumnId(null);
+      return;
+    }
     const overId = over.id as string;
     if (COLUMN_IDS.has(overId)) {
       setOverColumnId(overId);
@@ -128,8 +144,8 @@ export default function KanbanBoard() {
     if (!over) return;
 
     const ticketKey = active.id as string;
-    const overId    = over.id as string;
-    const current   = tickets.find((t) => t.key === ticketKey);
+    const overId = over.id as string;
+    const current = tickets.find((t) => t.key === ticketKey);
 
     let newStatus: string | null = null;
 
@@ -139,7 +155,8 @@ export default function KanbanBoard() {
     } else {
       // Dropped on a ticket — adopt its column status
       const target = tickets.find((t) => t.key === overId);
-      if (target && target.status !== current?.status) newStatus = target.status;
+      if (target && target.status !== current?.status)
+        newStatus = target.status;
     }
 
     if (!newStatus) return;
@@ -180,7 +197,10 @@ export default function KanbanBoard() {
               </button>
             ))}
           </div>
-          <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowCreate(true)}
+          >
             + New Ticket
           </button>
         </div>
@@ -202,7 +222,9 @@ export default function KanbanBoard() {
               )}
               <div className={styles.board}>
                 {COLUMNS.map((col) => {
-                  const colTickets = group.tickets.filter((t) => t.status === col.id);
+                  const colTickets = group.tickets.filter(
+                    (t) => t.status === col.id,
+                  );
                   return (
                     <KanbanColumn
                       key={col.id}
@@ -210,7 +232,7 @@ export default function KanbanBoard() {
                       tickets={colTickets}
                       isOver={overColumnId === col.id}
                       onTicketClick={(t) => {
-                        if (!dragging) setDetailTicket(t);
+                        if (!dragging) setEditTicketKey(t.key);
                       }}
                     />
                   );
@@ -225,9 +247,41 @@ export default function KanbanBoard() {
         </DragOverlay>
       </DndContext>
 
-      {detailTicket && (
-        <TicketDetailDrawer ticket={detailTicket} onClose={() => setDetailTicket(null)} />
-      )}
+      <CreateTicketDrawer
+        open={!!editTicketKey}
+        onClose={() => setEditTicketKey(null)}
+        ticketKey={editTicketKey ?? undefined}
+        initialData={
+          editTicketData
+            ? {
+                title: editTicketData.summary,
+                description: (editTicketData as any).description ?? "",
+                issue_type: editTicketData.issue_type,
+                priority: editTicketData.priority,
+                status: editTicketData.status,
+                assignee: editTicketData.assignee,
+                reporter: (editTicketData as any).reporter ?? "",
+                pod: editTicketData.pod,
+                client: editTicketData.client,
+                story_points: editTicketData.story_points,
+                labels: editTicketData.labels,
+                due_date: editTicketData.due_date,
+                epic: (editTicketData as any).epic ?? "",
+                parent: (editTicketData as any).parent ?? "",
+                originalEst: editTicketData.original_estimate_hours
+                  ? String(editTicketData.original_estimate_hours)
+                  : "",
+                timeSpent: editTicketData.hours_spent
+                  ? String(editTicketData.hours_spent)
+                  : "",
+                remaining: editTicketData.remaining_estimate_hours
+                  ? String(editTicketData.remaining_estimate_hours)
+                  : "",
+              }
+            : undefined
+        }
+      />
+
       <CreateTicketDrawer
         open={showCreate}
         onClose={() => setShowCreate(false)}
@@ -253,10 +307,20 @@ function KanbanColumn({
   return (
     <div
       className={styles.column}
-      style={isOver ? { borderColor: column.color, boxShadow: `0 0 0 1px ${column.color}33` } : {}}
+      style={
+        isOver
+          ? {
+              borderColor: column.color,
+              boxShadow: `0 0 0 1px ${column.color}33`,
+            }
+          : {}
+      }
     >
       <div className={styles.columnHeader}>
-        <span className={styles.columnDot} style={{ background: column.color }} />
+        <span
+          className={styles.columnDot}
+          style={{ background: column.color }}
+        />
         <span className={styles.columnLabel}>{column.label}</span>
         <span className={styles.columnCount}>{tickets.length}</span>
       </div>
@@ -271,12 +335,18 @@ function KanbanColumn({
           style={isOver ? { background: `${column.color}0d` } : {}}
         >
           {tickets.map((t) => (
-            <SortableCard key={t.key} ticket={t} onClick={() => onTicketClick(t)} />
+            <SortableCard
+              key={t.key}
+              ticket={t}
+              onClick={() => onTicketClick(t)}
+            />
           ))}
           {tickets.length === 0 && (
             <div
               className={styles.emptyCol}
-              style={isOver ? { borderColor: column.color, color: column.color } : {}}
+              style={
+                isOver ? { borderColor: column.color, color: column.color } : {}
+              }
             >
               Drop here
             </div>
@@ -288,7 +358,13 @@ function KanbanColumn({
 }
 
 /* ── Sortable Card ── */
-function SortableCard({ ticket, onClick }: { ticket: Ticket; onClick: () => void }) {
+function SortableCard({
+  ticket,
+  onClick,
+}: {
+  ticket: Ticket;
+  onClick: () => void;
+}) {
   const {
     attributes,
     listeners,
@@ -304,8 +380,8 @@ function SortableCard({ ticket, onClick }: { ticket: Ticket; onClick: () => void
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity:   isDragging ? 0 : 1,
-        cursor:    "grab",
+        opacity: isDragging ? 0 : 1,
+        cursor: "grab",
       }}
       {...attributes}
       {...listeners}
@@ -316,14 +392,24 @@ function SortableCard({ ticket, onClick }: { ticket: Ticket; onClick: () => void
 }
 
 /* ── Card Content ── */
-function TicketCardContent({ ticket, onClick }: { ticket: Ticket; onClick?: () => void }) {
-  const initials = (ticket.assignee || "").split(" ").map((n) => n[0]).join("").slice(0, 2);
+function TicketCardContent({
+  ticket,
+  onClick,
+}: {
+  ticket: Ticket;
+  onClick?: () => void;
+}) {
+  const initials = (ticket.assignee || "")
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2);
   const priorityColor: Record<string, string> = {
     Highest: "var(--red)",
-    High:    "var(--amber)",
-    Medium:  "var(--accent)",
-    Low:     "var(--text-3)",
-    Lowest:  "var(--text-3)",
+    High: "var(--amber)",
+    Medium: "var(--accent)",
+    Low: "var(--text-3)",
+    Lowest: "var(--text-3)",
   };
 
   return (
@@ -342,15 +428,21 @@ function TicketCardContent({ ticket, onClick }: { ticket: Ticket; onClick?: () =
       <div className={styles.cardFooter}>
         <div
           className={styles.priorityDot}
-          style={{ background: priorityColor[ticket.priority] ?? "var(--text-3)" }}
+          style={{
+            background: priorityColor[ticket.priority] ?? "var(--text-3)",
+          }}
           title={ticket.priority}
         />
         {ticket.hours_spent > 0 && (
-          <span className={styles.cardHours}>{ticket.hours_spent.toFixed(1)}h</span>
+          <span className={styles.cardHours}>
+            {ticket.hours_spent.toFixed(1)}h
+          </span>
         )}
         <div className={styles.cardSpacer} />
         {ticket.pod && <span className={styles.cardPod}>{ticket.pod}</span>}
-        <div className={styles.avatar} title={ticket.assignee}>{initials}</div>
+        <div className={styles.avatar} title={ticket.assignee}>
+          {initials}
+        </div>
       </div>
     </div>
   );

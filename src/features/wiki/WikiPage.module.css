@@ -39,7 +39,7 @@
 
 .subtitle {
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--text-2);
   font-weight: 400;
   margin: 0;
 }
@@ -73,7 +73,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: calc(100vh - var(--topbar-h) - 140px);
+  /* max-height: calc(100vh - var(--topbar-h) - 140px); */
+  height: 600px;
   overflow-y: auto;
 }
 
@@ -86,11 +87,10 @@
 }
 
 .sectionTitle {
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 700;
   letter-spacing: 0.1em;
-  color: var(--text-3);
+  color: var(--text);
 }
 
 .addBtn {
@@ -156,8 +156,15 @@
   color: var(--accent);
 }
 
-.spaceIcon { font-size: 0.9rem; }
-.spaceName { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spaceIcon {
+  font-size: 0.9rem;
+}
+.spaceName {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .pageTreeWrap {
   display: flex;
@@ -171,7 +178,8 @@
   gap: 2px;
 }
 
-.treeItem {}
+.treeItem {
+}
 
 .pageItem {
   display: flex;
@@ -199,7 +207,11 @@
   color: var(--accent);
 }
 
-.pageItemTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pageItemTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .treeToggle {
   font-size: 0.7rem;
@@ -221,6 +233,7 @@
   font-size: 0.78rem;
   color: var(--text-3);
   padding: 10px;
+  margin: 10px 5px;
   font-style: italic;
   text-align: center;
   background: var(--surface);
@@ -245,27 +258,38 @@
   gap: 12px;
   padding: 14px 18px;
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--bgrnd);
 }
 
 .breadcrumb {
   display: flex;
   align-items: center;
-  gap: 0;
-  font-size: 0.8rem;
-  color: var(--text-3);
+  gap: 2px;
+  font-size: 1rem;
+  color: var(--text);
   flex-wrap: wrap;
 }
-.breadcrumbPart { display: flex; align-items: center; }
-.breadcrumbSep  { margin: 0 6px; color: var(--text-3); }
+.breadcrumbPart {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.breadcrumbSep {
+  margin: 0 6px;
+  color: var(--text-3);
+}
 .breadcrumbLink {
-  background: none; border: none;
-  color: var(--text-2); cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--text-2);
+  cursor: pointer;
   font-size: 0.8rem;
   font-weight: 500;
   transition: color 0.15s;
 }
-.breadcrumbLink:hover { color: var(--accent); }
+.breadcrumbLink:hover {
+  color: var(--accent);
+}
 
 .pageActions {
   display: flex;
@@ -283,21 +307,28 @@
 }
 
 .savingDot {
-  width: 6px; height: 6px;
+  width: 6px;
+  height: 6px;
   background: var(--amber);
   border-radius: 50%;
   animation: pulse 1s infinite;
 }
 
 .savedDot {
-  width: 6px; height: 6px;
+  width: 6px;
+  height: 6px;
   background: var(--green);
   border-radius: 50%;
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 
 /* ── Editor area ── */
@@ -336,11 +367,25 @@
   border-top: 1px solid var(--border);
   gap: 8px;
 }
-.versionItem:first-of-type { border-top: none; }
+.versionItem:first-of-type {
+  border-top: none;
+}
 
-.versionNum    { color: var(--accent); font-weight: 600; font-size: 0.78rem; margin-right: 8px; }
-.versionAuthor { color: var(--text-2); font-size: 0.78rem; margin-right: 8px; }
-.versionDate   { color: var(--text-3); font-size: 0.72rem; }
+.versionNum {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.78rem;
+  margin-right: 8px;
+}
+.versionAuthor {
+  color: var(--text-2);
+  font-size: 0.78rem;
+  margin-right: 8px;
+}
+.versionDate {
+  color: var(--text-3);
+  font-size: 0.72rem;
+}
 
 /* ── Welcome screen ── */
 .welcome {
@@ -351,18 +396,30 @@
   flex: 1;
   gap: 14px;
   text-align: center;
-  padding: 60px 40px;
+  padding: 40px;
 }
 
-.welcomeIcon  { font-size: 3.5rem; }
-.welcomeTitle { font-size: 1.25rem; font-weight: 700; margin: 0; color: var(--text); }
-.welcomeDesc  { color: var(--text-2); font-size: 0.9rem; margin: 0; max-width: 320px; }
+.welcomeIcon {
+  font-size: 3.5rem;
+}
+.welcomeTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+.welcomeDesc {
+  color: var(--text-2);
+  font-size: 0.9rem;
+  margin: 0;
+  max-width: 320px;
+}
 
 /* ── Template Picker Modal ── */
 .templateOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0, 0, 0, 0.55);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -385,11 +442,19 @@
   justify-content: space-between;
   margin-bottom: 18px;
 }
-.templateHeader h3 { margin: 0; font-size: 1.05rem; color: var(--text); }
+.templateHeader h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
 
 .closeBtn {
-  background: none; border: none; color: var(--text-2);
-  cursor: pointer; font-size: 1rem; padding: 4px 8px;
+  background: none;
+  border: none;
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px 8px;
 }
 
 .templateGrid {
@@ -416,12 +481,19 @@
   transform: translateY(-1px);
 }
 
-.templateIcon { font-size: 1.6rem; }
-.templateName { font-size: 0.8rem; font-weight: 500; color: var(--text-2); text-align: center; }
+.templateIcon {
+  font-size: 1.6rem;
+}
+.templateName {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-2);
+  text-align: center;
+}
 
 /* ── Related docs widget ── */
 .relatedPanel {
   margin-top: 8px;
   padding-top: 12px;
-  border-top: 1px solid var(--border);
+  /* border-top: 1px solid var(--border); */
 }

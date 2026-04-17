@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { novaQuery } from "@/services/api";
 import {
   PieChart, Pie, Cell, Tooltip as ReTooltip, ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -9,7 +11,7 @@ import LinearProgress from "@mui/material/LinearProgress";
 import type { Project, ProjectTask } from "../spacesData";
 import styles from "./SummaryTab.module.css";
 
-import { RiArrowUpLine, RiFlashlightLine, RiShieldCheckLine, RiLightbulbFlashLine } from "react-icons/ri";
+import { RiLightbulbFlashLine } from "react-icons/ri";
 import SummaryKPIStrip from "./SummaryKPIStrip";
 
 /* ── Custom pie label ── */
@@ -28,6 +30,7 @@ function PieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) 
 }
 
 export default function SummaryTab({ project }: { project: Project }) {
+  const qc = useQueryClient();
   const allTasks: ProjectTask[] = useMemo(
     () => project.sprints.flatMap(s => s.tasks),
     [project]
@@ -114,6 +117,22 @@ export default function SummaryTab({ project }: { project: Project }) {
       total: v.done + v.inProgress + v.todo,
     })).sort((a, b) => b.total - a.total).slice(0, 6);
   }, [allTasks]);
+
+  /* ── EOS AI Insights ── */
+  const insightPrompt = useMemo(() => {
+    const bugCount = allTasks.filter(t => t.type === "Bug").length;
+    const top = [...workloadData].sort((a, b) => b.total - a.total)[0];
+    return `Analyze project "${project.key}" and give exactly 4 insights about its health.
+Stats: ${kpis.total} total tasks, ${kpis.done} done, ${kpis.blocked} blocked, ${kpis.overdue} overdue, ${bugCount} bugs. Sprint progress: ${project.progress}%. Top engineer by load: ${top?.name ?? "N/A"} with ${top?.total ?? 0} tasks.
+Reply with exactly 4 lines. Start each with ✓ for positive, ⚠ for warning, ⚡ for risk, or 💡 for recommendation. Keep each line under 90 chars.`;
+  }, [project.key, project.progress, kpis, allTasks, workloadData]);
+
+  const eosInsights = useQuery({
+    queryKey: ["eos-summary-insights", project.key],
+    queryFn: () => novaQuery(insightPrompt),
+    staleTime: 1000 * 60 * 20,
+    retry: 1,
+  });
 
   /* ── Health score ── */
   const healthScore = useMemo(() => {
@@ -397,55 +416,55 @@ export default function SummaryTab({ project }: { project: Project }) {
           </div>
         </div>
 
-        {/* AI-powered insights */}
+        {/* AI-powered insights — live EOS */}
         <div className={styles.insightsCard}>
           <div className={styles.cardTitleRow}>
             <div className={styles.cardTitle}>
               <span style={{ fontSize: 16, color: "var(--accent)", display: "inline-flex" }}><RiLightbulbFlashLine /></span>
               AI Insights
             </div>
-            <span className={styles.aiBadge}>EOS</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span className={styles.aiBadge}>EOS</span>
+              <button
+                className={styles.refreshBtn}
+                title="Refresh EOS insights"
+                onClick={() => qc.invalidateQueries({ queryKey: ["eos-summary-insights", project.key] })}
+              >
+                ↺
+              </button>
+            </div>
           </div>
-          <div className={styles.insightsList}>
-            {[
-              {
-                icon: <RiArrowUpLine size={14} />,
-                color: "var(--green)",
-                title: "Velocity on track",
-                desc: `Sprint completion rate is ${healthScore.doneRate}% — ahead of historical average for this team.`,
-              },
-              {
-                icon: <RiFlashlightLine size={14} />,
-                color: "var(--amber)",
-                title: "Scope creep risk",
-                desc: `${allTasks.filter(t => t.type === "Bug").length} bugs detected this sprint. Consider a bug bash before next sprint planning.`,
-              },
-              {
-                icon: <RiShieldCheckLine size={14} />,
-                color: kpis.blocked > 2 ? "var(--red)" : "var(--green)",
-                title: kpis.blocked > 2 ? "Blockers need attention" : "Low blocker count",
-                desc: kpis.blocked > 2
-                  ? `${kpis.blocked} tasks are currently blocked. Schedule a sync to resolve dependencies.`
-                  : "Dependency health looks good. Team is unblocked and moving forward.",
-              },
-              {
-                icon: <RiLightbulbFlashLine size={14} />,
-                color: "var(--accent)",
-                title: "Knowledge concentration",
-                desc: `${workloadData[0]?.name ?? "Top member"} holds ${workloadData[0]?.total ?? 0} tasks — consider load balancing in next sprint.`,
-              },
-            ].map((insight, i) => (
-              <div key={i} className={styles.insightItem}>
-                <div className={styles.insightIcon} style={{ color: insight.color, background: `${insight.color}18` }}>
-                  {insight.icon}
-                </div>
-                <div className={styles.insightContent}>
-                  <div className={styles.insightTitle}>{insight.title}</div>
-                  <div className={styles.insightDesc}>{insight.desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+
+          {eosInsights.isPending && (
+            <div className={styles.eosLoading}>
+              <span className={styles.eosDot} />
+              EOS is analysing project health…
+            </div>
+          )}
+
+          {eosInsights.isError && (
+            <div className={styles.eosError}>
+              Could not load AI insights — EOS may be offline.
+            </div>
+          )}
+
+          {eosInsights.data && (
+            <div className={styles.eosInsightsList}>
+              {eosInsights.data.answer
+                .split("\n")
+                .map(l => l.trim())
+                .filter(Boolean)
+                .slice(0, 4)
+                .map((line, i) => (
+                  <div key={i} className={styles.eosInsightLine}>
+                    <span className={styles.eosInsightEmoji}>
+                      {line.startsWith("✓") ? "✓" : line.startsWith("⚠") ? "⚠" : line.startsWith("⚡") ? "⚡" : "💡"}
+                    </span>
+                    <span>{line.replace(/^[✓⚠⚡💡]\s*/, "")}</span>
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
 
         {/* Risk flags */}

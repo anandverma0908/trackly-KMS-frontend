@@ -2,9 +2,15 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
-  fetchWikiSpaces, fetchWikiPages, fetchWikiPage,
-  createWikiSpace, createWikiPage, updateWikiPage, deleteWikiPage,
-  fetchWikiVersions, restoreWikiVersion,
+  fetchWikiSpaces,
+  fetchWikiPages,
+  fetchWikiPage,
+  createWikiSpace,
+  createWikiPage,
+  updateWikiPage,
+  deleteWikiPage,
+  fetchWikiVersions,
+  restoreWikiVersion,
 } from "@/services/api";
 import { useWikiStore } from "@/store";
 import type { WikiPage as WikiPageType } from "@/types";
@@ -12,25 +18,64 @@ import PageEditor from "./PageEditor";
 import RelatedDocsWidget from "./RelatedDocsWidget";
 import styles from "./WikiPage.module.css";
 
-import { MdMenuBook, MdAdd, MdHistory, MdDeleteOutline, MdClose } from "react-icons/md";
+import { BiFileBlank } from "react-icons/bi";
+import {
+  MdMenuBook,
+  MdAdd,
+  MdHistory,
+  MdDeleteOutline,
+  MdClose,
+} from "react-icons/md";
+import { TbFolder } from "react-icons/tb";
+import { FaCircle } from "react-icons/fa";
+import { MdOutlineKeyboardArrowRight } from "react-icons/md";
+import { LiaSwatchbookSolid } from "react-icons/lia";
 
 const PAGE_TEMPLATES = [
-  { name: "PRD",           icon: "📋", content: "# Product Requirements Document\n\n## Overview\n\n## Goals\n\n## Non-Goals\n\n## Requirements\n\n## Success Metrics" },
-  { name: "Runbook",       icon: "🔧", content: "# Runbook\n\n## Purpose\n\n## Prerequisites\n\n## Steps\n\n1. Step one\n2. Step two\n\n## Troubleshooting" },
-  { name: "Sprint Retro",  icon: "🔄", content: "# Sprint Retrospective\n\n## What Went Well ✅\n\n## What to Improve 🔧\n\n## Action Items 📝\n\n| Action | Owner | Due |" },
-  { name: "Meeting Notes", icon: "📝", content: "# Meeting Notes\n\n**Date:** \n**Attendees:** \n\n## Agenda\n\n## Discussion\n\n## Action Items\n\n| Action | Owner | Due |" },
-  { name: "ADR",           icon: "🏗️", content: "# Architecture Decision Record\n\n## Status\n\n## Context\n\n## Decision\n\n## Consequences" },
+  {
+    name: "PRD",
+    icon: "📋",
+    content:
+      "# Product Requirements Document\n\n## Overview\n\n## Goals\n\n## Non-Goals\n\n## Requirements\n\n## Success Metrics",
+  },
+  {
+    name: "Runbook",
+    icon: "🔧",
+    content:
+      "# Runbook\n\n## Purpose\n\n## Prerequisites\n\n## Steps\n\n1. Step one\n2. Step two\n\n## Troubleshooting",
+  },
+  {
+    name: "Sprint Retro",
+    icon: "🔄",
+    content:
+      "# Sprint Retrospective\n\n## What Went Well ✅\n\n## What to Improve 🔧\n\n## Action Items 📝\n\n| Action | Owner | Due |",
+  },
+  {
+    name: "Meeting Notes",
+    icon: "📝",
+    content:
+      "# Meeting Notes\n\n**Date:** \n**Attendees:** \n\n## Agenda\n\n## Discussion\n\n## Action Items\n\n| Action | Owner | Due |",
+  },
+  {
+    name: "ADR",
+    icon: "🏗️",
+    content:
+      "# Architecture Decision Record\n\n## Status\n\n## Context\n\n## Decision\n\n## Consequences",
+  },
 ];
 
 export default function WikiPage() {
   const qc = useQueryClient();
-  const { activeSpaceId, activePageId, setActiveSpace, setActivePage } = useWikiStore();
+  const { activeSpaceId, activePageId, setActiveSpace, setActivePage } =
+    useWikiStore();
 
-  const [showNewSpace, setShowNewSpace]   = useState(false);
-  const [newSpaceName, setNewSpaceName]   = useState("");
-  const [showVersions, setShowVersions]   = useState(false);
+  const [showNewSpace, setShowNewSpace] = useState(false);
+  const [newSpaceName, setNewSpaceName] = useState("");
+  const [showVersions, setShowVersions] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [autoSaveStatus, setAutoSaveStatus] = useState<
+    "idle" | "saving" | "saved"
+  >("idle");
 
   const { data: spaces = [] } = useQuery({
     queryKey: ["wiki-spaces"],
@@ -74,8 +119,11 @@ export default function WikiPage() {
   });
 
   const createPageMut = useMutation({
-    mutationFn: (payload: { title: string; content: string; parent_id?: string }) =>
-      createWikiPage({ space_id: activeSpaceId!, ...payload }),
+    mutationFn: (payload: {
+      title: string;
+      content: string;
+      parent_id?: string;
+    }) => createWikiPage({ space_id: activeSpaceId!, ...payload }),
     onSuccess: (page) => {
       qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] });
       setActivePage(page.id);
@@ -84,8 +132,13 @@ export default function WikiPage() {
   });
 
   const updatePageMut = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: { title?: string; content?: string } }) =>
-      updateWikiPage(id, payload),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: { title?: string; content?: string };
+    }) => updateWikiPage(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["wiki-page", activePageId] });
       qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] });
@@ -113,11 +166,14 @@ export default function WikiPage() {
     },
   });
 
-  const handleSave = useCallback((content: string, title: string) => {
-    if (!activePageId) return;
-    setAutoSaveStatus("saving");
-    updatePageMut.mutate({ id: activePageId, payload: { content, title } });
-  }, [activePageId, updatePageMut]);
+  const handleSave = useCallback(
+    (content: string, title: string) => {
+      if (!activePageId) return;
+      setAutoSaveStatus("saving");
+      updatePageMut.mutate({ id: activePageId, payload: { content, title } });
+    },
+    [activePageId, updatePageMut],
+  );
 
   function handleNewPage(templateContent?: string) {
     const title = `New Page ${pages.length + 1}`;
@@ -126,24 +182,20 @@ export default function WikiPage() {
   }
 
   const activeSpace = spaces.find((s) => s.id === activeSpaceId);
-  const treePages   = buildTree(pages);
+  const treePages = buildTree(pages);
   const breadcrumbs = activePageId ? getBreadcrumbs(pages, activePageId) : [];
 
   return (
     <div className={`${styles.page} fade-up`}>
       {/* ── Dashboard-style header ── */}
-      <div className={styles.header}>
-        <div className={styles.titleRow}>
+      <div className={`fade-up`}>
+        <div>
           <h1 className={styles.title}>Wiki</h1>
           <p className={styles.subtitle}>
-            {activeSpace ? `${activeSpace.name} — ${pages.length} pages` : "Select a space to get started"}
+            {activeSpace
+              ? `${activeSpace.name} — ${pages.length} pages`
+              : "Select a space to get started"}
           </p>
-        </div>
-        <div className={styles.headerActions}>
-          <button className="btn btn-primary btn-sm" onClick={() => setShowTemplates(true)}>
-            <MdAdd size={14} />
-            New Page
-          </button>
         </div>
       </div>
 
@@ -155,7 +207,11 @@ export default function WikiPage() {
           <div>
             <div className={styles.sectionHeader}>
               <span className={styles.sectionTitle}>Spaces</span>
-              <button className={styles.addBtn} onClick={() => setShowNewSpace(true)} title="New Space">
+              <button
+                className={styles.addBtn}
+                onClick={() => setShowNewSpace(true)}
+                title="New Space"
+              >
                 <MdAdd size={14} />
               </button>
             </div>
@@ -167,10 +223,17 @@ export default function WikiPage() {
                   placeholder="Space name…"
                   value={newSpaceName}
                   onChange={(e) => setNewSpaceName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") createSpaceMut.mutate(); if (e.key === "Escape") setShowNewSpace(false); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") createSpaceMut.mutate();
+                    if (e.key === "Escape") setShowNewSpace(false);
+                  }}
                   autoFocus
                 />
-                <button className="btn btn-primary btn-sm" onClick={() => createSpaceMut.mutate()} disabled={!newSpaceName.trim()}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => createSpaceMut.mutate()}
+                  disabled={!newSpaceName.trim()}
+                >
                   Create
                 </button>
               </div>
@@ -183,7 +246,9 @@ export default function WikiPage() {
                   className={`${styles.spaceItem} ${s.id === activeSpaceId ? styles.spaceItemActive : ""}`}
                   onClick={() => setActiveSpace(s.id)}
                 >
-                  <span className={styles.spaceIcon}>📁</span>
+                  <span className={styles.spaceIcon}>
+                    <TbFolder size={16} />
+                  </span>
                   <span className={styles.spaceName}>{s.name}</span>
                 </button>
               ))}
@@ -227,7 +292,10 @@ export default function WikiPage() {
               <div className={styles.sectionHeader} style={{ marginBottom: 8 }}>
                 <span className={styles.sectionTitle}>Related</span>
               </div>
-              <RelatedDocsWidget pageId={activePageId} onSelect={setActivePage} />
+              <RelatedDocsWidget
+                pageId={activePageId}
+                onSelect={setActivePage}
+              />
             </div>
           )}
         </aside>
@@ -240,7 +308,10 @@ export default function WikiPage() {
               <div className={styles.mainHeader}>
                 <div className={styles.breadcrumb}>
                   <span className={styles.breadcrumbPart}>
-                    <MdMenuBook size={14} style={{ marginRight: 6, color: "var(--accent)" }} />
+                    <MdMenuBook
+                      size={18}
+                      style={{ marginRight: 6, color: "var(--text)" }}
+                    />
                     {activeSpace?.name}
                   </span>
                   {breadcrumbs.map((b) => (
@@ -258,8 +329,18 @@ export default function WikiPage() {
 
                 <div className={styles.pageActions}>
                   <div className={styles.autoSave}>
-                    {autoSaveStatus === "saving" && <><span className={styles.savingDot} />Saving…</>}
-                    {autoSaveStatus === "saved"  && <><span className={styles.savedDot} />Saved</>}
+                    {autoSaveStatus === "saving" && (
+                      <>
+                        <span className={styles.savingDot} />
+                        Saving…
+                      </>
+                    )}
+                    {autoSaveStatus === "saved" && (
+                      <>
+                        <span className={styles.savedDot} />
+                        Saved
+                      </>
+                    )}
                   </div>
                   <button
                     className="btn btn-ghost btn-sm"
@@ -270,7 +351,10 @@ export default function WikiPage() {
                   </button>
                   <button
                     className="btn btn-ghost btn-sm"
-                    onClick={() => { if (confirm("Delete this page?")) deletePageMut.mutate(activePage.id); }}
+                    onClick={() => {
+                      if (confirm("Delete this page?"))
+                        deletePageMut.mutate(activePage.id);
+                    }}
                   >
                     <MdDeleteOutline size={14} style={{ marginRight: 4 }} />
                     Delete
@@ -281,18 +365,28 @@ export default function WikiPage() {
               {/* Version history panel */}
               {showVersions && (
                 <div className={styles.versionsPanel}>
-                  <div className={styles.versionsPanelTitle}>Version History</div>
-                  {versions.length === 0 && <p className={styles.emptyTree}>No versions saved yet.</p>}
+                  <div className={styles.versionsPanelTitle}>
+                    Version History
+                  </div>
+                  {versions.length === 0 && (
+                    <p className={styles.emptyTree}>No versions saved yet.</p>
+                  )}
                   {versions.map((v) => (
                     <div key={v.id} className={styles.versionItem}>
                       <div>
                         <span className={styles.versionNum}>v{v.version}</span>
-                        <span className={styles.versionAuthor}>{v.author_name}</span>
-                        <span className={styles.versionDate}>{new Date(v.created_at).toLocaleString()}</span>
+                        <span className={styles.versionAuthor}>
+                          {v.author_name}
+                        </span>
+                        <span className={styles.versionDate}>
+                          {new Date(v.created_at).toLocaleString()}
+                        </span>
                       </div>
                       <button
                         className="btn btn-ghost btn-sm"
-                        onClick={() => restoreMut.mutate({ versionId: v.version })}
+                        onClick={() =>
+                          restoreMut.mutate({ versionId: v.version })
+                        }
                       >
                         Restore
                       </button>
@@ -306,7 +400,9 @@ export default function WikiPage() {
                 <PageEditor
                   key={activePage.id}
                   initialTitle={activePage.title}
-                  initialContent={activePage.content_md ?? activePage.content_html ?? ""}
+                  initialContent={
+                    activePage.content_md ?? activePage.content_html ?? ""
+                  }
                   onSave={handleSave}
                   pages={pages}
                 />
@@ -314,7 +410,7 @@ export default function WikiPage() {
             </>
           ) : (
             <div className={styles.welcome}>
-              <div className={styles.welcomeIcon}>📚</div>
+              <div className={styles.welcomeIcon}><LiaSwatchbookSolid /></div>
               <h2 className={styles.welcomeTitle}>
                 {activeSpaceId ? "Select a page" : "Select a space"}
               </h2>
@@ -324,8 +420,11 @@ export default function WikiPage() {
                   : "Choose a space from the sidebar to get started."}
               </p>
               {activeSpaceId && (
-                <button className="btn btn-primary" onClick={() => handleNewPage()}>
-                  + Create First Page
+                <button
+                  className="btn btn-primary"
+                  onClick={() => handleNewPage()}
+                >
+                  + Create Page
                 </button>
               )}
             </div>
@@ -335,15 +434,28 @@ export default function WikiPage() {
 
       {/* Template Picker Modal */}
       {showTemplates && (
-        <div className={styles.templateOverlay} onClick={(e) => e.target === e.currentTarget && setShowTemplates(false)}>
+        <div
+          className={styles.templateOverlay}
+          onClick={(e) =>
+            e.target === e.currentTarget && setShowTemplates(false)
+          }
+        >
           <div className={styles.templateModal}>
             <div className={styles.templateHeader}>
               <h3>Choose a Template</h3>
-              <button className={styles.closeBtn} onClick={() => setShowTemplates(false)}><MdClose /></button>
+              <button
+                className={styles.closeBtn}
+                onClick={() => setShowTemplates(false)}
+              >
+                <MdClose />
+              </button>
             </div>
             <div className={styles.templateGrid}>
-              <div className={styles.templateCard} onClick={() => handleNewPage()}>
-                <span className={styles.templateIcon}>📄</span>
+              <div
+                className={styles.templateCard}
+                onClick={() => handleNewPage()}
+              >
+                <span className={styles.templateIcon}><BiFileBlank /></span>
                 <span className={styles.templateName}>Blank Page</span>
               </div>
               {PAGE_TEMPLATES.map((tpl) => (
@@ -366,7 +478,10 @@ export default function WikiPage() {
 
 /* ── Page Tree Item ── */
 function PageTreeItem({
-  page, activeId, onSelect, depth,
+  page,
+  activeId,
+  onSelect,
+  depth,
 }: {
   page: WikiPageType & { children?: WikiPageType[] };
   activeId: string | null;
@@ -386,28 +501,40 @@ function PageTreeItem({
         {hasChildren && (
           <span
             className={styles.treeToggle}
-            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded(!expanded);
+            }}
             style={{ transform: expanded ? "rotate(90deg)" : "none" }}
-          >›</span>
+          >
+            <MdOutlineKeyboardArrowRight size={9} />
+          </span>
         )}
-        {!hasChildren && <span className={styles.treeLeaf}>·</span>}
+        {!hasChildren && (
+          <span className={styles.treeLeaf}>
+            <FaCircle size={9} />
+          </span>
+        )}
         <span className={styles.pageItemTitle}>{page.title}</span>
       </button>
-      {expanded && page.children?.map((child) => (
-        <PageTreeItem
-          key={child.id}
-          page={child as any}
-          activeId={activeId}
-          onSelect={onSelect}
-          depth={depth + 1}
-        />
-      ))}
+      {expanded &&
+        page.children?.map((child) => (
+          <PageTreeItem
+            key={child.id}
+            page={child as any}
+            activeId={activeId}
+            onSelect={onSelect}
+            depth={depth + 1}
+          />
+        ))}
     </div>
   );
 }
 
 /* ── Helpers ── */
-function buildTree(pages: WikiPageType[]): (WikiPageType & { children: WikiPageType[] })[] {
+function buildTree(
+  pages: WikiPageType[],
+): (WikiPageType & { children: WikiPageType[] })[] {
   const map = new Map<string, WikiPageType & { children: WikiPageType[] }>();
   pages.forEach((p) => map.set(p.id, { ...p, children: [] }));
   const roots: (WikiPageType & { children: WikiPageType[] })[] = [];

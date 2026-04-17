@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { useFilterStore } from "@/store";
-import { fetchTickets } from "@/services/api";
+import { fetchTickets, fetchTicket } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import { useDebounce } from "@/hooks";
 import { formatDate, formatHours } from "@/utils/formatters";
 import { IssueTypeBadge, StatusBadge, PODBadge } from "@/components/ui/Badge";
 import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
 import CreateTicketDrawer from "./CreateTicketDrawer";
-import TicketDetailDrawer from "./TicketDetailDrawer";
 import type { Ticket } from "@/types";
 import styles from "./TicketsPage.module.css";
 
@@ -83,6 +83,14 @@ export default function TicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTicketKey = searchParams.get("key");
+
+  const { data: urlTicketData } = useQuery({
+    queryKey: ["ticket", urlTicketKey],
+    queryFn: () => fetchTicket(urlTicketKey!),
+    enabled: !!urlTicketKey,
+  });
 
   const filters = useFilterStore();
   const { pods, clients, togglePod, toggleClient, clearPods, clearClients } =
@@ -243,12 +251,73 @@ export default function TicketsPage() {
       />
 
       {/* Detail Drawer */}
-      {selectedTicket && (
-        <TicketDetailDrawer
-          ticket={selectedTicket}
+      {selectedTicket && !urlTicketKey && (
+        <CreateTicketDrawer
+          open={!!selectedTicket}
           onClose={() => setSelectedTicket(null)}
+          ticketKey={selectedTicket.key}
+          initialData={{
+            title: selectedTicket.summary,
+            description: (selectedTicket as any).description ?? "",
+            issue_type: selectedTicket.issue_type,
+            priority: selectedTicket.priority,
+            status: selectedTicket.status,
+            assignee: selectedTicket.assignee,
+            reporter: (selectedTicket as any).reporter ?? "",
+            pod: selectedTicket.pod,
+            client: selectedTicket.client,
+            story_points: selectedTicket.story_points,
+            labels: selectedTicket.labels,
+            due_date: selectedTicket.due_date,
+            epic: (selectedTicket as any).epic ?? "",
+            parent: (selectedTicket as any).parent ?? "",
+            originalEst: selectedTicket.original_estimate_hours
+              ? String(selectedTicket.original_estimate_hours)
+              : "",
+            timeSpent: selectedTicket.hours_spent ? String(selectedTicket.hours_spent) : "",
+            remaining: selectedTicket.remaining_estimate_hours
+              ? String(selectedTicket.remaining_estimate_hours)
+              : "",
+          }}
         />
       )}
+
+      {/* URL-driven edit drawer */}
+      <CreateTicketDrawer
+        open={!!urlTicketKey}
+        onClose={() => {
+          searchParams.delete("key");
+          setSearchParams(searchParams);
+        }}
+        ticketKey={urlTicketKey ?? undefined}
+        initialData={
+          urlTicketData
+            ? {
+                title: urlTicketData.summary,
+                description: (urlTicketData as any).description ?? "",
+                issue_type: urlTicketData.issue_type,
+                priority: urlTicketData.priority,
+                status: urlTicketData.status,
+                assignee: urlTicketData.assignee,
+                reporter: (urlTicketData as any).reporter ?? "",
+                pod: urlTicketData.pod,
+                client: urlTicketData.client,
+                story_points: urlTicketData.story_points,
+                labels: urlTicketData.labels,
+                due_date: urlTicketData.due_date,
+                epic: (urlTicketData as any).epic ?? "",
+                parent: (urlTicketData as any).parent ?? "",
+                originalEst: urlTicketData.original_estimate_hours
+                  ? String(urlTicketData.original_estimate_hours)
+                  : "",
+                timeSpent: urlTicketData.hours_spent ? String(urlTicketData.hours_spent) : "",
+                remaining: urlTicketData.remaining_estimate_hours
+                  ? String(urlTicketData.remaining_estimate_hours)
+                  : "",
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }

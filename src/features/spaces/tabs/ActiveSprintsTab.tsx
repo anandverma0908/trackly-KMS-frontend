@@ -1,17 +1,26 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Tooltip from "@mui/material/Tooltip";
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import type { Project, ProjectTask, ProjectSprint } from "../spacesData";
-import { getPriorityColor } from "../spacesData";
+import { getPriorityColor, getTaskStatusColor } from "../spacesData";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
 import { createTicket, updateTicketStatus } from "@/services/api";
 import type { TicketCreate } from "@/types";
 import styles from "./ActiveSprintsTab.module.css";
 
-import { RiSearchLine, RiAddLine, RiSparklingLine, RiUserLine, RiFilter3Line, RiFlagLine, RiBugLine, RiCheckboxCircleLine, RiForbid2Line, RiArrowDownSLine } from "react-icons/ri";
+import {
+  RiSearchLine,
+  RiAddLine,
+  RiFileHistoryLine,
+  RiUserLine,
+  RiFilter3Line,
+} from "react-icons/ri";
+import { PiBugBeetle } from "react-icons/pi";
+import { BiTask } from "react-icons/bi";
+import { GoTag } from "react-icons/go";
+import { TbSubtask } from "react-icons/tb";
 
 const COLUMNS = [
   { id: "To Do", label: "To Do", color: "var(--text-3)", emoji: "📋" },
@@ -34,39 +43,15 @@ type AIFilter =
   | "my-tasks"
   | null;
 
-const AI_FILTERS: {
-  id: AIFilter;
-  label: string;
-  icon: React.ReactNode;
-  color: string;
-}[] = [
-  {
-    id: "blockers",
-    label: "Blockers",
-    icon: <RiForbid2Line size={12} />,
-    color: "var(--red)",
-  },
-  {
-    id: "high-priority",
-    label: "High Priority",
-    icon: <RiFlagLine size={12} />,
-    color: "var(--amber)",
-  },
-  {
-    id: "overdue",
-    label: "Overdue",
-    icon: <RiCheckboxCircleLine size={12} />,
-    color: "var(--red)",
-  },
-  {
-    id: "bugs",
-    label: "Bugs Only",
-    icon: <RiBugLine size={12} />,
-    color: "var(--purple)",
-  },
-];
-
-export default function ActiveSprintsTab({ project }: { project: Project }) {
+export default function ActiveSprintsTab({
+  project,
+  externalCreateOpen,
+  setExternalCreateOpen,
+}: {
+  project: Project;
+  externalCreateOpen?: boolean;
+  setExternalCreateOpen?: (v: boolean) => void;
+}) {
   const qc = useQueryClient();
   const activeSprints = useMemo(
     () =>
@@ -76,7 +61,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
     [project],
   );
 
-  const [selectedSprint, setSelectedSprint] = useState<ProjectSprint>(
+  const [selectedSprint] = useState<ProjectSprint>(
     activeSprints[0] ?? project.sprints[0],
   );
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(
@@ -86,7 +71,9 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
   const [myTasksActive, setMyTasksActive] = useState(false);
   const [aiFilter, setAiFilter] = useState<AIFilter>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const createOpen = externalCreateOpen ?? showCreateModal;
   const [createColumn, setCreateColumn] = useState("To Do");
+  const [viewTicket, setViewTicket] = useState<ProjectTask | null>(null);
   // Optimistic local status overrides for drag-and-drop
   const [localStatuses, setLocalStatuses] = useState<
     Record<string, ProjectTask["status"]>
@@ -302,8 +289,6 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
     return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length];
   }
 
-
-
   if (!selectedSprint) {
     return (
       <div className={styles.empty}>
@@ -318,30 +303,83 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
 
   return (
     <div className={styles.tab}>
-      {/* ── Sprint selector ── */}
-      {activeSprints.length > 1 && (
-        <div className={styles.sprintSelectorRow}>
-          <div className={styles.sprintSelect}>
-            <select
-              className={styles.sprintDropdown}
-              value={selectedSprint.id}
-              onChange={(e) => {
-                const s = project.sprints.find(
-                  (sp) => sp.id === e.target.value,
-                );
-                if (s) setSelectedSprint(s);
-              }}
-            >
-              {activeSprints.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-            <RiArrowDownSLine size={16} color="var(--text-3)" />
+      {/* ── Sprint selector + info ── */}
+      {/* <div className={styles.sprintBar}>
+        <div className={styles.sprintLeft}>
+          {activeSprints.length > 1 ? (
+            <div className={styles.sprintSelect}>
+              <select
+                className={styles.sprintDropdown}
+                value={selectedSprint.id}
+                onChange={(e) => {
+                  const s = project.sprints.find(
+                    (sp) => sp.id === e.target.value,
+                  );
+                  if (s) setSelectedSprint(s);
+                }}
+              >
+                {activeSprints.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <RiArrowDownSLine size={16} color="var(--text-3)" />
+            </div>
+          ) : (
+            <div className={styles.sprintName}>{selectedSprint.name}</div>
+          )}
+          <div className={styles.sprintDates}>
+            {selectedSprint.startDate} → {selectedSprint.endDate}
           </div>
+          <div className={styles.sprintGoal}>Goal: {selectedSprint.goal}</div>
         </div>
-      )}
+
+        <div className={styles.sprintRight}>
+          <div className={styles.sprintStats}>
+            <div className={styles.sStat}>
+              <span
+                className={styles.sStatVal}
+                style={{ color: "var(--green)" }}
+              >
+                {selectedSprint.donePoints}
+              </span>
+              <span className={styles.sStatLbl}>Done pts</span>
+            </div>
+            <div className={styles.sStatDiv} />
+            <div className={styles.sStat}>
+              <span className={styles.sStatVal}>
+                {selectedSprint.totalPoints}
+              </span>
+              <span className={styles.sStatLbl}>Total pts</span>
+            </div>
+            <div className={styles.sStatDiv} />
+            <div className={styles.sStat}>
+              <span
+                className={styles.sStatVal}
+                style={{ color: project.color }}
+              >
+                {sprintPct}%
+              </span>
+              <span className={styles.sStatLbl}>Complete</span>
+            </div>
+          </div>
+          <LinearProgress
+            variant="determinate"
+            value={sprintPct}
+            sx={{
+              width: 160,
+              height: 5,
+              borderRadius: 100,
+              backgroundColor: "var(--surface-2)",
+              "& .MuiLinearProgress-bar": {
+                background: `linear-gradient(90deg, ${project.color}, ${project.color}aa)`,
+                borderRadius: 100,
+              },
+            }}
+          />
+        </div>
+      </div> */}
 
       {/* ── Toolbar: member chips + search + my tasks + AI filters + create ── */}
       <div className={styles.toolbar}>
@@ -350,7 +388,12 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
           {project.members.slice(0, 6).map((m, idx) => {
             const isActive = selectedMembers.has(m.name);
             return (
-              <Tooltip key={m.id} title={`${m.name} · ${m.role}`} arrow placement="bottom">
+              <Tooltip
+                key={m.id}
+                title={`${m.name} · ${m.role}`}
+                arrow
+                placement="bottom"
+              >
                 <button
                   className={`${styles.memberChip} ${isActive ? styles.memberChipActive : ""}`}
                   onClick={() => toggleMember(m.name)}
@@ -363,7 +406,9 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
                     className={styles.memberChipAvatar}
                     style={{
                       background: m.color,
-                      outline: isActive ? `2px solid ${project.color}` : undefined,
+                      outline: isActive
+                        ? `2px solid ${project.color}`
+                        : undefined,
                       outlineOffset: 2,
                     }}
                   >
@@ -429,7 +474,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
           </Tooltip>
 
           {/* AI filters */}
-          <div className={styles.aiFiltersWrap}>
+          {/* <div className={styles.aiFiltersWrap}>
             <RiSparklingLine size={13} color="var(--accent)" />
             <span className={styles.aiLabel}>AI:</span>
             {AI_FILTERS.map((f) => (
@@ -451,19 +496,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
                 {f.label}
               </button>
             ))}
-          </div>
-
-          {/* Create task */}
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => {
-              setCreateColumn("To Do");
-              setShowCreateModal(true);
-            }}
-          >
-            <RiAddLine size={15} />
-            Create Task
-          </button>
+          </div> */}
         </div>
       </div>
 
@@ -516,18 +549,15 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
             {/* Column header */}
             <div className={styles.colHeader}>
               <div className={styles.colHeaderLeft}>
-                <span className={styles.colEmoji}>{col.emoji}</span>
-                <span className={styles.colLabel} style={{ color: col.color }}>
-                  {col.label}
-                </span>
+                <span className={styles.colLabel}>{col.label}</span>
                 <span
                   className={styles.colCount}
-                  style={{ background: `${col.color}22`, color: col.color }}
+                  // style={{ background: `${col.color}22`, color: col.color }}
                 >
                   {col.tasks.length}
                 </span>
               </div>
-              <Tooltip title={`Add to ${col.label}`} arrow>
+              {/* <Tooltip title={`Add to ${col.label}`} arrow>
                 <button
                   className={styles.colAddBtn}
                   onClick={() => {
@@ -537,7 +567,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
                 >
                   <RiAddLine size={14} />
                 </button>
-              </Tooltip>
+              </Tooltip> */}
             </div>
 
             {/* Progress micro-bar */}
@@ -553,7 +583,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
                         100
                       : 0
                   }%`,
-                  background: col.color,
+                  // background: col.color,
                 }}
               />
             </div>
@@ -568,6 +598,7 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
                     projectColor={project.color}
                     onDragStart={() => handleDragStart(task)}
                     onDragEnd={handleDragEnd}
+                    onView={setViewTicket}
                   />
                 ))}
               </AnimatePresence>
@@ -588,8 +619,11 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
 
       {/* ── Create task drawer ── */}
       <CreateTicketDrawer
-        open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        open={createOpen}
+        onClose={() => {
+          setShowCreateModal(false);
+          setExternalCreateOpen?.(false);
+        }}
         defaultStatus={createColumn}
         sprintName={selectedSprint.name}
         members={project.members}
@@ -609,6 +643,31 @@ export default function ActiveSprintsTab({ project }: { project: Project }) {
           });
         }}
       />
+      <CreateTicketDrawer
+        open={Boolean(viewTicket)}
+        onClose={() => setViewTicket(null)}
+        ticketKey={viewTicket?.key}
+        initialData={
+          viewTicket
+            ? {
+                title: viewTicket.title,
+                description: viewTicket.description,
+                issue_type: viewTicket.type,
+                priority:
+                  viewTicket.priority === "Critical"
+                    ? "Highest"
+                    : viewTicket.priority,
+                status: viewTicket.status,
+                assignee: viewTicket.assignee,
+                labels: viewTicket.labels,
+                story_points: viewTicket.storyPoints,
+                due_date: viewTicket.dueDate,
+              }
+            : undefined
+        }
+        members={project.members}
+        sprintName={selectedSprint.name}
+      />
     </div>
   );
 }
@@ -618,20 +677,48 @@ function KanbanCard({
   task,
   onDragStart,
   onDragEnd,
+  onView,
 }: {
   task: ProjectTask;
   projectColor?: string;
   onDragStart: () => void;
   onDragEnd: () => void;
+  onView?: (task: ProjectTask) => void;
 }) {
+  const statusColor = getTaskStatusColor(task.status);
   const priorityColor = getPriorityColor(task.priority);
 
-  const typeIcons: Record<string, string> = {
-    Story: "🟢",
-    Bug: "🔴",
-    Task: "🔵",
-    Epic: "⚡",
-    Subtask: "◾",
+  const typeIcons: Record<string, string | JSX.Element> = {
+    Story: (
+      <RiFileHistoryLine
+        size={14}
+        style={{ verticalAlign: "middle", color: "var(--accent)" }}
+      />
+    ),
+    Bug: (
+      <PiBugBeetle
+        size={14}
+        style={{ verticalAlign: "middle", color: "var(--red)" }}
+      />
+    ),
+    Task: (
+      <BiTask
+        size={14}
+        style={{ verticalAlign: "middle", color: "var(--purple)" }}
+      />
+    ),
+    Epic: (
+      <GoTag
+        size={14}
+        style={{ verticalAlign: "middle", color: "var(--amber)" }}
+      />
+    ),
+    Subtask: (
+      <TbSubtask
+        size={14}
+        style={{ verticalAlign: "middle", color: "var(--green)" }}
+      />
+    ),
   };
 
   return (
@@ -645,11 +732,12 @@ function KanbanCard({
       exit={{ opacity: 0, scale: 0.95 }}
       layout
       whileHover={{ y: -2, boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
+      onClick={() => onView?.(task)}
     >
       {/* Priority indicator */}
       <div
         className={styles.cardPriorityBar}
-        style={{ background: priorityColor }}
+        style={{ background: statusColor }}
       />
 
       {/* Header */}
@@ -715,7 +803,7 @@ function KanbanCard({
 
       {/* Blocked banner */}
       {task.status === "Blocked" && (
-        <div className={styles.blockedBanner}>🚫 Blocked</div>
+        <div className={styles.blockedBanner}>Blocked</div>
       )}
     </motion.div>
   );

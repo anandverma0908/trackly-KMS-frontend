@@ -1,10 +1,28 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { createTicket, updateTicket, analyzeTicketNL, fetchFilters } from "@/services/api";
+import {
+  createTicket,
+  updateTicket,
+  analyzeTicketNL,
+  fetchFilters,
+  fetchTicketComments,
+  createComment,
+  deleteComment,
+  fetchTicketActivity,
+  logTime,
+  fetchTicket,
+} from "@/services/api";
+import { useAuthStore } from "@/features/auth/useAuthStore";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import SideDrawer from "@/components/ui/SideDrawer";
-import type { TicketCreate, NLAnalysisResult, DuplicateTicket } from "@/types";
+import { formatDate } from "@/utils/formatters";
+import type {
+  TicketCreate,
+  NLAnalysisResult,
+  DuplicateTicket,
+  TicketActivity,
+} from "@/types";
 import type { ProjectMember } from "@/features/spaces/spacesData";
 import styles from "./CreateTicketDrawer.module.css";
 
@@ -18,7 +36,28 @@ import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Autocomplete from "@mui/material/Autocomplete";
 
-import { RiSparklingLine, RiAttachmentLine, RiTimeLine, RiLink, RiAddLine, RiDeleteBinLine, RiBugLine, RiBookmarkLine, RiCheckboxLine, RiFlashlightLine, RiCornerDownRightLine, RiArrowUpLine, RiArrowUpDoubleLine, RiArrowUpSLine, RiDragMoveLine, RiArrowDownSLine, RiArrowDownDoubleLine, RiCheckboxBlankCircleFill, RiArrowDownWideFill, RiAlertLine } from "react-icons/ri";
+import {
+  RiSparklingLine,
+  RiAttachmentLine,
+  RiTimeLine,
+  RiLink,
+  RiAddLine,
+  RiDeleteBinLine,
+  RiBugLine,
+  RiBookmarkLine,
+  RiCheckboxLine,
+  RiFlashlightLine,
+  RiCornerDownRightLine,
+  RiArrowUpLine,
+  RiArrowUpDoubleLine,
+  RiArrowUpSLine,
+  RiDragMoveLine,
+  RiArrowDownSLine,
+  RiArrowDownDoubleLine,
+  RiCheckboxBlankCircleFill,
+  RiArrowDownWideFill,
+  RiAlertLine,
+} from "react-icons/ri";
 
 /* ── Config ── */
 const ISSUE_TYPES = [
@@ -142,6 +181,8 @@ export interface CreateTicketDrawerProps {
   ticketKey?: string;
   /** Edit mode: initial form values to populate */
   initialData?: Partial<FormState>;
+  /** View mode: disables all inputs and hides action buttons */
+  readOnly?: boolean;
 }
 
 /* ────────────────────────────────────────── */
@@ -155,8 +196,23 @@ export default function CreateTicketDrawer({
   onCreated,
   ticketKey,
   initialData,
+  readOnly = false,
 }: CreateTicketDrawerProps) {
   const qc = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === "admin";
+
+  /* Default fallback values when API returns empty */
+  const DEFAULT_PODS = ["DPAI", "SNOP", "EDM", "PLAT", "SNOE", "PA"];
+  const DEFAULT_CLIENTS = [
+    "Colgate",
+    "Jockey",
+    "SAAS",
+    "BSV",
+    "ReckittBenckiser",
+    "Henkel",
+    "Unilever",
+  ];
 
   /* NOVA */
   const [novaOpen, setNovaOpen] = useState(true);
@@ -176,17 +232,30 @@ export default function CreateTicketDrawer({
   const [newLinkType, setNewLinkType] = useState(LINK_TYPES[0]);
   const [newLinkKey, setNewLinkKey] = useState("");
 
+  /* Comments (edit mode only) */
+  const [commentText, setCommentText] = useState("");
+  const [replyTo, setReplyTo] = useState<number | null>(null);
+
+  /* Worklogs (edit mode only) */
+  const [wlHours, setWlHours] = useState("");
+  const [wlComment, setWlComment] = useState("");
+  const [wlDate, setWlDate] = useState(new Date().toISOString().split("T")[0]);
+
   /* File drag */
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /* Form */
+  /* Track whether this open-session has been initialized, so user edits
+     are never overwritten by a stale initialData reference change */
+  const hasInitialized = useRef(false);
+
+  /* Form — reporter pre-seeded from auth store so it shows immediately */
   const [form, setForm] = useState<FormState>({
     title: "",
     description: "",
     issue_type: "Task",
     priority: "Medium",
     status: defaultStatus,
-    reporter: "",
+    reporter: isAdmin ? "" : (user?.name ?? ""),
     epic: "",
     parent: "",
     originalEst: "",
@@ -199,51 +268,42 @@ export default function CreateTicketDrawer({
 
   const isEdit = Boolean(ticketKey);
 
-  // Reset/prefill form when drawer opens
+  // Populate form exactly once per open-session
   useEffect(() => {
-    if (open) {
-      if (isEdit && initialData) {
-        setForm({
-          title: initialData.title || "",
-          description: initialData.description || "",
-          issue_type: initialData.issue_type || "Task",
-          priority: initialData.priority || "Medium",
-          status: initialData.status || defaultStatus,
-          reporter: initialData.reporter || "",
-          epic: initialData.epic || "",
-          parent: initialData.parent || "",
-          originalEst: initialData.originalEst || "",
-          timeSpent: initialData.timeSpent || "",
-          remaining: initialData.remaining || "",
-          linkedIssues: initialData.linkedIssues || [],
-          attachments: initialData.attachments || [],
-          labels: initialData.labels || [],
-          assignee: initialData.assignee,
-          pod: initialData.pod,
-          client: initialData.client,
-          story_points: initialData.story_points,
-          due_date: initialData.due_date,
-        });
-        setNovaOpen(false);
-      } else {
-        setForm({
-          title: "",
-          description: "",
-          issue_type: "Task",
-          priority: "Medium",
-          status: defaultStatus,
-          reporter: "",
-          epic: "",
-          parent: "",
-          originalEst: "",
-          timeSpent: "",
-          remaining: "",
-          linkedIssues: [],
-          attachments: [],
-          labels: [],
-        });
-        setNovaOpen(true);
-      }
+    if (!open) {
+      // Drawer closed — reset the initialization flag for the next open
+      hasInitialized.current = false;
+      return;
+    }
+
+    // Already initialized this session — do not overwrite user edits
+    if (hasInitialized.current) return;
+
+    if (isEdit && initialData) {
+      // Edit mode — data arrived, populate form once
+      hasInitialized.current = true;
+      setForm({
+        title: initialData.title || "",
+        description: initialData.description || "",
+        issue_type: initialData.issue_type || "Task",
+        priority: initialData.priority || "Medium",
+        status: initialData.status || defaultStatus,
+        reporter: initialData.reporter || (!isAdmin ? (user?.name ?? "") : ""),
+        epic: initialData.epic || "",
+        parent: initialData.parent || "",
+        originalEst: initialData.originalEst || "",
+        timeSpent: initialData.timeSpent || "",
+        remaining: initialData.remaining || "",
+        linkedIssues: initialData.linkedIssues || [],
+        attachments: initialData.attachments || [],
+        labels: initialData.labels || [],
+        assignee: initialData.assignee,
+        pod: initialData.pod,
+        client: initialData.client,
+        story_points: initialData.story_points,
+        due_date: initialData.due_date,
+      });
+      setNovaOpen(false);
       setNlText("");
       setConfidence(null);
       setDuplicates([]);
@@ -251,7 +311,45 @@ export default function CreateTicketDrawer({
       setLabelInput("");
       setNewLinkType(LINK_TYPES[0]);
       setNewLinkKey("");
+      setCommentText("");
+      setReplyTo(null);
+      setWlHours("");
+      setWlComment("");
+      setWlDate(new Date().toISOString().split("T")[0]);
+    } else if (!isEdit) {
+      // Create mode — blank form
+      hasInitialized.current = true;
+      setForm({
+        title: "",
+        description: "",
+        issue_type: "Task",
+        priority: "Medium",
+        status: defaultStatus,
+        reporter: isAdmin ? "" : (user?.name ?? ""),
+        epic: "",
+        parent: "",
+        originalEst: "",
+        timeSpent: "",
+        remaining: "",
+        linkedIssues: [],
+        attachments: [],
+        labels: [],
+      });
+      setNovaOpen(true);
+      setNlText("");
+      setConfidence(null);
+      setDuplicates([]);
+      setTab(0);
+      setLabelInput("");
+      setNewLinkType(LINK_TYPES[0]);
+      setNewLinkKey("");
+      setCommentText("");
+      setReplyTo(null);
+      setWlHours("");
+      setWlComment("");
+      setWlDate(new Date().toISOString().split("T")[0]);
     }
+    // isEdit && !initialData → still loading, wait for next render
   }, [open, defaultStatus, isEdit, initialData]);
 
   const set = (k: keyof FormState, v: unknown) =>
@@ -263,8 +361,109 @@ export default function CreateTicketDrawer({
     queryFn: fetchFilters,
   });
   const users = filtersData?.users ?? members.map((m) => m.name);
-  const pods = filtersData?.pods ?? [];
-  const clients = filtersData?.clients ?? [];
+  const pods = filtersData?.pods?.length ? filtersData.pods : DEFAULT_PODS;
+  const clients = filtersData?.clients?.length
+    ? filtersData.clients
+    : DEFAULT_CLIENTS;
+
+  /* Ticket detail (for worklogs) — only in edit mode */
+  const { data: ticketDetail } = useQuery({
+    queryKey: ["ticket", ticketKey],
+    queryFn: () => fetchTicket(ticketKey!),
+    enabled: isEdit,
+  });
+
+  /* Comments — only in edit mode */
+  const { data: comments = [] } = useQuery({
+    queryKey: ["ticket-comments", ticketKey],
+    queryFn: () => fetchTicketComments(ticketKey!),
+    enabled: isEdit && tab === 3,
+  });
+
+  /* Activity — only in edit mode */
+  const { data: serverActivity = [] } = useQuery({
+    queryKey: ["ticket-activity", ticketKey],
+    queryFn: () => fetchTicketActivity(ticketKey!),
+    enabled: isEdit && tab === 4,
+  });
+
+  const commentMut = useMutation({
+    mutationFn: ({
+      content,
+      parentId,
+    }: {
+      content: string;
+      parentId?: number;
+    }) => createComment(ticketKey!, content, parentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket-comments", ticketKey] });
+      setCommentText("");
+      setReplyTo(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteCmtMut = useMutation({
+    mutationFn: (id: number) => deleteComment(ticketKey!, id),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["ticket-comments", ticketKey] }),
+  });
+
+  const logTimeMut = useMutation({
+    mutationFn: ({
+      hours,
+      comment,
+      date,
+    }: {
+      hours: number;
+      comment: string;
+      date: string;
+    }) => logTime(ticketKey!, hours, comment, date),
+    onSuccess: () => {
+      toast.success("Time logged");
+      setWlHours("");
+      setWlComment("");
+      qc.invalidateQueries({ queryKey: ["ticket", ticketKey] });
+      qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function handleLogTime() {
+    const hours = parseFloat(wlHours);
+    if (!hours || hours <= 0) {
+      toast.error("Enter valid hours");
+      return;
+    }
+    logTimeMut.mutate({ hours, comment: wlComment, date: wlDate });
+  }
+
+  /* Activity merged with worklogs */
+  const activity = useMemo<TicketActivity[]>(() => {
+    const wlActivity: TicketActivity[] = (ticketDetail?.worklogs ?? []).map(
+      (wl, idx) => ({
+        id: -1000 - idx,
+        ticket_key: ticketKey ?? "",
+        actor: wl.author,
+        action: "logged time",
+        field: `${wl.hours}h`,
+        new_value: wl.comment || undefined,
+        created_at: wl.date,
+      }),
+    );
+    const combined = [...serverActivity, ...wlActivity];
+    combined.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
+    return combined;
+  }, [serverActivity, ticketDetail, ticketKey]);
+
+  /* Top-level comments + replies */
+  const topLevelComments = comments.filter((c) => !c.parent_id);
+  const repliesFor = (parentId: number) =>
+    comments.filter((c) => c.parent_id === parentId);
 
   /* Create mutation */
   const createMut = useMutation({
@@ -281,7 +480,8 @@ export default function CreateTicketDrawer({
 
   /* Update mutation */
   const updateMut = useMutation({
-    mutationFn: (payload: Partial<TicketCreate>) => updateTicket(ticketKey!, payload),
+    mutationFn: (payload: Partial<TicketCreate>) =>
+      updateTicket(ticketKey!, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
       qc.invalidateQueries({ queryKey: ["tickets"] });
@@ -418,7 +618,13 @@ export default function CreateTicketDrawer({
     STATUSES.find((s) => s.value === form.status) ?? STATUSES[0];
 
   /* ── Footer ── */
-  const footer = (
+  const footer = readOnly ? (
+    <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+      <button className={styles.btnSecondary} onClick={onClose}>
+        Close
+      </button>
+    </div>
+  ) : (
     <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
       <button className={styles.btnSecondary} onClick={onClose}>
         Cancel
@@ -455,7 +661,13 @@ export default function CreateTicketDrawer({
       open={open}
       onClose={onClose}
       size="md"
-      title={isEdit ? `Edit ${ticketKey}` : "Create Issue"}
+      title={
+        readOnly
+          ? `View ${ticketKey}`
+          : isEdit
+            ? `Edit ${ticketKey}`
+            : "Create Issue"
+      }
       subtitle={sprintName ? `Sprint: ${sprintName}` : undefined}
       badge={
         <div
@@ -489,75 +701,76 @@ export default function CreateTicketDrawer({
       footer={footer}
     >
       <div className={styles.drawerBody}>
-        {/* ── NOVA AI Panel ── */}
-        <div className={styles.novaPanel}>
-          <div
-            className={styles.novaHeader}
-            onClick={() => setNovaOpen((v) => !v)}
-          >
-            <div className={styles.novaIcon}>
-              <RiSparklingLine size={14} />
-            </div>
-            <div className={styles.novaTitle}>
-              Describe in plain English — EOS will fill the form
-            </div>
-            <RiArrowDownWideFill
-              size={16}
-              className={`${styles.novaChevron} ${novaOpen ? styles.novaChevronOpen : ""}`}
-            />
-          </div>
-          {novaOpen && (
-            <div className={styles.novaBody}>
-              <textarea
-                className={styles.novaInput}
-                rows={2}
-                placeholder='e.g. "Fix login timeout in DPAI — high priority bug, affects Colgate users, ~3 story points"'
-                value={nlText}
-                onChange={(e) => setNlText(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && e.ctrlKey && handleAnalyze()
-                }
-              />
-              <div className={styles.novaActions}>
-                <button
-                  className={styles.btnPrimary}
-                  disabled={analyzing || !nlText.trim()}
-                  onClick={handleAnalyze}
-                  style={{ padding: "6px 12px", fontSize: 11 }}
-                >
-                  {analyzing ? (
-                    <>
-                      <svg
-                        className={styles.spinner}
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                      >
-                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                      </svg>
-                      Analyzing…
-                    </>
-                  ) : (
-                    <>
-                      <RiSparklingLine size={12} />
-                      Analyze with EOS
-                    </>
-                  )}
-                </button>
-                <button
-                  className={styles.btnGhost}
-                  onClick={() => setNovaOpen(false)}
-                >
-                  Fill manually
-                </button>
-                <span className={styles.novaHint}>Ctrl+Enter</span>
+        {!readOnly && (
+          <div className={styles.novaPanel}>
+            <div
+              className={styles.novaHeader}
+              onClick={() => setNovaOpen((v) => !v)}
+            >
+              <div className={styles.novaIcon}>
+                <RiSparklingLine size={14} />
               </div>
+              <div className={styles.novaTitle}>
+                Describe in plain English — EOS will fill the form
+              </div>
+              <RiArrowDownWideFill
+                size={16}
+                className={`${styles.novaChevron} ${novaOpen ? styles.novaChevronOpen : ""}`}
+              />
             </div>
-          )}
-        </div>
+            {novaOpen && (
+              <div className={styles.novaBody}>
+                <textarea
+                  className={styles.novaInput}
+                  rows={2}
+                  placeholder='e.g. "Fix login timeout in DPAI — high priority bug, affects Colgate users, ~3 story points"'
+                  value={nlText}
+                  onChange={(e) => setNlText(e.target.value)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && e.ctrlKey && handleAnalyze()
+                  }
+                />
+                <div className={styles.novaActions}>
+                  <button
+                    className={styles.btnPrimary}
+                    disabled={analyzing || !nlText.trim()}
+                    onClick={handleAnalyze}
+                    style={{ padding: "6px 12px", fontSize: 11 }}
+                  >
+                    {analyzing ? (
+                      <>
+                        <svg
+                          className={styles.spinner}
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                        >
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                        </svg>
+                        Analyzing…
+                      </>
+                    ) : (
+                      <>
+                        <RiSparklingLine size={12} />
+                        Analyze with EOS
+                      </>
+                    )}
+                  </button>
+                  <button
+                    className={styles.btnGhost}
+                    onClick={() => setNovaOpen(false)}
+                  >
+                    Fill manually
+                  </button>
+                  <span className={styles.novaHint}>Ctrl+Enter</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── NOVA Confidence ── */}
         {confidence !== null && (
@@ -610,6 +823,7 @@ export default function CreateTicketDrawer({
             value={form.title}
             onChange={(e) => set("title", e.target.value)}
             placeholder="Short, descriptive summary"
+            readOnly={readOnly}
           />
         </div>
 
@@ -622,43 +836,47 @@ export default function CreateTicketDrawer({
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
               placeholder="Acceptance criteria, steps to reproduce, notes…"
+              readOnly={readOnly}
             />
-            <button
-              className={styles.enhanceBtn}
-              disabled={enhancing}
-              onClick={handleEnhanceDesc}
-              title="Enhance description with EOS AI"
-            >
-              {enhancing ? (
-                <svg
-                  className={styles.spinner}
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                >
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
-              ) : (
-                <RiSparklingLine size={14} />
-              )}
-            </button>
+            {!readOnly && (
+              <button
+                className={styles.enhanceBtn}
+                disabled={enhancing}
+                onClick={handleEnhanceDesc}
+                title="Enhance description with EOS AI"
+              >
+                {enhancing ? (
+                  <svg
+                    className={styles.spinner}
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                  >
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
+                ) : (
+                  <RiSparklingLine size={14} />
+                )}
+              </button>
+            )}
           </div>
         </div>
 
         {/* ── Classification (Type / Priority / Status) ── */}
         <div className={styles.classificationCard}>
           <div className={styles.classificationGrid}>
-            <FormControl size="small" fullWidth>
+            <FormControl size="small" fullWidth disabled={readOnly}>
               <InputLabel>Type</InputLabel>
               <Select
                 label="Type"
                 value={form.issue_type}
                 onChange={(e) => set("issue_type", e.target.value)}
                 renderValue={(v) => {
-                  const t = ISSUE_TYPES.find((x) => x.value === v)!;
+                  const t =
+                    ISSUE_TYPES?.find((x) => x.value === v)! ?? ISSUE_TYPES[1];
                   return (
                     <span
                       style={{
@@ -697,7 +915,7 @@ export default function CreateTicketDrawer({
               </Select>
             </FormControl>
 
-            <FormControl size="small" fullWidth>
+            <FormControl size="small" fullWidth disabled={readOnly}>
               <InputLabel>Priority</InputLabel>
               <Select
                 label="Priority"
@@ -743,7 +961,7 @@ export default function CreateTicketDrawer({
               </Select>
             </FormControl>
 
-            <FormControl size="small" fullWidth>
+            <FormControl size="small" fullWidth disabled={readOnly}>
               <InputLabel>Status</InputLabel>
               <Select
                 label="Status"
@@ -807,6 +1025,17 @@ export default function CreateTicketDrawer({
             <Tab label="Details" />
             <Tab label="Links" />
             <Tab label="Time & Files" />
+            {isEdit && (
+              <Tab
+                label={`Comments${comments.length > 0 ? ` (${comments.length})` : ""}`}
+              />
+            )}
+            {isEdit && <Tab label="Activity" />}
+            {isEdit && (
+              <Tab
+                label={`Worklogs${(ticketDetail?.worklogs?.length ?? 0) > 0 ? ` (${ticketDetail!.worklogs!.length})` : ""}`}
+              />
+            )}
           </Tabs>
         </div>
 
@@ -822,6 +1051,7 @@ export default function CreateTicketDrawer({
                   onChange={(_, v) => set("assignee", v ?? undefined)}
                   size="small"
                   fullWidth
+                  disabled={readOnly}
                   renderInput={(params) => (
                     <TextField {...params} label="Assignee" />
                   )}
@@ -829,10 +1059,17 @@ export default function CreateTicketDrawer({
                 />
                 <Autocomplete
                   options={users}
-                  value={form.reporter ?? null}
-                  onChange={(_, v) => set("reporter", v ?? "")}
+                  value={form.reporter || null}
+                  onChange={(_, v) =>
+                    set("reporter", typeof v === "string" ? v : "")
+                  }
+                  onInputChange={(_, v, reason) => {
+                    if (reason === "input") set("reporter", v);
+                  }}
+                  freeSolo
                   size="small"
                   fullWidth
+                  disabled={readOnly}
                   renderInput={(params) => (
                     <TextField {...params} label="Reporter" />
                   )}
@@ -842,7 +1079,7 @@ export default function CreateTicketDrawer({
 
               {/* Story Points + Due Date */}
               <div className={styles.formRow}>
-                <FormControl size="small" fullWidth>
+                <FormControl size="small" fullWidth disabled={readOnly}>
                   <InputLabel>Story Points</InputLabel>
                   <Select
                     label="Story Points"
@@ -872,12 +1109,13 @@ export default function CreateTicketDrawer({
                   value={form.due_date ?? ""}
                   onChange={(e) => set("due_date", e.target.value || undefined)}
                   InputLabelProps={{ shrink: true }}
+                  disabled={readOnly}
                 />
               </div>
 
               {/* POD + Client */}
               <div className={styles.formRow}>
-                <FormControl size="small" fullWidth>
+                <FormControl size="small" fullWidth disabled={readOnly}>
                   <InputLabel>POD</InputLabel>
                   <Select
                     label="POD"
@@ -894,7 +1132,7 @@ export default function CreateTicketDrawer({
                     ))}
                   </Select>
                 </FormControl>
-                <FormControl size="small" fullWidth>
+                <FormControl size="small" fullWidth disabled={readOnly}>
                   <InputLabel>Client</InputLabel>
                   <Select
                     label="Client"
@@ -920,26 +1158,30 @@ export default function CreateTicketDrawer({
                   {(form.labels ?? []).map((l) => (
                     <span key={l} className={styles.labelTag}>
                       {l}
-                      <button
-                        className={styles.labelRemove}
-                        onClick={() =>
-                          set(
-                            "labels",
-                            (form.labels ?? []).filter((x) => x !== l),
-                          )
-                        }
-                      >
-                        ✕
-                      </button>
+                      {!readOnly && (
+                        <button
+                          className={styles.labelRemove}
+                          onClick={() =>
+                            set(
+                              "labels",
+                              (form.labels ?? []).filter((x) => x !== l),
+                            )
+                          }
+                        >
+                          ✕
+                        </button>
+                      )}
                     </span>
                   ))}
-                  <input
-                    className={styles.labelInput}
-                    placeholder="Type and press Enter…"
-                    value={labelInput}
-                    onChange={(e) => setLabelInput(e.target.value)}
-                    onKeyDown={addLabel}
-                  />
+                  {!readOnly && (
+                    <input
+                      className={styles.labelInput}
+                      placeholder="Type and press Enter…"
+                      value={labelInput}
+                      onChange={(e) => setLabelInput(e.target.value)}
+                      onKeyDown={addLabel}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -958,6 +1200,7 @@ export default function CreateTicketDrawer({
                   placeholder="e.g. DPAI-100"
                   value={form.epic}
                   onChange={(e) => set("epic", e.target.value)}
+                  readOnly={readOnly}
                 />
               </div>
               <div className={styles.field}>
@@ -967,6 +1210,7 @@ export default function CreateTicketDrawer({
                   placeholder="e.g. DPAI-50"
                   value={form.parent}
                   onChange={(e) => set("parent", e.target.value)}
+                  readOnly={readOnly}
                 />
               </div>
             </div>
@@ -979,38 +1223,42 @@ export default function CreateTicketDrawer({
                   <RiLink size={13} color="var(--text-3)" />
                   <span className={styles.linkType}>{lnk.type}</span>
                   <span className={styles.linkKey}>{lnk.key}</span>
-                  <button
-                    className={styles.linkDelete}
-                    onClick={() => removeLink(i)}
-                  >
-                    <RiDeleteBinLine size={14} />
-                  </button>
+                  {!readOnly && (
+                    <button
+                      className={styles.linkDelete}
+                      onClick={() => removeLink(i)}
+                    >
+                      <RiDeleteBinLine size={14} />
+                    </button>
+                  )}
                 </div>
               ))}
-              <div className={styles.linkAddRow}>
-                <FormControl size="small" sx={{ minWidth: 150 }}>
-                  <Select
-                    value={newLinkType}
-                    onChange={(e) => setNewLinkType(e.target.value)}
-                  >
-                    {LINK_TYPES.map((t) => (
-                      <MenuItem key={t} value={t}>
-                        {t}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <input
-                  className={styles.textInput}
-                  placeholder="Ticket key…"
-                  value={newLinkKey}
-                  onChange={(e) => setNewLinkKey(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addLink()}
-                />
-                <button className={styles.iconBtn} onClick={addLink}>
-                  <RiAddLine size={16} />
-                </button>
-              </div>
+              {!readOnly && (
+                <div className={styles.linkAddRow}>
+                  <FormControl size="small" sx={{ minWidth: 150 }}>
+                    <Select
+                      value={newLinkType}
+                      onChange={(e) => setNewLinkType(e.target.value)}
+                    >
+                      {LINK_TYPES.map((t) => (
+                        <MenuItem key={t} value={t}>
+                          {t}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <input
+                    className={styles.textInput}
+                    placeholder="Ticket key…"
+                    value={newLinkKey}
+                    onChange={(e) => setNewLinkKey(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addLink()}
+                  />
+                  <button className={styles.iconBtn} onClick={addLink}>
+                    <RiAddLine size={16} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1032,6 +1280,7 @@ export default function CreateTicketDrawer({
                     placeholder="e.g. 2h 30m"
                     value={form.originalEst}
                     onChange={(e) => set("originalEst", e.target.value)}
+                    readOnly={readOnly}
                   />
                 </div>
                 <div className={styles.field}>
@@ -1041,6 +1290,7 @@ export default function CreateTicketDrawer({
                     placeholder="e.g. 1h"
                     value={form.timeSpent}
                     onChange={(e) => set("timeSpent", e.target.value)}
+                    readOnly={readOnly}
                   />
                 </div>
                 <div className={styles.field}>
@@ -1050,6 +1300,7 @@ export default function CreateTicketDrawer({
                     placeholder="e.g. 1h 30m"
                     value={form.remaining}
                     onChange={(e) => set("remaining", e.target.value)}
+                    readOnly={readOnly}
                   />
                 </div>
               </div>
@@ -1062,29 +1313,33 @@ export default function CreateTicketDrawer({
                 <span className={styles.sectionHeaderText}>Attachments</span>
               </div>
 
-              <div
-                className={styles.dropZone}
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  handleFiles(e.dataTransfer.files);
-                }}
-              >
-                <RiAttachmentLine size={24} color="var(--text-3)" />
-                <div className={styles.dropZoneText}>
-                  Drop files here or{" "}
-                  <span className={styles.dropZoneAccent}>browse</span>
+              {!readOnly && (
+                <div
+                  className={styles.dropZone}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    handleFiles(e.dataTransfer.files);
+                  }}
+                >
+                  <RiAttachmentLine size={24} color="var(--text-3)" />
+                  <div className={styles.dropZoneText}>
+                    Drop files here or{" "}
+                    <span className={styles.dropZoneAccent}>browse</span>
+                  </div>
+                  <div className={styles.dropZoneHint}>Max 25 MB per file</div>
                 </div>
-                <div className={styles.dropZoneHint}>Max 25 MB per file</div>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                hidden
-                onChange={(e) => handleFiles(e.target.files)}
-              />
+              )}
+              {!readOnly && (
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  hidden
+                  onChange={(e) => handleFiles(e.target.files)}
+                />
+              )}
 
               {form.attachments.length > 0 && (
                 <div
@@ -1102,16 +1357,236 @@ export default function CreateTicketDrawer({
                       <span className={styles.fileSize}>
                         {(f.size / 1024).toFixed(0)} KB
                       </span>
-                      <button
-                        className={styles.linkDelete}
-                        onClick={() => removeAttachment(i)}
-                      >
-                        <RiDeleteBinLine size={14} />
-                      </button>
+                      {!readOnly && (
+                        <button
+                          className={styles.linkDelete}
+                          onClick={() => removeAttachment(i)}
+                        >
+                          <RiDeleteBinLine size={14} />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab: Comments ── */}
+        {tab === 3 && isEdit && (
+          <div className={styles.tabPanel}>
+            <div className={styles.commentsList}>
+              {topLevelComments.length === 0 && (
+                <p className={styles.emptyHint}>
+                  No comments yet. Be the first!
+                </p>
+              )}
+              {topLevelComments.map((c) => (
+                <div key={c.id} className={styles.commentItem}>
+                  <div className={styles.commentAvatar}>
+                    {c.author
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </div>
+                  <div className={styles.commentBody}>
+                    <div className={styles.commentMeta}>
+                      <span className={styles.commentAuthor}>{c.author}</span>
+                      <span className={styles.commentDate}>
+                        {formatDate(c.created_at, "MMM d, yyyy")}
+                      </span>
+                      <button
+                        className={styles.commentAction}
+                        onClick={() => setReplyTo(c.id)}
+                      >
+                        Reply
+                      </button>
+                      <button
+                        className={styles.commentAction}
+                        onClick={() => deleteCmtMut.mutate(c.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <p className={styles.commentText}>{c.content}</p>
+                    {repliesFor(c.id).map((r) => (
+                      <div key={r.id} className={styles.replyItem}>
+                        <div
+                          className={styles.commentAvatar}
+                          style={{ width: 24, height: 24, fontSize: 10 }}
+                        >
+                          {r.author
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </div>
+                        <div className={styles.commentBody}>
+                          <div className={styles.commentMeta}>
+                            <span className={styles.commentAuthor}>
+                              {r.author}
+                            </span>
+                            <span className={styles.commentDate}>
+                              {formatDate(r.created_at, "MMM d, yyyy")}
+                            </span>
+                          </div>
+                          <p className={styles.commentText}>{r.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className={styles.commentCompose}>
+              {replyTo && (
+                <div className={styles.replyIndicator}>
+                  Replying to comment #{replyTo}
+                  <button
+                    className={styles.cancelReply}
+                    onClick={() => setReplyTo(null)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+              <textarea
+                className={`${styles.textInput} ${styles.textArea}`}
+                placeholder="Write a comment…"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                rows={3}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  marginTop: 8,
+                }}
+              >
+                <button
+                  className={styles.btnPrimary}
+                  disabled={!commentText.trim() || commentMut.isPending}
+                  onClick={() =>
+                    commentMut.mutate({
+                      content: commentText,
+                      parentId: replyTo ?? undefined,
+                    })
+                  }
+                  style={{ padding: "7px 16px", fontSize: 12 }}
+                >
+                  {commentMut.isPending ? "Posting…" : "Post Comment"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab: Activity ── */}
+        {tab === 4 && isEdit && (
+          <div className={styles.tabPanel}>
+            {activity.length === 0 && (
+              <p className={styles.emptyHint}>No activity recorded yet.</p>
+            )}
+            <div className={styles.timeline}>
+              {activity.map((a) => (
+                <div
+                  key={`${a.id}-${a.created_at}`}
+                  className={styles.activityEntry}
+                >
+                  <div className={styles.activityIcon}>
+                    {getActivityIcon(a.action)}
+                  </div>
+                  <div className={styles.activityContent}>
+                    <span className={styles.activityActor}>{a.actor}</span>{" "}
+                    {getActivityText(a)}
+                    <span className={styles.activityTime}>
+                      {" "}
+                      · {formatDate(a.created_at, "MMM d, yyyy")}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab: Worklogs ── */}
+        {tab === 5 && isEdit && (
+          <div className={styles.tabPanel}>
+            <div className={styles.worklogForm}>
+              <div className={styles.formRow3}>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Hours *</label>
+                  <input
+                    className={styles.textInput}
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    placeholder="e.g. 2.5"
+                    value={wlHours}
+                    onChange={(e) => setWlHours(e.target.value)}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Date</label>
+                  <input
+                    className={styles.textInput}
+                    type="date"
+                    value={wlDate}
+                    onChange={(e) => setWlDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.fieldLabel}>Comment (optional)</label>
+                <input
+                  className={styles.textInput}
+                  placeholder="What did you work on?"
+                  value={wlComment}
+                  onChange={(e) => setWlComment(e.target.value)}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  className={styles.btnPrimary}
+                  onClick={handleLogTime}
+                  disabled={logTimeMut.isPending}
+                  style={{ padding: "7px 16px", fontSize: 12 }}
+                >
+                  {logTimeMut.isPending ? "Logging…" : "+ Log Time"}
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.worklogList}>
+              {(ticketDetail?.worklogs ?? []).length === 0 && (
+                <p className={styles.emptyHint}>No time logged yet.</p>
+              )}
+              {(ticketDetail?.worklogs ?? [])
+                .slice()
+                .sort(
+                  (a, b) =>
+                    new Date(b.date).getTime() - new Date(a.date).getTime(),
+                )
+                .map((wl, idx) => (
+                  <div key={idx} className={styles.worklogItem}>
+                    <div className={styles.worklogHeader}>
+                      <span className={styles.worklogAuthor}>{wl.author}</span>
+                      <span className={styles.worklogDate}>
+                        {formatDate(wl.date, "MMM d, yyyy")}
+                      </span>
+                      <span className={styles.worklogHours}>{wl.hours}h</span>
+                    </div>
+                    {wl.comment && (
+                      <div className={styles.worklogComment}>{wl.comment}</div>
+                    )}
+                  </div>
+                ))}
             </div>
           </div>
         )}
@@ -1169,4 +1644,36 @@ export default function CreateTicketDrawer({
       </div>
     </SideDrawer>
   );
+}
+
+/* ── Activity helpers ── */
+function getActivityIcon(action: string): string {
+  const map: Record<string, string> = {
+    created: "🆕",
+    updated: "✏️",
+    changed: "📝",
+    assigned: "👤",
+    "logged time": "⏱️",
+    commented: "💬",
+    deleted: "🗑️",
+    moved: "➡️",
+    transitioned: "➡️",
+  };
+  for (const key of Object.keys(map)) {
+    if (action.toLowerCase().includes(key)) return map[key];
+  }
+  return "•";
+}
+
+function getActivityText(entry: TicketActivity): string {
+  if (entry.action === "logged time")
+    return `logged ${entry.field || "time"}${entry.new_value ? ` — "${entry.new_value}"` : ""}`;
+  if (entry.action === "created") return `created this ticket`;
+  if (entry.field) {
+    let txt = `${entry.action} ${entry.field}`;
+    if (entry.old_value) txt += ` from "${entry.old_value}"`;
+    if (entry.new_value) txt += ` to "${entry.new_value}"`;
+    return txt;
+  }
+  return entry.action;
 }
