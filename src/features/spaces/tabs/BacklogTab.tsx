@@ -411,13 +411,13 @@ export default function BacklogTab({ project }: { project: Project }) {
                     />
                   ))}
                   {/* Add issue row */}
-                  <div
+                  {/* <div
                     className={styles.addRow}
                     onClick={() => setShowCreateDrawer(true)}
                   >
                     <RiAddLine size={13} color="var(--text-3)" />
                     <span className={styles.addRowText}>Add issue</span>
-                  </div>
+                  </div> */}
                 </div>
               )}
             </div>
