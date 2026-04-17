@@ -557,6 +557,11 @@ export async function fetchWorkload(): Promise<WorkloadEntry[]> {
   return data?.data ?? data ?? [];
 }
 
+export async function fetchOrgMembers() {
+  const { data } = await api.get("/users/members");
+  return data as import("@/types").OrgMember[];
+}
+
 export async function fetchNovaStatus() {
   const { data } = await api.get("/nova/status");
   return data;

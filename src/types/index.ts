@@ -241,6 +241,18 @@ export interface RelatedDoc {
   url?:       string
 }
 
+/* ── Org Members ── */
+export interface OrgMember {
+  id:           string
+  name:         string
+  email:        string
+  role:         string
+  pod:          string | null
+  emp_no:       string | null
+  reporting_to: string | null
+  title:        string | null
+}
+
 /* ── Sprint ── */
 export type SprintStatus = 'planning' | 'active' | 'completed'
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useFilterStore } from "@/store";
-import { fetchSummary } from "@/services/api";
+import { fetchSummary, fetchOrgMembers } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import { useDebounce } from "@/hooks";
 import { initials, formatNumber } from "@/utils/formatters";
@@ -24,7 +24,7 @@ export default function TeamPage() {
   // If role-scoped to a POD, override the multi-select with just that POD
   const effectivePods = pods.length > 0 ? pods : scopedPod ? [scopedPod] : [];
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading: summaryLoading } = useQuery({
     queryKey: QUERY_KEYS.summary({
       dateFrom: filters.dateFrom,
       dateTo: filters.dateTo,
@@ -40,9 +40,25 @@ export default function TeamPage() {
       }),
   });
 
-  const maxHours = Math.max(...(data?.by_user.map((u) => u.hours) ?? [1]));
+  const { data: orgMembers = [], isLoading: membersLoading } = useQuery({
+    queryKey: ["org-members"],
+    queryFn: fetchOrgMembers,
+    staleTime: 5 * 60_000,
+  });
 
-  const engineers = (data?.by_user ?? [])
+  const isLoading = summaryLoading || membersLoading;
+
+  // Build merged list: every org member appears, enriched with summary data
+  const summaryMap = new Map<string, SummaryByUser>();
+  (data?.by_user ?? []).forEach((u) => summaryMap.set(u.user, u));
+
+  const allEngineers: SummaryByUser[] = orgMembers
+    .filter((m) => m.role !== "finance_viewer")
+    .map((m) => summaryMap.get(m.name) ?? { user: m.name, hours: 0, tickets: 0, clients: [] });
+
+  const maxHours = Math.max(...allEngineers.map((u) => u.hours), 1);
+
+  const engineers = allEngineers
     .filter((u) => {
       if (!debouncedSearch) return true;
       return u.user.toLowerCase().includes(debouncedSearch.toLowerCase());
@@ -74,7 +90,7 @@ export default function TeamPage() {
           <p className={styles.subtitle}>
             {isLoading
               ? "Loading…"
-              : `${engineers.length} engineers across ${new Set(data?.by_pod.map((p) => p.pod)).size} PODs — click any card to view their worklog.`}
+              : `${engineers.length} members — click any card to view their worklog.`}
           </p>
         </div>
       </div>
@@ -135,7 +151,14 @@ export default function TeamPage() {
               </div>
 
               <div className={styles.name}>{eng.user}</div>
-              <div className={styles.pod}>{eng.user}</div>
+              <div className={styles.pod}>
+                {(() => {
+                  const m = orgMembers.find((o) => o.name === eng.user);
+                  if (m?.title) return m.title;
+                  if (m?.role) return m.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                  return eng.clients[0] ?? "—";
+                })()}
+              </div>
 
               <div className={styles.stats}>
                 <div className={styles.stat}>

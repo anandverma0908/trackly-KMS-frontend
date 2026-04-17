@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import OnboardingModal from "@/components/onboarding/OnboardingModal";
 import NotificationPanel from "@/components/nova/NotificationPanel";
 import styles from "./AppShell.module.css";
+import NovaChatWidget from "../nova/NovaChatWidget";
 
 export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -63,7 +64,7 @@ export default function AppShell() {
         )}
       </AnimatePresence>
 
-      {/* <NovaChatWidget /> */}
+      <NovaChatWidget />
       <OnboardingModal />
     </div>
   );

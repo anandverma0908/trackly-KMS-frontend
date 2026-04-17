@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchTickets } from "@/services/api";
+import { fetchTickets, fetchOrgMembers } from "@/services/api";
 import { useFilterStore } from "@/store";
 import { useAuthStore } from "../auth/useAuthStore";
 import {
@@ -8,11 +8,12 @@ import {
   formatDate,
   formatHours,
 } from "@/utils/formatters";
-import type { SummaryByUser, Ticket } from "@/types";
+import type { SummaryByUser, Ticket, OrgMember } from "@/types";
 import SideDrawer from "@/components/ui/SideDrawer";
 import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
 import { StatusBadge, PODBadge } from "@/components/ui/Badge";
 import styles from "@/components/ui/SideDrawer.module.css";
+import drawerStyles from "./EngineerDrawer.module.css";
 import { getAuthHeader } from "../auth/useAuthStore";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -224,6 +225,22 @@ export default function EngineerDrawer({
     enabled: !!engineer,
   });
 
+  /* Org members — for direct reports section */
+  const { data: orgMembers = [] } = useQuery<OrgMember[]>({
+    queryKey: ["org-members"],
+    queryFn: fetchOrgMembers,
+    staleTime: 5 * 60_000,
+  });
+
+  const engineerProfile = orgMembers.find((m) => m.name === engineer?.user);
+  const isManager =
+    engineerProfile?.role === "tech_lead" ||
+    engineerProfile?.role === "engineering_manager" ||
+    engineerProfile?.role === "admin";
+  const directReports = isManager && engineerProfile?.emp_no
+    ? orgMembers.filter((m) => m.reporting_to === engineerProfile.emp_no)
+    : [];
+
   const color = engineer ? getColor(engineer.user) : "#4F7EFF";
 
   const jiraRows: DrawerRow[] = (ticketData?.tickets ?? []).map(
@@ -297,13 +314,47 @@ export default function EngineerDrawer({
         </p>
       }
     >
+      {directReports.length > 0 && (
+        <div className={drawerStyles.reportsSection}>
+          <div className={drawerStyles.reportsSectionTitle}>
+            Direct Reports
+            <span className={drawerStyles.reportsBadge}>{directReports.length}</span>
+          </div>
+          <div className={drawerStyles.reportsList}>
+            {directReports.map((member) => (
+              <div key={member.id} className={drawerStyles.reportCard}>
+                <div
+                  className={drawerStyles.reportAvatar}
+                  style={{ background: `linear-gradient(135deg,${getColor(member.name)},${getColor(member.name)}aa)` }}
+                >
+                  {initials(member.name)}
+                </div>
+                <div className={drawerStyles.reportInfo}>
+                  <div className={drawerStyles.reportName}>{member.name}</div>
+                  <div className={drawerStyles.reportMeta}>
+                    {member.title || member.role.replace(/_/g, " ")}
+                    {member.pod && <span className={drawerStyles.reportPod}>{member.pod}</span>}
+                  </div>
+                </div>
+                <div className={drawerStyles.reportRoleBadge} data-role={member.role}>
+                  {member.role === "tech_lead" ? "Tech Lead" :
+                   member.role === "engineering_manager" ? "Eng. Manager" :
+                   member.role === "team_member" ? "Member" :
+                   member.role}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <LatticeGrid<DrawerRow>
         columns={COLUMNS}
         rows={allRows}
         rowKey="id"
         isLoading={isLoading}
         virtualize={false}
-        maxHeight={490}
+        maxHeight={directReports.length > 0 ? 380 : 490}
         stickyHeader
         emptyIcon="📭"
         emptyTitle="No activity found"
