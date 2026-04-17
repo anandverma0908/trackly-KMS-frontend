@@ -311,7 +311,7 @@ export interface KnowledgeGap {
 
 /* ── Search ── */
 export interface SearchResult {
-  id:         number
+  id:         string | number
   type:       'ticket' | 'wiki'
   title:      string
   key?:       string

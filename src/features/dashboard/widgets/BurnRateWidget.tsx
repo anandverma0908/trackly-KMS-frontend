@@ -24,7 +24,6 @@ export default function BurnRateWidget() {
     return (
       <div className={styles.card}>
         <div className={styles.header}>
-          <span className={styles.icon}><MdOutlineShowChart /></span>
           <div className="card-title">Client Burn Rate</div>
         </div>
         <div className={styles.list}>
@@ -42,7 +41,6 @@ export default function BurnRateWidget() {
   return (
     <div className={styles.card}>
       <div className={styles.header}>
-        <span className={styles.icon}><MdOutlineShowChart /></span>
         <div className="card-title">Client Burn Rate</div>
         {alerts.length > 0 && (
           <span className={styles.alertBadge}>

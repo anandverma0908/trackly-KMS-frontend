@@ -6,13 +6,14 @@ import {
 import { fetchVelocity } from "@/services/api";
 import Skeleton from "@/components/ui/Skeleton";
 import styles from "./PodVelocity.module.css";
-import { BsLightningChargeFill } from "react-icons/bs";
 
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
+  const pod = payload[0]?.payload?.pod;
   return (
     <div className={styles.tooltip}>
       <div className={styles.tooltipSprint}>{label}</div>
+      {pod && <div className={styles.tooltipPod}>POD: {pod}</div>}
       {payload.map((p: any) => (
         <div key={p.dataKey} className={styles.tooltipRow}>
           <span className={styles.tooltipDot} style={{ background: p.color }} />
@@ -31,12 +32,13 @@ export default function PodVelocity() {
   });
 
   const recent = velocity.slice(-6); // last 6 sprints
+  const pods = [...new Set(recent.map((item: any) => item.pod).filter(Boolean))];
+  const podLabel = pods.length === 1 ? pods[0] : pods.length > 1 ? `${pods.length} PODs` : "All PODs";
 
   if (isLoading) {
     return (
       <div className={styles.card}>
         <div className={styles.header}>
-          <span className={styles.icon}><BsLightningChargeFill /></span>
           <div className="card-title">POD Velocity</div>
         </div>
         <div style={{ height: 140 }}>
@@ -49,9 +51,8 @@ export default function PodVelocity() {
   return (
     <div className={styles.card}>
       <div className={styles.header}>
-        <span className={styles.icon}><BsLightningChargeFill /></span>
         <div className="card-title">POD Velocity</div>
-        <span className={styles.sub}>Story points · last 6 sprints</span>
+        <span className={styles.sub}>{podLabel} · Story points · last 6 sprints</span>
       </div>
 
       {recent.length === 0 ? (

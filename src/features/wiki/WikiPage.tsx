@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
@@ -66,8 +67,10 @@ const PAGE_TEMPLATES = [
 
 export default function WikiPage() {
   const qc = useQueryClient();
+  const [searchParams] = useSearchParams();
   const { activeSpaceId, activePageId, setActiveSpace, setActivePage } =
     useWikiStore();
+  const urlPageId = searchParams.get("page");
 
   const [showNewSpace, setShowNewSpace] = useState(false);
   const [newSpaceName, setNewSpaceName] = useState("");
@@ -94,6 +97,12 @@ export default function WikiPage() {
     enabled: activePageId !== null,
   });
 
+  const { data: urlPage } = useQuery({
+    queryKey: ["wiki-page-from-url", urlPageId],
+    queryFn: () => fetchWikiPage(urlPageId!),
+    enabled: !!urlPageId,
+  });
+
   const { data: versions = [] } = useQuery({
     queryKey: ["wiki-versions", activePageId],
     queryFn: () => fetchWikiVersions(activePageId!),
@@ -106,6 +115,12 @@ export default function WikiPage() {
       setActiveSpace(spaces[0].id);
     }
   }, [spaces, activeSpaceId, setActiveSpace]);
+
+  useEffect(() => {
+    if (!urlPageId || !urlPage) return;
+    if (activePageId !== urlPageId) setActivePage(urlPageId);
+    if (activeSpaceId !== urlPage.space_id) setActiveSpace(urlPage.space_id);
+  }, [urlPageId, urlPage, activePageId, activeSpaceId, setActivePage, setActiveSpace]);
 
   const createSpaceMut = useMutation({
     mutationFn: () => createWikiSpace({ name: newSpaceName, description: "" }),

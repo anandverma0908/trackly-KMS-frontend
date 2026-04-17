@@ -136,10 +136,19 @@ export default function Topbar({
   }
 
   function handleResultClick(r: SearchResult) {
-    if (r.url) window.open(r.url, "_blank");
+    if (r.type === "ticket" && (r.id || r.key)) {
+      navigate(`/tickets?key=${encodeURIComponent(String(r.id ?? r.key))}`);
+    } else if (r.type === "wiki") {
+      navigate(`/wiki?page=${encodeURIComponent(String(r.id))}`);
+    } else if (r.url) {
+      if (r.url.startsWith("/")) navigate(r.url);
+      else window.open(r.url, "_blank");
+    }
+
     setSearchFocused(false);
     setQuery("");
     setResults([]);
+    setNovaAnswer(null);
   }
 
   function handleModeSwitch(m: SearchMode) {
@@ -302,21 +311,23 @@ export default function Topbar({
                     </span>
                     <div className={styles.resultBody}>
                       <div className={styles.resultTitle}>
-                        {r.key && (
-                          <span className={styles.resultKey}>{r.key}</span>
-                        )}
                         <span>{r.title}</span>
                       </div>
                       {r.snippet && (
                         <p className={styles.resultSnippet}>{r.snippet}</p>
                       )}
                     </div>
-                    <span
-                      className={`badge ${r.type === "ticket" ? "badge-blue" : "badge-purple"}`}
-                      style={{ fontSize: "10px", flexShrink: 0 }}
-                    >
-                      {r.type}
-                    </span>
+                    <div className={styles.resultMeta}>
+                      <span
+                        className={`badge ${r.type === "ticket" ? "badge-blue" : "badge-purple"}`}
+                        style={{ fontSize: "10px", flexShrink: 0 }}
+                      >
+                        {r.type}
+                      </span>
+                      <span className={styles.resultScore}>
+                        {(r.score * 100).toFixed(0)}%
+                      </span>
+                    </div>
                   </button>
                 ))}
               </div>

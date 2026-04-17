@@ -38,9 +38,6 @@ export default function TeamHoursChart() {
     return (
       <div className={styles.card}>
         <div className={styles.header}>
-          <span className="widget-icon" style={{ color: "var(--amber)", background: "rgba(251,191,36,0.12)", borderColor: "rgba(251,191,36,0.2)" }}>
-            <RiTeamFill />
-          </span>
           <span className="widget-title">Team Hours — This Month</span>
         </div>
         <div className={styles.skeletonList}>
@@ -61,7 +58,6 @@ export default function TeamHoursChart() {
   return (
     <div className={styles.card}>
       <div className={styles.header}>
-        <span className={styles.icon}><RiTeamFill /></span>
         <div className="card-title">Team Hours — This Month</div>
         <div className={styles.legend}>
           <span className={styles.legendItem}>

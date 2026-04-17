@@ -998,10 +998,10 @@ export default function CreateTicketDrawer({
                           width: 7,
                           height: 7,
                           borderRadius: "50%",
-                          background: s.color,
+                          background: s?.color,
                         }}
                       />
-                      {s.label}
+                      {s?.label}
                     </span>
                   );
                 }}

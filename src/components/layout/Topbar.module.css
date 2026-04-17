@@ -277,23 +277,10 @@
   font-weight: 500;
   color: var(--text);
   display: flex;
-  align-items: center;
-  gap: 7px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   margin-bottom: 2px;
-}
-
-.resultKey {
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 11px;
-  font-family: var(--font-mono);
-  background: var(--accent-glow);
-  padding: 1px 5px;
-  border-radius: 4px;
-  flex-shrink: 0;
 }
 
 .resultSnippet {
@@ -304,6 +291,20 @@
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
+}
+
+.resultMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.resultScore {
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
 }
 
 /* Empty + hint */

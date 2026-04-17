@@ -8,7 +8,7 @@ import {
 } from "@/services/api";
 import { formatDate } from "@/utils/formatters";
 import { IssueTypeBadge, StatusBadge, PODBadge } from "@/components/ui/Badge";
-import type { Ticket, TicketComment, TicketActivity, Worklog } from "@/types";
+import type { Ticket, TicketComment, TicketActivity } from "@/types";
 import styles from "./TicketDetailDrawer.module.css";
 
 const STATUS_TRANSITIONS: Record<string, string[]> = {

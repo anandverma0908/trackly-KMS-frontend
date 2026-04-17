@@ -56,6 +56,36 @@ function mock() {
   return (window as any).__EAP_MOCK__ ?? null;
 }
 
+function _normalizeSearchResult(raw: any): SearchResult {
+  const type = raw.type ?? raw.source_type ?? "wiki";
+  const id = raw.id ?? raw.key ?? "";
+  const key = raw.key ?? undefined;
+  const score = typeof raw.score === "number"
+    ? raw.score
+    : typeof raw.similarity === "number"
+      ? raw.similarity
+      : 0;
+
+  const url = raw.url ?? (
+    type === "ticket" && key
+      ? `/tickets?key=${encodeURIComponent(String(key))}`
+      : type === "wiki" && id
+        ? `/wiki?page=${encodeURIComponent(String(id))}`
+        : undefined
+  );
+
+  return {
+    id,
+    type,
+    title: raw.title ?? "",
+    key,
+    snippet: raw.snippet ?? "",
+    score,
+    url,
+    space: raw.space ?? raw.space_name,
+  };
+}
+
 /* ── Param builder — returns plain object for axios ── */
 function buildParams(
   filters: Partial<FilterState>,
@@ -335,12 +365,16 @@ export async function extractMeetingActions(content: string) {
 /* ── Search ── */
 export async function semanticSearch(query: string, scope?: 'all' | 'tickets' | 'wiki'): Promise<SearchResult[]> {
   const { data } = await api.post("/search", { query, scope: scope ?? 'all' });
-  return data?.results ?? data ?? [];
+  return (data?.results ?? data ?? []).map(_normalizeSearchResult);
 }
 
 export async function novaQuery(query: string, scope?: 'all' | 'wiki'): Promise<NovaQueryResponse> {
   const { data } = await api.post("/nova/query", { query, scope });
-  return data;
+  return {
+    answer: data?.answer ?? "",
+    query: data?.query ?? query,
+    citations: (data?.citations ?? data?.sources ?? []).map(_normalizeSearchResult),
+  };
 }
 
 /* ── Sprints ── */
@@ -387,7 +421,17 @@ export async function fetchBurndown(sprintId: string): Promise<BurndownPoint[]> 
 
 export async function fetchVelocity(): Promise<VelocityPoint[]> {
   const { data } = await api.get("/analytics/velocity");
-  return data?.data ?? data ?? [];
+  const rows = data?.data ?? data ?? [];
+  return rows.map((row: any) => {
+    const completed = Number(row.completed ?? row.points_completed ?? row.velocity ?? 0);
+    const committed = Number(row.committed ?? row.points_committed ?? (completed > 0 ? completed + Math.max(3, Math.round(completed * 0.2)) : 0));
+    return {
+      sprint: row.sprint ?? row.sprint_name ?? row.name ?? "Sprint",
+      committed,
+      completed,
+      pod: row.pod ?? null,
+    };
+  });
 }
 
 export async function generateSprintRetro(sprintId: string) {

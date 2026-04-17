@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Tooltip from "@mui/material/Tooltip";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import type { Project, ProjectTask, ProjectSprint } from "../spacesData";
+import type { Project, ProjectTask } from "../spacesData";
 import { getPriorityColor, getTaskStatusColor } from "../spacesData";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
 import { createTicket, updateTicketStatus } from "@/services/api";
@@ -12,7 +12,6 @@ import styles from "./ActiveSprintsTab.module.css";
 
 import {
   RiSearchLine,
-  RiAddLine,
   RiFileHistoryLine,
   RiUserLine,
   RiFilter3Line,
@@ -73,7 +72,7 @@ export default function ActiveSprintsTab({
   const [aiFilter, setAiFilter] = useState<AIFilter>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const createOpen = externalCreateOpen ?? showCreateModal;
-  const [createColumn, setCreateColumn] = useState("To Do");
+  const [createColumn, _setCreateColumn] = useState("To Do");
   const [viewTicket, setViewTicket] = useState<ProjectTask | null>(null);
   // Optimistic local status overrides for drag-and-drop
   const [localStatuses, setLocalStatuses] = useState<

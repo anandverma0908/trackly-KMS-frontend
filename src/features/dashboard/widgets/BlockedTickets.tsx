@@ -23,7 +23,6 @@ export default function BlockedTickets() {
     return (
       <div className={styles.card}>
         <div className={styles.header}>
-          <span className={styles.icon}><MdBlock /></span>
           <div className="card-title">Blocked Tickets</div>
         </div>
         <div className={styles.list}>
@@ -41,7 +40,6 @@ export default function BlockedTickets() {
   return (
     <div className={styles.card}>
       <div className={styles.header}>
-        <span className={styles.icon}><MdBlock /></span>
         <div className="card-title">Blocked Tickets</div>
         {blocked.length > 0 && (
           <span className={styles.badge}>{blocked.length}</span>
@@ -50,8 +48,7 @@ export default function BlockedTickets() {
 
       {blocked.length === 0 ? (
         <div className={styles.empty}>
-          <span>✅</span>
-          <span>No blocked tickets{scopedPod ? ` in ${scopedPod}` : ""}</span>
+          <span>No blocked tickets</span>
         </div>
       ) : (
         <div className={styles.list}>

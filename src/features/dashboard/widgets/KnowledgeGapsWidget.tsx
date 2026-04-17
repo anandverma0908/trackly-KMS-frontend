@@ -17,7 +17,6 @@ export default function KnowledgeGapsWidget() {
     return (
       <div className={styles.card}>
         <div className={styles.header}>
-          <span className={styles.icon}><TbBrain /></span>
           <div className="card-title">Knowledge Gaps</div>
           <span className={styles.badge}>EOS</span>
         </div>
@@ -36,7 +35,6 @@ export default function KnowledgeGapsWidget() {
   return (
     <div className={styles.card}>
       <div className={styles.header}>
-        <span className={styles.icon}><TbBrain /></span>
         <div className="card-title">Knowledge Gaps</div>
         <span className={styles.badge}>EOS</span>
         {sorted.length > 0 && (
@@ -46,7 +44,6 @@ export default function KnowledgeGapsWidget() {
 
       {sorted.length === 0 ? (
         <div className={styles.empty}>
-          <span>✅</span>
           <span>No knowledge gaps detected — great documentation!</span>
         </div>
       ) : (

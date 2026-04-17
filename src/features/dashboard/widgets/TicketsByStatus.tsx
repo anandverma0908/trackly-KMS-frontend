@@ -50,7 +50,6 @@ export default function TicketsByStatus() {
     return (
       <div className={styles.card}>
         <div className={styles.header}>
-          <span className={styles.icon}><HiOutlineChartBar /></span>
           <div className="card-title">Tickets by Status</div>
         </div>
         <div style={{ height: 140, background: "var(--surface-2)", borderRadius: 8 }} />
@@ -61,7 +60,6 @@ export default function TicketsByStatus() {
   return (
     <div className={styles.card}>
       <div className={styles.header}>
-        <span className={styles.icon}><HiOutlineChartBar /></span>
         <div className="card-title">Tickets by Status</div>
         <span className={styles.total}>{total} total</span>
       </div>

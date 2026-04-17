@@ -9,8 +9,6 @@ import TodayStandup from "./widgets/TodayStandup";
 import WeeklyHeatmap from "./widgets/WeeklyHeatmap";
 import RecentActivity from "./widgets/RecentActivity";
 
-import MySprintItems from "./widgets/MySprintItems";
-
 // Lead+ widgets
 import TeamHoursChart from "./widgets/TeamHoursChart";
 import BlockedTickets from "./widgets/BlockedTickets";
@@ -74,10 +72,10 @@ export default function DashboardPage() {
         <RecentActivity limit={5} />
       </div>
 
-      {/* ── Mid row: heatmap + velocity/sprint ── */}
+      {/* ── Mid row: velocity + sprint (timesheet moved to lead section) ── */}
       <div className={`${styles.midRow} fade-up-3`}>
-        <WeeklyHeatmap />
-        {isTeamMember ? <MySprintItems /> : <SprintBurndown />}
+        <PodVelocity />
+        {isTeamMember ? <WeeklyHeatmap /> : <SprintBurndown />}
       </div>
 
       {/* ── Lead section ── */}
@@ -88,11 +86,11 @@ export default function DashboardPage() {
             <div className={styles.sectionDivider} />
           </div>
           <div className={styles.midRow}>
-            <BlockedTickets />
+            <TeamHoursChart />
             <TeamStandups />
           </div>
           <div className={styles.midRow}>
-            <PodVelocity />
+            <BlockedTickets />
             {isTeamMember ? null : <TodayStandup />}
           </div>
         </section>
@@ -111,7 +109,7 @@ export default function DashboardPage() {
           </div>
           <div className={styles.midRow}>
             <KnowledgeGapsWidget />
-            <MySprintItems />
+            <WeeklyHeatmap />
           </div>
         </section>
       )}
@@ -126,13 +124,6 @@ export default function DashboardPage() {
           <SystemHealth />
         </section>
       )}
-
-      {/* ── Bottom: team chart quick actions ── */}
-      <div className={`${styles.bottomRow} fade-up-3`}>
-        {/* Left: lead sees TeamHours, others see sprint burndown or standup */}
-        {isLead || isManager ? <TeamHoursChart /> : <TodayStandup />}
-        {/* <QuickActions /> */}
-      </div>
     </div>
   );
 }

@@ -68,8 +68,8 @@ function buildPodCard(p: PodSummary, sprints: Sprint[]): PodCard {
 export default function SpacesPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const can = useAuthStore((s) => s.can);
-  const canManage = can("manage:all");
+  const user = useAuthStore((s) => s.user);
+  const canManage = user?.role === "admin" || user?.role === "engineering_manager";
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showCreateDrawer, setShowCreateDrawer] = useState(false);

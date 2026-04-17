@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [remember, setRemember] = useState(false);
+  const [_remember, _setRemember] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

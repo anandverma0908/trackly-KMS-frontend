@@ -4,7 +4,15 @@ import { useAuthStore } from "@/features/auth/useAuthStore";
 import styles from "./Sidebar.module.css";
 import Tooltip from "@mui/material/Tooltip";
 
-import { RiDashboardLine, RiBookOpenLine, RiTeamLine, RiRocketLine, RiLockLine, RiUserSettingsLine, RiCloseLine } from "react-icons/ri";
+import {
+  RiDashboardLine,
+  RiBookOpenLine,
+  RiTeamLine,
+  RiRocketLine,
+  RiLockLine,
+  RiUserSettingsLine,
+  RiCloseLine,
+} from "react-icons/ri";
 
 /* ── Main Sidebar ────────────────────────────────────────────────────────── */
 interface SidebarProps {
@@ -99,12 +107,7 @@ export default function Sidebar({
 
           {/* <div className={styles.divider} /> */}
 
-          {nav(
-            <RiTeamLine size={20} />,
-            "Team",
-            "/team",
-            can("view:teams"),
-          )}
+          {nav(<RiTeamLine size={20} />, "Team", "/team", can("view:teams"))}
           {/* {nav(
             <TableChartIcon fontSize="small" />,
             "Timesheets",

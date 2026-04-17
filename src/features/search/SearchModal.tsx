@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { semanticSearch, novaQuery } from "@/services/api";
 import type { SearchResult, NovaQueryResponse } from "@/types";
 import styles from "./SearchModal.module.css";
@@ -10,6 +11,7 @@ interface Props {
 type SearchMode = "semantic" | "nova";
 
 export default function SearchModal({ onClose }: Props) {
+  const navigate = useNavigate();
   const [query, setQuery]             = useState("");
   const [mode, setMode]               = useState<SearchMode>("semantic");
   const [results, setResults]         = useState<SearchResult[]>([]);
@@ -47,11 +49,18 @@ export default function SearchModal({ onClose }: Props) {
   }
 
   function handleResultClick(r: SearchResult) {
-    if (r.url) window.open(r.url, "_blank");
+    if (r.type === "ticket" && (r.id || r.key)) {
+      navigate(`/tickets?key=${encodeURIComponent(String(r.id ?? r.key))}`);
+    } else if (r.type === "wiki") {
+      navigate(`/wiki?page=${encodeURIComponent(String(r.id))}`);
+    } else if (r.url) {
+      if (r.url.startsWith("/")) navigate(r.url);
+      else window.open(r.url, "_blank");
+    }
     onClose();
   }
 
-  async function doSearch(q: string) {
+  async function doSearch(q: string, searchMode: SearchMode = mode) {
     if (!q.trim()) {
       setResults([]);
       setNovaResponse(null);
@@ -59,7 +68,7 @@ export default function SearchModal({ onClose }: Props) {
     }
     setLoading(true);
     try {
-      if (mode === "nova") {
+      if (searchMode === "nova") {
         const res = await novaQuery(q);
         setNovaResponse(res);
         setResults(res.citations ?? []);
@@ -83,6 +92,14 @@ export default function SearchModal({ onClose }: Props) {
     debounceRef.current = setTimeout(() => doSearch(v), 400);
   }
 
+  function handleModeSwitch(nextMode: SearchMode) {
+    setMode(nextMode);
+    if (query.trim()) {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      void doSearch(query, nextMode);
+    }
+  }
+
   return (
     <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal}>
@@ -101,13 +118,13 @@ export default function SearchModal({ onClose }: Props) {
           <div className={styles.modes}>
             <button
               className={`${styles.modeBtn} ${mode === "semantic" ? styles.modeBtnActive : ""}`}
-              onClick={() => { setMode("semantic"); doSearch(query); }}
+              onClick={() => handleModeSwitch("semantic")}
             >
               Semantic
             </button>
             <button
               className={`${styles.modeBtn} ${mode === "nova" ? styles.modeBtnActive : ""}`}
-              onClick={() => { setMode("nova"); doSearch(query); }}
+              onClick={() => handleModeSwitch("nova")}
             >
               <span className={styles.novaGlow} />
               EOS
@@ -160,7 +177,7 @@ export default function SearchModal({ onClose }: Props) {
               <kbd>Esc</kbd> close
             </div>
             <div className={styles.hintRow}>
-              <span>Switch to <button className={styles.hintBtn} onClick={() => setMode(mode === "nova" ? "semantic" : "nova")}>
+              <span>Switch to <button className={styles.hintBtn} onClick={() => handleModeSwitch(mode === "nova" ? "semantic" : "nova")}>
                 {mode === "nova" ? "Semantic" : "EOS"}
               </button> mode</span>
             </div>
@@ -188,7 +205,6 @@ function SearchResultItem({
       </span>
       <div className={styles.resultBody}>
         <div className={styles.resultTitle}>
-          {result.key && <span className={styles.resultKey}>{result.key}</span>}
           {result.title}
         </div>
         {result.snippet && (

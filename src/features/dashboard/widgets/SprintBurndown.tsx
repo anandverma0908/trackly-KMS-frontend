@@ -46,7 +46,6 @@ export default function SprintBurndown() {
     return (
       <div className={styles.card}>
         <div className={styles.header}>
-          <span className={styles.icon}><TbChartLine /></span>
           <div className="card-title">Sprint Burndown</div>
         </div>
         <div style={{ height: 140 }}>
@@ -60,7 +59,7 @@ export default function SprintBurndown() {
     return (
       <div className={styles.card}>
         <div className={styles.header}>
-          <span className={styles.icon}><TbChartLine /></span>
+
           <div className="card-title">Sprint Burndown</div>
         </div>
         <div className={styles.empty}>No active sprint</div>
@@ -80,7 +79,7 @@ export default function SprintBurndown() {
   return (
     <div className={styles.card}>
       <div className={styles.header}>
-        <span className={styles.icon}><TbChartLine /></span>
+
         <div className="card-title">Sprint Burndown</div>
         <div className={styles.meta}>
           {daysLeft !== null && (

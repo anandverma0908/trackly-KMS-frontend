@@ -74,9 +74,6 @@ export default function TodayStandup() {
     return (
       <div className={styles.card}>
         <div className={styles.header}>
-          <span className={styles.icon}>
-            <TbRobot />
-          </span>
           <div className="card-title">Today's Standup</div>
           <span className={styles.badge}>EOS</span>
         </div>

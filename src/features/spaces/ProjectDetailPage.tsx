@@ -5,7 +5,6 @@ import {
   fetchProject,
   generateSprintRetro,
   generateReleaseNotes,
-  novaQuery,
 } from "@/services/api";
 import { getPodColor } from "@/config/themes";
 import { getStatusColor } from "./spacesData";
@@ -60,8 +59,7 @@ export default function ProjectDetailPage() {
   /* ── EOS NOVA tab state ── */
   const [retroResult, setRetroResult] = useState<string | null>(null);
   const [releaseResult, setReleaseResult] = useState<string | null>(null);
-  const [predictionText, setPredictionText] = useState<string | null>(null);
-  const [predictionLoaded, setPredictionLoaded] = useState(false);
+  // const [predictionLoaded, setPredictionLoaded] = useState(false);
 
   /* ── Fetch project data ── */
   const { data: project, isLoading } = useQuery({
@@ -100,35 +98,35 @@ export default function ProjectDetailPage() {
   });
 
   /* ── Sprint prediction (lazy, fires once per project load) ── */
-  async function loadPrediction(sprint: {
-    name: string;
-    donePoints: number;
-    totalPoints: number;
-    endDate?: string;
-  }) {
-    if (predictionLoaded) return;
-    setPredictionLoaded(true);
-    const pct =
-      sprint.totalPoints > 0
-        ? Math.round((sprint.donePoints / sprint.totalPoints) * 100)
-        : 0;
-    const daysLeft = sprint.endDate
-      ? Math.max(
-          0,
-          Math.ceil(
-            (new Date(sprint.endDate).getTime() - Date.now()) / 86_400_000,
-          ),
-        )
-      : "unknown";
-    try {
-      const res = await novaQuery(
-        `Sprint "${sprint.name}" is ${pct}% done with ${daysLeft} days left. Done: ${sprint.donePoints}pts, Total: ${sprint.totalPoints}pts. In one short sentence (max 80 chars), predict if this sprint will complete on time. Start with ✓ if on track or ⚠ if at risk.`,
-      );
-      setPredictionText(res.answer.split("\n")[0].trim());
-    } catch {
-      /* silent — prediction is non-critical */
-    }
-  }
+  // async function loadPrediction(sprint: {
+  //   name: string;
+  //   donePoints: number;
+  //   totalPoints: number;
+  //   endDate?: string;
+  // }) {
+  //   if (predictionLoaded) return;
+  //   setPredictionLoaded(true);
+  //   const pct =
+  //     sprint.totalPoints > 0
+  //       ? Math.round((sprint.donePoints / sprint.totalPoints) * 100)
+  //       : 0;
+  //   const daysLeft = sprint.endDate
+  //     ? Math.max(
+  //         0,
+  //         Math.ceil(
+  //           (new Date(sprint.endDate).getTime() - Date.now()) / 86_400_000,
+  //         ),
+  //       )
+  //     : "unknown";
+  //   try {
+  //     const res = await novaQuery(
+  //       `Sprint "${sprint.name}" is ${pct}% done with ${daysLeft} days left. Done: ${sprint.donePoints}pts, Total: ${sprint.totalPoints}pts. In one short sentence (max 80 chars), predict if this sprint will complete on time. Start with ✓ if on track or ⚠ if at risk.`,
+  //     );
+  //     // setPredictionText(res.answer.split("\n")[0].trim());
+  //   } catch {
+  //     /* silent — prediction is non-critical */
+  //   }
+  // }
 
   if (isLoading) {
     return (
