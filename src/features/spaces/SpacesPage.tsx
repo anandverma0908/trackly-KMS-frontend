@@ -4,13 +4,24 @@ import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Tooltip from "@mui/material/Tooltip";
 import LinearProgress from "@mui/material/LinearProgress";
-import { fetchPodSummary, fetchSprints, deleteSpace, type PodSummary } from "@/services/api";
+import {
+  fetchPodSummary,
+  fetchSprints,
+  deleteSpace,
+  type PodSummary,
+} from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import { getPodColor } from "@/config/themes";
 import type { Sprint } from "@/types";
 import styles from "./SpacesPage.module.css";
 
-import { RiSearchLine, RiGridLine, RiTableLine, RiAddLine, RiDeleteBinLine } from "react-icons/ri";
+import {
+  RiSearchLine,
+  RiGridLine,
+  RiTableLine,
+  RiAddLine,
+  RiDeleteBinLine,
+} from "react-icons/ri";
 import SpacesKPIStrip from "./SpacesKPIStrip";
 import CreateSpaceDrawer from "./CreateSpaceDrawer";
 
@@ -118,107 +129,123 @@ export default function SpacesPage() {
         <SpacesKPIStrip stats={stats} loading={loadingPods} />
       </div>
 
-      {/* ── Header ── */}
-      <div className={`${styles.header} fade-up`}>
-        <div>
-          <div className={styles.searchWrap}>
-            <RiSearchLine size={16} style={{ opacity: 0.5 }} />
-            <input
-              className={styles.searchInput}
-              placeholder="Search pods…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search && (
-              <button className={styles.clearBtn} onClick={() => setSearch("")}>
-                ✕
+      <div className={styles.container}>
+        {/* ── Header ── */}
+        <div className={`${styles.header} fade-up`}>
+          <div>
+            <div className={styles.searchWrap}>
+              <RiSearchLine size={16} style={{ opacity: 0.5 }} />
+              <input
+                className={styles.searchInput}
+                placeholder="Search pods…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  className={styles.clearBtn}
+                  onClick={() => setSearch("")}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 10,
+            }}
+          >
+            {canManage && (
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => setShowCreateDrawer(true)}
+              >
+                <RiAddLine size={16} />
+                Create Space
               </button>
             )}
-          </div>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 10,
-          }}
-        >
-          {canManage && (
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => setShowCreateDrawer(true)}
-            >
-              <RiAddLine size={16} />
-              Create Space
-            </button>
-          )}
-          <div className={styles.headerActions}>
-            <div className={styles.viewToggle}>
-              <Tooltip title="Grid view" arrow>
-                <button
-                  className={`${styles.viewBtn} ${viewMode === "grid" ? styles.viewBtnActive : ""}`}
-                  onClick={() => setViewMode("grid")}
-                >
-                  <RiGridLine size={20} />
-                </button>
-              </Tooltip>
-              <Tooltip title="List view" arrow>
-                <button
-                  className={`${styles.viewBtn} ${viewMode === "list" ? styles.viewBtnActive : ""}`}
-                  onClick={() => setViewMode("list")}
-                >
-                  <RiTableLine size={20} />
-                </button>
-              </Tooltip>
+            <div className={styles.headerActions}>
+              <div className={styles.viewToggle}>
+                <Tooltip title="Grid view" arrow>
+                  <button
+                    className={`${styles.viewBtn} ${viewMode === "grid" ? styles.viewBtnActive : ""}`}
+                    onClick={() => setViewMode("grid")}
+                  >
+                    <RiGridLine size={20} />
+                  </button>
+                </Tooltip>
+                <Tooltip title="List view" arrow>
+                  <button
+                    className={`${styles.viewBtn} ${viewMode === "list" ? styles.viewBtnActive : ""}`}
+                    onClick={() => setViewMode("list")}
+                  >
+                    <RiTableLine size={20} />
+                  </button>
+                </Tooltip>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* ── Grid / List ── */}
+        {loadingPods ? (
+          <div className={styles.loading}>Loading spaces…</div>
+        ) : cards.length === 0 ? (
+          <div className={styles.empty}>
+            <div className={styles.emptyTitle}>No spaces found</div>
+            <div className={styles.emptyDesc}>Try a different search</div>
+          </div>
+        ) : viewMode === "grid" ? (
+          <div className={`${styles.grid} fade-up-2`}>
+            {cards.map((card, i) => (
+              <PodCard
+                key={card.pod}
+                card={card}
+                delay={Math.min(i * 0.05, 0.4)}
+                onClick={() => navigate(`/spaces/${card.pod}`)}
+                canDelete={canManage}
+                onDelete={() => {
+                  if (
+                    confirm(
+                      `Delete space "${card.pod}"? This will remove all tickets, sprints, and epics.`,
+                    )
+                  ) {
+                    deleteMut.mutate(card.pod);
+                  }
+                }}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className={`${styles.listView} fade-up-2`}>
+            {cards.map((card) => (
+              <PodRow
+                key={card.pod}
+                card={card}
+                onClick={() => navigate(`/spaces/${card.pod}`)}
+                canDelete={canManage}
+                onDelete={() => {
+                  if (
+                    confirm(
+                      `Delete space "${card.pod}"? This will remove all tickets, sprints, and epics.`,
+                    )
+                  ) {
+                    deleteMut.mutate(card.pod);
+                  }
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* ── Grid / List ── */}
-      {loadingPods ? (
-        <div className={styles.loading}>Loading spaces…</div>
-      ) : cards.length === 0 ? (
-        <div className={styles.empty}>
-          <div className={styles.emptyTitle}>No spaces found</div>
-          <div className={styles.emptyDesc}>Try a different search</div>
-        </div>
-      ) : viewMode === "grid" ? (
-        <div className={`${styles.grid} fade-up-2`}>
-          {cards.map((card, i) => (
-            <PodCard
-              key={card.pod}
-              card={card}
-              delay={Math.min(i * 0.05, 0.4)}
-              onClick={() => navigate(`/spaces/${card.pod}`)}
-              canDelete={canManage}
-              onDelete={() => {
-                if (confirm(`Delete space "${card.pod}"? This will remove all tickets, sprints, and epics.`)) {
-                  deleteMut.mutate(card.pod);
-                }
-              }}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className={`${styles.listView} fade-up-2`}>
-          {cards.map((card) => (
-            <PodRow
-              key={card.pod}
-              card={card}
-              onClick={() => navigate(`/spaces/${card.pod}`)}
-              canDelete={canManage}
-              onDelete={() => {
-                if (confirm(`Delete space "${card.pod}"? This will remove all tickets, sprints, and epics.`)) {
-                  deleteMut.mutate(card.pod);
-                }
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      <CreateSpaceDrawer open={showCreateDrawer} onClose={() => setShowCreateDrawer(false)} />
+      <CreateSpaceDrawer
+        open={showCreateDrawer}
+        onClose={() => setShowCreateDrawer(false)}
+      />
     </div>
   );
 }

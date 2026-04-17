@@ -4,6 +4,14 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  gap: 15px;
+}
+
+.stripDivider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-2);
+  flex-shrink: 0;
 }
 
 /* ── Header ── */
@@ -12,7 +20,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 24px;
+  padding: 12px;
   flex-wrap: wrap;
   border-radius: var(--r-xl);
   background: var(--bgrnd);
@@ -24,6 +32,11 @@
   gap: 12px;
   flex: 1;
   min-width: 0;
+}
+
+.tabContainer {
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
 }
 
 .backBtn {
@@ -69,7 +82,6 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 4px;
 }
 
 .projectTitle {
@@ -139,7 +151,7 @@
   background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: var(--r);
-  padding: 12px 14px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -162,6 +174,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: 30px;
 }
 
 .sprintBadge {
@@ -285,7 +298,7 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-3);
+  color: var(--text-2);
   font-family: var(--font-sans);
   transition: all 0.15s;
   white-space: nowrap;
@@ -322,7 +335,10 @@
   transition: all 0.15s;
   margin-top: 2px;
 }
-.predictionTrigger:hover { background: var(--accent); color: #fff; }
+.predictionTrigger:hover {
+  background: var(--accent);
+  color: #fff;
+}
 
 .predictionLoading {
   display: inline-flex;
@@ -433,8 +449,15 @@
   font-family: var(--font-sans);
   align-self: flex-start;
 }
-.novaGenBtn:hover { background: var(--accent); color: #fff; }
-.novaGenBtn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+.novaGenBtn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+.novaGenBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 .novaResult {
   background: var(--surface-2);
@@ -459,10 +482,33 @@
   animation: spin 0.7s linear infinite;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+.sprintDates {
+  font-size: 10px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+}
+
+.sprintGoal {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  font-style: italic;
+  max-width: 400px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 @media (max-width: 800px) {
-  .novaActions { grid-template-columns: 1fr; }
+  .novaActions {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── Not Found ── */
