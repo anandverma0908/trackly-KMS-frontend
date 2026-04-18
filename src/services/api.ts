@@ -502,6 +502,7 @@ export interface PodSummary {
 }
 
 export async function fetchPodSummary(): Promise<PodSummary[]> {
+  if (mock()?.fetchPodSummary) return mock().fetchPodSummary();
   const { data } = await api.get<PodSummary[]>("/analytics/pod-summary");
   return data ?? [];
 }

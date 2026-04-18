@@ -36,8 +36,18 @@ export default function SettingsPage() {
     { key: "appearance", label: "Appearance", icon: "🎨" },
     { key: "notifications", label: "Notifications", icon: "🔔" },
     { key: "password", label: "Change Password", icon: "🔒" },
-    { key: "users", label: "Users", icon: "👥", guard: () => can("manage:users") },
-    { key: "budget", label: "Budget & Burn Rate", icon: "📊", guard: () => can("view:summary") || can("manage:settings") },
+    {
+      key: "users",
+      label: "Users",
+      icon: "👥",
+      guard: () => can("manage:users"),
+    },
+    {
+      key: "budget",
+      label: "Budget & Burn Rate",
+      icon: "📊",
+      guard: () => can("view:summary") || can("manage:settings"),
+    },
   ];
   const tabs = allTabs.filter((t) => (t.guard ? t.guard() : true));
 
@@ -47,7 +57,9 @@ export default function SettingsPage() {
     <div className={styles.page}>
       <div className={styles.pageHeader}>
         <h1 className={styles.title}>Settings</h1>
-        <p className={styles.subtitle}>Manage your account and app preferences</p>
+        <p className={styles.subtitle}>
+          Manage your account and app preferences
+        </p>
       </div>
 
       <div className={styles.layout}>
@@ -59,7 +71,7 @@ export default function SettingsPage() {
               className={`${styles.tabBtn} ${activeTab === t.key ? styles.tabBtnActive : ""}`}
               onClick={() => setActiveTab(t.key)}
             >
-              <span className={styles.tabIcon}>{t.icon}</span>
+              {/* <span className={styles.tabIcon}>{t.icon}</span> */}
               <span className={styles.tabLabel}>{t.label}</span>
             </button>
           ))}
@@ -122,7 +134,11 @@ function ProfileTab() {
         </div>
         <div className={styles.profileField}>
           <label className={styles.profileLabel}>Role</label>
-          <input className="input" value={user?.role.replace(/_/g, " ") ?? ""} readOnly />
+          <input
+            className="input"
+            value={user?.role.replace(/_/g, " ") ?? ""}
+            readOnly
+          />
         </div>
         <div className={styles.profileField}>
           <label className={styles.profileLabel}>POD</label>
@@ -143,7 +159,9 @@ function AppearanceTab() {
         <span className={styles.cardIcon}>🎨</span>
         <div>
           <div className={styles.cardTitle}>Appearance</div>
-          <div className={styles.cardSubtitle}>Accent color and light/dark mode</div>
+          <div className={styles.cardSubtitle}>
+            Accent color and light/dark mode
+          </div>
         </div>
       </div>
 
@@ -242,10 +260,22 @@ function NotificationsTab() {
       label: "Notification Type",
       render: (row) => (
         <div>
-          <div style={{ fontSize: "0.88rem", fontWeight: 500, color: "var(--text)" }}>
+          <div
+            style={{
+              fontSize: "0.88rem",
+              fontWeight: 500,
+              color: "var(--text)",
+            }}
+          >
             {row.label}
           </div>
-          <div style={{ fontSize: "0.78rem", color: "var(--text-3)", marginTop: 2 }}>
+          <div
+            style={{
+              fontSize: "0.78rem",
+              color: "var(--text-3)",
+              marginTop: 2,
+            }}
+          >
             {row.desc}
           </div>
         </div>
@@ -284,23 +314,46 @@ function NotificationsTab() {
       <div className={styles.tabHeader}>
         <div>
           <h2 className={styles.tabTitle}>Notification Preferences</h2>
-          <p className={styles.tabSubtitle}>Choose how and when you receive notifications from Trackly.</p>
+          <p className={styles.tabSubtitle}>
+            Choose how and when you receive notifications from Trackly.
+          </p>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}>
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={handleSave}
+          disabled={saving}
+        >
           {saving ? "Saving…" : "Save Preferences"}
         </button>
       </div>
 
-      <div className={notificationStyles.globalBar} style={{ margin: "16px 0" }}>
+      <div
+        className={notificationStyles.globalBar}
+        style={{ margin: "16px 0" }}
+      >
         <div className={notificationStyles.globalItem}>
-          <div className={notificationStyles.globalLabel}>In-App Notifications</div>
-          <div className={notificationStyles.globalDesc}>Bell icon in the top-right</div>
-          <Toggle checked={globalInApp} onChange={(v) => toggleAll("inApp", v)} />
+          <div className={notificationStyles.globalLabel}>
+            In-App Notifications
+          </div>
+          <div className={notificationStyles.globalDesc}>
+            Bell icon in the top-right
+          </div>
+          <Toggle
+            checked={globalInApp}
+            onChange={(v) => toggleAll("inApp", v)}
+          />
         </div>
         <div className={notificationStyles.globalItem}>
-          <div className={notificationStyles.globalLabel}>Email Notifications</div>
-          <div className={notificationStyles.globalDesc}>Sent to your account email</div>
-          <Toggle checked={globalEmail} onChange={(v) => toggleAll("email", v)} />
+          <div className={notificationStyles.globalLabel}>
+            Email Notifications
+          </div>
+          <div className={notificationStyles.globalDesc}>
+            Sent to your account email
+          </div>
+          <Toggle
+            checked={globalEmail}
+            onChange={(v) => toggleAll("email", v)}
+          />
         </div>
       </div>
 
@@ -318,7 +371,8 @@ function NotificationsTab() {
       </div>
 
       <p className={notificationStyles.note}>
-        Email delivery requires SMTP to be configured in system settings. In-app notifications are always delivered when the app is open.
+        Email delivery requires SMTP to be configured in system settings. In-app
+        notifications are always delivered when the app is open.
       </p>
     </div>
   );
@@ -391,14 +445,22 @@ function PasswordTab() {
 
   return (
     <div className="card" style={{ padding: 24, maxWidth: 480 }}>
-      <div className={passwordStyles.avatar} style={{ marginBottom: 12 }}>{initials}</div>
+      <div className={passwordStyles.avatar} style={{ marginBottom: 12 }}>
+        {initials}
+      </div>
       <div className={passwordStyles.name}>{user?.name}</div>
       <div className={passwordStyles.meta} style={{ marginBottom: 16 }}>
-        {user?.email} · <span className={passwordStyles.role}>{user?.role?.replace("_", " ")}</span>
+        {user?.email} ·{" "}
+        <span className={passwordStyles.role}>
+          {user?.role?.replace("_", " ")}
+        </span>
       </div>
 
       {done && (
-        <div className={passwordStyles.successBanner} style={{ marginBottom: 12 }}>
+        <div
+          className={passwordStyles.successBanner}
+          style={{ marginBottom: 12 }}
+        >
           ✓ Password changed successfully
         </div>
       )}
@@ -434,12 +496,18 @@ function PasswordTab() {
                     key={i}
                     className={passwordStyles.strengthBar}
                     style={{
-                      background: i <= strength ? strengthColor[strength] : "var(--border-2)",
+                      background:
+                        i <= strength
+                          ? strengthColor[strength]
+                          : "var(--border-2)",
                     }}
                   />
                 ))}
               </div>
-              <span className={passwordStyles.strengthLabel} style={{ color: strengthColor[strength] }}>
+              <span
+                className={passwordStyles.strengthLabel}
+                style={{ color: strengthColor[strength] }}
+              >
                 {strengthLabel[strength]}
               </span>
             </div>
@@ -455,14 +523,23 @@ function PasswordTab() {
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             autoComplete="new-password"
-            style={{ borderColor: confirm && confirm !== password ? "#F87171" : undefined }}
+            style={{
+              borderColor:
+                confirm && confirm !== password ? "#F87171" : undefined,
+            }}
           />
           {confirm && confirm !== password && (
-            <span className={passwordStyles.errorHint}>Passwords don't match</span>
+            <span className={passwordStyles.errorHint}>
+              Passwords don't match
+            </span>
           )}
         </div>
 
-        <button type="submit" className={passwordStyles.btn} disabled={loading || !password || !confirm}>
+        <button
+          type="submit"
+          className={passwordStyles.btn}
+          disabled={loading || !password || !confirm}
+        >
           {loading ? "Updating…" : "Update Password"}
         </button>
       </form>
@@ -480,19 +557,83 @@ interface PrefRow {
 }
 
 const DEFAULT_PREFS: PrefRow[] = [
-  { id: "sprint_started", label: "Sprint Started", desc: "When a sprint transitions to Active", inApp: true, email: false },
-  { id: "sprint_completed", label: "Sprint Completed", desc: "When a sprint is marked Complete", inApp: true, email: false },
-  { id: "standup_ready", label: "Standup Ready", desc: "When EOS generates your daily standup", inApp: true, email: false },
-  { id: "ticket_assigned", label: "Ticket Assigned to You", desc: "When a ticket is assigned to you", inApp: true, email: true },
-  { id: "ticket_commented", label: "Comment on Your Ticket", desc: "When someone comments on your ticket", inApp: true, email: true },
-  { id: "burn_rate_warning", label: "Burn Rate Warning", desc: "Client hours at 70% / 85% / 100% / 110%", inApp: true, email: true },
-  { id: "mention", label: "@Mention", desc: "When you are @mentioned in a comment", inApp: true, email: true },
-  { id: "wiki_updated", label: "Wiki Page Updated", desc: "Changes to pages you're watching", inApp: true, email: false },
-  { id: "knowledge_gap", label: "Knowledge Gap Detected", desc: "EOS finds an undocumented topic cluster", inApp: true, email: false },
-  { id: "release_notes", label: "Release Notes Generated", desc: "When release notes are ready for a sprint", inApp: true, email: false },
+  {
+    id: "sprint_started",
+    label: "Sprint Started",
+    desc: "When a sprint transitions to Active",
+    inApp: true,
+    email: false,
+  },
+  {
+    id: "sprint_completed",
+    label: "Sprint Completed",
+    desc: "When a sprint is marked Complete",
+    inApp: true,
+    email: false,
+  },
+  {
+    id: "standup_ready",
+    label: "Standup Ready",
+    desc: "When EOS generates your daily standup",
+    inApp: true,
+    email: false,
+  },
+  {
+    id: "ticket_assigned",
+    label: "Ticket Assigned to You",
+    desc: "When a ticket is assigned to you",
+    inApp: true,
+    email: true,
+  },
+  {
+    id: "ticket_commented",
+    label: "Comment on Your Ticket",
+    desc: "When someone comments on your ticket",
+    inApp: true,
+    email: true,
+  },
+  {
+    id: "burn_rate_warning",
+    label: "Burn Rate Warning",
+    desc: "Client hours at 70% / 85% / 100% / 110%",
+    inApp: true,
+    email: true,
+  },
+  {
+    id: "mention",
+    label: "@Mention",
+    desc: "When you are @mentioned in a comment",
+    inApp: true,
+    email: true,
+  },
+  {
+    id: "wiki_updated",
+    label: "Wiki Page Updated",
+    desc: "Changes to pages you're watching",
+    inApp: true,
+    email: false,
+  },
+  {
+    id: "knowledge_gap",
+    label: "Knowledge Gap Detected",
+    desc: "EOS finds an undocumented topic cluster",
+    inApp: true,
+    email: false,
+  },
+  {
+    id: "release_notes",
+    label: "Release Notes Generated",
+    desc: "When release notes are ready for a sprint",
+    inApp: true,
+    email: false,
+  },
 ];
 
-function Toggle({ checked, onChange, disabled }: {
+function Toggle({
+  checked,
+  onChange,
+  disabled,
+}: {
   checked: boolean;
   onChange: (v: boolean) => void;
   disabled?: boolean;

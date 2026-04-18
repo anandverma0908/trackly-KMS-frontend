@@ -5,13 +5,24 @@ import Topbar from "./Topbar";
 import Sidebar from "./Sidebar";
 import OnboardingModal from "@/components/onboarding/OnboardingModal";
 import NotificationPanel from "@/components/nova/NotificationPanel";
+import EosPanel from "@/components/nova/EosPanel";
 import styles from "./AppShell.module.css";
-import NovaChatWidget from "../nova/NovaChatWidget";
 
 export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [eosOpen, setEosOpen] = useState(false);
+
+  function toggleNotif() {
+    setNotifOpen((v) => !v);
+    setEosOpen(false);
+  }
+
+  function toggleEos() {
+    setEosOpen((v) => !v);
+    setNotifOpen(false);
+  }
 
   return (
     <div className={styles.shell}>
@@ -28,14 +39,16 @@ export default function AppShell() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Right side: topbar + main — shrinks when notif panel opens */}
+      {/* Right side: topbar + main */}
       <div className={styles.rightSide}>
         <Topbar
           onMenuClick={() => setSidebarOpen((v) => !v)}
           onSidebarToggle={() => setSidebarCollapsed((v) => !v)}
           sidebarCollapsed={sidebarCollapsed}
           notifOpen={notifOpen}
-          onNotifToggle={() => setNotifOpen((v) => !v)}
+          onNotifToggle={toggleNotif}
+          eosOpen={eosOpen}
+          onEosToggle={toggleEos}
         />
         <main className={styles.main}>
           <Outlet />
@@ -50,12 +63,7 @@ export default function AppShell() {
             initial={{ width: 0 }}
             animate={{ width: 280 }}
             exit={{ width: 0 }}
-            transition={{
-              type: "spring",
-              stiffness: 280,
-              damping: 38,
-              mass: 0.7,
-            }}
+            transition={{ type: "spring", stiffness: 280, damping: 38, mass: 0.7 }}
           >
             <div className={styles.notifInner}>
               <NotificationPanel onClose={() => setNotifOpen(false)} />
@@ -64,7 +72,23 @@ export default function AppShell() {
         )}
       </AnimatePresence>
 
-      <NovaChatWidget />
+      {/* EOS panel — flex sibling, animates width */}
+      <AnimatePresence initial={false}>
+        {eosOpen && (
+          <motion.aside
+            className={styles.eosPanel}
+            initial={{ width: 0 }}
+            animate={{ width: 340 }}
+            exit={{ width: 0 }}
+            transition={{ type: "spring", stiffness: 280, damping: 38, mass: 0.7 }}
+          >
+            <div className={styles.eosInner}>
+              <EosPanel onClose={() => setEosOpen(false)} />
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
       <OnboardingModal />
     </div>
   );

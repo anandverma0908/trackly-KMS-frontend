@@ -27,12 +27,27 @@
   flex-shrink: 0;
   overflow: hidden;
   background: var(--surface);
-  /* border-left: 1px solid var(--border); */
+  border-left: 1px solid var(--border);
   height: 100vh;
 }
 
 .notifInner {
   width: 280px;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* EOS panel — flex sibling, slides in from right */
+.eosPanel {
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  height: 100vh;
+}
+
+.eosInner {
+  width: 340px;
   height: 100%;
   overflow: hidden;
 }
@@ -59,4 +74,15 @@
   }
 
   .notifInner { width: 100vw; }
+
+  .eosPanel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    height: 100vh;
+    z-index: 250;
+  }
+
+  .eosInner { width: 100vw; }
 }

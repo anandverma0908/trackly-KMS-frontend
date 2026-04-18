@@ -129,6 +129,27 @@ export function enableMocks() {
     fetchSprint: async (id: string)                => { await delay(250); return DUMMY_SPRINTS.find((s) => s.id === id) ?? DUMMY_SPRINTS[0] },
     fetchProject: async (pod: string)              => { await delay(350); return _buildMockProject(pod) },
 
+    fetchPodSummary: async () => {
+      await delay(350)
+      return (DUMMY_SUMMARY.by_pod as any[]).map((p) => {
+        const total = p.tickets
+        const done = Math.round(total * 0.55)
+        const active = Math.round(total * 0.25)
+        const blocked = Math.max(1, Math.round(total * 0.08))
+        const todo = Math.max(0, total - done - active - blocked)
+        return {
+          pod: p.pod,
+          statuses: {
+            Done: done,
+            'In Progress': active,
+            Blocked: blocked,
+            'To Do': todo,
+          },
+          total_hours: p.hours,
+        }
+      })
+    },
+
     fetchTicket: async (key: string) => {
       await delay(300)
       const t = DUMMY_TICKETS.tickets.find((x: any) => x.key === key || x.jira_key === key)

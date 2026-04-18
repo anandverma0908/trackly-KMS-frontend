@@ -277,10 +277,25 @@
   font-weight: 500;
   color: var(--text);
   display: flex;
+  align-items: center;
+  gap: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   margin-bottom: 2px;
+}
+
+.resultKey {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 
 .resultSnippet {
@@ -364,6 +379,36 @@
 .iconBtnActive {
   background: var(--accent-glow) !important;
   color: var(--accent) !important;
+}
+
+/* EOS button */
+.eosBtn {
+  position: relative !important;
+}
+
+.eosBtnInner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eosDot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  animation: pulse 2s infinite;
+}
+
+.eosBtnActive {
+  background: var(--accent-glow) !important;
+  color: var(--accent) !important;
+  border: 1px solid var(--accent-border) !important;
 }
 
 /* Sidebar toggle — desktop only */

@@ -20,6 +20,7 @@ import Divider from "@mui/material/Divider";
 import CircularProgress from "@mui/material/CircularProgress";
 
 import { RiMenuFoldLine, RiMenuLine, RiSearchLine, RiNotification3Line, RiMoonLine, RiSunLine, RiLogoutBoxRLine, RiUserLine, RiTicketLine, RiArticleLine, RiSparklingLine, RiCloseLine } from "react-icons/ri";
+import { GoNorthStar } from "react-icons/go";
 
 /* ── Commented out — preserved for later use ──────────────────────────────
 import DateRangePicker from "../ui/DateRangePicker";
@@ -32,6 +33,8 @@ interface TopbarProps {
   sidebarCollapsed?: boolean;
   notifOpen?: boolean;
   onNotifToggle?: () => void;
+  eosOpen?: boolean;
+  onEosToggle?: () => void;
 }
 
 type SearchMode = "semantic" | "nova";
@@ -42,6 +45,8 @@ export default function Topbar({
   sidebarCollapsed = false,
   notifOpen = false,
   onNotifToggle,
+  eosOpen = false,
+  onEosToggle,
 }: TopbarProps) {
   const navigate = useNavigate();
   const { colorMode, toggleMode } = useThemeStore();
@@ -311,6 +316,9 @@ export default function Topbar({
                     </span>
                     <div className={styles.resultBody}>
                       <div className={styles.resultTitle}>
+                        {r.key && (
+                          <span className={styles.resultKey}>{r.key}</span>
+                        )}
                         <span>{r.title}</span>
                       </div>
                       {r.snippet && (
@@ -366,6 +374,21 @@ export default function Topbar({
         <DateRangePicker />
         <div className={styles.sep} />
         ──────────────────────────────────────────────────────────────── */}
+
+        {/* EOS toggle */}
+        <Tooltip title="EOS Assistant" placement="bottom">
+          <IconButton
+            size="small"
+            onClick={onEosToggle}
+            className={`${styles.iconBtn} ${styles.eosBtn} ${eosOpen ? styles.eosBtnActive : ""}`}
+            aria-label="Toggle EOS assistant"
+          >
+            <span className={styles.eosBtnInner}>
+              <GoNorthStar size={18} />
+              {!eosOpen && <span className={styles.eosDot} />}
+            </span>
+          </IconButton>
+        </Tooltip>
 
         {/* Theme toggle */}
         <Tooltip title={isDark ? "Light mode" : "Dark mode"} placement="bottom">
