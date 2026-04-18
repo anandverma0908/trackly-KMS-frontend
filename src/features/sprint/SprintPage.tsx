@@ -12,8 +12,8 @@ import {
 } from "recharts";
 import type { Sprint, Ticket } from "@/types";
 import { IssueTypeBadge, StatusBadge } from "@/components/ui/Badge";
-import { useAuthStore } from "@/features/auth/useAuthStore";
-import styles from "./SprintPage.module.css";
+import { useAuthStore } from "@/features/auth/model/useAuthStore";
+import styles from "./SprintPage.module.scss";
 
 type View = "board" | "backlog" | "burndown" | "velocity";
 

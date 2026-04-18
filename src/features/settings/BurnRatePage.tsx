@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { fetchBurnRates, setClientBudget, fetchBurnRateAlerts } from "@/services/api";
 import type { ClientBudget } from "@/types";
-import styles from "./BurnRatePage.module.css";
+import styles from "./BurnRatePage.module.scss";
 
 export default function BurnRatePage() {
   const qc = useQueryClient();

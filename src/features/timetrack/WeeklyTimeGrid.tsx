@@ -2,9 +2,9 @@ import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { fetchTickets, logTime } from "@/services/api";
-import { useAuthStore } from "@/features/auth/useAuthStore";
+import { useAuthStore } from "@/features/auth/model/useAuthStore";
 import type { Ticket } from "@/types";
-import styles from "./WeeklyTimeGrid.module.css";
+import styles from "./WeeklyTimeGrid.module.scss";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 

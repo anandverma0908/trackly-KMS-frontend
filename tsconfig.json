@@ -18,14 +18,21 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
+      "@app/*": ["./src/app/*"],
       "@features/*": ["./src/features/*"],
-      "@components/*": ["./src/components/*"],
-      "@store/*": ["./src/store/*"],
-      "@services/*": ["./src/services/*"],
-      "@hooks/*": ["./src/hooks/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@layouts/*": ["./src/layouts/*"],
+      "@widgets/*": ["./src/widgets/*"],
+      "@pages/*": ["./src/pages/*"],
+      "@entities/*": ["./src/entities/*"],
       "@config/*": ["./src/config/*"],
-      "@utils/*": ["./src/utils/*"],
-      "@styles/*": ["./src/styles/*"]
+      "@components/*": ["./src/shared/ui/*"],
+      "@store/*": ["./src/shared/store/*"],
+      "@services/*": ["./src/shared/api/*"],
+      "@hooks/*": ["./src/shared/hooks/*"],
+      "@types/*": ["./src/shared/types/*"],
+      "@utils/*": ["./src/shared/lib/*"],
+      "@styles/*": ["./src/shared/styles/*"]
     }
   },
   "include": ["src"],

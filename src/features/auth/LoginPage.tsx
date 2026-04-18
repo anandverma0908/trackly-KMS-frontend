@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "./useAuthStore";
-import styles from "./LoginPage.module.css";
+import { useAuthStore } from "./model/useAuthStore";
+import styles from "./LoginPage.module.scss";
 import { MdArrowForward } from "react-icons/md";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
 import { FaLock } from "react-icons/fa";
@@ -42,7 +42,6 @@ export default function LoginPage() {
 
   return (
     <div className={styles.root}>
-      {/* AI ambient background */}
       <div className={styles.gridBg} />
       <div className={styles.glowTop} />
       <div className={styles.glowBottom} />
@@ -56,7 +55,6 @@ export default function LoginPage() {
       </div>
 
       <div className={styles.container}>
-        {/* ── Left — AI brand panel ── */}
         <div className={styles.left}>
           <div className={styles.leftInner}>
             {/* Brand */}
@@ -162,7 +160,6 @@ export default function LoginPage() {
           <div className={styles.footer}>© 2026 Trackly · Protected by enterprise-grade security</div>
         </div>
 
-        {/* ── Right — glass form ── */}
         <div className={styles.right}>
           <div className={styles.glassCard}>
             {/* Card header */}

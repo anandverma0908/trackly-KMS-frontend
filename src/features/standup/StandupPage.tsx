@@ -6,9 +6,9 @@ import {
 } from "@/services/api";
 import { fetchFilters } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
-import { useAuthStore } from "@/features/auth/useAuthStore";
+import { useAuthStore } from "@/features/auth/model/useAuthStore";
 import type { Standup } from "@/types";
-import styles from "./StandupPage.module.css";
+import styles from "./StandupPage.module.scss";
 
 export default function StandupPage() {
   const { user } = useAuthStore();

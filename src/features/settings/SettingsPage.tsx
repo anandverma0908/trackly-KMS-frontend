@@ -1,15 +1,15 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { useAuthStore, getAuthHeader } from "@/features/auth/useAuthStore";
+import { useAuthStore, getAuthHeader } from "@/features/auth/model/useAuthStore";
 import { useThemeStore } from "@/store";
 import { THEMES } from "@/config/themes";
-import { ROLE_COLORS } from "@/features/auth/types";
+import { ROLE_COLORS } from "@/features/auth/model/types";
 import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
-import UsersTab from "./UsersTab";
-import BudgetTab from "./BudgetTab";
-import notificationStyles from "./NotificationPrefsPage.module.css";
-import passwordStyles from "./ChangePasswordPage.module.css";
-import styles from "./SettingsPage.module.css";
+import UsersTab from "./ui/UsersTab";
+import BudgetTab from "./ui/BudgetTab";
+import notificationStyles from "./NotificationPrefsPage.module.scss";
+import passwordStyles from "./ChangePasswordPage.module.scss";
+import styles from "./SettingsPage.module.scss";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -91,7 +91,7 @@ export default function SettingsPage() {
   );
 }
 
-/* ── Profile Tab ── */
+/* Profile Tab */
 function ProfileTab() {
   const user = useAuthStore((s) => s.user);
   const roleColor = user ? ROLE_COLORS[user.role] : undefined;
@@ -149,7 +149,7 @@ function ProfileTab() {
   );
 }
 
-/* ── Appearance Tab ── */
+/* Appearance Tab */
 function AppearanceTab() {
   const { themeId, colorMode, setTheme, toggleMode } = useThemeStore();
 
@@ -223,7 +223,7 @@ function AppearanceTab() {
   );
 }
 
-/* ── Notifications Tab ── */
+/* Notifications Tab */
 function NotificationsTab() {
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [saving, setSaving] = useState(false);
@@ -378,7 +378,7 @@ function NotificationsTab() {
   );
 }
 
-/* ── Password Tab ── */
+/* Password Tab */
 function PasswordTab() {
   const user = useAuthStore((s) => s.user);
   const [current, setCurrent] = useState("");
@@ -547,7 +547,7 @@ function PasswordTab() {
   );
 }
 
-/* ── Notification helpers ── */
+/* Notification helpers */
 interface PrefRow {
   id: string;
   label: string;

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore, getAuthHeader } from "@/features/auth/useAuthStore";
+import { useAuthStore, getAuthHeader } from "@/features/auth/model/useAuthStore";
 import toast from "react-hot-toast";
-import styles from "./ChangePasswordPage.module.css";
+import styles from "./ChangePasswordPage.module.scss";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 

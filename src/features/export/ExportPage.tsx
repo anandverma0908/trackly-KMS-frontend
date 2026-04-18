@@ -10,7 +10,7 @@ import {
 import { QUERY_KEYS } from "@/config/queryKeys";
 import { toMonthLabel } from "@/utils/formatters";
 import type { ExportConfig, ReportType } from "@/types";
-import styles from "./ExportPage.module.css";
+import styles from "./ExportPage.module.scss";
 
 const QUICK_DATES = [
   {

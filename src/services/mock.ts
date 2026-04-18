@@ -1,7 +1,7 @@
 import { DUMMY_SUMMARY, DUMMY_TICKETS, DUMMY_FILTERS, DUMMY_SPRINTS } from '@/utils/dummyData'
-import { MOCK_PROJECTS } from '@/features/spaces/spacesData'
+import { MOCK_PROJECTS } from '@/features/spaces/model/spacesData'
 import type { FilterState, TicketCreate } from '@/types'
-import type { Project } from '@/features/spaces/spacesData'
+import type { Project } from '@/features/spaces/model/spacesData'
 
 const delay = (ms = 450) => new Promise(r => setTimeout(r, ms))
 

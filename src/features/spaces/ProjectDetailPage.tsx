@@ -7,13 +7,13 @@ import {
   generateReleaseNotes,
 } from "@/services/api";
 import { getPodColor } from "@/config/themes";
-import { getStatusColor } from "./spacesData";
-import BacklogTab from "./tabs/BacklogTab";
+import { getStatusColor } from "./model/spacesData";
+import BacklogTab from "./ui/tabs/BacklogTab";
 import toast from "react-hot-toast";
 
-import SummaryTab from "./tabs/SummaryTab";
-import ActiveSprintsTab from "./tabs/ActiveSprintsTab";
-import styles from "./ProjectDetailPage.module.css";
+import SummaryTab from "./ui/tabs/SummaryTab";
+import ActiveSprintsTab from "./ui/tabs/ActiveSprintsTab";
+import styles from "./ProjectDetailPage.module.scss";
 
 import {
   RiArrowLeftLine,
@@ -56,12 +56,10 @@ export default function ProjectDetailPage() {
   const [activeTab, setActiveTab] = useState<Tab>("active-sprints");
   const [showCreateTask, setShowCreateTask] = useState(false);
 
-  /* ── EOS NOVA tab state ── */
   const [retroResult, setRetroResult] = useState<string | null>(null);
   const [releaseResult, setReleaseResult] = useState<string | null>(null);
   // const [predictionLoaded, setPredictionLoaded] = useState(false);
 
-  /* ── Fetch project data ── */
   const { data: project, isLoading } = useQuery({
     queryKey: ["space-project", pod],
     queryFn: () => fetchProject(pod!),
@@ -71,7 +69,6 @@ export default function ProjectDetailPage() {
 
   const podColor = getPodColor(pod ?? "");
 
-  /* ── Sprint retro mutation ── */
   const retroMut = useMutation({
     mutationFn: (sprintId: string) => generateSprintRetro(sprintId),
     onSuccess: (data) => {
@@ -97,7 +94,6 @@ export default function ProjectDetailPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  /* ── Sprint prediction (lazy, fires once per project load) ── */
   // async function loadPrediction(sprint: {
   //   name: string;
   //   donePoints: number;
@@ -171,7 +167,6 @@ export default function ProjectDetailPage() {
 
   return (
     <div className={styles.page}>
-      {/* ── Project Header ── */}
       <div className={`${styles.header} fade-up`}>
         <div className={styles.headerLeft}>
           <button
@@ -311,7 +306,6 @@ export default function ProjectDetailPage() {
       </div>
 
       <div className={styles.tabContainer}>
-        {/* ── Tabs ── */}
         <div className={styles.tabBarWrap}>
           <div className={styles.tabBar}>
             {TABS.map((tab) => (
@@ -341,7 +335,6 @@ export default function ProjectDetailPage() {
           )}
         </div>
 
-        {/* ── Color accent line ── */}
         <div
           className={styles.accentLine}
           style={{
@@ -349,7 +342,6 @@ export default function ProjectDetailPage() {
           }}
         />
 
-        {/* ── Tab Content ── */}
         <div className={styles.tabContent}>
           {activeTab === "summary" && <SummaryTab project={project} />}
           {activeTab === "backlog" && <BacklogTab project={project} />}
@@ -371,7 +363,6 @@ export default function ProjectDetailPage() {
               </div>
 
               <div className={styles.novaActions}>
-                {/* Sprint Retro */}
                 <div className={styles.novaCard}>
                   <div className={styles.novaCardTitle}>
                     <RiFlashlightLine size={14} color="var(--accent)" />
@@ -409,7 +400,6 @@ export default function ProjectDetailPage() {
                   )}
                 </div>
 
-                {/* Release Notes */}
                 <div className={styles.novaCard}>
                   <div className={styles.novaCardTitle}>
                     <RiTaskLine size={14} color="var(--accent)" />

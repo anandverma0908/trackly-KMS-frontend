@@ -1,0 +1,21 @@
+@use "variables" as *;
+
+@for $i from 1 through 8 {
+  .fade-up-#{$i} {
+    animation: fadeUp 0.5s #{$i * 0.06}s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+.fade-up {
+  animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mono {
+  font-family: $font-mono;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

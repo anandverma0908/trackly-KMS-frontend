@@ -8,9 +8,9 @@ import { useDebounce } from "@/hooks";
 import { formatDate, formatHours } from "@/utils/formatters";
 import { IssueTypeBadge, StatusBadge, PODBadge } from "@/components/ui/Badge";
 import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
-import CreateTicketDrawer from "./CreateTicketDrawer";
+import CreateTicketDrawer from "./ui/CreateTicketDrawer";
 import type { Ticket } from "@/types";
-import styles from "./TicketsPage.module.css";
+import styles from "./TicketsPage.module.scss";
 
 const COLUMNS: Column<Ticket>[] = [
   {

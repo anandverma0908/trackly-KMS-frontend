@@ -27,8 +27,8 @@ import type {
   BurnRateAlert,
   WorkloadEntry,
 } from "@/types";
-import type { Project } from "@/features/spaces/spacesData";
-import { getAuthHeader } from "@/features/auth/useAuthStore";
+import type { Project } from "@/features/spaces/model/spacesData";
+import { getAuthHeader } from "@/features/auth/model/useAuthStore";
 
 const api = axios.create({
   baseURL: "/api",

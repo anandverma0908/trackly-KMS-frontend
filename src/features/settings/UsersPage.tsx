@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { useAuthStore, getAuthHeader } from "@/features/auth/useAuthStore";
+import { useAuthStore, getAuthHeader } from "@/features/auth/model/useAuthStore";
 import { initials } from "@/utils/formatters";
 import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
-import styles from "./UsersPage.module.css";
+import styles from "./UsersPage.module.scss";
 import { MdModeEdit } from "react-icons/md";
 import { TbKeyFilled } from "react-icons/tb";
 import { TbTrashFilled } from "react-icons/tb";

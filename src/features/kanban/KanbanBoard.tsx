@@ -22,9 +22,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchTickets, updateTicketStatus, fetchTicket } from "@/services/api";
 import { IssueTypeBadge } from "@/components/ui/Badge";
-import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
+import CreateTicketDrawer from "@/features/tickets/ui/CreateTicketDrawer";
 import type { Ticket } from "@/types";
-import styles from "./KanbanBoard.module.css";
+import styles from "./KanbanBoard.module.scss";
 
 const COLUMNS = [
   { id: "To Do", label: "To Do", color: "var(--text-3)" },
@@ -290,7 +290,7 @@ export default function KanbanBoard() {
   );
 }
 
-/* ── Column ── */
+/* Column */
 function KanbanColumn({
   column,
   tickets,
@@ -357,7 +357,7 @@ function KanbanColumn({
   );
 }
 
-/* ── Sortable Card ── */
+/* Sortable Card */
 function SortableCard({
   ticket,
   onClick,
@@ -391,7 +391,7 @@ function SortableCard({
   );
 }
 
-/* ── Card Content ── */
+/* Card Content */
 function TicketCardContent({
   ticket,
   onClick,

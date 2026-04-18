@@ -1,7 +1,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
-import styles from "./NotificationPrefsPage.module.css";
+import styles from "./NotificationPrefsPage.module.scss";
 
 interface PrefRow {
   id:     string;

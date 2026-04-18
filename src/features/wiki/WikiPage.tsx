@@ -15,9 +15,9 @@ import {
 } from "@/services/api";
 import { useWikiStore } from "@/store";
 import type { WikiPage as WikiPageType } from "@/types";
-import PageEditor from "./PageEditor";
-import RelatedDocsWidget from "./RelatedDocsWidget";
-import styles from "./WikiPage.module.css";
+import PageEditor from "./ui/PageEditor";
+import RelatedDocsWidget from "./ui/RelatedDocsWidget";
+import styles from "./WikiPage.module.scss";
 
 import { BiFileBlank } from "react-icons/bi";
 import {
@@ -202,7 +202,7 @@ export default function WikiPage() {
 
   return (
     <div className={`${styles.page} fade-up`}>
-      {/* ── Dashboard-style header ── */}
+      {/* Dashboard-style header */}
       <div className={`fade-up`}>
         <div>
           <h1 className={styles.title}>Wiki</h1>
@@ -214,7 +214,7 @@ export default function WikiPage() {
         </div>
       </div>
 
-      {/* ── Layout: sidebar + content ── */}
+      {/* Layout: sidebar + content */}
       <div className={styles.layout}>
         {/* Sidebar */}
         <aside className={`${styles.sidebar} fade-up-1`}>
@@ -491,7 +491,7 @@ export default function WikiPage() {
   );
 }
 
-/* ── Page Tree Item ── */
+/* Page Tree Item */
 function PageTreeItem({
   page,
   activeId,
@@ -546,7 +546,7 @@ function PageTreeItem({
   );
 }
 
-/* ── Helpers ── */
+/* Helpers */
 function buildTree(
   pages: WikiPageType[],
 ): (WikiPageType & { children: WikiPageType[] })[] {

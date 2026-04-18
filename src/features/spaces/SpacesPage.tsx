@@ -10,10 +10,10 @@ import {
   deleteSpace,
   type PodSummary,
 } from "@/services/api";
-import { useAuthStore } from "@/features/auth/useAuthStore";
+import { useAuthStore } from "@/features/auth/model/useAuthStore";
 import { getPodColor } from "@/config/themes";
 import type { Sprint } from "@/types";
-import styles from "./SpacesPage.module.css";
+import styles from "./SpacesPage.module.scss";
 
 import {
   RiSearchLine,
@@ -22,10 +22,9 @@ import {
   RiAddLine,
   RiDeleteBinLine,
 } from "react-icons/ri";
-import SpacesKPIStrip from "./SpacesKPIStrip";
-import CreateSpaceDrawer from "./CreateSpaceDrawer";
+import SpacesKPIStrip from "./ui/SpacesKPIStrip";
+import CreateSpaceDrawer from "./ui/CreateSpaceDrawer";
 
-/* ── Derived pod card data ── */
 interface PodCard {
   pod: string;
   color: string;
@@ -118,20 +117,17 @@ export default function SpacesPage() {
 
   return (
     <div className={styles.page}>
-      {/* ── Header ── */}
       <div className={`fade-up`}>
         <div>
           <h1 className={styles.title}>Spaces</h1>
         </div>
       </div>
 
-      {/* ── KPI Strip ── */}
       <div className={`${styles.kpiStrip} fade-up`}>
         <SpacesKPIStrip stats={stats} loading={loadingPods} />
       </div>
 
       <div className={styles.container}>
-        {/* ── Header ── */}
         <div className={`${styles.header} fade-up`}>
           <div>
             <div className={styles.searchWrap}>
@@ -191,7 +187,6 @@ export default function SpacesPage() {
           </div>
         </div>
 
-        {/* ── Grid / List ── */}
         {loadingPods ? (
           <div className={styles.loading}>Loading spaces…</div>
         ) : cards.length === 0 ? (
@@ -251,7 +246,6 @@ export default function SpacesPage() {
   );
 }
 
-/* ── Pod Card ── */
 function PodCard({
   card,
   delay,
@@ -415,7 +409,6 @@ function PodCard({
   );
 }
 
-/* ── Pod Row (list view) ── */
 function PodRow({
   card,
   onClick,

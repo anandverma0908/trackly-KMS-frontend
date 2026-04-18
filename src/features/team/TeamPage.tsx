@@ -6,10 +6,10 @@ import { QUERY_KEYS } from "@/config/queryKeys";
 import { useDebounce } from "@/hooks";
 import { initials, formatNumber } from "@/utils/formatters";
 import EmptyState from "@/components/ui/EmptyState";
-import styles from "./TeamPage.module.css";
-import EngineerDrawer from "./EngineerDrawer";
+import styles from "./TeamPage.module.scss";
+import EngineerDrawer from "./ui/EngineerDrawer";
 import { SummaryByUser } from "@/types";
-import { useAuthStore } from "../auth/useAuthStore";
+import { useAuthStore } from "@/features/auth/model/useAuthStore";
 
 export default function TeamPage() {
   const [search, setSearch] = useState("");
@@ -83,7 +83,6 @@ export default function TeamPage() {
 
   return (
     <div className={styles.page}>
-      {/* Header */}
       <div className={`${styles.header} fade-up`}>
         <div>
           <h1 className={styles.title}>Team</h1>

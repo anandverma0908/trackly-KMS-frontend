@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import type { KnowledgeGap } from "@/types";
-import styles from "./AnalyticsPage.module.css";
+import styles from "./AnalyticsPage.module.scss";
 
 export default function AnalyticsPage() {
   const qc = useQueryClient();

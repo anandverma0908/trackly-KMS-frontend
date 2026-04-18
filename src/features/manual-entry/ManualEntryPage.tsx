@@ -2,13 +2,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchFilters } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
-import { useManualEntry } from "./useManualEntry";
-import StepInput from "./StepInput";
-import StepParsing from "./StepParsing";
-import StepPreview from "./StepPreview";
-import StepConfirmed from "./StepConfirmed";
-import MyTimesheets from "./MyTimesheets";
-import styles from "./ManualEntryPage.module.css";
+import { useManualEntry } from "./model/useManualEntry";
+import StepInput from "./ui/StepInput";
+import StepParsing from "./ui/StepParsing";
+import StepPreview from "./ui/StepPreview";
+import StepConfirmed from "./ui/StepConfirmed";
+import MyTimesheets from "./ui/MyTimesheets";
+import styles from "./ManualEntryPage.module.scss";
 import { BsFillCalendar2EventFill } from "react-icons/bs";
 import { PiStarFourFill } from "react-icons/pi";
 
@@ -53,7 +53,7 @@ export default function ManualEntryPage() {
 
   return (
     <div className={styles.page}>
-      {/* ── Page header ── */}
+      {/* Page header */}
       <div className={`${styles.header} fade-up`}>
         <div>
           <h1 className={styles.title}>Timelog</h1>
@@ -79,9 +79,9 @@ export default function ManualEntryPage() {
         </div>
       </div>
 
-      {/* ── Tab toggle ── */}
+      {/* Tab toggle */}
 
-      {/* ── Tab: AI Entry ── */}
+      {/* Tab: AI Entry */}
       {activeTab === "entry" && (
         <>
           {/* Progress stepper */}
@@ -160,7 +160,7 @@ export default function ManualEntryPage() {
         </>
       )}
 
-      {/* ── Tab: Timesheets ── */}
+      {/* Tab: Timesheets */}
       {activeTab === "timesheets" && (
         <div className="fade-up-1">
           <MyTimesheets />

@@ -1,6 +1,6 @@
-import { useDashboard } from "./useDashboard";
-import { useAuthStore } from "@/features/auth/useAuthStore";
-import styles from "./DashboardPage.module.css";
+import { useDashboard } from "./model/useDashboard";
+import { useAuthStore } from "@/features/auth/model/useAuthStore";
+import styles from "./DashboardPage.module.scss";
 
 // Core widgets
 import DashboardKPIStrip from "./widgets/DashboardKPIStrip";
@@ -41,7 +41,6 @@ export default function DashboardPage() {
 
   return (
     <div className={styles.page}>
-      {/* ── Header ── */}
       {/* <div className={`${styles.header} fade-up`}>
         <div className={styles.titleRow}>
           <h1 className={styles.title}>
@@ -59,12 +58,10 @@ export default function DashboardPage() {
         </div>
       </div> */}
 
-      {/* ── KPI Strip ── */}
       <div className={`${styles.kpiRow} fade-up-1`}>
         <DashboardKPIStrip />
       </div>
 
-      {/* ── Main row: primary chart + active tickets panel ── */}
       <div className={`${styles.mainRow} fade-up-2`}>
         {/* Right: active tickets for everyone */}
         <MyActiveTickets />
@@ -72,13 +69,11 @@ export default function DashboardPage() {
         <RecentActivity limit={5} />
       </div>
 
-      {/* ── Mid row: velocity + sprint (timesheet moved to lead section) ── */}
       <div className={`${styles.midRow} fade-up-3`}>
         <PodVelocity />
         {isTeamMember ? <WeeklyHeatmap /> : <SprintBurndown />}
       </div>
 
-      {/* ── Lead section ── */}
       {isLead && (
         <section className={`${styles.section} fade-up-3`}>
           <div className={styles.sectionHeader}>
@@ -96,7 +91,6 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* ── Manager section ── */}
       {isManager && (
         <section className={`${styles.section} fade-up-3`}>
           <div className={styles.sectionHeader}>
@@ -114,7 +108,6 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* ── Admin section ── */}
       {isAdmin && (
         <section className={`${styles.section} fade-up-3`}>
           <div className={styles.sectionHeader}>
