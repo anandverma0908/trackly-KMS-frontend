@@ -13,6 +13,8 @@ import toast from "react-hot-toast";
 
 import SummaryTab from "./tabs/SummaryTab";
 import ActiveSprintsTab from "./tabs/ActiveSprintsTab";
+import RoadmapTab from "./tabs/RoadmapTab";
+import SprintsTab from "./tabs/SprintsTab";
 import styles from "./ProjectDetailPage.module.css";
 
 import {
@@ -23,37 +25,25 @@ import {
   RiTimeLine,
   RiAddLine,
   RiSparklingLine,
+  RiRoadMapLine,
+  RiCalendar2Line,
 } from "react-icons/ri";
 
-type Tab = "summary" | "backlog" | "roadmap" | "active-sprints" | "nova";
+type Tab = "summary" | "backlog" | "board" | "sprints" | "roadmap" | "nova";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  {
-    id: "summary",
-    label: "Summary",
-    icon: <RiBarChartBoxLine size={15} />,
-  },
-  {
-    id: "backlog",
-    label: "Backlog",
-    icon: <RiTaskLine size={15} />,
-  },
-  {
-    id: "active-sprints",
-    label: "Active Sprints",
-    icon: <RiFlashlightLine size={15} />,
-  },
-  {
-    id: "nova",
-    label: "EOS",
-    icon: <RiSparklingLine size={15} />,
-  },
+  { id: "summary",  label: "Summary",  icon: <RiBarChartBoxLine size={15} /> },
+  { id: "backlog",  label: "Backlog",  icon: <RiTaskLine size={15} /> },
+  { id: "board",    label: "Board",    icon: <RiFlashlightLine size={15} /> },
+  { id: "sprints",  label: "Sprints",  icon: <RiCalendar2Line size={15} /> },
+  { id: "roadmap",  label: "Roadmap",  icon: <RiRoadMapLine size={15} /> },
+  { id: "nova",     label: "EOS",      icon: <RiSparklingLine size={15} /> },
 ];
 
 export default function ProjectDetailPage() {
   const { projectId: pod } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<Tab>("active-sprints");
+  const [activeTab, setActiveTab] = useState<Tab>("summary");
   const [showCreateTask, setShowCreateTask] = useState(false);
 
   /* ── EOS NOVA tab state ── */
@@ -330,7 +320,7 @@ export default function ProjectDetailPage() {
               </button>
             ))}
           </div>
-          {activeTab === "active-sprints" && (
+          {activeTab === "board" && (
             <button
               className="btn btn-primary btn-sm"
               onClick={() => setShowCreateTask(true)}
@@ -351,9 +341,11 @@ export default function ProjectDetailPage() {
 
         {/* ── Tab Content ── */}
         <div className={styles.tabContent}>
-          {activeTab === "summary" && <SummaryTab project={project} />}
-          {activeTab === "backlog" && <BacklogTab project={project} />}
-          {activeTab === "active-sprints" && (
+          {activeTab === "summary"  && <SummaryTab project={project} />}
+          {activeTab === "backlog"  && <BacklogTab project={project} />}
+          {activeTab === "sprints"  && <SprintsTab project={project} />}
+          {activeTab === "roadmap"  && <RoadmapTab project={project} />}
+          {activeTab === "board" && (
             <ActiveSprintsTab
               project={project}
               externalCreateOpen={showCreateTask}

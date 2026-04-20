@@ -956,3 +956,221 @@
   color: var(--text-2);
   margin-top: 4px;
 }
+
+/* ── Live Duplicate Detection Banner ── */
+.liveDupeBanner {
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.liveDupeHeader {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--amber);
+}
+
+.liveDupeHeader span {
+  flex: 1;
+}
+
+.liveDupeClose {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 2px;
+}
+
+.liveDupeItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(251, 191, 36, 0.12);
+}
+
+.liveDupeKey {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-2);
+  background: var(--surface-3);
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.liveDupeSummary {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.liveDupePct {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--amber);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.liveDupeEos {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+
+/* ── Story Point Estimation Callout ── */
+.storyEstCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.storyEstLeft {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+}
+
+.storyEstIcon {
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.storyEstTitle {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.storyEstMeta {
+  display: block;
+  font-size: 10px;
+  color: var(--text-3);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.storyEstActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.storyEstAccept {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+
+.storyEstAccept:hover {
+  opacity: 0.88;
+}
+
+.storyEstDismiss {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+
+/* ── EOS Code-Aware Context ── */
+.codeCtxCard {
+  border: 1px solid var(--accent-border, rgba(79,126,255,0.25));
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+.codeCtxHeader {
+  display: flex; align-items: center; gap: 7px;
+  padding: 10px 14px;
+  background: var(--accent-dim, rgba(79,126,255,0.06));
+  cursor: pointer; user-select: none;
+}
+.codeCtxTitle { flex: 1; font-size: 0.82rem; font-weight: 600; color: var(--text); }
+.codeCtxChevron { font-size: 0.65rem; color: var(--text-3); }
+
+.eosBadgeInline {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--accent-dim, rgba(79,126,255,0.1));
+  border: 1px solid var(--accent-border, rgba(79,126,255,0.25));
+  border-radius: 4px; padding: 1px 5px;
+  font-size: 0.62rem; font-weight: 700; color: var(--accent);
+}
+
+.codeCtxBody {
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 12px;
+  background: var(--surface);
+}
+
+.codeCtxSection { display: flex; flex-direction: column; gap: 5px; }
+.codeCtxSectionTitle {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 2px;
+}
+
+.codeFile {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.codeFilePath { font-size: 0.72rem; font-family: var(--font-mono); color: var(--accent); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.codeFileReason { font-size: 0.68rem; color: var(--text-3); flex-shrink: 0; }
+
+.codePr {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.codePrKey { font-size: 0.72rem; font-family: var(--font-mono); color: var(--text-2); flex-shrink: 0; }
+.codePrTitle { flex: 1; font-size: 0.78rem; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.codePrStatus { font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; flex-shrink: 0; }
+.codePrMerged { background: rgba(52,211,153,0.12); color: var(--green, #34D399); }
+.codePrOpen   { background: rgba(79,126,255,0.1);  color: var(--accent); }
+
+.codeCtxNote {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.68rem; color: var(--text-3);
+  padding-top: 2px;
+}

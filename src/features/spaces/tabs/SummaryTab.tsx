@@ -1,262 +1,275 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { novaQuery } from "@/services/api";
 import {
-  PieChart, Pie, Cell, Tooltip as ReTooltip, ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis,
-  BarChart, Bar,
+  BarChart, Bar, Tooltip as ReTooltip, ResponsiveContainer,
 } from "recharts";
 import LinearProgress from "@mui/material/LinearProgress";
+import {
+  RiSparklingLine, RiAlertLine, RiCheckLine,
+  RiCloseLine, RiRefreshLine, RiBarChartBoxLine,
+  RiTimeLine, RiTeamLine, RiLightbulbLine,
+} from "react-icons/ri";
 import type { Project, ProjectTask } from "../spacesData";
+import SummaryKPIStrip from "./SummaryKPIStrip";
 import styles from "./SummaryTab.module.css";
 
-import { RiLightbulbFlashLine } from "react-icons/ri";
-import SummaryKPIStrip from "./SummaryKPIStrip";
-
-/* ── Custom pie label ── */
-const RADIAN = Math.PI / 180;
-function PieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) {
-  if (percent < 0.05) return null;
-  const r  = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const x  = cx + r * Math.cos(-midAngle * RADIAN);
-  const y  = cy + r * Math.sin(-midAngle * RADIAN);
+function EOSBadge() {
   return (
-    <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central"
-      fontSize={10} fontWeight={700}>
-      {`${(percent * 100).toFixed(0)}%`}
-    </text>
+    <span className={styles.eosBadge}>
+      <RiSparklingLine size={9} /> EOS
+    </span>
   );
 }
 
 export default function SummaryTab({ project }: { project: Project }) {
   const qc = useQueryClient();
+  const [briefDismissed, setBriefDismissed] = useState(false);
+
   const allTasks: ProjectTask[] = useMemo(
-    () => project.sprints.flatMap(s => s.tasks),
+    () => project.sprints.flatMap((s) => s.tasks),
     [project]
   );
 
   /* ── KPIs ── */
   const kpis = useMemo(() => {
-    const total     = allTasks.length;
-    const done      = allTasks.filter(t => t.status === "Done").length;
-    const blocked   = allTasks.filter(t => t.status === "Blocked").length;
-    const overdue   = allTasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "Done").length;
-    const updated   = allTasks.filter(t => t.updatedAt >= "2025-04-01").length;
+    const total   = allTasks.length;
+    const done    = allTasks.filter((t) => t.status === "Done").length;
+    const blocked = allTasks.filter((t) => t.status === "Blocked").length;
+    const overdue = allTasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "Done").length;
+    const updated = allTasks.filter((t) => t.updatedAt >= "2025-04-01").length;
     return { total, done, blocked, overdue, updated };
   }, [allTasks]);
 
-  /* ── Status distribution ── */
-  const statusData = useMemo(() => {
-    const map: Record<string, number> = {};
-    allTasks.forEach(t => { map[t.status] = (map[t.status] ?? 0) + 1; });
-    const colors: Record<string, string> = {
-      "To Do":       "#606060",
-      "In Progress": "#FBBF24",
-      "In Review":   "#A78BFA",
-      "Blocked":     "#F87171",
-      "Done":        "#34D399",
-    };
-    return Object.entries(map).map(([name, value]) => ({
-      name, value, color: colors[name] ?? "#4F7EFF",
-    }));
-  }, [allTasks]);
+  /* ── Health score & radar ── */
+  const radarData = useMemo(() => {
+    const bugCount    = allTasks.filter((t) => t.type === "Bug").length;
+    const doneRate    = allTasks.length > 0 ? Math.round((kpis.done / allTasks.length) * 100) : 0;
+    const blockedRate = allTasks.length > 0 ? Math.round((1 - kpis.blocked / allTasks.length) * 100) : 100;
+    const overduePen  = allTasks.length > 0 ? Math.max(0, Math.round((1 - (kpis.overdue / allTasks.length) * 2) * 100)) : 100;
+    const velocity    = Math.min(100, Math.round(project.progress + 10));
+    const momentum    = Math.min(100, project.weeklyActivity.reduce((s, v) => s + v, 0) * 3);
+    const quality     = Math.round((1 - bugCount / Math.max(allTasks.length, 1)) * 100);
+    return [
+      { metric: "Delivery",  score: doneRate },
+      { metric: "Velocity",  score: velocity },
+      { metric: "Clarity",   score: 72 },
+      { metric: "Momentum",  score: momentum },
+      { metric: "Flow",      score: blockedRate },
+      { metric: "Quality",   score: quality },
+      { metric: "On-Time",   score: overduePen },
+    ];
+  }, [allTasks, kpis, project]);
 
-  /* ── Priority distribution ── */
-  const priorityData = useMemo(() => {
-    const map: Record<string, number> = {};
-    allTasks.forEach(t => { map[t.priority] = (map[t.priority] ?? 0) + 1; });
-    const colors: Record<string, string> = {
-      Critical: "#F87171",
-      High:     "#FBBF24",
-      Medium:   "#4F7EFF",
-      Low:      "#606060",
-    };
-    return Object.entries(map).map(([name, value]) => ({
-      name, value, color: colors[name] ?? "#4F7EFF",
-    }));
-  }, [allTasks]);
+  const healthScore = Math.round(radarData.reduce((s, d) => s + d.score, 0) / radarData.length);
+  const healthColor = healthScore >= 70 ? "var(--green)" : healthScore >= 50 ? "var(--amber)" : "var(--red)";
 
-  /* ── Weekly activity (7 days from project) ── */
+  /* ── Weekly activity ── */
   const activityData = useMemo(() => {
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     return project.weeklyActivity.map((v, i) => ({ day: days[i], tasks: v }));
   }, [project]);
 
-  /* ── Sprint progress ── */
-  const sprintProgressData = useMemo(() => {
-    return project.sprints.map(s => ({
-      name:       s.name.split("—")[0].trim(),
-      done:       s.donePoints,
-      remaining:  s.totalPoints - s.donePoints,
-      total:      s.totalPoints,
-      pct:        Math.round((s.donePoints / Math.max(s.totalPoints, 1)) * 100),
-    }));
-  }, [project]);
-
-  /* ── Type breakdown ── */
-  const typeData = useMemo(() => {
-    const map: Record<string, number> = {};
-    allTasks.forEach(t => { map[t.type] = (map[t.type] ?? 0) + 1; });
-    return Object.entries(map).map(([name, value]) => ({ name, value }));
-  }, [allTasks]);
-
   /* ── Team workload ── */
   const workloadData = useMemo(() => {
     const map: Record<string, { done: number; inProgress: number; todo: number }> = {};
-    allTasks.forEach(t => {
+    allTasks.forEach((t) => {
       const who = t.assignee || "—";
       if (!map[who]) map[who] = { done: 0, inProgress: 0, todo: 0 };
-      if (t.status === "Done")         map[who].done++;
+      if (t.status === "Done") map[who].done++;
       else if (t.status === "In Progress") map[who].inProgress++;
-      else                             map[who].todo++;
+      else map[who].todo++;
     });
-    return Object.entries(map).map(([name, v]) => ({
-      name: name.split(" ")[0],
-      ...v,
-      total: v.done + v.inProgress + v.todo,
-    })).sort((a, b) => b.total - a.total).slice(0, 6);
+    return Object.entries(map)
+      .map(([name, v]) => ({ name: name.split(" ")[0], ...v, total: v.done + v.inProgress + v.todo }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 6);
   }, [allTasks]);
 
-  /* ── EOS AI Insights ── */
-  const insightPrompt = useMemo(() => {
-    const bugCount = allTasks.filter(t => t.type === "Bug").length;
-    const top = [...workloadData].sort((a, b) => b.total - a.total)[0];
-    return `Analyze project "${project.key}" and give exactly 4 insights about its health.
-Stats: ${kpis.total} total tasks, ${kpis.done} done, ${kpis.blocked} blocked, ${kpis.overdue} overdue, ${bugCount} bugs. Sprint progress: ${project.progress}%. Top engineer by load: ${top?.name ?? "N/A"} with ${top?.total ?? 0} tasks.
-Reply with exactly 4 lines. Start each with ✓ for positive, ⚠ for warning, ⚡ for risk, or 💡 for recommendation. Keep each line under 90 chars.`;
-  }, [project.key, project.progress, kpis, allTasks, workloadData]);
+  /* ── EOS Project Brief (streaming-style via novaQuery) ── */
+  const briefPrompt = useMemo(() => {
+    const activeSprint = project.sprints.find((s) => s.status === "active");
+    const bugCount = allTasks.filter((t) => t.type === "Bug").length;
+    return `Write a 2-sentence executive brief for project "${project.key}": Health score ${healthScore}/100, ${kpis.done}/${kpis.total} tasks done, ${kpis.blocked} blocked, ${kpis.overdue} overdue, ${bugCount} bugs, ${project.progress}% overall progress. Active sprint: ${activeSprint?.name ?? "none"}. Be direct and specific. Start with the most important signal.`;
+  }, [project, kpis, allTasks, healthScore]);
 
-  const eosInsights = useQuery({
-    queryKey: ["eos-summary-insights", project.key],
+  const brief = useQuery({
+    queryKey: ["eos-brief", project.key],
+    queryFn: () => novaQuery(briefPrompt),
+    staleTime: 1000 * 60 * 15,
+    retry: 1,
+  });
+
+  /* ── EOS Insight Cards (3 fixed types) ── */
+  const insightPrompt = useMemo(() => {
+    const top = [...workloadData].sort((a, b) => b.total - a.total)[0];
+    const bugCount = allTasks.filter((t) => t.type === "Bug").length;
+    return `Analyze project "${project.key}" and give exactly 3 insights — one velocity signal, one risk signal, one recommendation.
+Stats: ${kpis.total} tasks, ${kpis.done} done, ${kpis.blocked} blocked, ${kpis.overdue} overdue, ${bugCount} bugs, ${project.progress}% progress.
+Top engineer: ${top?.name ?? "N/A"} (${top?.total ?? 0} tasks).
+Format: each line starts with "VELOCITY:", "RISK:", or "REC:" then a space then the insight (max 90 chars each).`;
+  }, [project, kpis, allTasks, workloadData]);
+
+  const insights = useQuery({
+    queryKey: ["eos-insights", project.key],
     queryFn: () => novaQuery(insightPrompt),
     staleTime: 1000 * 60 * 20,
     retry: 1,
   });
 
-  /* ── Health score ── */
-  const healthScore = useMemo(() => {
-    const doneRate   = allTasks.length > 0 ? kpis.done / allTasks.length : 0;
-    const blockedRate = allTasks.length > 0 ? 1 - (kpis.blocked / allTasks.length) : 1;
-    const overduePenalty = allTasks.length > 0 ? 1 - (kpis.overdue / allTasks.length) * 2 : 1;
-    const velocityScore  = Math.min(project.progress / 100 + 0.1, 1);
+  const parsedInsights = useMemo(() => {
+    if (!insights.data) return null;
+    const lines = insights.data.answer.split("\n").map((l) => l.trim()).filter(Boolean);
+    const get = (prefix: string) => lines.find((l) => l.startsWith(prefix))?.replace(prefix, "").trim() ?? null;
     return {
-      doneRate:     Math.round(doneRate * 100),
-      blockedRate:  Math.round(blockedRate * 100),
-      overdueRate:  Math.round(Math.max(overduePenalty, 0) * 100),
-      velocity:     Math.round(velocityScore * 100),
+      velocity: get("VELOCITY:"),
+      risk:     get("RISK:"),
+      rec:      get("REC:"),
     };
-  }, [allTasks, kpis, project.progress]);
+  }, [insights.data]);
 
-  /* ── Radar data (team health dimensions) ── */
-  const radarData = [
-    { metric: "Delivery",   score: healthScore.doneRate },
-    { metric: "Velocity",   score: healthScore.velocity },
-    { metric: "Clarity",    score: 72 },
-    { metric: "Momentum",   score: Math.min(project.weeklyActivity.reduce((s,v)=>s+v,0) * 3, 100) },
-    { metric: "Flow",       score: healthScore.blockedRate },
-    { metric: "Quality",    score: Math.round((1 - allTasks.filter(t=>t.type==="Bug").length / Math.max(allTasks.length,1)) * 100) },
-  ];
-
-  const overallHealth = Math.round(
-    radarData.reduce((s, d) => s + d.score, 0) / radarData.length
-  );
+  /* ── Risk flags ── */
+  const riskFlags = useMemo(() => {
+    const bugCount = allTasks.filter((t) => t.type === "Bug").length;
+    return [
+      { label: "Blocked Tasks",  value: kpis.blocked, max: allTasks.length, risk: kpis.blocked > 3 ? "high" : kpis.blocked > 1 ? "medium" : "low" as const },
+      { label: "Overdue Tasks",  value: kpis.overdue, max: allTasks.length, risk: kpis.overdue > 2 ? "high" : kpis.overdue > 0 ? "medium" : "low" as const },
+      { label: "Bug Rate",       value: bugCount,      max: allTasks.length, risk: bugCount > 3 ? "high" : bugCount > 1 ? "medium" : "low" as const },
+    ];
+  }, [allTasks, kpis]);
 
   return (
     <div className={styles.tab}>
-      {/* ── KPI Row ── */}
-      <div className={styles.kpiRow}>
-        <SummaryKPIStrip
-          kpis={kpis}
-          allTasksCount={allTasks.length}
-          sprintsCount={project.sprints.length}
-        />
+
+      {/* ── EOS Project Brief ── */}
+      {!briefDismissed && (
+        <div className={styles.briefBar}>
+          <div className={styles.briefGlow} />
+          <div className={styles.briefContent}>
+            <RiSparklingLine size={14} color="var(--accent)" className={styles.briefIcon} />
+            <div className={styles.briefText}>
+              {brief.isPending && <span className={styles.briefLoading}>EOS is analysing {project.key}…</span>}
+              {brief.data && <span>{brief.data.answer.split("\n").slice(0, 2).join(" ")}</span>}
+              {brief.isError && <span className={styles.briefLoading}>Could not load EOS brief.</span>}
+            </div>
+            <EOSBadge />
+            <button className={styles.briefClose} onClick={() => setBriefDismissed(true)}>
+              <RiCloseLine size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Health Score + 3 Insight Cards ── */}
+      <div className={styles.aiRow}>
+        {/* Health score */}
+        <div className={styles.healthCard}>
+          <div className={styles.healthCardHeader}>
+            <span className={styles.cardLabel}>Project Health</span>
+            <EOSBadge />
+          </div>
+          <div className={styles.healthScoreBig} style={{ color: healthColor }}>{healthScore}</div>
+          <div className={styles.healthScoreSub}>/100</div>
+          <div className={styles.healthProbBar}>
+            <div className={styles.healthProbFill} style={{ width: `${healthScore}%`, background: healthColor }} />
+          </div>
+          <div className={styles.healthDims}>
+            {radarData.map((d) => (
+              <div key={d.metric} className={styles.healthDimRow}>
+                <span className={styles.healthDimLabel}>{d.metric}</span>
+                <div className={styles.healthDimBar}>
+                  <div className={styles.healthDimFill} style={{ width: `${d.score}%`, background: d.score >= 70 ? "var(--green)" : d.score >= 50 ? "var(--amber)" : "var(--red)" }} />
+                </div>
+                <span className={styles.healthDimVal}>{d.score}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Velocity signal */}
+        <div className={styles.insightCard}>
+          <div className={styles.insightCardHeader}>
+            <div className={styles.insightIcon} style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>
+              <RiBarChartBoxLine size={16} color="var(--accent)" />
+            </div>
+            <div>
+              <div className={styles.insightCardTitle}>Velocity Signal</div>
+              <EOSBadge />
+            </div>
+          </div>
+          <p className={styles.insightCardBody}>
+            {insights.isPending ? <span className={styles.insightLoading}>EOS analysing…</span>
+              : parsedInsights?.velocity ?? `${project.progress}% complete across ${project.sprints.length} sprints.`}
+          </p>
+          <div className={styles.insightStat}>
+            <span className={styles.insightStatVal} style={{ color: project.color }}>
+              {project.sprints.filter((s) => s.status === "completed").length}
+            </span>
+            <span className={styles.insightStatLbl}>sprints completed</span>
+          </div>
+        </div>
+
+        {/* Risk signal */}
+        <div className={styles.insightCard} style={{ borderLeft: `3px solid ${kpis.blocked > 0 || kpis.overdue > 0 ? "var(--red)" : "var(--green)"}` }}>
+          <div className={styles.insightCardHeader}>
+            <div className={styles.insightIcon} style={{ background: kpis.blocked > 0 ? "rgba(248,113,113,0.12)" : "rgba(52,211,153,0.12)" }}>
+              {kpis.blocked > 0 ? <RiAlertLine size={16} color="var(--red)" /> : <RiCheckLine size={16} color="var(--green)" />}
+            </div>
+            <div>
+              <div className={styles.insightCardTitle}>Risk Signal</div>
+              <EOSBadge />
+            </div>
+          </div>
+          <p className={styles.insightCardBody}>
+            {insights.isPending ? <span className={styles.insightLoading}>EOS analysing…</span>
+              : parsedInsights?.risk ?? (kpis.blocked > 0 ? `${kpis.blocked} tickets blocked, ${kpis.overdue} overdue.` : "No critical blockers detected.")}
+          </p>
+          <div className={styles.insightStat}>
+            <span className={styles.insightStatVal} style={{ color: kpis.blocked > 0 ? "var(--red)" : "var(--green)" }}>{kpis.blocked}</span>
+            <span className={styles.insightStatLbl}>blocked now</span>
+          </div>
+        </div>
+
+        {/* Recommendation */}
+        <div className={styles.insightCard} style={{ borderLeft: "3px solid var(--accent)" }}>
+          <div className={styles.insightCardHeader}>
+            <div className={styles.insightIcon} style={{ background: "var(--accent-glow)" }}>
+              <RiLightbulbLine size={16} color="var(--accent)" />
+            </div>
+            <div>
+              <div className={styles.insightCardTitle}>Recommendation</div>
+              <EOSBadge />
+            </div>
+          </div>
+          <p className={styles.insightCardBody}>
+            {insights.isPending ? <span className={styles.insightLoading}>EOS analysing…</span>
+              : parsedInsights?.rec ?? "Keep momentum — protect team focus and avoid mid-sprint scope changes."}
+          </p>
+          <button
+            className={styles.insightRefresh}
+            onClick={() => qc.invalidateQueries({ queryKey: ["eos-insights", project.key] })}
+            title="Refresh EOS insights"
+          >
+            <RiRefreshLine size={12} /> Refresh
+          </button>
+        </div>
       </div>
 
-      {/* ── Row 2: Status Pie + Priority Pie + Activity ── */}
-      <div className={styles.row2}>
-        {/* Status pie */}
-        <div className={styles.chartCard}>
-          <div className={styles.cardTitle}>Status Overview</div>
-          <div className={styles.pieWrap}>
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie
-                  data={statusData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={75}
-                  innerRadius={40}
-                  dataKey="value"
-                  labelLine={false}
-                  label={PieLabel}
-                >
-                  {statusData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <ReTooltip
-                  contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }}
-                  formatter={(value: number, name: string) => [`${value} tasks`, name]}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className={styles.pieLegend}>
-            {statusData.map((d) => (
-              <div key={d.name} className={styles.legendRow}>
-                <div className={styles.legendDot} style={{ background: d.color }} />
-                <span className={styles.legendName}>{d.name}</span>
-                <span className={styles.legendVal}>{d.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* ── KPI Pills ── */}
+      <SummaryKPIStrip kpis={kpis} allTasksCount={allTasks.length} sprintsCount={project.sprints.length} />
 
-        {/* Priority pie */}
+      {/* ── Charts row: Activity + Workload ── */}
+      <div className={styles.chartsRow}>
         <div className={styles.chartCard}>
-          <div className={styles.cardTitle}>Priority Breakdown</div>
-          <div className={styles.pieWrap}>
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie
-                  data={priorityData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={75}
-                  innerRadius={40}
-                  dataKey="value"
-                  labelLine={false}
-                  label={PieLabel}
-                >
-                  {priorityData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <ReTooltip
-                  contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className={styles.chartCardHeader}>
+            <span className={styles.cardLabel}>Weekly Activity</span>
+            <RiTimeLine size={13} color="var(--text-3)" />
           </div>
-          <div className={styles.pieLegend}>
-            {priorityData.map((d) => (
-              <div key={d.name} className={styles.legendRow}>
-                <div className={styles.legendDot} style={{ background: d.color }} />
-                <span className={styles.legendName}>{d.name}</span>
-                <span className={styles.legendVal}>{d.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Weekly activity area chart */}
-        <div className={styles.chartCard}>
-          <div className={styles.cardTitle}>Weekly Activity</div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={activityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height={160}>
+            <AreaChart data={activityData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
               <defs>
-                <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={`actGrad-${project.key}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={project.color} stopOpacity={0.3} />
                   <stop offset="95%" stopColor={project.color} stopOpacity={0.02} />
                 </linearGradient>
@@ -264,96 +277,68 @@ Reply with exactly 4 lines. Start each with ✓ for positive, ⚠ for warning, �
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="day" tick={{ fontSize: 10, fill: "var(--text-3)" }} />
               <YAxis tick={{ fontSize: 10, fill: "var(--text-3)" }} allowDecimals={false} />
-              <ReTooltip
-                contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }}
-              />
-              <Area
-                type="monotone"
-                dataKey="tasks"
-                stroke={project.color}
-                strokeWidth={2}
-                fill="url(#actGrad)"
-                dot={{ fill: project.color, strokeWidth: 0, r: 3 }}
-              />
+              <ReTooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }} />
+              <Area type="monotone" dataKey="tasks" stroke={project.color} strokeWidth={2} fill={`url(#actGrad-${project.key})`} dot={{ fill: project.color, strokeWidth: 0, r: 3 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </div>
 
-      {/* ── Row 3: Sprint progress + Team workload ── */}
-      <div className={styles.row3}>
-        {/* Sprint progress */}
-        <div className={styles.chartCardWide}>
-          <div className={styles.cardTitle}>Sprint Progress</div>
-          {sprintProgressData.map((s) => (
-            <div key={s.name} className={styles.sprintRow}>
-              <div className={styles.sprintName}>{s.name}</div>
-              <LinearProgress
-                variant="determinate"
-                value={s.pct}
-                sx={{
-                  flex: 1,
-                  height: 8,
-                  borderRadius: 100,
-                  backgroundColor: "var(--surface-2)",
-                  "& .MuiLinearProgress-bar": {
-                    background: `linear-gradient(90deg, ${project.color}, ${project.color}aa)`,
-                    borderRadius: 100,
-                  },
-                }}
-              />
-              <div className={styles.sprintPct} style={{ color: project.color }}>{s.pct}%</div>
-              <div className={styles.sprintPts}>{s.done}/{s.total} pts</div>
-            </div>
-          ))}
-
-          {/* Type distribution bar */}
-          <div className={styles.cardTitle} style={{ marginTop: 20 }}>Issue Type Distribution</div>
-          <ResponsiveContainer width="100%" height={140}>
-            <BarChart data={typeData} layout="vertical" margin={{ top: 0, right: 30, left: 30, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 10, fill: "var(--text-3)" }} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "var(--text-2)" }} width={55} />
-              <ReTooltip
-                contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }}
-              />
-              <Bar dataKey="value" fill={project.color} radius={[0, 4, 4, 0]} maxBarSize={18} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Team workload */}
-        <div className={styles.chartCardWide}>
-          <div className={styles.cardTitle}>Team Workload</div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={workloadData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+        <div className={styles.chartCard}>
+          <div className={styles.chartCardHeader}>
+            <span className={styles.cardLabel}>Team Workload</span>
+            <RiTeamLine size={13} color="var(--text-3)" />
+          </div>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={workloadData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--text-3)" }} />
               <YAxis tick={{ fontSize: 10, fill: "var(--text-3)" }} allowDecimals={false} />
-              <ReTooltip
-                contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }}
-              />
-              <Bar dataKey="done" fill="var(--green)" radius={[0,0,0,0]} stackId="a" maxBarSize={30} name="Done" />
-              <Bar dataKey="inProgress" fill="var(--amber)" stackId="a" maxBarSize={30} name="In Progress" />
-              <Bar dataKey="todo" fill="var(--surface-3)" stackId="a" radius={[3,3,0,0]} maxBarSize={30} name="To Do" />
+              <ReTooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }} />
+              <Bar dataKey="done" fill="var(--green)" stackId="a" maxBarSize={28} name="Done" />
+              <Bar dataKey="inProgress" fill="var(--amber)" stackId="a" maxBarSize={28} name="In Progress" />
+              <Bar dataKey="todo" fill="var(--surface-3)" stackId="a" radius={[3,3,0,0]} maxBarSize={28} name="To Do" />
             </BarChart>
           </ResponsiveContainer>
+        </div>
 
-          {/* Member list */}
+        {/* Risk indicators */}
+        <div className={styles.chartCard}>
+          <div className={styles.chartCardHeader}>
+            <span className={styles.cardLabel}>Risk Indicators</span>
+            <EOSBadge />
+          </div>
+          <div className={styles.riskList}>
+            {riskFlags.map((r) => {
+              const c = r.risk === "high" ? "var(--red)" : r.risk === "medium" ? "var(--amber)" : "var(--green)";
+              const pct = r.max > 0 ? Math.round((r.value / r.max) * 100) : 0;
+              return (
+                <div key={r.label} className={styles.riskItem}>
+                  <div className={styles.riskItemHeader}>
+                    <span className={styles.riskItemLabel}>{r.label}</span>
+                    <span className={styles.riskItemBadge} style={{ color: c, background: `${c}18` }}>{r.risk.toUpperCase()}</span>
+                  </div>
+                  <LinearProgress variant="determinate" value={pct} sx={{ height: 5, borderRadius: 100, backgroundColor: "var(--surface-2)", "& .MuiLinearProgress-bar": { background: c, borderRadius: 100 } }} />
+                  <span className={styles.riskItemVal}>{r.value} / {r.max}</span>
+                </div>
+              );
+            })}
+          </div>
+          {/* Member breakdown */}
           <div className={styles.memberList}>
-            {project.members.map((m) => {
-              const mTasks = allTasks.filter(t => t.assignee === m.name);
-              const mDone  = mTasks.filter(t => t.status === "Done").length;
+            {project.members.slice(0, 4).map((m) => {
+              const mTasks = allTasks.filter((t) => t.assignee === m.name);
+              const mDone  = mTasks.filter((t) => t.status === "Done").length;
               const mPct   = mTasks.length > 0 ? Math.round((mDone / mTasks.length) * 100) : 0;
+              const overloaded = mTasks.length > (allTasks.length / Math.max(project.members.length, 1)) * 1.4;
               return (
                 <div key={m.id} className={styles.memberRow}>
-                  <div className={styles.memberAvatarSm} style={{ background: m.color }}>{m.initials}</div>
+                  <div className={styles.memberAvatar} style={{ background: m.color }}>{m.initials}</div>
                   <div className={styles.memberInfo}>
-                    <div className={styles.memberName}>{m.name}</div>
-                    <div className={styles.memberRole}>{m.role}</div>
+                    <span className={styles.memberName}>{m.name.split(" ")[0]}</span>
+                    {overloaded && <span className={styles.overloadedBadge}><RiAlertLine size={9} /> Overloaded</span>}
                   </div>
-                  <div className={styles.memberPct} style={{ color: project.color }}>{mPct}%</div>
-                  <div className={styles.memberTasks}>{mTasks.length} tasks</div>
+                  <span className={styles.memberPct} style={{ color: project.color }}>{mPct}%</span>
+                  <span className={styles.memberTasks}>{mTasks.length}t</span>
                 </div>
               );
             })}
@@ -361,200 +346,26 @@ Reply with exactly 4 lines. Start each with ✓ for positive, ⚠ for warning, �
         </div>
       </div>
 
-      {/* ── Row 4: Health Radar + Insights + Risk Flags ── */}
-      <div className={styles.row4}>
-        {/* Project health radar */}
-        <div className={styles.chartCard}>
-          <div className={styles.cardTitleRow}>
-            <div className={styles.cardTitle}>Project Health Score</div>
-            <div
-              className={styles.healthScore}
-              style={{
-                color: overallHealth >= 70 ? "var(--green)" : overallHealth >= 50 ? "var(--amber)" : "var(--red)",
-              }}
-            >
-              {overallHealth}
-              <span className={styles.healthScoreUnit}>/100</span>
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <RadarChart data={radarData}>
-              <PolarGrid stroke="var(--border-2)" />
-              <PolarAngleAxis
-                dataKey="metric"
-                tick={{ fontSize: 10, fill: "var(--text-2)" }}
-              />
-              <Radar
-                dataKey="score"
-                stroke={project.color}
-                fill={project.color}
-                fillOpacity={0.25}
-                strokeWidth={2}
-              />
-              <ReTooltip
-                contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }}
-                formatter={(v: number) => [`${v}/100`, ""]}
-              />
-            </RadarChart>
-          </ResponsiveContainer>
-          <div className={styles.radarDimensions}>
-            {radarData.map((d) => (
-              <div key={d.metric} className={styles.radarDim}>
-                <span className={styles.radarDimLabel}>{d.metric}</span>
-                <div className={styles.radarDimBar}>
-                  <div
-                    className={styles.radarDimFill}
-                    style={{
-                      width: `${d.score}%`,
-                      background: d.score >= 70 ? "var(--green)" : d.score >= 50 ? "var(--amber)" : "var(--red)",
-                    }}
-                  />
-                </div>
-                <span className={styles.radarDimVal}>{d.score}</span>
-              </div>
-            ))}
-          </div>
+      {/* ── Sprint progress ── */}
+      <div className={styles.sprintProgressCard}>
+        <div className={styles.chartCardHeader}>
+          <span className={styles.cardLabel}>Sprint Progress</span>
+          <span style={{ fontSize: "0.76rem", color: "var(--text-3)" }}>{project.sprints.length} sprints</span>
         </div>
-
-        {/* AI-powered insights — live EOS */}
-        <div className={styles.insightsCard}>
-          <div className={styles.cardTitleRow}>
-            <div className={styles.cardTitle}>
-              <span style={{ fontSize: 16, color: "var(--accent)", display: "inline-flex" }}><RiLightbulbFlashLine /></span>
-              AI Insights
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span className={styles.aiBadge}>EOS</span>
-              <button
-                className={styles.refreshBtn}
-                title="Refresh EOS insights"
-                onClick={() => qc.invalidateQueries({ queryKey: ["eos-summary-insights", project.key] })}
-              >
-                ↺
-              </button>
-            </div>
-          </div>
-
-          {eosInsights.isPending && (
-            <div className={styles.eosLoading}>
-              <span className={styles.eosDot} />
-              EOS is analysing project health…
-            </div>
-          )}
-
-          {eosInsights.isError && (
-            <div className={styles.eosError}>
-              Could not load AI insights — EOS may be offline.
-            </div>
-          )}
-
-          {eosInsights.data && (
-            <div className={styles.eosInsightsList}>
-              {eosInsights.data.answer
-                .split("\n")
-                .map(l => l.trim())
-                .filter(Boolean)
-                .slice(0, 4)
-                .map((line, i) => (
-                  <div key={i} className={styles.eosInsightLine}>
-                    <span className={styles.eosInsightEmoji}>
-                      {line.startsWith("✓") ? "✓" : line.startsWith("⚠") ? "⚠" : line.startsWith("⚡") ? "⚡" : "💡"}
-                    </span>
-                    <span>{line.replace(/^[✓⚠⚡💡]\s*/, "")}</span>
-                  </div>
-                ))}
-            </div>
-          )}
-        </div>
-
-        {/* Risk flags */}
-        <div className={styles.riskCard}>
-          <div className={styles.cardTitle}>Risk Indicators</div>
-          <div className={styles.riskList}>
-            {[
-              {
-                label: "Blocked Tasks",
-                value: kpis.blocked,
-                max: allTasks.length,
-                risk: kpis.blocked > 3 ? "high" : kpis.blocked > 1 ? "medium" : "low",
-              },
-              {
-                label: "Overdue Tasks",
-                value: kpis.overdue,
-                max: allTasks.length,
-                risk: kpis.overdue > 2 ? "high" : kpis.overdue > 0 ? "medium" : "low",
-              },
-              {
-                label: "Bug Rate",
-                value: allTasks.filter(t => t.type === "Bug").length,
-                max: allTasks.length,
-                risk: allTasks.filter(t => t.type === "Bug").length > 3 ? "high" : "low",
-              },
-              {
-                label: "Sprint Completion",
-                value: project.sprints.filter(s => s.status === "active")[0]?.donePoints ?? 0,
-                max: project.sprints.filter(s => s.status === "active")[0]?.totalPoints ?? 1,
-                risk: "low",
-              },
-            ].map((r) => {
-              const riskColor = r.risk === "high" ? "var(--red)" : r.risk === "medium" ? "var(--amber)" : "var(--green)";
-              const pct = r.max > 0 ? Math.round((r.value / r.max) * 100) : 0;
-              return (
-                <div key={r.label} className={styles.riskItem}>
-                  <div className={styles.riskHeader}>
-                    <span className={styles.riskLabel}>{r.label}</span>
-                    <span className={styles.riskBadge} style={{ color: riskColor, background: `${riskColor}18` }}>
-                      {r.risk.toUpperCase()}
-                    </span>
-                  </div>
-                  <div className={styles.riskBarWrap}>
-                    <LinearProgress
-                      variant="determinate"
-                      value={pct}
-                      sx={{
-                        flex: 1,
-                        height: 6,
-                        borderRadius: 100,
-                        backgroundColor: "var(--surface-2)",
-                        "& .MuiLinearProgress-bar": {
-                          background: riskColor,
-                          borderRadius: 100,
-                        },
-                      }}
-                    />
-                    <span className={styles.riskVal}>{r.value}/{r.max}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Quick stats grid */}
-          <div className={styles.quickStats}>
-            <div className={styles.qStat}>
-              <div className={styles.qStatVal} style={{ color: "var(--green)" }}>
-                {project.sprints.filter(s => s.status === "completed").length}
+        {project.sprints.map((s) => {
+          const pct = s.totalPoints > 0 ? Math.round((s.donePoints / s.totalPoints) * 100) : 0;
+          return (
+            <div key={s.id} className={styles.sprintRow}>
+              <div className={styles.sprintRowLeft}>
+                <span className={styles.sprintStatusDot} style={{ background: s.status === "active" ? "var(--accent)" : s.status === "completed" ? "var(--green)" : "var(--amber)" }} />
+                <span className={styles.sprintName}>{s.name}</span>
               </div>
-              <div className={styles.qStatLbl}>Completed Sprints</div>
+              <LinearProgress variant="determinate" value={pct} sx={{ flex: 1, height: 6, borderRadius: 100, backgroundColor: "var(--surface-2)", "& .MuiLinearProgress-bar": { background: `linear-gradient(90deg, ${project.color}, ${project.color}aa)`, borderRadius: 100 } }} />
+              <span className={styles.sprintPct} style={{ color: project.color }}>{pct}%</span>
+              <span className={styles.sprintPts}>{s.donePoints}/{s.totalPoints}pts</span>
             </div>
-            <div className={styles.qStat}>
-              <div className={styles.qStatVal} style={{ color: "var(--amber)" }}>
-                {project.sprints.filter(s => s.status === "active").length}
-              </div>
-              <div className={styles.qStatLbl}>Active Sprints</div>
-            </div>
-            <div className={styles.qStat}>
-              <div className={styles.qStatVal}>{project.epics.length}</div>
-              <div className={styles.qStatLbl}>Epics</div>
-            </div>
-            <div className={styles.qStat}>
-              <div className={styles.qStatVal} style={{ color: "var(--purple)" }}>
-                {allTasks.reduce((s,t)=>s+t.storyPoints,0)}
-              </div>
-              <div className={styles.qStatLbl}>Total SP</div>
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
     </div>
   );

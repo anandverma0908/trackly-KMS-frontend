@@ -347,6 +347,14 @@
   overflow: hidden;
 }
 
+.gen2Pane {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow-y: auto;
+}
+
 .emptyChat {
   flex: 1;
   display: flex;
@@ -488,6 +496,26 @@
 .citationTitle {
   font-size: 11.5px;
   color: var(--text-2);
+}
+
+.citationActive {
+  border-color: var(--accent-border);
+  background: var(--accent-glow);
+}
+
+.citationHint {
+  font-size: 9px;
+  color: var(--text-3);
+  font-style: italic;
+  margin-left: 2px;
+}
+
+.citedHighlight {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-radius: 3px;
+  padding: 1px 2px;
+  color: inherit;
+  transition: background 0.2s;
 }
 
 .thinkingRow {

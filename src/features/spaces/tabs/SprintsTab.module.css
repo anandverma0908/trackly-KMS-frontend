@@ -1,0 +1,145 @@
+.tab { display: flex; flex-direction: column; gap: 16px; padding: 20px 0; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px 20px;
+}
+.cardHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cardTitle  { font-size: 0.88rem; font-weight: 700; }
+.cardMeta   { font-size: 0.76rem; color: var(--text-3); }
+
+/* Health card */
+.healthCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.healthHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.healthHeaderLeft { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.healthTitle { font-size: 0.9rem; font-weight: 700; }
+.statusDot { width: 7px; height: 7px; border-radius: 50%; }
+.activeLabel { font-size: 0.72rem; font-weight: 700; color: var(--accent); }
+.eosBadge {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--accent-glow); border: 1px solid var(--accent-border);
+  color: var(--accent); font-size: 0.66rem; font-weight: 700;
+  letter-spacing: 0.08em; padding: 2px 7px; border-radius: 99px;
+}
+.sprintDates { display: flex; align-items: center; gap: 5px; font-size: 0.76rem; color: var(--text-3); flex-shrink: 0; }
+
+.healthBody { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.healthMeter { flex: 1; min-width: 200px; }
+.healthProbRow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.healthProbVal { font-size: 2rem; font-weight: 800; font-family: var(--font-mono); line-height: 1; }
+.healthProbLbl { font-size: 0.78rem; color: var(--text-3); flex: 1; }
+.healthStatusChip { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 99px; border: 1px solid; flex-shrink: 0; }
+.healthProbBar { height: 6px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.healthProbFill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+
+.healthStats { display: flex; gap: 20px; flex-wrap: wrap; }
+.healthStat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.healthStatVal { font-size: 1.1rem; font-weight: 800; font-family: var(--font-mono); }
+.healthStatLbl { font-size: 0.68rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }
+
+.healthRec {
+  display: flex; align-items: flex-start; gap: 7px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 10px 12px;
+  font-size: 0.82rem; color: var(--text-2); line-height: 1.5;
+}
+
+.atRiskList { display: flex; flex-direction: column; gap: 5px; }
+.atRiskLabel { font-size: 0.72rem; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; display: block; }
+.atRiskItem { display: flex; align-items: center; gap: 10px; padding: 7px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 0.8rem; }
+.atRiskKey   { font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.atRiskTitle { flex: 1; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atRiskStatus { font-size: 0.72rem; font-weight: 600; flex-shrink: 0; }
+
+.sprintGoalRow { display: flex; align-items: baseline; gap: 6px; font-size: 0.8rem; }
+.sprintGoalLabel { color: var(--text-3); font-weight: 600; }
+.sprintGoalText  { color: var(--text-2); font-style: italic; }
+
+.noActive {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.85rem; color: var(--text-3);
+  background: var(--surface); border: 1px dashed var(--border-2);
+  border-radius: var(--r); padding: 20px; text-align: center; justify-content: center;
+}
+
+/* Sprint list */
+.sprintList { display: flex; flex-direction: column; }
+.sprintRow {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 0; border-bottom: 1px solid var(--border); gap: 16px;
+}
+.sprintRow:last-child { border-bottom: none; }
+.sprintRowLeft { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; }
+.sprintStatusDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.sprintRowName { font-size: 0.88rem; font-weight: 600; margin-bottom: 3px; }
+.sprintRowMeta { display: flex; gap: 6px; font-size: 0.74rem; color: var(--text-3); flex-wrap: wrap; }
+.sprintRowGoal { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+.sprintRowRight { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.sprintStatusBadge { font-size: 0.7rem; font-weight: 700; padding: 2px 9px; border-radius: 99px; border: 1px solid; }
+.sprintPts { font-size: 0.8rem; color: var(--text-2); }
+.sprintPtsSep { color: var(--text-3); }
+.miniBar { width: 80px; height: 4px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.miniBarFill { height: 100%; border-radius: 99px; }
+.sprintPct { font-size: 0.78rem; font-weight: 700; font-family: var(--font-mono); color: var(--text-2); min-width: 36px; text-align: right; }
+.empty { font-size: 0.85rem; color: var(--text-3); padding: 16px 0; }
+
+/* ── Smart Sprint Planning Assistant ── */
+.planningCard {
+  background: var(--surface);
+  border: 1px solid var(--accent-border, rgba(79,126,255,0.3));
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+  position: relative;
+}
+
+.planningHeader {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.84rem; font-weight: 600; color: var(--text);
+}
+.planningTitle { flex: 1; }
+.planningDismiss {
+  background: none; border: none; color: var(--text-3);
+  cursor: pointer; font-size: 0.8rem; padding: 2px 4px;
+  line-height: 1;
+}
+.planningDismiss:hover { color: var(--text); }
+
+.planningGrid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+}
+.planningMetric {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.planningMetricVal { font-size: 1.1rem; font-weight: 800; color: var(--text); }
+.planningMetricLbl { font-size: 0.68rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.planningRec {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface-2); border-radius: var(--r-sm);
+  font-size: 0.82rem; color: var(--text-2); line-height: 1.55;
+}
+
+.planningActions { display: flex; gap: 8px; }
+.planningBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 7px 14px;
+  font-size: 0.8rem; color: var(--text-2); cursor: pointer;
+  font-family: var(--font-sans); transition: all 0.15s;
+}
+.planningBtn:hover { border-color: var(--accent); color: var(--accent); }

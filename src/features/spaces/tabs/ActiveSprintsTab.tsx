@@ -15,11 +15,21 @@ import {
   RiFileHistoryLine,
   RiUserLine,
   RiFilter3Line,
+  RiSparklingLine,
+  RiAlertLine,
+  RiCheckLine,
 } from "react-icons/ri";
 import { PiBugBeetle } from "react-icons/pi";
 import { BiTask } from "react-icons/bi";
 import { GoTag } from "react-icons/go";
 import { TbSubtask } from "react-icons/tb";
+
+const AI_FILTERS = [
+  { id: "blockers"     as const, label: "Blockers",     color: "var(--red)",    icon: "🚫" },
+  { id: "high-priority"as const, label: "High Priority", color: "var(--amber)",  icon: "⚡" },
+  { id: "overdue"      as const, label: "Overdue",       color: "var(--red)",    icon: "⏰" },
+  { id: "bugs"         as const, label: "Bugs",          color: "var(--purple)", icon: "🐛" },
+];
 
 const COLUMNS = [
   { id: "To Do", label: "To Do", color: "var(--text-3)", emoji: "📋" },
@@ -64,6 +74,26 @@ export default function ActiveSprintsTab({
     () => activeSprints[0] ?? project.sprints[0],
     [activeSprints, project],
   );
+
+  /* ── Sprint Health (EOS) ── */
+  const sprintHealth = useMemo(() => {
+    if (!selectedSprint || selectedSprint.status !== "active") return null;
+    const now = new Date();
+    const start = new Date(selectedSprint.startDate);
+    const end   = new Date(selectedSprint.endDate);
+    const totalDays   = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86_400_000));
+    const daysElapsed = Math.max(1, Math.ceil((now.getTime() - start.getTime()) / 86_400_000));
+    const daysLeft    = Math.max(0, totalDays - daysElapsed);
+    const done        = selectedSprint.donePoints;
+    const total       = selectedSprint.totalPoints;
+    const remaining   = total - done;
+    const pace        = done / daysElapsed;
+    const neededPace  = daysLeft > 0 ? remaining / daysLeft : remaining > 0 ? 0 : pace;
+    const probability = Math.min(100, Math.round((neededPace > 0 ? pace / neededPace : 1) * 100));
+    const status      = probability >= 80 ? "on-track" : probability >= 50 ? "at-risk" : "behind";
+    const color       = status === "on-track" ? "var(--green)" : status === "at-risk" ? "var(--amber)" : "var(--red)";
+    return { probability, status, color, daysLeft, done, total, remaining };
+  }, [selectedSprint]);
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(
     new Set(),
   );
@@ -386,6 +416,30 @@ export default function ActiveSprintsTab({
         </div>
       </div> */}
 
+      {/* ── EOS Sprint Health Bar ── */}
+      {sprintHealth && (
+        <div className={styles.healthStrip} style={{ borderColor: sprintHealth.color }}>
+          <div className={styles.healthStripLeft}>
+            <RiSparklingLine size={12} color="var(--accent)" />
+            <span className={styles.healthStripLabel}>EOS Sprint Health</span>
+            <span className={styles.healthStripProb} style={{ color: sprintHealth.color }}>
+              {sprintHealth.probability}%
+            </span>
+            <span className={styles.healthStripStatus} style={{ color: sprintHealth.color, borderColor: sprintHealth.color, background: `${sprintHealth.color}18` }}>
+              {sprintHealth.status === "on-track" ? <><RiCheckLine size={10} /> On Track</> : sprintHealth.status === "at-risk" ? <><RiAlertLine size={10} /> At Risk</> : <><RiAlertLine size={10} /> Behind</>}
+            </span>
+          </div>
+          <div className={styles.healthStripBar}>
+            <div className={styles.healthStripFill} style={{ width: `${sprintHealth.probability}%`, background: sprintHealth.color }} />
+          </div>
+          <div className={styles.healthStripStats}>
+            <span>{sprintHealth.done}/{sprintHealth.total} pts</span>
+            <span>·</span>
+            <span>{sprintHealth.daysLeft}d left</span>
+          </div>
+        </div>
+      )}
+
       {/* ── Toolbar: member chips + search + my tasks + AI filters + create ── */}
       <div className={styles.toolbar}>
         {/* Member avatar filter chips */}
@@ -479,29 +533,21 @@ export default function ActiveSprintsTab({
           </Tooltip>
 
           {/* AI filters */}
-          {/* <div className={styles.aiFiltersWrap}>
+          <div className={styles.aiFiltersWrap}>
             <RiSparklingLine size={13} color="var(--accent)" />
-            <span className={styles.aiLabel}>AI:</span>
+            <span className={styles.aiLabel}>EOS:</span>
             {AI_FILTERS.map((f) => (
               <button
                 key={f.id}
                 className={`${styles.aiChip} ${aiFilter === f.id ? styles.aiChipActive : ""}`}
-                style={
-                  aiFilter === f.id
-                    ? {
-                        color: f.color,
-                        borderColor: f.color,
-                        background: `${f.color}18`,
-                      }
-                    : {}
-                }
+                style={aiFilter === f.id ? { color: f.color, borderColor: f.color, background: `${f.color}18` } : {}}
                 onClick={() => setAiFilter(aiFilter === f.id ? null : f.id)}
               >
-                {f.icon}
+                <span>{f.icon}</span>
                 {f.label}
               </button>
             ))}
-          </div> */}
+          </div>
         </div>
       </div>
 

@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
-  fetchTeamStandups, fetchTodayStandup, updateStandup, generateStandup,
+  fetchTeamStandups, fetchTodayStandup, updateStandup, generateStandup, novaQuery,
 } from "@/services/api";
 import { fetchFilters } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import type { Standup } from "@/types";
+import { RiSparklingLine, RiCheckboxCircleLine, RiTimeLine, RiAlertLine } from "react-icons/ri";
 import styles from "./StandupPage.module.css";
 
 export default function StandupPage() {
@@ -71,6 +72,39 @@ export default function StandupPage() {
     acc[pod].push(s);
     return acc;
   }, {});
+
+  // Autonomous standup synthesis
+  const [synthesizing, setSynthesizing] = useState(false);
+  const [synthesis, setSynthesis] = useState<string | null>(null);
+
+  async function synthesizeStandups() {
+    if (!teamStandups.length) return;
+    setSynthesizing(true);
+    setSynthesis(null);
+    try {
+      const summaries = teamStandups.slice(0, 8).map((s) =>
+        `${s.engineer}: Yesterday — ${s.yesterday}. Today — ${s.today}. Blockers — ${s.blockers || "none"}.`
+      ).join("\n");
+      const resp = await novaQuery(
+        `Synthesize these standups into a 2-sentence team summary for the engineering manager. Highlight any shared blockers or themes. Standups:\n${summaries}`,
+        "all"
+      );
+      setSynthesis(resp.answer ?? "Could not synthesize standups.");
+    } catch {
+      toast.error("EOS could not synthesize standups");
+    } finally {
+      setSynthesizing(false);
+    }
+  }
+
+  // Collection status: who has vs hasn't submitted
+  const expectedMembers = useMemo(() => {
+    const seen = new Set(teamStandups.map((s) => s.engineer));
+    const allEngineers = filtersData?.users ?? [];
+    return allEngineers.map((e: string) => ({ name: e, submitted: seen.has(e) }));
+  }, [teamStandups, filtersData]);
+
+  const blockers = teamStandups.filter((s) => s.blockers && s.blockers.trim().length > 0);
 
   return (
     <div className={styles.page}>
@@ -136,6 +170,66 @@ export default function StandupPage() {
       {/* Manager View */}
       {isManager && (
         <>
+          {/* ── EOS Autonomous Standup Panel ── */}
+          <div className={styles.eosPanel}>
+            <div className={styles.eosPanelHeader}>
+              <RiSparklingLine size={13} color="var(--accent)" />
+              <span className={styles.eosPanelTitle}>EOS Standup Intelligence</span>
+              <span className={styles.eosBadge}><RiSparklingLine size={9} /> EOS</span>
+              <button
+                className={styles.synthesizeBtn}
+                onClick={synthesizeStandups}
+                disabled={synthesizing || teamStandups.length === 0}
+              >
+                {synthesizing ? <><span className={styles.synSpinner} /> Synthesizing…</> : <><RiSparklingLine size={11} /> Synthesize Team</>}
+              </button>
+            </div>
+
+            <div className={styles.eosPanelBody}>
+              {/* Collection Status */}
+              {expectedMembers.length > 0 && (
+                <div className={styles.collectionStatus}>
+                  <div className={styles.collectionTitle}>Collection Status</div>
+                  <div className={styles.collectionGrid}>
+                    {expectedMembers.map((m) => (
+                      <div key={m.name} className={`${styles.collectionMember} ${m.submitted ? styles.collectionSubmitted : styles.collectionMissing}`}>
+                        {m.submitted ? <RiCheckboxCircleLine size={11} /> : <RiTimeLine size={11} />}
+                        <span>{m.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className={styles.collectionStat}>
+                    {expectedMembers.filter((m) => m.submitted).length}/{expectedMembers.length} submitted
+                    {expectedMembers.filter((m) => !m.submitted).length > 0 && (
+                      <span className={styles.collectionPending}> · {expectedMembers.filter((m) => !m.submitted).length} pending</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Blockers aggregate */}
+              {blockers.length > 0 && (
+                <div className={styles.blockersAggregate}>
+                  <div className={styles.blockersTitle}><RiAlertLine size={11} /> Active Blockers</div>
+                  {blockers.map((s) => (
+                    <div key={s.id} className={styles.blockerRow}>
+                      <span className={styles.blockerName}>{s.engineer}</span>
+                      <span className={styles.blockerText}>{s.blockers}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Synthesis output */}
+              {synthesis && (
+                <div className={styles.synthesisOutput}>
+                  <div className={styles.synthesisLabel}><RiSparklingLine size={10} /> EOS Team Summary</div>
+                  <p className={styles.synthesisText}>{synthesis}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className={styles.filters}>
             <input
               type="date"

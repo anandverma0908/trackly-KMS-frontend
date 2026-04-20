@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Topbar from "./Topbar";
@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import OnboardingModal from "@/components/onboarding/OnboardingModal";
 import NotificationPanel from "@/components/nova/NotificationPanel";
 import EosPanel from "@/components/nova/EosPanel";
+import CommandBar from "@/components/CommandBar/CommandBar";
 import styles from "./AppShell.module.css";
 
 export default function AppShell() {
@@ -13,6 +14,18 @@ export default function AppShell() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
   const [eosOpen, setEosOpen] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   function toggleNotif() {
     setNotifOpen((v) => !v);
@@ -90,6 +103,11 @@ export default function AppShell() {
       </AnimatePresence>
 
       <OnboardingModal />
+
+      {/* ⌘K Command Bar */}
+      <AnimatePresence>
+        {cmdOpen && <CommandBar onClose={() => setCmdOpen(false)} />}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
@@ -13,6 +13,7 @@ import {
 import type { Sprint, Ticket } from "@/types";
 import { IssueTypeBadge, StatusBadge } from "@/components/ui/Badge";
 import { useAuthStore } from "@/features/auth/useAuthStore";
+import { RiSparklingLine, RiAlertLine, RiCheckLine } from "react-icons/ri";
 import styles from "./SprintPage.module.css";
 
 type View = "board" | "backlog" | "burndown" | "velocity";
@@ -116,6 +117,35 @@ export default function SprintPage() {
   const totalPoints = sprintTickets.reduce((sum, t) => sum + (t.story_points || 0), 0);
   const CAPACITY = 40;
 
+  // Sprint Health computation
+  const sprintHealth = useMemo(() => {
+    if (!activeSprint || activeSprint.status !== "active") return null;
+    const daysLeft = Math.max(0, Math.ceil((new Date(activeSprint.end_date).getTime() - Date.now()) / 86_400_000));
+    const totalDays = Math.max(1, Math.ceil((new Date(activeSprint.end_date).getTime() - new Date(activeSprint.start_date).getTime()) / 86_400_000));
+    const daysElapsed = Math.max(1, totalDays - daysLeft);
+    const committed = activeSprint.total_points ?? totalPoints;
+    const done = activeSprint.done_points ?? sprintTickets.filter(t => t.status === "Done" || t.status === "Closed").reduce((s, t) => s + (t.story_points ?? 0), 0);
+    const remaining = Math.max(0, committed - done);
+    const pace = done / daysElapsed;
+    const neededPace = daysLeft > 0 ? remaining / daysLeft : Infinity;
+    const probability = committed === 0 ? 100 : Math.min(100, Math.round((pace / Math.max(neededPace, 0.01)) * 100));
+    const blockedCount = sprintTickets.filter(t => t.status.toLowerCase().includes("block")).length;
+    const atRiskTickets = sprintTickets.filter(t => {
+      if (t.status === "Done" || t.status === "Closed") return false;
+      if (t.status.toLowerCase().includes("block")) return true;
+      if (t.due_date && new Date(t.due_date) < new Date(activeSprint.end_date) && new Date(t.due_date) < new Date()) return true;
+      return false;
+    });
+    const moveToBacklog = sprintTickets
+      .filter(t => t.status !== "Done" && t.status !== "Closed" && !t.status.toLowerCase().includes("progress") && !t.status.toLowerCase().includes("review"))
+      .slice(0, 2);
+    let recommendation = "";
+    if (probability >= 80) recommendation = `On pace — ${Math.round(pace * 7)}pts/week. Sprint looks healthy.`;
+    else if (probability >= 50) recommendation = `At risk. Burning ${pace.toFixed(1)} pts/day, need ${neededPace.toFixed(1)}. Consider de-scoping ${Math.ceil(remaining - pace * daysLeft)} pts.`;
+    else recommendation = `Behind pace. ${daysLeft}d left, ${remaining} pts remaining. EOS recommends moving ${moveToBacklog.length} backlog tickets out.`;
+    return { probability, daysLeft, committed, done, remaining, pace, blockedCount, atRiskTickets, moveToBacklog, recommendation };
+  }, [activeSprint, sprintTickets, totalPoints]);
+
   return (
     <div className={styles.page}>
       {/* Header */}
@@ -185,6 +215,80 @@ export default function SprintPage() {
                   Complete Sprint
                 </button>
               </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── EOS Sprint Health Predictor ── */}
+      {sprintHealth && (
+        <div className={styles.healthCard}>
+          <div className={styles.healthHeader}>
+            <RiSparklingLine size={14} className={styles.healthEosIcon} />
+            <span className={styles.healthTitle}>Sprint Health Predictor</span>
+            <span className={styles.eosBadge}><RiSparklingLine size={9} /> EOS</span>
+          </div>
+
+          <div className={styles.healthBody}>
+            {/* Probability meter */}
+            <div className={styles.healthMeter}>
+              <div className={styles.healthProbRow}>
+                <span className={styles.healthProbVal} style={{ color: sprintHealth.probability >= 80 ? "var(--green)" : sprintHealth.probability >= 50 ? "var(--amber)" : "var(--red)" }}>
+                  {sprintHealth.probability}%
+                </span>
+                <span className={styles.healthProbLbl}>completion probability</span>
+                <span className={styles.healthStatusChip} style={{ color: sprintHealth.probability >= 80 ? "var(--green)" : sprintHealth.probability >= 50 ? "var(--amber)" : "var(--red)", borderColor: sprintHealth.probability >= 80 ? "rgba(52,211,153,0.3)" : sprintHealth.probability >= 50 ? "rgba(251,191,36,0.3)" : "rgba(248,113,113,0.3)" }}>
+                  {sprintHealth.probability >= 80 ? "On Track" : sprintHealth.probability >= 50 ? "At Risk" : "Behind Pace"}
+                </span>
+              </div>
+              <div className={styles.healthProbBar}>
+                <div className={styles.healthProbFill} style={{ width: `${sprintHealth.probability}%`, background: sprintHealth.probability >= 80 ? "var(--green)" : sprintHealth.probability >= 50 ? "var(--amber)" : "var(--red)" }} />
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className={styles.healthStats}>
+              {[
+                { val: sprintHealth.done, lbl: "pts done", color: "var(--green)" },
+                { val: sprintHealth.remaining, lbl: "pts left", color: "var(--text)" },
+                { val: `${sprintHealth.daysLeft}d`, lbl: "remaining", color: "var(--text)" },
+                { val: sprintHealth.blockedCount, lbl: "blocked", color: sprintHealth.blockedCount > 0 ? "var(--red)" : "var(--text-3)" },
+              ].map(s => (
+                <div key={s.lbl} className={styles.healthStat}>
+                  <span className={styles.healthStatVal} style={{ color: s.color }}>{s.val}</span>
+                  <span className={styles.healthStatLbl}>{s.lbl}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* EOS Recommendation */}
+            <div className={styles.healthRec}>
+              <span className={styles.healthRecLabel}>EOS Recommends</span>
+              <p className={styles.healthRecText}>{sprintHealth.recommendation}</p>
+            </div>
+
+            {/* At-risk tickets */}
+            {sprintHealth.atRiskTickets.length > 0 && (
+              <div className={styles.healthRisks}>
+                <span className={styles.healthRisksLabel}>
+                  <RiAlertLine size={11} /> {sprintHealth.atRiskTickets.length} ticket{sprintHealth.atRiskTickets.length > 1 ? "s" : ""} at risk
+                </span>
+                {sprintHealth.atRiskTickets.slice(0, 3).map(t => (
+                  <div key={t.key} className={styles.healthRiskItem}>
+                    <span className={styles.healthRiskKey}>{t.key}</span>
+                    <span className={styles.healthRiskSummary}>{t.summary.slice(0, 48)}…</span>
+                    <span className={styles.healthRiskStatus}>{t.status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Move-to-backlog suggestion */}
+            {sprintHealth.probability < 60 && sprintHealth.moveToBacklog.length > 0 && (
+              <div className={styles.healthSuggest}>
+                <RiCheckLine size={11} />
+                <span>Consider moving <strong>{sprintHealth.moveToBacklog.map(t => t.key).join(", ")}</strong> to backlog to protect sprint commitment.</span>
+              </div>
             )}
           </div>
         </div>

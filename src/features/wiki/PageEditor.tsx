@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -6,10 +6,40 @@ import Image from "@tiptap/extension-image";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { TaskList, TaskItem } from "@tiptap/extension-list";
 import Placeholder from "@tiptap/extension-placeholder";
+import { RiSparklingLine, RiCloseLine } from "react-icons/ri";
+import { analyzeTicketNL } from "@/services/api";
 import { TicketLinkExtension } from "./extensions/TicketLinkExtension";
 import { PageLinkExtension } from "./extensions/PageLinkExtension";
 import type { WikiPage } from "@/types";
 import styles from "./PageEditor.module.css";
+
+/* ── AI command actions ──────────────────────────────────────────────────── */
+const AI_ACTIONS = [
+  { id: "continue",    label: "Continue writing",       icon: "✦" },
+  { id: "improve",     label: "Improve this",           icon: "✨" },
+  { id: "runbook",     label: "Convert to runbook",     icon: "📋" },
+  { id: "summarize",   label: "Summarize",              icon: "📝" },
+  { id: "actions",     label: "Generate action items",  icon: "☑" },
+  { id: "nontechnical",label: "Make non-technical",     icon: "👥" },
+] as const;
+type AiActionId = (typeof AI_ACTIONS)[number]["id"];
+
+function buildAiPrompt(action: AiActionId, context: string, pageTitle: string): string {
+  switch (action) {
+    case "continue":
+      return `You are a technical writer. Continue writing the following wiki page content for "${pageTitle}". Add 1-2 coherent paragraphs in the same style. Return only the new content (no intro, no heading):\n\n${context}`;
+    case "improve":
+      return `Improve the following wiki text for clarity and conciseness. Keep it technical and precise. Return only the improved text:\n\n${context}`;
+    case "runbook":
+      return `Convert the following documentation into a step-by-step runbook. Include: Prerequisites, Steps (numbered), Verification, and Rollback. Use markdown:\n\n${context}`;
+    case "summarize":
+      return `Write a concise 2-3 sentence TL;DR summary of the following wiki content. Start with the most important point:\n\n${context}`;
+    case "actions":
+      return `Extract all action items from the following content as a markdown checklist (- [ ] format). Group by owner if mentioned:\n\n${context}`;
+    case "nontechnical":
+      return `Rewrite the following technical documentation so a non-technical stakeholder can understand it. Avoid jargon, use plain language:\n\n${context}`;
+  }
+}
 
 interface Props {
   initialTitle:   string;
@@ -32,6 +62,13 @@ export default function PageEditor({ initialTitle, initialContent, onSave, pages
   const [showPagePicker, setShowPagePicker]   = useState(false);
   const [pageSearch, setPageSearch]           = useState("");
 
+  // /ai command state
+  const [aiMenu, setAiMenu]       = useState<{ top: number; left: number } | null>(null);
+  const aiMenuOpenRef             = useRef(false);
+  const [aiTriggerPos, setAiTriggerPos] = useState<number>(0);
+  const [aiLoading, setAiLoading] = useState(false);
+  const aiMenuRef = useRef<HTMLDivElement>(null);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ codeBlock: false }),
@@ -43,16 +80,34 @@ export default function PageEditor({ initialTitle, initialContent, onSave, pages
       TableHeader,
       TaskList,
       TaskItem.configure({ nested: true }),
-      Placeholder.configure({ placeholder: "Start writing… Use toolbar to insert ticket or page links" }),
+      Placeholder.configure({ placeholder: "Start writing… Type /ai for EOS AI assistance, or use toolbar to insert links" }),
       TicketLinkExtension,
       PageLinkExtension,
     ],
     content: initialContent || "",
-    onUpdate: () => {
+    onUpdate: ({ editor: ed }) => {
       if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
       autoSaveRef.current = setTimeout(() => {
-        onSave(editor?.getHTML() ?? "", title);
+        onSave(ed?.getHTML() ?? "", title);
       }, AUTO_SAVE_DELAY);
+
+      // Detect /ai command
+      const { from } = ed.state.selection;
+      const textBefore = ed.state.doc.textBetween(Math.max(0, from - 3), from);
+      if (textBefore === "/ai") {
+        const coords = ed.view.coordsAtPos(from);
+        const editorDom = ed.view.dom as HTMLElement;
+        const editorRect = editorDom.closest(`.${styles.editor}`)?.getBoundingClientRect();
+        setAiTriggerPos(from);
+        setAiMenu({
+          top: coords.bottom - (editorRect?.top ?? 0) + 8,
+          left: coords.left - (editorRect?.left ?? 0),
+        });
+        aiMenuOpenRef.current = true;
+      } else if (aiMenuOpenRef.current) {
+        setAiMenu(null);
+        aiMenuOpenRef.current = false;
+      }
     },
   });
 
@@ -72,6 +127,29 @@ export default function PageEditor({ initialTitle, initialContent, onSave, pages
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [editor, title, onSave]);
+
+  const handleAiAction = useCallback(async (actionId: AiActionId) => {
+    if (!editor) return;
+    setAiMenu(null);
+    setAiLoading(true);
+
+    // Delete the /ai trigger text (3 chars)
+    editor.chain().focus().deleteRange({ from: aiTriggerPos - 3, to: aiTriggerPos }).run();
+
+    // Get full page content as context
+    const pageText = editor.getText();
+    const prompt = buildAiPrompt(actionId, pageText || `Wiki page: ${title}`, title);
+
+    try {
+      const result = await analyzeTicketNL(prompt);
+      const content = result.description ?? "Could not generate content.";
+      editor.chain().focus().insertContent(content).run();
+    } catch {
+      editor.chain().focus().insertContent("[EOS could not generate content]").run();
+    } finally {
+      setAiLoading(false);
+    }
+  }, [editor, aiTriggerPos, title]);
 
   function handleInsertTicket() {
     const key = ticketKeyInput.trim().toUpperCase();
@@ -239,6 +317,41 @@ export default function PageEditor({ initialTitle, initialContent, onSave, pages
 
       {/* Editor Content */}
       <EditorContent editor={editor} className={styles.content} />
+
+      {/* /ai command menu */}
+      {aiMenu && (
+        <div
+          ref={aiMenuRef}
+          className={styles.aiMenu}
+          style={{ top: aiMenu.top, left: aiMenu.left }}
+        >
+          <div className={styles.aiMenuHeader}>
+            <RiSparklingLine size={11} />
+            <span>EOS AI Assistant</span>
+            <button className={styles.aiMenuClose} onClick={() => { setAiMenu(null); aiMenuOpenRef.current = false; }}>
+              <RiCloseLine size={13} />
+            </button>
+          </div>
+          {AI_ACTIONS.map((action) => (
+            <button
+              key={action.id}
+              className={styles.aiMenuItem}
+              onClick={() => handleAiAction(action.id)}
+            >
+              <span className={styles.aiMenuItemIcon}>{action.icon}</span>
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* AI loading overlay indicator */}
+      {aiLoading && (
+        <div className={styles.aiLoadingBar}>
+          <RiSparklingLine size={11} />
+          EOS is writing…
+        </div>
+      )}
     </div>
   );
 }

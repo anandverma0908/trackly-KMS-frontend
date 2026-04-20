@@ -15,7 +15,7 @@ import ManualEntryPage from "@/features/manual-entry/ManualEntryPage";
 
 import WikiPage from "@/features/wiki/WikiPage";
 import KanbanBoard from "@/features/kanban/KanbanBoard";
-import SprintPage from "@/features/sprint/SprintPage";
+
 import StandupPage from "@/features/standup/StandupPage";
 import AnalyticsPage from "@/features/analytics/AnalyticsPage";
 
@@ -122,7 +122,7 @@ function AnimatedRoutes() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/tickets" element={<TicketsPage />} />
               <Route path="/kanban" element={<KanbanBoard />} />
-              <Route path="/sprints" element={<SprintPage />} />
+              <Route path="/sprints" element={<Navigate to="/spaces" replace />} />
               <Route path="/wiki" element={<WikiPage />} />
               <Route path="/standup" element={<StandupPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />

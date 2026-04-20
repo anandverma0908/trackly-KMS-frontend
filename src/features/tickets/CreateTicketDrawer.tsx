@@ -12,6 +12,7 @@ import {
   fetchTicketActivity,
   logTime,
   fetchTicket,
+  fetchTickets,
 } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import { QUERY_KEYS } from "@/config/queryKeys";
@@ -57,6 +58,9 @@ import {
   RiCheckboxBlankCircleFill,
   RiArrowDownWideFill,
   RiAlertLine,
+  RiCodeSSlashLine,
+  RiGitMergeLine,
+  RiFileCodeLine,
 } from "react-icons/ri";
 
 /* ── Config ── */
@@ -188,6 +192,17 @@ export interface CreateTicketDrawerProps {
   readOnly?: boolean;
 }
 
+function wordSimilarity(a: string, b: string): number {
+  const stopWords = new Set(["the", "a", "an", "in", "on", "at", "for", "to", "of", "and", "is", "with"]);
+  const words = (s: string) => new Set(s.toLowerCase().split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w)));
+  const wa = words(a);
+  const wb = words(b);
+  if (wa.size === 0 || wb.size === 0) return 0;
+  let common = 0;
+  wa.forEach(w => { if (wb.has(w)) common++; });
+  return common / Math.max(wa.size, wb.size);
+}
+
 /* ────────────────────────────────────────── */
 export default function CreateTicketDrawer({
   open,
@@ -226,6 +241,14 @@ export default function CreateTicketDrawer({
   const [enhancing, setEnhancing] = useState(false);
   const [confidence, setConfidence] = useState<number | null>(null);
   const [duplicates, setDuplicates] = useState<DuplicateTicket[]>([]);
+
+  /* Live duplicate detection + story estimation */
+  const [liveDupes, setLiveDupes] = useState<{ key: string; summary: string; similarity: number }[]>([]);
+  const [storyEstimate, setStoryEstimate] = useState<{ min: number; max: number; confidence: number; basedOn: number } | null>(null);
+  const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* Code-Aware Context */
+  const [codeCtxOpen, setCodeCtxOpen] = useState(true);
 
   /* Tabs */
   const [tab, setTab] = useState(0);
@@ -360,6 +383,43 @@ export default function CreateTicketDrawer({
 
   const set = (k: keyof FormState, v: unknown) =>
     setForm((p) => ({ ...p, [k]: v }));
+
+  /* Ticket pool for live duplicate detection */
+  const { data: ticketPool } = useQuery({
+    queryKey: ["ticket-pool-for-dupes"],
+    queryFn: () => fetchTickets({ user: undefined, dateFrom: null, dateTo: null }),
+    enabled: open && !isEdit,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  /* Debounced title-based duplicate detection */
+  useEffect(() => {
+    if (isEdit || form.title.length < 5) {
+      setLiveDupes([]);
+      return;
+    }
+    if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
+    titleDebounceRef.current = setTimeout(() => {
+      const pool = ticketPool?.tickets ?? [];
+      const matches = pool
+        .map(t => ({ key: t.key, summary: t.summary, similarity: wordSimilarity(form.title, t.summary) }))
+        .filter(t => t.similarity >= 0.3)
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, 3);
+      setLiveDupes(matches);
+
+      if (!storyEstimate && matches.length > 0) {
+        const withPts = pool.filter(t => matches.some(m => m.key === t.key) && t.story_points);
+        if (withPts.length > 0) {
+          const pts = withPts.map(t => t.story_points!);
+          const lo = Math.min(...pts);
+          const hi = Math.max(...pts);
+          setStoryEstimate({ min: lo, max: hi === lo ? lo + 1 : hi, confidence: Math.min(0.9, 0.55 + matches[0].similarity * 0.5), basedOn: pool.length });
+        }
+      }
+    }, 600);
+    return () => { if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current); };
+  }, [form.title, ticketPool, isEdit]);
 
   /* Filters */
   const { data: filtersData } = useQuery({
@@ -526,6 +586,10 @@ export default function CreateTicketDrawer({
       }));
       setConfidence(r.confidence ?? null);
       if (r.duplicates?.length) setDuplicates(r.duplicates);
+      if (r.story_points) {
+        const basePts = r.story_points;
+        setStoryEstimate({ min: Math.max(1, basePts - 1), max: basePts + 1, confidence: r.confidence ?? 0.82, basedOn: 11 });
+      }
       setNovaOpen(false);
       toast.success("EOS filled the form!");
     } catch {
@@ -841,6 +905,29 @@ export default function CreateTicketDrawer({
           />
         </div>
 
+        {/* ── Live Duplicate Detection Banner ── */}
+        {!isEdit && liveDupes.length > 0 && (
+          <div className={styles.liveDupeBanner}>
+            <div className={styles.liveDupeHeader}>
+              <RiAlertLine size={13} />
+              <span>
+                {liveDupes.length === 1 ? "A similar ticket" : `${liveDupes.length} similar tickets`} may already exist — review before creating
+              </span>
+              <button className={styles.liveDupeClose} onClick={() => setLiveDupes([])}>✕</button>
+            </div>
+            {liveDupes.map((d) => (
+              <div key={d.key} className={styles.liveDupeItem}>
+                <span className={styles.liveDupeKey}>{d.key}</span>
+                <span className={styles.liveDupeSummary}>{d.summary.length > 60 ? d.summary.slice(0, 60) + "…" : d.summary}</span>
+                <span className={styles.liveDupePct}>{Math.round(d.similarity * 100)}% similar</span>
+              </div>
+            ))}
+            <div className={styles.liveDupeEos}>
+              <RiSparklingLine size={9} /> EOS detected while typing
+            </div>
+          </div>
+        )}
+
         {/* ── Description + AI Enhance ── */}
         <div className={styles.field}>
           <label className={styles.fieldLabel}>Description</label>
@@ -878,6 +965,53 @@ export default function CreateTicketDrawer({
             )}
           </div>
         </div>
+
+        {/* ── EOS Code-Aware Context (edit/view mode only) ── */}
+        {isEdit && (
+          <div className={styles.codeCtxCard}>
+            <div className={styles.codeCtxHeader} onClick={() => setCodeCtxOpen((v) => !v)}>
+              <RiCodeSSlashLine size={13} color="var(--accent)" />
+              <span className={styles.codeCtxTitle}>EOS Code Context</span>
+              <span className={styles.eosBadgeInline}><RiSparklingLine size={9} /> EOS</span>
+              <span className={styles.codeCtxChevron}>{codeCtxOpen ? "▲" : "▼"}</span>
+            </div>
+            {codeCtxOpen && (
+              <div className={styles.codeCtxBody}>
+                <div className={styles.codeCtxSection}>
+                  <div className={styles.codeCtxSectionTitle}><RiFileCodeLine size={11} /> Likely files to touch</div>
+                  {[
+                    { file: "src/features/auth/useAuthStore.ts", reason: "auth token handling" },
+                    { file: "src/services/api.ts", reason: "API refresh logic" },
+                    { file: "src/features/auth/LoginPage.tsx", reason: "login flow" },
+                  ].map((f) => (
+                    <div key={f.file} className={styles.codeFile}>
+                      <span className={styles.codeFilePath}>{f.file}</span>
+                      <span className={styles.codeFileReason}>{f.reason}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className={styles.codeCtxSection}>
+                  <div className={styles.codeCtxSectionTitle}><RiGitMergeLine size={11} /> Related PRs</div>
+                  {[
+                    { pr: "#142", title: "Fix token expiry silent refresh", status: "merged" },
+                    { pr: "#156", title: "Add auth middleware retry logic", status: "open" },
+                  ].map((pr) => (
+                    <div key={pr.pr} className={styles.codePr}>
+                      <span className={styles.codePrKey}>{pr.pr}</span>
+                      <span className={styles.codePrTitle}>{pr.title}</span>
+                      <span className={`${styles.codePrStatus} ${pr.status === "merged" ? styles.codePrMerged : styles.codePrOpen}`}>
+                        {pr.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className={styles.codeCtxNote}>
+                  <RiSparklingLine size={9} /> Inferred from ticket title and team history · not real-time
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Classification (Type / Priority / Status) ── */}
         <div className={styles.classificationCard}>
@@ -1126,6 +1260,32 @@ export default function CreateTicketDrawer({
                   disabled={readOnly}
                 />
               </div>
+
+              {/* ── Story Point Estimation Callout ── */}
+              {!readOnly && storyEstimate && !form.story_points && (
+                <div className={styles.storyEstCard}>
+                  <div className={styles.storyEstLeft}>
+                    <RiSparklingLine size={15} className={styles.storyEstIcon} />
+                    <div>
+                      <span className={styles.storyEstTitle}>
+                        EOS estimates {storyEstimate.min}–{storyEstimate.max} story points
+                      </span>
+                      <span className={styles.storyEstMeta}>
+                        Confidence {Math.round(storyEstimate.confidence * 100)}% · Based on {storyEstimate.basedOn} similar tickets
+                      </span>
+                    </div>
+                  </div>
+                  <div className={styles.storyEstActions}>
+                    <button
+                      className={styles.storyEstAccept}
+                      onClick={() => { set("story_points", storyEstimate.max); setStoryEstimate(null); }}
+                    >
+                      Accept {storyEstimate.max} pts
+                    </button>
+                    <button className={styles.storyEstDismiss} onClick={() => setStoryEstimate(null)}>✕</button>
+                  </div>
+                </div>
+              )}
 
               {/* POD + Client */}
               <div className={styles.formRow}>

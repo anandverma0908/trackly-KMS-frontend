@@ -90,3 +90,239 @@
   font-size: 0.85rem;
 }
 .emptyIcon { font-size: 2rem; }
+
+/* EOS badge */
+.eosBadge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em;
+  padding: 2px 8px; border-radius: 99px;
+  flex-shrink: 0;
+}
+
+/* Velocity Anomaly card alert state */
+.cardAlert {
+  border-color: var(--amber, #f59e0b);
+  background: color-mix(in srgb, var(--amber, #f59e0b) 4%, var(--surface));
+}
+
+.anomalyHealthy {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; color: var(--text-2);
+  padding: 10px 0;
+}
+
+.anomalyList { display: flex; flex-direction: column; gap: 12px; }
+
+.anomalyItem {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber, #f59e0b);
+  border-radius: var(--r);
+  padding: 12px 14px;
+}
+
+.anomalyTop {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px;
+}
+
+.anomalyTitle { font-size: 0.84rem; font-weight: 500; flex: 1; }
+
+.anomalyBadge {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--amber, #f59e0b);
+  background: color-mix(in srgb, var(--amber, #f59e0b) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber, #f59e0b) 30%, transparent);
+  padding: 2px 8px; border-radius: 99px;
+}
+
+.anomalyMeta {
+  display: flex; gap: 16px;
+  font-size: 0.78rem; color: var(--text-3);
+  margin-bottom: 8px;
+}
+
+.anomalyRec {
+  font-size: 0.78rem; color: var(--text-2);
+  border-top: 1px solid var(--border);
+  padding-top: 8px; margin: 0;
+  line-height: 1.5;
+}
+
+/* Gap action buttons */
+.gapBtns { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.generateBtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-size: 0.78rem; font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.generateBtn:hover:not(:disabled) { background: var(--accent); color: #fff; border-color: var(--accent); }
+.generateBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btnSpinner {
+  width: 10px; height: 10px;
+  border: 2px solid var(--accent);
+  border-top-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Team Health Monitor ── */
+.healthList { display: flex; flex-direction: column; gap: 8px; }
+
+.healthRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.healthRowAlert { border-color: rgba(248, 113, 113, 0.35); background: rgba(248,113,113,0.04); }
+
+.healthAvatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-3); flex-shrink: 0;
+}
+
+.healthInfo { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.healthName { font-size: 0.82rem; color: var(--text); font-weight: 500; }
+.healthBar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.healthBarFill { height: 100%; border-radius: 2px; transition: width 0.4s; }
+
+.healthHrs { font-size: 0.78rem; color: var(--text-2); font-family: var(--font-mono); width: 36px; text-align: right; flex-shrink: 0; }
+
+.healthBadge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.68rem; font-weight: 700; padding: 2px 7px;
+  border-radius: 4px; flex-shrink: 0;
+}
+.healthBadgeHigh { background: rgba(248,113,113,0.12); color: var(--red, #F87171); }
+.healthBadgeMed  { background: rgba(251,191,36,0.12);  color: var(--amber, #FBBF24); }
+.healthBadgeLow  { background: rgba(52,211,153,0.12);  color: var(--green, #34D399); }
+
+.healthRec {
+  display: flex; align-items: flex-start; gap: 7px;
+  padding: 10px 12px;
+  background: var(--accent-dim, rgba(79,126,255,0.06));
+  border: 1px solid var(--accent-border, rgba(79,126,255,0.2));
+  border-radius: var(--r-sm);
+  font-size: 0.8rem; color: var(--text-2); line-height: 1.5;
+  margin-top: 4px;
+}
+
+/* ── Emotion-Aware Work Management ── */
+.sentimentList { display: flex; flex-direction: column; gap: 8px; }
+.sentimentRow {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+}
+.sentimentRowHigh { background: rgba(248,113,113,0.04); border-color: rgba(248,113,113,0.25); }
+.sentimentRowMed  { background: rgba(251,191,36,0.04);  border-color: rgba(251,191,36,0.2); }
+
+.sentimentAvatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-3); flex-shrink: 0;
+}
+.sentimentInfo { flex: 1; min-width: 0; }
+.sentimentName { font-size: 0.82rem; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.sentimentPhrases { display: flex; flex-wrap: wrap; gap: 5px; }
+.sentimentPhrase {
+  font-size: 0.72rem; color: var(--text-3);
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--r-xs); padding: 2px 7px;
+  font-style: italic;
+}
+
+.sentimentMeta { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; flex-shrink: 0; }
+.sentimentBadge {
+  font-size: 0.67rem; font-weight: 700; letter-spacing: 0.04em;
+  padding: 2px 8px; border-radius: 100px;
+}
+.sentimentBadgeHigh { background: rgba(248,113,113,0.12); color: var(--red, #F87171); }
+.sentimentBadgeMed  { background: rgba(251,191,36,0.12);  color: var(--amber, #FBBF24); }
+.sentimentSprint { font-size: 0.68rem; color: var(--text-3); }
+
+.sentimentRec {
+  display: flex; align-items: flex-start; gap: 7px;
+  padding: 10px 12px; margin-top: 4px;
+  background: var(--accent-dim, rgba(79,126,255,0.06));
+  border: 1px solid var(--accent-border, rgba(79,126,255,0.2));
+  border-radius: var(--r-sm);
+  font-size: 0.8rem; color: var(--text-2); line-height: 1.5;
+}
+
+/* ── Cross-Org Benchmarks ── */
+.privacyBadge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.67rem; font-weight: 700; color: var(--green, #34D399);
+  background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.25);
+  border-radius: 100px; padding: 2px 8px; letter-spacing: 0.04em;
+}
+
+.benchmarkList { display: flex; flex-direction: column; gap: 0; }
+.benchmarkItem {
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.benchmarkItem:last-child { border-bottom: none; }
+
+.benchmarkHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.benchmarkMetric { font-size: 0.86rem; font-weight: 600; color: var(--text); }
+.benchmarkValues { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.benchmarkYours { font-size: 0.78rem; color: var(--text-2); }
+.benchmarkYours strong { color: var(--accent); }
+.benchmarkIndustry { font-size: 0.76rem; color: var(--text-3); }
+.benchmarkSimilar { display: flex; align-items: center; gap: 3px; font-size: 0.76rem; font-weight: 600; }
+.benchmarkUp   { color: var(--green, #34D399); }
+.benchmarkDown { color: var(--amber, #FBBF24); }
+.benchmarkInsight { font-size: 0.78rem; color: var(--text-3); line-height: 1.5; margin: 0; }
+
+/* ── Predictive Resource Planning ── */
+.resourceList { display: flex; flex-direction: column; gap: 10px; }
+.resourceItem {
+  border-radius: var(--r-sm); padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 5px;
+  border-left: 3px solid transparent;
+}
+.resourceItemHigh { background: rgba(248,113,113,0.04); border-color: var(--red, #F87171); border: 1px solid rgba(248,113,113,0.2); border-left: 3px solid var(--red, #F87171); }
+.resourceItemMed  { background: rgba(251,191,36,0.04);  border-color: var(--amber, #f59e0b); border: 1px solid rgba(251,191,36,0.2); border-left: 3px solid var(--amber, #f59e0b); }
+
+.resourceHeader { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+.resourceUrgency {
+  font-size: 0.65rem; font-weight: 800; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 2px 8px; border-radius: 100px;
+}
+.resourceUrgencyHigh { background: rgba(248,113,113,0.12); color: var(--red, #F87171); }
+.resourceUrgencyMed  { background: rgba(251,191,36,0.12);  color: var(--amber, #FBBF24); }
+.resourceNeededBy { font-size: 0.72rem; color: var(--text-3); margin-left: auto; }
+
+.resourceSkill { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+.resourceGoal { display: flex; align-items: center; gap: 5px; font-size: 0.74rem; color: var(--text-3); }
+.resourceNote { font-size: 0.78rem; color: var(--text-2); line-height: 1.5; margin: 4px 0 0; }
+
+.resourceRec {
+  display: flex; align-items: flex-start; gap: 7px;
+  padding: 10px 12px; margin-top: 4px;
+  background: var(--accent-dim, rgba(79,126,255,0.06));
+  border: 1px solid var(--accent-border, rgba(79,126,255,0.2));
+  border-radius: var(--r-sm);
+  font-size: 0.8rem; color: var(--text-2); line-height: 1.5;
+}

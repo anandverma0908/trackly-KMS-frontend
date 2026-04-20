@@ -1,10 +1,12 @@
 import { useMemo } from "react";
 import LinearProgress from "@mui/material/LinearProgress";
 import Tooltip from "@mui/material/Tooltip";
+import { useQuery } from "@tanstack/react-query";
+import { novaQuery } from "@/services/api";
 import type { Project, ProjectEpic, ProjectSprint } from "../spacesData";
 import styles from "./RoadmapTab.module.css";
 
-import { RiCalendarLine, RiHistoryLine } from "react-icons/ri";
+import { RiCalendarLine, RiHistoryLine, RiSparklingLine, RiAlertLine } from "react-icons/ri";
 
 type _ViewMode = "quarter" | "month";
 
@@ -24,8 +26,39 @@ function dateToPct(date: Date, start: Date, totalMs: number) {
 }
 
 export default function RoadmapTab({ project }: { project: Project }) {
-  // viewMode can be extended for "month" view in future
   const _viewMode: _ViewMode = "quarter"; void _viewMode;
+
+  /* ── EOS: detect at-risk epics ── */
+  const atRiskEpics = useMemo(() => {
+    const now = new Date();
+    return project.epics.filter((e) => {
+      const end = parseDate(e.endDate);
+      const start = parseDate(e.startDate);
+      const totalDays = Math.max(1, (end.getTime() - start.getTime()) / 86_400_000);
+      const elapsed = (now.getTime() - start.getTime()) / 86_400_000;
+      const expectedProgress = Math.min(100, (elapsed / totalDays) * 100);
+      return end > now && e.progress < expectedProgress - 15;
+    });
+  }, [project.epics]);
+
+  const overdueEpics = useMemo(() =>
+    project.epics.filter((e) => parseDate(e.endDate) < new Date() && e.progress < 100),
+    [project.epics]
+  );
+
+  /* ── EOS narrative ── */
+  const narrativePrompt = useMemo(() => {
+    const completedSprints = project.sprints.filter((s) => s.status === "completed").length;
+    const activeSprint = project.sprints.find((s) => s.status === "active");
+    return `Give a one-sentence project timeline assessment for "${project.key}": ${project.progress}% overall, ${completedSprints} sprints done, ${atRiskEpics.length} epics at risk, ${overdueEpics.length} overdue. Active sprint: ${activeSprint?.name ?? "none"}. Start with ✦ EOS:`;
+  }, [project, atRiskEpics.length, overdueEpics.length]);
+
+  const narrative = useQuery({
+    queryKey: ["roadmap-narrative", project.key],
+    queryFn: () => novaQuery(narrativePrompt),
+    staleTime: 1000 * 60 * 15,
+    retry: 1,
+  });
 
   // Timeline bounds: project start → max(epic end, sprint end) + buffer
   const timeStart = useMemo(() => {
@@ -89,6 +122,34 @@ export default function RoadmapTab({ project }: { project: Project }) {
 
   return (
     <div className={styles.tab}>
+
+      {/* ── EOS Narrative Bar ── */}
+      <div className={styles.eosBar}>
+        <RiSparklingLine size={13} color="var(--accent)" />
+        {narrative.isPending && <span className={styles.eosBarText} style={{ color: "var(--text-3)" }}>EOS is analysing project timeline…</span>}
+        {narrative.data && <span className={styles.eosBarText}>{narrative.data.answer.split("\n")[0]}</span>}
+        {!narrative.isPending && !narrative.data && <span className={styles.eosBarText} style={{ color: "var(--text-3)" }}>EOS timeline intelligence</span>}
+        <span className={styles.eosBadge}><RiSparklingLine size={9} /> EOS</span>
+      </div>
+
+      {/* ── EOS Risk Alerts ── */}
+      {(atRiskEpics.length > 0 || overdueEpics.length > 0) && (
+        <div className={styles.riskAlerts}>
+          {overdueEpics.map((e) => (
+            <div key={e.id} className={styles.riskAlert} style={{ borderLeftColor: "var(--red)" }}>
+              <RiAlertLine size={13} color="var(--red)" />
+              <span><strong>{e.title}</strong> is overdue ({e.progress}% complete) — deadline passed.</span>
+            </div>
+          ))}
+          {atRiskEpics.map((e) => (
+            <div key={e.id} className={styles.riskAlert} style={{ borderLeftColor: "var(--amber)" }}>
+              <RiAlertLine size={13} color="var(--amber)" />
+              <span><strong>{e.title}</strong> is behind schedule ({e.progress}% complete, expected further along).</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
@@ -296,12 +357,19 @@ export default function RoadmapTab({ project }: { project: Project }) {
       <div className={styles.epicCards}>
         <div className={styles.epicCardsTitle}>Epic Breakdown</div>
         <div className={styles.epicCardGrid}>
-          {project.epics.map((epic) => (
-            <div key={epic.id} className={styles.epicCard}>
+          {project.epics.map((epic) => {
+            const isOverdue = overdueEpics.some((e) => e.id === epic.id);
+            const isAtRisk  = atRiskEpics.some((e) => e.id === epic.id);
+            return (
+            <div key={epic.id} className={`${styles.epicCard} ${isOverdue ? styles.epicCardOverdue : isAtRisk ? styles.epicCardAtRisk : ""}`}>
               <div className={styles.epicCardTop}>
                 <div className={styles.epicColorBar} style={{ background: epic.color }} />
                 <div className={styles.epicCardInfo}>
-                  <div className={styles.epicCardTitle}>{epic.title}</div>
+                  <div className={styles.epicCardTitle}>
+                    {epic.title}
+                    {isOverdue && <span className={styles.epicRiskBadge} style={{ color: "var(--red)", borderColor: "var(--red)", background: "var(--red-glow, rgba(248,113,113,0.1))" }}>Overdue</span>}
+                    {!isOverdue && isAtRisk && <span className={styles.epicRiskBadge} style={{ color: "var(--amber)", borderColor: "var(--amber)", background: "rgba(251,191,36,0.1)" }}>At Risk</span>}
+                  </div>
                   <div className={styles.epicCardDates}>
                     {epic.startDate} → {epic.endDate}
                   </div>
@@ -327,7 +395,8 @@ export default function RoadmapTab({ project }: { project: Project }) {
                 <span>{epic.completed}/{epic.tasks} tasks done</span>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

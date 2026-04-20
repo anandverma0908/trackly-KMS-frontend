@@ -12,8 +12,23 @@ import {
   RiTeamLine,
   RiSparklingLine,
   RiCloseLine,
+  RiMicLine,
+  RiVideoLine,
+  RiScreenshot2Line,
+  RiHistoryLine,
+  RiRobot2Line,
+  RiNotification3Line,
+  RiMindMap,
 } from "react-icons/ri";
 import styles from "./NovaPage.module.css";
+import gen3Styles from "./Gen3.module.css";
+import VoiceToTicket from "./VoiceToTicket";
+import MeetingToDoc from "./MeetingToDoc";
+import ScreenshotBug from "./ScreenshotBug";
+import OrgBrain from "./OrgBrain";
+import MultiAgent from "./MultiAgent";
+import AmbientBrief from "./AmbientBrief";
+import ThoughtToWork from "./ThoughtToWork";
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 interface Insight {
@@ -27,11 +42,18 @@ interface Insight {
   icon: React.ReactNode;
 }
 
+interface Citation {
+  key: string;
+  title: string;
+  type: string;
+  quote?: string; // exact sentence from response to highlight on hover
+}
+
 interface Message {
   id: string;
   role: "user" | "nova";
   text: string;
-  citations?: { key: string; title: string; type: string }[];
+  citations?: Citation[];
   timestamp: Date;
 }
 
@@ -103,12 +125,22 @@ const SUGGESTIONS = [
   "Show velocity trend last 6 sprints",
 ];
 
-const MOCK_RESPONSES: Record<string, { text: string; citations?: { key: string; title: string; type: string }[] }> = {
+const MOCK_RESPONSES: Record<string, { text: string; citations?: Citation[] }> = {
   default: {
-    text: "I found several relevant items in your team's knowledge base. Based on ticket history, wiki pages, and decision records, here's what I can tell you...",
+    text: "I found several relevant items in your team's knowledge base. Based on ticket history, wiki pages, and decision records, here's what I can tell you.\n\nPriya S. resolved a nearly identical auth token expiry issue in Sprint 7 — her fix involved refreshing tokens 60 seconds before expiry rather than on failure. The architecture decision DEC-12 mandates short-lived JWTs with silent refresh, which is the root cause of recurring TRK-89 class issues.",
     citations: [
-      { key: "TRK-89", title: "Fix auth token expiry edge case", type: "ticket" },
-      { key: "DEC-12", title: "Auth Architecture Decision", type: "decision" },
+      {
+        key: "TRK-89",
+        title: "Fix auth token expiry edge case",
+        type: "ticket",
+        quote: "Priya S. resolved a nearly identical auth token expiry issue in Sprint 7 — her fix involved refreshing tokens 60 seconds before expiry rather than on failure.",
+      },
+      {
+        key: "DEC-12",
+        title: "Auth Architecture Decision",
+        type: "decision",
+        quote: "The architecture decision DEC-12 mandates short-lived JWTs with silent refresh, which is the root cause of recurring TRK-89 class issues.",
+      },
     ],
   },
 };
@@ -193,8 +225,65 @@ function InsightCard({ insight, delay }: { insight: Insight; delay: number }) {
   );
 }
 
+/* ── Highlighted message text with citation quotes ───────────────────────── */
+function HighlightedText({
+  text,
+  citations,
+  hoveredKey,
+  streaming,
+  done,
+}: {
+  text: string;
+  citations?: Citation[];
+  hoveredKey: string | null;
+  streaming: boolean;
+  done: boolean;
+}) {
+  if (!hoveredKey || !citations) {
+    return (
+      <>
+        {text}
+        {streaming && !done && <span className={styles.streamCursor}>▋</span>}
+      </>
+    );
+  }
+
+  const citation = citations.find((c) => c.key === hoveredKey);
+  const quote = citation?.quote;
+
+  if (!quote) {
+    return (
+      <>
+        {text}
+        {streaming && !done && <span className={styles.streamCursor}>▋</span>}
+      </>
+    );
+  }
+
+  const idx = text.indexOf(quote);
+  if (idx === -1) {
+    return (
+      <>
+        {text}
+        {streaming && !done && <span className={styles.streamCursor}>▋</span>}
+      </>
+    );
+  }
+
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className={styles.citedHighlight}>{text.slice(idx, idx + quote.length)}</mark>
+      {text.slice(idx + quote.length)}
+      {streaming && !done && <span className={styles.streamCursor}>▋</span>}
+    </>
+  );
+}
+
 /* ── Message bubble ───────────────────────────────────────────────────────── */
 function MessageBubble({ msg, isLatestNova }: { msg: Message; isLatestNova: boolean }) {
+  const [hoveredCitation, setHoveredCitation] = useState<string | null>(null);
+
   const { displayed, done } = useStreamingText(
     msg.text,
     msg.role === "nova" && isLatestNova,
@@ -202,6 +291,7 @@ function MessageBubble({ msg, isLatestNova }: { msg: Message; isLatestNova: bool
   );
 
   const textToShow = (msg.role === "nova" && isLatestNova) ? displayed : msg.text;
+  const isStreaming = msg.role === "nova" && isLatestNova;
 
   return (
     <motion.div
@@ -216,18 +306,27 @@ function MessageBubble({ msg, isLatestNova }: { msg: Message; isLatestNova: bool
       )}
       <div className={styles.messageBubble}>
         <p className={styles.messageText}>
-          {textToShow}
-          {msg.role === "nova" && isLatestNova && !done && (
-            <span className={styles.streamCursor}>▋</span>
-          )}
+          <HighlightedText
+            text={textToShow}
+            citations={msg.citations}
+            hoveredKey={hoveredCitation}
+            streaming={isStreaming}
+            done={done}
+          />
         </p>
-        {msg.citations && done && (
+        {msg.citations && (isStreaming ? done : true) && (
           <div className={styles.citations}>
             <span className={styles.citationsLabel}>Sources</span>
             {msg.citations.map((c) => (
-              <button key={c.key} className={styles.citation}>
+              <button
+                key={c.key}
+                className={`${styles.citation} ${hoveredCitation === c.key ? styles.citationActive : ""}`}
+                onMouseEnter={() => setHoveredCitation(c.key)}
+                onMouseLeave={() => setHoveredCitation(null)}
+              >
                 <span className={styles.citationKey}>{c.key}</span>
                 <span className={styles.citationTitle}>{c.title}</span>
+                {c.quote && <span className={styles.citationHint}>hover to highlight</span>}
               </button>
             ))}
           </div>
@@ -242,7 +341,7 @@ export default function NovaPage() {
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"insights" | "chat">("insights");
+  const [activeTab, setActiveTab] = useState<"insights" | "chat" | "voice" | "meeting" | "screenshot" | "brain" | "agents" | "ambient" | "thought">("insights");
   const inputRef = useRef<HTMLInputElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
@@ -274,7 +373,7 @@ export default function NovaPage() {
     const novaMsg: Message = {
       id: crypto.randomUUID(),
       role: "nova",
-      text: `${resp.text}\n\nFor your query about "${q}", I analyzed your team's tickets, wiki pages, and decision records from the last 6 months. I found 3 closely related items that may be directly relevant.`,
+      text: resp.text,
       citations: resp.citations,
       timestamp: new Date(),
     };
@@ -369,11 +468,91 @@ export default function NovaPage() {
             <span className={styles.tabBadge}>{messages.length}</span>
           )}
         </button>
+        <button
+          className={`${styles.tab} ${activeTab === "voice" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("voice")}
+        >
+          <RiMicLine size={14} />
+          Voice to Ticket
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === "meeting" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("meeting")}
+        >
+          <RiVideoLine size={14} />
+          Meeting to Doc
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === "screenshot" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("screenshot")}
+        >
+          <RiScreenshot2Line size={14} />
+          Screenshot to Bug
+        </button>
+        <div className={gen3Styles.tabSep} />
+        <span className={gen3Styles.tabGen3Label}>2031</span>
+        <button
+          className={`${styles.tab} ${activeTab === "brain" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("brain")}
+        >
+          <RiHistoryLine size={14} />
+          Org Brain
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === "agents" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("agents")}
+        >
+          <RiRobot2Line size={14} />
+          Agents
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === "ambient" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("ambient")}
+        >
+          <RiNotification3Line size={14} />
+          Ambient
+          <span className={styles.tabBadge}>3</span>
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === "thought" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("thought")}
+        >
+          <RiMindMap size={14} />
+          Thought
+        </button>
       </div>
 
       {/* ── Content ── */}
       <AnimatePresence mode="wait">
-        {activeTab === "insights" ? (
+        {activeTab === "voice" ? (
+          <motion.div key="voice" className={styles.gen2Pane} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <VoiceToTicket />
+          </motion.div>
+        ) : activeTab === "meeting" ? (
+          <motion.div key="meeting" className={styles.gen2Pane} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <MeetingToDoc />
+          </motion.div>
+        ) : activeTab === "screenshot" ? (
+          <motion.div key="screenshot" className={styles.gen2Pane} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <ScreenshotBug />
+          </motion.div>
+        ) : activeTab === "brain" ? (
+          <motion.div key="brain" className={styles.gen2Pane} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <OrgBrain />
+          </motion.div>
+        ) : activeTab === "agents" ? (
+          <motion.div key="agents" className={styles.gen2Pane} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <MultiAgent />
+          </motion.div>
+        ) : activeTab === "ambient" ? (
+          <motion.div key="ambient" className={styles.gen2Pane} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <AmbientBrief />
+          </motion.div>
+        ) : activeTab === "thought" ? (
+          <motion.div key="thought" className={styles.gen2Pane} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <ThoughtToWork />
+          </motion.div>
+        ) : activeTab === "insights" ? (
           <motion.div
             key="insights"
             className={styles.insightsGrid}

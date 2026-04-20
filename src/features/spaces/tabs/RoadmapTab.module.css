@@ -383,3 +383,54 @@
 @media (max-width: 900px) {
   .summaryRow { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── EOS AI additions ── */
+.eosBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r);
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.eosBarText { flex: 1; }
+
+.eosBadge {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em;
+  padding: 2px 7px; border-radius: 99px; flex-shrink: 0;
+}
+
+.riskAlerts { display: flex; flex-direction: column; gap: 6px; }
+
+.riskAlert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid;
+  border-radius: var(--r-sm);
+  font-size: 0.81rem;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.epicCardOverdue { border-color: var(--red) !important; }
+.epicCardAtRisk  { border-color: var(--amber) !important; }
+
+.epicRiskBadge {
+  display: inline-flex;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.04em;
+  padding: 1px 7px; border-radius: 99px; border: 1px solid;
+  margin-left: 6px; vertical-align: middle;
+}

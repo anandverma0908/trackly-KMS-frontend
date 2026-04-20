@@ -1,0 +1,251 @@
+/* Shared panel shell */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  height: 100%;
+}
+
+.panelHeader { display: flex; flex-direction: column; gap: 4px; }
+.panelTitle { font-size: 1.05rem; font-weight: 700; color: var(--text); margin: 0; }
+.panelSub { font-size: 0.82rem; color: var(--text-3); margin: 0; }
+
+/* Unsupported */
+.unsupported {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  font-size: 0.84rem;
+  color: var(--text-2);
+}
+
+/* Voice center */
+.voiceCenter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 32px 0;
+}
+
+.micBtn {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: var(--surface-2);
+  border: 2px solid var(--border);
+  color: var(--text-2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.micBtn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim, rgba(79,126,255,0.08)); }
+.micBtnActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 8px var(--accent-glow-2, rgba(79,126,255,0.15));
+  animation: micPulse 1.5s ease-in-out infinite;
+}
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 0 8px rgba(79,126,255,0.15); }
+  50% { box-shadow: 0 0 0 16px rgba(79,126,255,0.05); }
+}
+
+.micLabel { font-size: 0.84rem; color: var(--text-3); }
+
+.waveWrap { display: flex; align-items: center; gap: 4px; height: 24px; }
+.wave {
+  width: 4px; height: 100%; border-radius: 2px;
+  background: var(--accent);
+  animation: waveAnim 0.8s ease-in-out infinite alternate;
+}
+@keyframes waveAnim {
+  from { transform: scaleY(0.2); }
+  to { transform: scaleY(1); }
+}
+
+.liveText { font-size: 0.84rem; color: var(--text-2); font-style: italic; }
+.transcriptPreview { font-size: 0.78rem; color: var(--text-3); max-width: 420px; text-align: center; line-height: 1.5; }
+
+/* Transcript card */
+.transcriptCard {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.transcriptLabel { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-3); }
+.transcriptText { font-size: 0.88rem; color: var(--text); line-height: 1.6; margin: 0; }
+.transcriptActions { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+
+/* Extracted card */
+.extractedCard {
+  background: var(--surface-2);
+  border: 1px solid var(--accent-border, rgba(79,126,255,0.25));
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.extractedHeader {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.8rem; color: var(--text-2);
+}
+.extractedActions { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+
+/* Field grid */
+.fieldGrid { display: flex; flex-direction: column; gap: 10px; }
+.fieldRow { display: flex; gap: 10px; }
+.fieldRow .field { flex: 1; }
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+.fieldLabel { font-size: 0.72rem; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.fieldInput, .fieldTextarea, .fieldSelect {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 7px 10px;
+  font-size: 0.84rem;
+  color: var(--text);
+  font-family: var(--font-sans);
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.fieldInput:focus, .fieldTextarea:focus, .fieldSelect:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.fieldTextarea { resize: vertical; }
+.fieldSelect { cursor: pointer; }
+
+/* Buttons */
+.btnPrimary {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: var(--r-sm);
+  padding: 8px 16px; font-size: 0.84rem; font-weight: 600;
+  cursor: pointer; font-family: var(--font-sans);
+  transition: opacity 0.15s;
+}
+.btnPrimary:hover { opacity: 0.85; }
+.btnPrimary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btnGhost {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; color: var(--text-2);
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: 7px 14px; font-size: 0.84rem;
+  cursor: pointer; font-family: var(--font-sans);
+  transition: all 0.15s;
+}
+.btnGhost:hover { border-color: var(--accent); color: var(--accent); }
+
+.btnSpinner {
+  width: 12px; height: 12px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* EOS badge */
+.eosBadge {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--accent-dim, rgba(79,126,255,0.1));
+  border: 1px solid var(--accent-border, rgba(79,126,255,0.25));
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-left: auto;
+}
+
+/* Success */
+.successCard {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  padding: 40px 0;
+}
+.successIcon { font-size: 2.5rem; }
+.successText { font-size: 1rem; font-weight: 600; color: var(--text); }
+
+/* Meeting recorder */
+.recorderCenter {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  padding: 24px 0;
+}
+.recorderTimer {
+  font-size: 2rem; font-weight: 700; color: var(--text);
+  font-family: var(--font-mono);
+}
+.recorderStatus { font-size: 0.82rem; color: var(--text-3); }
+
+.speakerList { display: flex; flex-direction: column; gap: 6px; }
+.speakerRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.speakerAvatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent-dim, rgba(79,126,255,0.15));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 700; color: var(--accent);
+  flex-shrink: 0;
+}
+.speakerName { font-size: 0.84rem; color: var(--text); flex: 1; }
+.speakerTime { font-size: 0.75rem; color: var(--text-3); font-family: var(--font-mono); }
+.speakerActive { border-color: var(--accent); }
+.speakerActiveDot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+  animation: blink 1s ease-in-out infinite;
+}
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+/* Doc output */
+.docOutput {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.docSection { display: flex; flex-direction: column; gap: 6px; }
+.docSectionTitle {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.docSectionBody { font-size: 0.84rem; color: var(--text); line-height: 1.6; }
+.docActions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* Screenshot drop zone */
+.dropZone {
+  border: 2px dashed var(--border);
+  border-radius: var(--r);
+  padding: 40px 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.dropZone:hover, .dropZoneActive { border-color: var(--accent); background: var(--accent-dim, rgba(79,126,255,0.04)); }
+.dropInput { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.dropIcon { color: var(--text-3); }
+.dropLabel { font-size: 0.84rem; color: var(--text-2); }
+.dropSub { font-size: 0.75rem; color: var(--text-3); }
+
+.previewImg {
+  width: 100%; max-height: 220px;
+  object-fit: contain;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+}
