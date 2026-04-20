@@ -23,6 +23,13 @@ import WeeklyTimeGrid from "@/features/timetrack/WeeklyTimeGrid";
 import SpacesPage from "@/features/spaces/SpacesPage";
 import ProjectDetailPage from "@/features/spaces/ProjectDetailPage";
 
+import MyWorkPage from "@/features/my-work/MyWorkPage";
+import NovaPage from "@/features/nova/NovaPage";
+import DecisionsPage from "@/features/decisions/DecisionsPage";
+import ProcessesPage from "@/features/processes/ProcessesPage";
+import GoalsPage from "@/features/goals/GoalsPage";
+import RoadmapPage from "@/features/roadmap/RoadmapPage";
+
 function useRouteDirection() {
   const location = useLocation();
   const prevRef = useRef(location);
@@ -111,7 +118,7 @@ function AnimatedRoutes() {
             }
           >
             <Route element={<RequireRole />}>
-              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route index element={<Navigate to="/my-work" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/tickets" element={<TicketsPage />} />
               <Route path="/kanban" element={<KanbanBoard />} />
@@ -127,6 +134,12 @@ function AnimatedRoutes() {
               <Route path="/admin/users" element={<Navigate to="/settings" replace />} />
               <Route path="/spaces" element={<SpacesPage />} />
               <Route path="/spaces/:projectId" element={<ProjectDetailPage />} />
+              <Route path="/my-work" element={<MyWorkPage />} />
+              <Route path="/nova" element={<NovaPage />} />
+              <Route path="/decisions" element={<DecisionsPage />} />
+              <Route path="/processes" element={<ProcessesPage />} />
+              <Route path="/goals" element={<GoalsPage />} />
+              <Route path="/roadmap" element={<RoadmapPage />} />
             </Route>
           </Route>
         </Route>
@@ -136,7 +149,7 @@ function AnimatedRoutes() {
           path="*"
           element={
             <PageTransition>
-              <Navigate to="/dashboard" replace />
+              <Navigate to="/my-work" replace />
             </PageTransition>
           }
         />

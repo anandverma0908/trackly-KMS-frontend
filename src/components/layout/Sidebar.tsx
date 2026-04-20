@@ -5,14 +5,20 @@ import styles from "./Sidebar.module.css";
 import Tooltip from "@mui/material/Tooltip";
 
 import {
-  RiDashboardLine,
   RiBookOpenLine,
   RiTeamLine,
   RiRocketLine,
   RiCloseLine,
+  RiUser3Line,
+  RiMapLine,
+  RiBarChartLine,
+  RiSunLine,
+  RiFileTextLine,
+  RiShieldCheckLine,
+  RiBrainLine,
+  RiFocus3Line,
 } from "react-icons/ri";
 
-/* ── Main Sidebar ────────────────────────────────────────────────────────── */
 interface SidebarProps {
   open?: boolean;
   onClose?: () => void;
@@ -33,6 +39,9 @@ export default function Sidebar({
     onClose?.();
   }
 
+  const isActive = (path: string) =>
+    location.pathname === path || location.pathname.startsWith(path + "/");
+
   const nav = (
     icon: React.ReactNode,
     label: string,
@@ -45,12 +54,19 @@ export default function Sidebar({
         key={path}
         label={label}
         icon={icon}
-        active={location.pathname === path}
+        active={isActive(path)}
         collapsed={collapsed}
         onClick={() => handleNavClick(path)}
       />
     );
   };
+
+  const sectionLabel = (label: string) =>
+    !collapsed ? (
+      <div className={styles.section}>{label}</div>
+    ) : (
+      <div className={styles.sectionDividerCollapsed} />
+    );
 
   return (
     <motion.aside
@@ -68,10 +84,6 @@ export default function Sidebar({
         <RiCloseLine size={20} />
       </button>
 
-      {/* <div className={styles.logo}>
-        <div className={styles.logoMark}>T</div>
-      </div> */}
-
       <div className={styles.logo} onClick={() => navigate("/dashboard")}>
         <div className={styles.logoMark}>T</div>
         {!collapsed && <span className={styles.logoName}>Trackly</span>}
@@ -79,101 +91,36 @@ export default function Sidebar({
 
       <div className={styles.body}>
         <div className={styles.navGroup}>
-          {/* ── Primary nav ── */}
-          {nav(<RiDashboardLine size={20} />, "Dashboard", "/dashboard")}
-          {nav(<RiRocketLine size={20} />, "Spaces", "/spaces")}
 
-          {/* {nav(
-            <ConfirmationNumberIcon fontSize="small" />,
-            "Tickets",
-            "/tickets",
-            can("view:tickets"),
-          )} */}
+          {/* ── ME ── */}
+          {sectionLabel("Me")}
+          {nav(<RiUser3Line size={18} />, "My Work", "/my-work")}
 
-          {/* {nav(
-            <SpeedIcon fontSize="small" />,
-            "Sprints",
-            "/sprints",
-            can("view:tickets"),
-          )} */}
+          {/* ── WORK ── */}
+          {sectionLabel("Work")}
+          {nav(<RiRocketLine size={18} />, "Spaces", "/spaces")}
+          {nav(<RiMapLine size={18} />, "Roadmap", "/roadmap")}
+          {nav(<RiFocus3Line size={18} />, "Goals", "/goals")}
 
-          {/* <div className={styles.divider} /> */}
+          {/* ── KNOWLEDGE ── */}
+          {sectionLabel("Knowledge")}
+          {nav(<RiBookOpenLine size={18} />, "Wiki", "/wiki")}
+          {nav(<RiFileTextLine size={18} />, "Decisions", "/decisions")}
+          {nav(<RiShieldCheckLine size={18} />, "Processes", "/processes")}
 
-          {nav(<RiBookOpenLine size={20} />, "Wiki", "/wiki")}
-          {/* {nav(<WbSunnyIcon fontSize="small" />, "Standup", "/standup")} */}
-          {/* {nav(<BarChartIcon fontSize="small" />, "Analytics", "/analytics")} */}
+          {/* ── INTELLIGENCE ── */}
+          {sectionLabel("Intelligence")}
+          {nav(<RiBrainLine size={18} />, "Nova", "/nova")}
+          {nav(<RiBarChartLine size={18} />, "Analytics", "/analytics")}
 
-          {/* <div className={styles.divider} /> */}
+          {/* ── PEOPLE ── */}
+          {sectionLabel("People")}
+          {nav(<RiTeamLine size={18} />, "Team", "/team", can("view:teams"))}
+          {nav(<RiSunLine size={18} />, "Standup", "/standup")}
 
-          {nav(<RiTeamLine size={20} />, "Team", "/team", can("view:teams"))}
-          {/* {nav(
-            <TableChartIcon fontSize="small" />,
-            "Timesheets",
-            "/manual-entry",
-            // can("entry:manual"),
-          )} */}
-          {/* {nav(
-            <GridViewIcon fontSize="small" />,
-            "Weekly Grid",
-            "/timesheets/weekly",
-            can("entry:manual"),
-          )} */}
-          {/* {nav(
-            <FileDownloadIcon fontSize="small" />,
-            "Export",
-            "/export",
-            can("export:all"),
-          )} */}
-
-          {/* <div className={styles.divider} /> */}
-
-          {/* Filters — hidden when collapsed */}
-          {/* {!collapsed && (
-            <>
-              <FilterSection
-                title="Projects"
-                items={allPods}
-                selected={pods}
-                onToggle={togglePod}
-                onClear={clearPods}
-                getColor={getPodColor}
-                maxVisible={5}
-              />
-              <div className={styles.divider} />
-              <FilterSection
-                title="Clients"
-                items={allClients}
-                selected={clients}
-                onToggle={toggleClient}
-                onClear={clearClients}
-                maxVisible={5}
-              />
-              <div className={styles.divider} />
-            </>
-          )} */}
-
-          {/* {nav(
-            <SettingsIcon fontSize="small" />,
-            "Settings",
-            "/settings",
-            can("manage:settings"),
-          )} */}
-          {/* {nav(
-            <AutoAwesomeIcon fontSize="small" />,
-            "Burn Rate",
-            "/settings/budget",
-            can("manage:settings"),
-          )} */}
-          {/* {nav(
-            <NotificationsIcon fontSize="small" />,
-            "Notifications",
-            "/settings/notifications",
-          )} */}
         </div>
 
-        <div className={styles.navGroupBottom}>
-          {/* Settings-related items moved to the Settings page */}
-        </div>
+        <div className={styles.navGroupBottom} />
       </div>
     </motion.aside>
   );
@@ -196,9 +143,7 @@ function NavItem({
   const btn = (
     <button
       className={`${styles.item} ${active ? styles.itemActive : ""}`}
-      style={{
-        width: collapsed ? "auto" : "100%",
-      }}
+      style={{ width: collapsed ? "auto" : "100%" }}
       onClick={onClick}
     >
       <span className={styles.itemIcon}>{icon}</span>

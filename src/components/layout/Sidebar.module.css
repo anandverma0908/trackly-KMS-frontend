@@ -154,6 +154,12 @@
   padding: 10px 8px 5px;
 }
 
+.sectionDividerCollapsed {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 6px;
+}
+
 .divider {
   height: 1px;
   background: var(--border);
