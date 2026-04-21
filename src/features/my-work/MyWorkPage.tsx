@@ -21,6 +21,12 @@ import {
   RiFlashlightLine,
   RiRocketLine,
   RiBookOpenLine,
+  RiBrainLine,
+  RiCalendarLine,
+  RiLineChartLine,
+  RiShieldLine,
+  RiRobotLine,
+  RiHeartLine,
 } from "react-icons/ri";
 
 import type { AITicket, Insight, FocusBlock, TimeEnergy, SprintRisk } from "./useMyWork";
@@ -86,16 +92,30 @@ export default function MyWorkPage() {
         </div>
       </div>
 
+      {/* ── Gen 2: Proactive Intelligence ── */}
+      <Gen2ProactiveSection aiTickets={aiTickets} loading={loading} onTicketClick={setSelectedKey} />
+
       {/* ── Standup + Delivery Forecast ── */}
       <div className={`${styles.deliveryRow} fade-up-3`}>
         <TodayStandup />
         <NovaDeliveryForecast risk={sprintRisk} />
       </div>
 
+      {/* ── Gen 3: Predictive Intelligence ── */}
+      <Gen3PredictiveSection aiTickets={aiTickets} sprintRisk={sprintRisk} loading={loading} />
+
       {/* ── Knowledge Gaps ── */}
       {(loadingGaps || knowledgeGaps.length > 0) && (
         <NovaKnowledgeGaps gaps={knowledgeGaps} loading={loadingGaps} />
       )}
+
+      {/* ── Autonomous Intelligence ── */}
+      <div className={`${styles.gen4LiveGrid} fade-up-4`}>
+        <AmbientAwarenessWidget aiTickets={aiTickets} />
+        <AICopilotWidget aiTickets={aiTickets} />
+        <CareerTrajectoryWidget aiTickets={aiTickets} loading={loading} />
+        <WellbeingSignalsWidget aiTickets={aiTickets} loading={loading} />
+      </div>
 
       {/* ── Ticket Detail Drawer ── */}
       {selectedKey && (
@@ -711,6 +731,731 @@ function NovaKnowledgeGaps({
     </div>
   );
 }
+
+/* ══════════════════════════════════════════════════════════════
+   GEN 2 — PROACTIVE  (2027–2028)
+   ══════════════════════════════════════════════════════════════ */
+
+interface BlockerPred { key: string; reason: string; hoursUntilBlock: number; }
+
+const MOCK_BLOCKER_PREDS: BlockerPred[] = [
+  { key: "AUTH-221", reason: "Design hasn't responded to the pending Figma comment in 36h", hoursUntilBlock: 48 },
+  { key: "UI-045", reason: "Awaiting product sign-off on scope change — 3rd request sent", hoursUntilBlock: 8 },
+];
+
+const MOCK_VELOCITY_DATA = {
+  bestDays: ["Tuesday", "Wednesday"],
+  boostPct: 28,
+  peakWindow: "9–11am",
+  calendarConflicts: 3,
+  heatmap: [
+    [2, 8, 7, 5, 1],
+    [3, 9, 8, 8, 2],
+    [3, 9, 7, 8, 1],
+    [2, 7, 6, 6, 2],
+    [1, 6, 5, 4, 0],
+  ],
+};
+
+function Gen2ProactiveSection({
+  aiTickets,
+  loading,
+  onTicketClick,
+}: {
+  aiTickets: AITicket[];
+  loading: boolean;
+  onTicketClick: (key: string) => void;
+}) {
+  const wip = aiTickets.filter((t) => t.status === "In Progress").length;
+  const contextSwitches = Math.max(wip, 1);
+  const weeklyAvg = Math.max(1, Math.floor(contextSwitches / 2));
+
+  const realPreds: BlockerPred[] = aiTickets
+    .filter((t) => !t.status.toLowerCase().includes("block") && t.daysInStatus > 1)
+    .slice(0, 2)
+    .map((t, i) => ({
+      key: t.key,
+      reason: t.daysInStatus > 3
+        ? `No status update for ${t.daysInStatus} days — external dependency at risk`
+        : i === 0 ? "Awaiting review — comment unanswered for 2d" : "Dependency stalled",
+      hoursUntilBlock: i === 0 ? 48 : 16,
+    }));
+  const predictions = realPreds.length >= 2 ? realPreds : MOCK_BLOCKER_PREDS;
+
+  return (
+    <div className={`${styles.genSection} fade-up-2`}>
+      <div className={styles.gen2Grid}>
+        <FlowStateCard
+          contextSwitches={contextSwitches}
+          weeklyAvg={weeklyAvg}
+          topTickets={aiTickets.slice(0, 2)}
+          onTicketClick={onTicketClick}
+          loading={loading}
+        />
+        <VelocityPatternCard />
+        <BlockerPredictionCard predictions={predictions} onTicketClick={onTicketClick} loading={loading} />
+      </div>
+    </div>
+  );
+}
+
+function FlowStateCard({
+  contextSwitches,
+  weeklyAvg,
+  topTickets,
+  onTicketClick,
+  loading,
+}: {
+  contextSwitches: number;
+  weeklyAvg: number;
+  topTickets: AITicket[];
+  onTicketClick: (key: string) => void;
+  loading: boolean;
+}) {
+  const ratio = weeklyAvg > 0 ? (contextSwitches / weeklyAvg).toFixed(1) : "1.0";
+  const isHigh = contextSwitches > 3;
+
+  return (
+    <div className={`${styles.proactiveCard} ${isHigh ? styles.proactiveCardAlert : ""}`}>
+      <div className={styles.proactiveHeader}>
+        <RiShieldLine size={14} color={isHigh ? "var(--amber)" : "var(--accent)"} />
+        <span>Flow State Protection</span>
+      </div>
+      {loading ? (
+        <div className={styles.proactiveSkeleton} />
+      ) : (
+        <>
+          <p className={styles.proactiveMessage}>
+            You've had{" "}
+            <strong style={{ color: isHigh ? "var(--amber)" : "var(--text)" }}>
+              {contextSwitches} context switches
+            </strong>{" "}
+            today — that's{" "}
+            <strong style={{ color: isHigh ? "var(--amber)" : "var(--text)" }}>{ratio}×</strong>{" "}
+            your weekly average.
+          </p>
+          {isHigh && topTickets.length > 0 ? (
+            <div className={styles.proactiveFocusList}>
+              <span className={styles.proactiveFocusLabel}>Focus on these 2:</span>
+              {topTickets.slice(0, 2).map((t) => (
+                <button key={t.key} className={styles.proactiveFocusItem} onClick={() => onTicketClick(t.key)}>
+                  <span className={styles.proactiveFocusKey}>{t.key}</span>
+                  <span className={styles.proactiveFocusSummary}>{t.summary}</span>
+                  <RiArrowRightLine size={12} />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className={styles.proactiveGood}>
+              Focus is healthy — {contextSwitches} active stream{contextSwitches !== 1 ? "s" : ""}, within your norm.
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function VelocityPatternCard() {
+  const { bestDays, boostPct, peakWindow, calendarConflicts, heatmap } = MOCK_VELOCITY_DATA;
+  const days = ["M", "T", "W", "T", "F"];
+
+  return (
+    <div className={styles.proactiveCard}>
+      <div className={styles.proactiveHeader}>
+        <RiLineChartLine size={14} color="var(--accent)" />
+        <span>Velocity Patterns</span>
+      </div>
+      <p className={styles.proactiveMessage}>
+        You complete{" "}
+        <strong style={{ color: "var(--green)" }}>{boostPct}% more tickets</strong> on{" "}
+        <strong>{bestDays.join(" & ")}</strong> during <strong>{peakWindow}</strong>.
+      </p>
+      <div className={styles.velocityHeatmap}>
+        {days.map((d, di) => (
+          <div key={d + di} className={styles.heatmapCol}>
+            {heatmap[di].map((v, si) => (
+              <div
+                key={si}
+                className={styles.heatmapCell}
+                style={{
+                  background:
+                    v >= 8 ? "rgba(79,207,140,0.75)"
+                    : v >= 6 ? "rgba(79,126,255,0.55)"
+                    : v >= 3 ? "rgba(251,191,36,0.35)"
+                    : "var(--surface-3)",
+                }}
+              />
+            ))}
+            <span className={styles.heatmapDayLabel}>{d}</span>
+          </div>
+        ))}
+      </div>
+      {calendarConflicts > 0 && (
+        <div className={styles.proactiveWarning}>
+          <RiCalendarLine size={12} />
+          <span>{calendarConflicts} meetings conflict with your peak window this week</span>
+          <button className={styles.proactiveActionLink}>Reschedule?</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BlockerPredictionCard({
+  predictions,
+  onTicketClick,
+  loading,
+}: {
+  predictions: BlockerPred[];
+  onTicketClick: (key: string) => void;
+  loading: boolean;
+}) {
+  return (
+    <div className={styles.proactiveCard}>
+      <div className={styles.proactiveHeader}>
+        <RiAlertLine size={14} color="var(--amber)" />
+        <span>Blocker Prediction</span>
+      </div>
+      {loading ? (
+        <div className={styles.proactiveSkeleton} />
+      ) : predictions.length === 0 ? (
+        <p className={styles.proactiveGood}>No blocker risks detected in your queue.</p>
+      ) : (
+        <div className={styles.predictionList}>
+          {predictions.map((p) => {
+            const urgencyColor =
+              p.hoursUntilBlock <= 12 ? "var(--red)"
+              : p.hoursUntilBlock <= 24 ? "var(--amber)"
+              : "var(--text-3)";
+            return (
+              <div key={p.key} className={styles.predictionItem}>
+                <div className={styles.predictionTop}>
+                  <span className={styles.predictionKey}>{p.key}</span>
+                  <span className={styles.predictionHours} style={{ color: urgencyColor }}>
+                    ~{p.hoursUntilBlock}h until blocked
+                  </span>
+                </div>
+                <p className={styles.predictionReason}>{p.reason}</p>
+                <button className={styles.predictionCta} onClick={() => onTicketClick(p.key)}>
+                  <RiSendPlaneLine size={11} />
+                  Follow up now
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   GEN 3 — PREDICTIVE  (2029–2031)
+   ══════════════════════════════════════════════════════════════ */
+
+const MOCK_COGNITIVE = {
+  meetings: 2,
+  unresolved: 5,
+  recommendation: "Defer AUTH-309 — highest cognitive cost, lowest urgency today",
+};
+
+const MOCK_COMPLETION_PREDS = [
+  { key: "AUTH-221", predictedBy: "Thursday", daysAway: 2, sprintEnd: "Friday", onTrack: true },
+  { key: "UI-045", predictedBy: "Monday", daysAway: 6, sprintEnd: "Friday", onTrack: false },
+  { key: "INFRA-089", predictedBy: "Wednesday", daysAway: 1, sprintEnd: "Friday", onTrack: true },
+];
+
+function Gen3PredictiveSection({
+  aiTickets,
+  sprintRisk,
+  loading,
+}: {
+  aiTickets: AITicket[];
+  sprintRisk: SprintRisk | null;
+  loading: boolean;
+}) {
+  return (
+    <div className={`${styles.genSection} fade-up-3`}>
+      <div className={styles.gen3Grid}>
+        <CognitiveLoadCard aiTickets={aiTickets} loading={loading} />
+        <FocusWindowCard />
+        <CompletionPredictionCard aiTickets={aiTickets} sprintRisk={sprintRisk} loading={loading} />
+      </div>
+    </div>
+  );
+}
+
+function CognitiveLoadCard({
+  aiTickets,
+  loading,
+}: {
+  aiTickets: AITicket[];
+  loading: boolean;
+}) {
+  const wip = aiTickets.filter((t) => t.status === "In Progress").length;
+  const blocked = aiTickets.filter((t) => t.status.toLowerCase().includes("block")).length;
+  const score = Math.min(100, Math.round(
+    MOCK_COGNITIVE.meetings * 8 + wip * 12 + blocked * 15 + MOCK_COGNITIVE.unresolved * 4 + 15
+  ));
+  const scoreColor = score >= 80 ? "var(--red)" : score >= 60 ? "var(--amber)" : "var(--green)";
+  const scoreLabel = score >= 80 ? "Overloaded" : score >= 60 ? "Elevated" : "Balanced";
+  const circumference = 2 * Math.PI * 28;
+  const offset = circumference - (score / 100) * circumference;
+
+  return (
+    <div className={styles.predictiveCard}>
+      <div className={styles.predictiveHeader}>
+        <RiBrainLine size={14} color="#a78bfa" />
+        <span>Cognitive Load</span>
+      </div>
+      {loading ? (
+        <div className={styles.proactiveSkeleton} />
+      ) : (
+        <>
+          <div className={styles.cogLoadBody}>
+            <div className={styles.cogGaugeWrap}>
+              <svg width="56" height="56" viewBox="0 0 56 56">
+                <circle cx="28" cy="28" r="24" fill="none" stroke="var(--surface-3)" strokeWidth="4" />
+                <circle
+                  cx="28" cy="28" r="24" fill="none" stroke={scoreColor}
+                  strokeWidth="4" strokeLinecap="round"
+                  strokeDasharray={circumference} strokeDashoffset={offset}
+                  transform="rotate(-90 28 28)"
+                  style={{ transition: "stroke-dashoffset 1s ease" }}
+                />
+              </svg>
+              <span className={styles.cogScore} style={{ color: scoreColor }}>{score}</span>
+            </div>
+            <div className={styles.cogMeta}>
+              <span className={styles.cogLabel} style={{ color: scoreColor }}>{scoreLabel}</span>
+              <div className={styles.cogBreakdown}>
+                <div className={styles.cogItem}><span className={styles.cogItemLbl}>WIP</span><span className={styles.cogItemVal}>{wip}</span></div>
+                <div className={styles.cogItem}><span className={styles.cogItemLbl}>Blocked</span><span className={styles.cogItemVal} style={{ color: blocked > 0 ? "var(--red)" : undefined }}>{blocked}</span></div>
+                <div className={styles.cogItem}><span className={styles.cogItemLbl}>Meetings</span><span className={styles.cogItemVal}>{MOCK_COGNITIVE.meetings}</span></div>
+                <div className={styles.cogItem}><span className={styles.cogItemLbl}>Unresolved</span><span className={styles.cogItemVal}>{MOCK_COGNITIVE.unresolved}</span></div>
+              </div>
+            </div>
+          </div>
+          <p className={styles.predictiveRec}>
+            <RiSparklingLine size={10} />
+            {MOCK_COGNITIVE.recommendation}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function FocusWindowCard() {
+  const timeSlots = ["6am", "9am", "12pm", "3pm", "6pm", "9pm"];
+  const peakSlotIndices = [1, 2];
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+
+  return (
+    <div className={styles.predictiveCard}>
+      <div className={styles.predictiveHeader}>
+        <RiCalendarLine size={14} color="#a78bfa" />
+        <span>Focus Windows</span>
+      </div>
+      <p className={styles.predictiveMessage}>
+        Your deepest focus work happens{" "}
+        <strong style={{ color: "#a78bfa" }}>9–11am weekdays</strong>.
+      </p>
+      <div className={styles.focusWindowGrid}>
+        {days.map((day, di) => (
+          <div key={day} className={styles.focusWindowCol}>
+            {timeSlots.map((_slot, si) => {
+              const isPeak = peakSlotIndices.includes(si);
+              const isReserved = isPeak && di === 1;
+              return (
+                <div
+                  key={si}
+                  className={`${styles.focusWindowCell} ${isPeak ? styles.focusWindowPeak : ""} ${isReserved ? styles.focusWindowReserved : ""}`}
+                />
+              );
+            })}
+            <span className={styles.focusWindowLabel}>{day[0]}</span>
+          </div>
+        ))}
+      </div>
+      <div className={styles.predictiveCallout}>
+        <RiSparklingLine size={11} />
+        <span>Tomorrow morning is clear — EOS reserved <strong>9–11am</strong> for AUTH-221</span>
+      </div>
+    </div>
+  );
+}
+
+function CompletionPredictionCard({
+  aiTickets,
+  sprintRisk,
+  loading,
+}: {
+  aiTickets: AITicket[];
+  sprintRisk: SprintRisk | null;
+  loading: boolean;
+}) {
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const topTickets = aiTickets.slice(0, 3);
+  const preds = topTickets.length >= 2
+    ? topTickets.map((t) => {
+        const est = t.remaining_estimate_hours || t.original_estimate_hours || 4;
+        const daysAway = Math.ceil(est / 2.5);
+        const future = new Date();
+        future.setDate(future.getDate() + daysAway);
+        return {
+          key: t.key,
+          predictedBy: days[future.getDay()],
+          daysAway,
+          sprintEnd: sprintRisk ? `${sprintRisk.daysLeft}d left` : "Friday",
+          onTrack: daysAway <= (sprintRisk?.daysLeft ?? 5),
+        };
+      })
+    : MOCK_COMPLETION_PREDS;
+
+  return (
+    <div className={styles.predictiveCard}>
+      <div className={styles.predictiveHeader}>
+        <RiRocketLine size={14} color="#a78bfa" />
+        <span>Completion Prediction</span>
+      </div>
+      {loading ? (
+        <div className={styles.proactiveSkeleton} />
+      ) : (
+        <div className={styles.completionList}>
+          {preds.map((p) => (
+            <div key={p.key} className={styles.completionItem}>
+              <div className={styles.completionTop}>
+                <span className={styles.completionKey}>{p.key}</span>
+                <span className={styles.completionStatus} style={{ color: p.onTrack ? "var(--green)" : "var(--amber)" }}>
+                  {p.onTrack ? "On track" : "At risk"}
+                </span>
+              </div>
+              <div className={styles.completionRow}>
+                <span className={styles.completionBy}>
+                  Done by{" "}
+                  <strong style={{ color: p.onTrack ? "var(--green)" : "var(--amber)" }}>{p.predictedBy}</strong>
+                </span>
+                <span className={styles.completionSprint}>Sprint: {p.sprintEnd}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   AMBIENT WORK AWARENESS
+   ══════════════════════════════════════════════════════════════ */
+
+const AMBIENT_FEED = [
+  { id: "a1", time: "2m ago",  icon: "infer",   text: "Inferred 65% complete on AUTH-221 — based on file activity and time spent" },
+  { id: "a2", time: "18m ago", icon: "update",  text: "Progress estimate updated: UI-045 moved from 40% → 70% complete" },
+  { id: "a3", time: "1h ago",  icon: "detect",  text: "Context switch detected — returned to AUTH-221 after 22min on INFRA-089" },
+  { id: "a4", time: "2h ago",  icon: "log",     text: "Auto-logged 1.5h to AUTH-221 — no manual entry needed" },
+  { id: "a5", time: "3h ago",  icon: "meeting", text: "Standup detected via calendar — paused time tracking for 28 minutes" },
+];
+
+function AmbientAwarenessWidget({ aiTickets }: { aiTickets: AITicket[] }) {
+  const topKey = aiTickets[0]?.key ?? "AUTH-221";
+  const feed = AMBIENT_FEED.map((f, i) =>
+    i === 0 ? { ...f, text: f.text.replace("AUTH-221", topKey) } : f
+  );
+
+  return (
+    <div className={styles.ambientCard}>
+      <div className={styles.ambientHeader}>
+        <div className={styles.ambientPulse} />
+        <RiEyeLine size={14} color="var(--accent)" />
+        <span>Ambient Work Awareness</span>
+        <span className={styles.ambientLive}>Live</span>
+      </div>
+      <p className={styles.ambientSubtitle}>EOS is watching — no logging needed</p>
+      <div className={styles.ambientFeed}>
+        {feed.map((item) => (
+          <div key={item.id} className={styles.ambientItem}>
+            <div className={`${styles.ambientDot} ${styles[`ambientDot_${item.icon}`]}`} />
+            <div className={styles.ambientItemBody}>
+              <span className={styles.ambientItemText}>{item.text}</span>
+              <span className={styles.ambientItemTime}>{item.time}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   PERSONAL AI COPILOT
+   ══════════════════════════════════════════════════════════════ */
+
+const COPILOT_SUGGESTIONS = [
+  "Move low-priority tickets to next sprint",
+  "Draft a status update for the client",
+  "Reschedule tomorrow's standup",
+  "Summarise my week for the team",
+];
+
+const COPILOT_RESPONSES: Record<string, string> = {
+  "Move low-priority tickets to next sprint":
+    "Done. 3 low-priority tickets (UI-040, UI-041, INFRA-085) moved to Sprint 12. Sprint 11 scope is now 26 pts — well within capacity.",
+  "Draft a status update for the client":
+    "Here's a draft:\n\n\"Hi team — quick update: AUTH-221 is 65% complete and on track for Thursday. UI-045 slipped by 1 day due to a design review delay, but we're back on track. No blockers at this time.\"",
+  "Reschedule tomorrow's standup":
+    "Standup moved from 9:00am → 10:30am tomorrow. Calendar invite updated. Sarah and Dev notified.",
+  "Summarise my week for the team":
+    "This week: closed 4 tickets (18 pts), unblocked AUTH-221, reviewed 2 PRs, and flagged 1 scope risk on INFRA-089. Velocity: 4.5 pts/day — 12% above your average.",
+};
+
+function AICopilotWidget({ aiTickets }: { aiTickets: AITicket[] }) {
+  const [input, setInput] = useState("");
+  const [thinking, setThinking] = useState(false);
+  const [history, setHistory] = useState<{ cmd: string; reply: string }[]>([]);
+
+  function submit(cmd: string) {
+    if (!cmd.trim() || thinking) return;
+    setThinking(true);
+    const normalised = cmd.trim();
+    setTimeout(() => {
+      const reply =
+        COPILOT_RESPONSES[normalised] ??
+        `Got it — "${normalised}". Processing your request across ${aiTickets.length} open tickets…`;
+      setHistory((h) => [{ cmd: normalised, reply }, ...h].slice(0, 3));
+      setThinking(false);
+      setInput("");
+    }, 900);
+  }
+
+  return (
+    <div className={styles.copilotCard}>
+      <div className={styles.copilotHeader}>
+        <RiRobotLine size={14} color="var(--accent)" />
+        <span>Personal AI Copilot</span>
+      </div>
+
+      {history.length > 0 && (
+        <div className={styles.copilotHistory}>
+          {history.map((h, i) => (
+            <div key={i} className={styles.copilotHistoryItem}>
+              <div className={styles.copilotUserLine}>
+                <span className={styles.copilotUserBubble}>{h.cmd}</span>
+              </div>
+              <div className={styles.copilotReplyLine}>
+                <RiSparklingLine size={10} color="var(--accent)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <p className={styles.copilotReplyText}>{h.reply}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {thinking && (
+        <div className={styles.copilotThinking}>
+          <span className={styles.copilotThinkingDot} />
+          <span className={styles.copilotThinkingDot} />
+          <span className={styles.copilotThinkingDot} />
+        </div>
+      )}
+
+      {history.length === 0 && !thinking && (
+        <div className={styles.copilotChips}>
+          {COPILOT_SUGGESTIONS.map((s) => (
+            <button key={s} className={styles.copilotChip} onClick={() => submit(s)}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className={styles.copilotInputRow}>
+        <input
+          className={styles.copilotInput}
+          placeholder="Ask EOS anything…"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit(input)}
+        />
+        <button className={styles.copilotSendBtn} onClick={() => submit(input)} disabled={!input.trim() || thinking}>
+          <RiSendPlaneLine size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   CAREER TRAJECTORY
+   ══════════════════════════════════════════════════════════════ */
+
+const SKILL_DOMAINS = [
+  { domain: "Frontend",       tickets: 23, max: 30, color: "var(--accent)" },
+  { domain: "Authentication", tickets: 8,  max: 30, color: "var(--green)" },
+  { domain: "Testing / QA",   tickets: 5,  max: 30, color: "var(--amber)" },
+  { domain: "API / Backend",  tickets: 3,  max: 30, color: "var(--accent)" },
+  { domain: "Infrastructure", tickets: 0,  max: 30, color: "var(--red)" },
+];
+
+const CAREER_RECS = [
+  { label: "SSO Architecture wiki", reason: "covers the infra work your team owns next quarter" },
+  { label: "Kubernetes basics runbook", reason: "gap in your infra knowledge detected" },
+];
+
+function CareerTrajectoryWidget({ aiTickets, loading }: { aiTickets: AITicket[]; loading: boolean }) {
+  const dominated = aiTickets.reduce<Record<string, number>>((acc, t) => {
+    acc[t.issue_type] = (acc[t.issue_type] || 0) + 1;
+    return acc;
+  }, {});
+
+  const totalReal = Object.values(dominated).reduce((s, v) => s + v, 0);
+  const domains = totalReal > 4
+    ? Object.entries(dominated).slice(0, 5).map(([domain, tickets], i) => ({
+        domain,
+        tickets,
+        max: Math.max(...Object.values(dominated)),
+        color: ["var(--accent)", "var(--green)", "var(--amber)", "var(--accent)", "var(--red)"][i] ?? "var(--accent)",
+      }))
+    : SKILL_DOMAINS;
+
+  const gap = domains.find((d) => d.tickets === 0) ?? domains[domains.length - 1];
+
+  return (
+    <div className={styles.careerCard}>
+      <div className={styles.careerHeader}>
+        <RiBarChartBoxLine size={14} color="var(--accent)" />
+        <span>Career Trajectory</span>
+      </div>
+      {loading ? (
+        <div className={styles.proactiveSkeleton} />
+      ) : (
+        <>
+          <div className={styles.careerBars}>
+            {domains.map((d) => (
+              <div key={d.domain} className={styles.careerBarRow}>
+                <span className={styles.careerBarLabel}>{d.domain}</span>
+                <div className={styles.careerBarTrack}>
+                  <div
+                    className={styles.careerBarFill}
+                    style={{
+                      width: `${d.max > 0 ? (d.tickets / d.max) * 100 : 0}%`,
+                      background: d.tickets === 0 ? "var(--surface-3)" : d.color,
+                    }}
+                  />
+                </div>
+                <span className={styles.careerBarCount} style={{ color: d.tickets === 0 ? "var(--red)" : "var(--text-3)" }}>
+                  {d.tickets === 0 ? "0 ⚠" : d.tickets}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className={styles.careerGapAlert}>
+            <RiSparklingLine size={10} />
+            <span>
+              You've done <strong>{domains[0].tickets} {domains[0].domain}</strong> tickets but zero{" "}
+              <strong>{gap.domain}</strong> — your team's next quarter includes this work.
+            </span>
+          </div>
+          <div className={styles.careerRecs}>
+            <span className={styles.careerRecsLabel}>Recommended reading</span>
+            {CAREER_RECS.map((r) => (
+              <div key={r.label} className={styles.careerRecItem}>
+                <RiBookOpenLine size={11} />
+                <div>
+                  <span className={styles.careerRecTitle}>{r.label}</span>
+                  <span className={styles.careerRecReason}>{r.reason}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   WELL-BEING SIGNALS
+   ══════════════════════════════════════════════════════════════ */
+
+const WELLBEING_HOURS = [9.5, 10.2, 11.1, 11.4, 10.8, 11.2, 8.5, 7.8, 9.1, 11.0, 11.3, 10.9, 11.6, 8.0];
+const WELLBEING_LABELS = ["M", "T", "W", "T", "F", "M", "T", "W", "T", "F", "M", "T", "W", "T"];
+const LATE_NIGHT_COMMITS = 4;
+
+function WellbeingSignalsWidget({ aiTickets, loading }: { aiTickets: AITicket[]; loading: boolean }) {
+  const overworkDays = WELLBEING_HOURS.filter((h) => h >= 10).length;
+  const consecutiveHigh = 5;
+  const avgHours = (WELLBEING_HOURS.reduce((s, h) => s + h, 0) / WELLBEING_HOURS.length).toFixed(1);
+  const wellScore = Math.max(0, Math.round(100 - overworkDays * 4 - LATE_NIGHT_COMMITS * 3));
+  const scoreColor = wellScore >= 70 ? "var(--green)" : wellScore >= 50 ? "var(--amber)" : "var(--red)";
+  const maxH = Math.max(...WELLBEING_HOURS);
+
+  const blockedCount = aiTickets.filter((t) => t.status.toLowerCase().includes("block")).length;
+
+  return (
+    <div className={styles.wellbeingCard}>
+      <div className={styles.wellbeingHeader}>
+        <RiHeartLine size={14} color="var(--red)" />
+        <span>Well-being Signals</span>
+        <span className={styles.wellbeingScore} style={{ color: scoreColor }}>{wellScore}</span>
+      </div>
+      {loading ? (
+        <div className={styles.proactiveSkeleton} />
+      ) : (
+        <>
+          <div className={styles.wellbeingAlert}>
+            <RiAlertLine size={12} color="var(--amber)" />
+            <span>
+              You've worked <strong>{consecutiveHigh}-hour days</strong> for 5 consecutive days — velocity
+              actually drops after day 3.
+            </span>
+          </div>
+          <div className={styles.wellbeingChart}>
+            {WELLBEING_HOURS.map((h, i) => (
+              <div key={i} className={styles.wellbeingBarWrap}>
+                <div
+                  className={styles.wellbeingBar}
+                  style={{
+                    height: `${(h / maxH) * 100}%`,
+                    background: h >= 11 ? "var(--red)" : h >= 9.5 ? "var(--amber)" : "var(--green)",
+                  }}
+                  title={`${WELLBEING_LABELS[i]}: ${h}h`}
+                />
+                <span className={styles.wellbeingBarLabel}>{WELLBEING_LABELS[i]}</span>
+              </div>
+            ))}
+          </div>
+          <div className={styles.wellbeingStats}>
+            <div className={styles.wellbeingStat}>
+              <span className={styles.wellbeingStatVal}>{avgHours}h</span>
+              <span className={styles.wellbeingStatLbl}>avg / day</span>
+            </div>
+            <div className={styles.wellbeingStat}>
+              <span className={styles.wellbeingStatVal} style={{ color: LATE_NIGHT_COMMITS > 2 ? "var(--amber)" : "var(--text)" }}>{LATE_NIGHT_COMMITS}</span>
+              <span className={styles.wellbeingStatLbl}>late commits</span>
+            </div>
+            <div className={styles.wellbeingStat}>
+              <span className={styles.wellbeingStatVal} style={{ color: blockedCount > 0 ? "var(--red)" : "var(--text)" }}>{blockedCount}</span>
+              <span className={styles.wellbeingStatLbl}>blockers</span>
+            </div>
+          </div>
+          <p className={styles.wellbeingRec}>
+            <RiSparklingLine size={10} />
+            Consider a half-day reset tomorrow — your focus score recovers 34% after rest.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 
 function QueueStatusBadge({ status }: { status: string }) {
   const isBlocked = status.toLowerCase().includes("block");
