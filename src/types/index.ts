@@ -28,6 +28,7 @@ export interface Ticket {
   issue_type:               string
   priority:                 string
   url:                      string
+  sprint_id?:               string | null
   worklogs:                 Worklog[]
 }
 
@@ -301,12 +302,13 @@ export interface Standup {
 
 /* ── Knowledge Gap ── */
 export interface KnowledgeGap {
-  id:          number
-  topic:       string
-  description: string
-  ticket_count: number
-  wiki_count:  number
-  detected_at: string
+  id:              string
+  topic:           string
+  suggestion:      string | null
+  ticket_count:    number
+  wiki_coverage:   number
+  example_tickets: string[]
+  detected_at:     string | null
 }
 
 /* ── Search ── */

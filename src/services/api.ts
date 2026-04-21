@@ -612,6 +612,22 @@ export async function fetchNovaStatus() {
   return data;
 }
 
+export interface MyBriefResponse {
+  brief:              string;
+  top_ticket_key:     string | null;
+  sprint_probability: number | null;
+  blocker_count:      number;
+  overdue_count:      number;
+  wip_count:          number;
+  open_count:         number;
+  chips: Array<{ label: string; type: "critical" | "warning" | "info" | "action" }>;
+}
+
+export async function fetchMyBrief(): Promise<MyBriefResponse> {
+  const { data } = await api.get("/nova/my-brief");
+  return data;
+}
+
 /* ── Timer / Time logging ── */
 export async function logTime(ticketKey: string, hours: number, comment: string, date: string) {
   const { data } = await api.post(`/tickets/${ticketKey}/worklogs`, { hours, comment, date });

@@ -97,6 +97,166 @@
   50% { opacity: 0; }
 }
 
+/* ── EOS Agent Brief ── */
+.agentCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--bgrnd);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-xl);
+  padding: 16px 18px;
+  background: linear-gradient(135deg, var(--bgrnd) 0%, color-mix(in srgb, var(--accent) 4%, var(--bgrnd)) 100%);
+}
+
+.agentCardLoading {
+  opacity: 0.75;
+}
+
+.agentAvatarWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.agentAvatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.agentPulse {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  opacity: 0.3;
+  animation: agentPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes agentPulse {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.18); opacity: 0; }
+}
+
+.agentContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agentBubble {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agentName {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.agentText {
+  font-size: 13px;
+  color: var(--text-2);
+  font-weight: 500;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.agentText :global(strong) {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.agentLoadingText {
+  font-size: 13px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.agentChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.agentChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  cursor: default;
+}
+
+.agentInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  padding: 7px 10px;
+  transition: border-color 0.15s;
+}
+
+.agentInputRow:focus-within {
+  border-color: var(--accent-border);
+}
+
+.agentInputIcon {
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.agentInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 12.5px;
+  color: var(--text);
+  font-family: inherit;
+}
+
+.agentInput::placeholder {
+  color: var(--text-3);
+}
+
+.agentSendBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.agentSendBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 /* ── Nova Insight Feed ── */
 .insightCard {
   background: var(--bgrnd);

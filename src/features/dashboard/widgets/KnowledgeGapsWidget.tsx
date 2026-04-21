@@ -69,7 +69,7 @@ export default function KnowledgeGapsWidget() {
                     {g.ticket_count} tickets
                   </span>
                 </div>
-                <div className={styles.description}>{g.description}</div>
+                <div className={styles.description}>{g.suggestion ?? ""}</div>
               </div>
             );
           })}

@@ -48,7 +48,7 @@ export default function AnalyticsPage() {
       return createWikiPage({
         space_id: spaceId,
         title:    `[Stub] ${gap.topic}`,
-        content:  `# ${gap.topic}\n\n> This page was auto-created from a knowledge gap detection.\n\n## Description\n\n${gap.description}\n\n## TODO\n\n- [ ] Add relevant documentation\n- [ ] Link to related tickets\n`,
+        content:  `# ${gap.topic}\n\n> This page was auto-created from a knowledge gap detection.\n\n## Description\n\n${gap.suggestion ?? ""}\n\n## TODO\n\n- [ ] Add relevant documentation\n- [ ] Link to related tickets\n`,
       });
     },
     onSuccess: () => {
@@ -64,12 +64,12 @@ export default function AnalyticsPage() {
       if (!spaceId) throw new Error("No wiki spaces found");
       const analysis = await analyzeTicketNL(
         `Write a comprehensive technical wiki article about "${gap.topic}". ` +
-        `Context: ${gap.description}. ` +
+        `Context: ${gap.suggestion ?? gap.topic}. ` +
         `Include sections: Overview, When This Comes Up, Common Patterns, Best Practices, Troubleshooting. ` +
         `Based on ${gap.ticket_count} unresolved tickets that needed this knowledge.`
       );
       const body = analysis.description ??
-        `## Overview\n\n${gap.description}\n\n## Common Patterns\n\nTODO\n\n## Best Practices\n\nTODO\n\n## Troubleshooting\n\nTODO`;
+        `## Overview\n\n${gap.suggestion ?? ""}\n\n## Common Patterns\n\nTODO\n\n## Best Practices\n\nTODO\n\n## Troubleshooting\n\nTODO`;
       return createWikiPage({
         space_id: spaceId,
         title: gap.topic,
@@ -394,13 +394,13 @@ export default function AnalyticsPage() {
               <div key={gap.id} className={styles.gapItem}>
                 <div className={styles.gapInfo}>
                   <div className={styles.gapTopic}>{gap.topic}</div>
-                  <div className={styles.gapDesc}>{gap.description}</div>
+                  {gap.suggestion && <div className={styles.gapDesc}>{gap.suggestion}</div>}
                   <div className={styles.gapMeta}>
                     <span>{gap.ticket_count} tickets</span>
                     <span>·</span>
-                    <span>{gap.wiki_count} wiki pages</span>
+                    <span>{gap.wiki_coverage}% wiki coverage</span>
                     <span>·</span>
-                    <span>{new Date(gap.detected_at).toLocaleDateString()}</span>
+                    <span>{gap.detected_at ? new Date(gap.detected_at).toLocaleDateString() : "—"}</span>
                   </div>
                 </div>
                 <div className={styles.gapBtns}>

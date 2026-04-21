@@ -26,7 +26,7 @@ import {
   RiShieldLine,
 } from "react-icons/ri";
 
-import type { AITicket, Insight, FocusBlock, TimeEnergy, SprintRisk } from "./useMyWork";
+import type { AITicket, Insight, FocusBlock, TimeEnergy, SprintRisk, CognitiveData, AmbientEvent } from "./useMyWork";
 import type { KnowledgeGap } from "@/types";
 
 /* ═══════════════════════════════════════════════════════════
@@ -41,6 +41,9 @@ export default function MyWorkPage() {
     focusBlock,
     timeEnergy,
     morningBrief,
+    briefChips,
+    cognitiveData,
+    ambientEvents,
     knowledgeGaps,
     loading,
     loadingGaps,
@@ -68,8 +71,8 @@ export default function MyWorkPage() {
         </span>
       </div>
 
-      {/* ── Morning Brief ── */}
-      <MorningBrief text={morningBrief} loading={loading} />
+      {/* ── EOS Agent Brief ── */}
+      <EosAgentBrief text={morningBrief} chips={briefChips} loading={loading} />
 
       {/* ── Nova Insight Feed ── */}
       <NovaInsightFeed insights={insights} loading={loading} onTicketClick={setSelectedKey} />
@@ -98,7 +101,7 @@ export default function MyWorkPage() {
       </div>
 
       {/* ── Gen 3: Predictive Intelligence ── */}
-      <Gen3PredictiveSection aiTickets={aiTickets} sprintRisk={sprintRisk} loading={loading} />
+      <Gen3PredictiveSection aiTickets={aiTickets} sprintRisk={sprintRisk} cognitiveData={cognitiveData} loading={loading} />
 
       {/* ── Knowledge Gaps ── */}
       {(loadingGaps || knowledgeGaps.length > 0) && (
@@ -106,7 +109,7 @@ export default function MyWorkPage() {
       )}
 
       {/* ── Ambient Awareness ── */}
-      <AmbientAwarenessWidget aiTickets={aiTickets} />
+      <AmbientAwarenessWidget ambientEvents={ambientEvents} />
 
       {/* ── Ticket Detail Drawer ── */}
       {selectedKey && (
@@ -147,8 +150,18 @@ export default function MyWorkPage() {
   );
 }
 
-/* ── Morning Brief ───────────────────────────────────────── */
-function MorningBrief({ text, loading }: { text: string; loading: boolean }) {
+/* ── EOS Agent Brief ─────────────────────────────────────── */
+type BriefChip = { label: string; type: "critical" | "warning" | "info" | "action" };
+
+function EosAgentBrief({
+  text,
+  chips,
+  loading,
+}: {
+  text: string;
+  chips: BriefChip[];
+  loading: boolean;
+}) {
   const [displayed, setDisplayed] = useState("");
   const idxRef = useRef(0);
 
@@ -160,26 +173,61 @@ function MorningBrief({ text, loading }: { text: string; loading: boolean }) {
       idxRef.current += 1;
       setDisplayed(text.slice(0, idxRef.current));
       if (idxRef.current >= text.length) clearInterval(interval);
-    }, 18);
+    }, 16);
     return () => clearInterval(interval);
   }, [text, loading]);
 
+  const chipColor: Record<BriefChip["type"], string> = {
+    critical: "var(--red)",
+    warning:  "var(--amber)",
+    info:     "var(--accent)",
+    action:   "var(--green)",
+  };
+
   if (loading) {
     return (
-      <div className={`${styles.briefCard} ${styles.briefLoading}`}>
-        <RiSparklingLine size={16} className={styles.briefIcon} />
-        <span className={styles.briefText}>Nova is analyzing your work…</span>
+      <div className={`${styles.agentCard} ${styles.agentCardLoading} fade-up`}>
+        <div className={styles.agentAvatarWrap}>
+          <div className={styles.agentAvatar}><RiSparklingLine size={14} /></div>
+        </div>
+        <div className={styles.agentContent}>
+          <div className={styles.agentBubble}>
+            <span className={styles.agentLoadingText}>EOS is reading your queue…</span>
+            <span className={styles.briefCursor}>|</span>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={`${styles.briefCard} fade-up`}>
-      <RiSparklingLine size={16} className={styles.briefIcon} />
-      <span className={styles.briefText}>
-        {displayed}
-        <span className={styles.briefCursor}>|</span>
-      </span>
+    <div className={`${styles.agentCard} fade-up`}>
+      <div className={styles.agentAvatarWrap}>
+        <div className={styles.agentAvatar}><RiSparklingLine size={14} /></div>
+        <div className={styles.agentPulse} />
+      </div>
+      <div className={styles.agentContent}>
+        <div className={styles.agentBubble}>
+          <span className={styles.agentName}>EOS</span>
+          <p className={styles.agentText}>
+            {displayed}
+            {displayed.length < text.length && <span className={styles.briefCursor}>|</span>}
+          </p>
+        </div>
+        {chips.length > 0 && (
+          <div className={styles.agentChips}>
+            {chips.map((c) => (
+              <span
+                key={c.label}
+                className={styles.agentChip}
+                style={{ color: chipColor[c.type], borderColor: `${chipColor[c.type]}40`, background: `${chipColor[c.type]}12` }}
+              >
+                {c.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -710,7 +758,7 @@ function NovaKnowledgeGaps({
                   {gap.ticket_count} tickets
                 </span>
               </div>
-              <p className={styles.kgDesc}>{gap.description}</p>
+              {gap.suggestion && <p className={styles.kgDesc}>{gap.suggestion}</p>}
               <div className={styles.kgAction}>
                 <RiSparklingLine size={10} />
                 <span>{action}</span>
@@ -946,11 +994,6 @@ function BlockerPredictionCard({
    GEN 3 — PREDICTIVE  (2029–2031)
    ══════════════════════════════════════════════════════════════ */
 
-const MOCK_COGNITIVE = {
-  meetings: 2,
-  unresolved: 5,
-  recommendation: "Defer AUTH-309 — highest cognitive cost, lowest urgency today",
-};
 
 const MOCK_COMPLETION_PREDS = [
   { key: "AUTH-221", predictedBy: "Thursday", daysAway: 2, sprintEnd: "Friday", onTrack: true },
@@ -961,16 +1004,18 @@ const MOCK_COMPLETION_PREDS = [
 function Gen3PredictiveSection({
   aiTickets,
   sprintRisk,
+  cognitiveData,
   loading,
 }: {
   aiTickets: AITicket[];
   sprintRisk: SprintRisk | null;
+  cognitiveData: CognitiveData;
   loading: boolean;
 }) {
   return (
     <div className={`${styles.genSection} fade-up-3`}>
       <div className={styles.gen3Grid}>
-        <CognitiveLoadCard aiTickets={aiTickets} loading={loading} />
+        <CognitiveLoadCard cognitiveData={cognitiveData} loading={loading} />
         <FocusWindowCard />
         <CompletionPredictionCard aiTickets={aiTickets} sprintRisk={sprintRisk} loading={loading} />
       </div>
@@ -979,21 +1024,17 @@ function Gen3PredictiveSection({
 }
 
 function CognitiveLoadCard({
-  aiTickets,
+  cognitiveData,
   loading,
 }: {
-  aiTickets: AITicket[];
+  cognitiveData: CognitiveData;
   loading: boolean;
 }) {
-  const wip = aiTickets.filter((t) => t.status === "In Progress").length;
-  const blocked = aiTickets.filter((t) => t.status.toLowerCase().includes("block")).length;
-  const score = Math.min(100, Math.round(
-    MOCK_COGNITIVE.meetings * 8 + wip * 12 + blocked * 15 + MOCK_COGNITIVE.unresolved * 4 + 15
-  ));
-  const scoreColor = score >= 80 ? "var(--red)" : score >= 60 ? "var(--amber)" : "var(--green)";
-  const scoreLabel = score >= 80 ? "Overloaded" : score >= 60 ? "Elevated" : "Balanced";
+  const { wipCount, blockedCount, staleCount, loadScore, recommendation } = cognitiveData;
+  const scoreColor = loadScore >= 80 ? "var(--red)" : loadScore >= 50 ? "var(--amber)" : "var(--green)";
+  const scoreLabel = loadScore >= 80 ? "Overloaded" : loadScore >= 50 ? "Elevated" : "Balanced";
   const circumference = 2 * Math.PI * 28;
-  const offset = circumference - (score / 100) * circumference;
+  const offset = circumference - (loadScore / 100) * circumference;
 
   return (
     <div className={styles.predictiveCard}>
@@ -1017,21 +1058,20 @@ function CognitiveLoadCard({
                   style={{ transition: "stroke-dashoffset 1s ease" }}
                 />
               </svg>
-              <span className={styles.cogScore} style={{ color: scoreColor }}>{score}</span>
+              <span className={styles.cogScore} style={{ color: scoreColor }}>{loadScore}</span>
             </div>
             <div className={styles.cogMeta}>
               <span className={styles.cogLabel} style={{ color: scoreColor }}>{scoreLabel}</span>
               <div className={styles.cogBreakdown}>
-                <div className={styles.cogItem}><span className={styles.cogItemLbl}>WIP</span><span className={styles.cogItemVal}>{wip}</span></div>
-                <div className={styles.cogItem}><span className={styles.cogItemLbl}>Blocked</span><span className={styles.cogItemVal} style={{ color: blocked > 0 ? "var(--red)" : undefined }}>{blocked}</span></div>
-                <div className={styles.cogItem}><span className={styles.cogItemLbl}>Meetings</span><span className={styles.cogItemVal}>{MOCK_COGNITIVE.meetings}</span></div>
-                <div className={styles.cogItem}><span className={styles.cogItemLbl}>Unresolved</span><span className={styles.cogItemVal}>{MOCK_COGNITIVE.unresolved}</span></div>
+                <div className={styles.cogItem}><span className={styles.cogItemLbl}>WIP</span><span className={styles.cogItemVal}>{wipCount}</span></div>
+                <div className={styles.cogItem}><span className={styles.cogItemLbl}>Blocked</span><span className={styles.cogItemVal} style={{ color: blockedCount > 0 ? "var(--red)" : undefined }}>{blockedCount}</span></div>
+                <div className={styles.cogItem}><span className={styles.cogItemLbl}>Stale</span><span className={styles.cogItemVal}>{staleCount}</span></div>
               </div>
             </div>
           </div>
           <p className={styles.predictiveRec}>
             <RiSparklingLine size={10} />
-            {MOCK_COGNITIVE.recommendation}
+            {recommendation}
           </p>
         </>
       )}
@@ -1144,19 +1184,14 @@ function CompletionPredictionCard({
    AMBIENT WORK AWARENESS
    ══════════════════════════════════════════════════════════════ */
 
-const AMBIENT_FEED = [
-  { id: "a1", time: "2m ago",  icon: "infer",   text: "Inferred 65% complete on AUTH-221 — based on file activity and time spent" },
-  { id: "a2", time: "18m ago", icon: "update",  text: "Progress estimate updated: UI-045 moved from 40% → 70% complete" },
-  { id: "a3", time: "1h ago",  icon: "detect",  text: "Context switch detected — returned to AUTH-221 after 22min on INFRA-089" },
-  { id: "a4", time: "2h ago",  icon: "log",     text: "Auto-logged 1.5h to AUTH-221 — no manual entry needed" },
-  { id: "a5", time: "3h ago",  icon: "meeting", text: "Standup detected via calendar — paused time tracking for 28 minutes" },
-];
 
-function AmbientAwarenessWidget({ aiTickets }: { aiTickets: AITicket[] }) {
-  const topKey = aiTickets[0]?.key ?? "AUTH-221";
-  const feed = AMBIENT_FEED.map((f, i) =>
-    i === 0 ? { ...f, text: f.text.replace("AUTH-221", topKey) } : f
-  );
+function AmbientAwarenessWidget({ ambientEvents }: { ambientEvents: AmbientEvent[] }) {
+  const typeColor: Record<AmbientEvent["type"], string> = {
+    status:  "var(--accent)",
+    comment: "var(--amber)",
+    assign:  "var(--green)",
+    blocker: "var(--red)",
+  };
 
   return (
     <div className={styles.ambientCard}>
@@ -1168,12 +1203,16 @@ function AmbientAwarenessWidget({ aiTickets }: { aiTickets: AITicket[] }) {
       </div>
       <p className={styles.ambientSubtitle}>EOS is watching — no logging needed</p>
       <div className={styles.ambientFeed}>
-        {feed.map((item) => (
-          <div key={item.id} className={styles.ambientItem}>
-            <div className={`${styles.ambientDot} ${styles[`ambientDot_${item.icon}`]}`} />
+        {ambientEvents.length === 0 ? (
+          <p className={styles.ambientEmpty}>No recent activity — queue is quiet.</p>
+        ) : ambientEvents.map((ev) => (
+          <div key={ev.id} className={styles.ambientItem}>
+            <div className={styles.ambientDot} style={{ background: typeColor[ev.type] }} />
             <div className={styles.ambientItemBody}>
-              <span className={styles.ambientItemText}>{item.text}</span>
-              <span className={styles.ambientItemTime}>{item.time}</span>
+              <span className={styles.ambientItemText}>
+                <strong>{ev.key}</strong> {ev.change} — {ev.title.slice(0, 48)}{ev.title.length > 48 ? "…" : ""}
+              </span>
+              <span className={styles.ambientItemTime}>{ev.time}</span>
             </div>
           </div>
         ))}
