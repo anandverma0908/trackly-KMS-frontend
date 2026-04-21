@@ -10,13 +10,13 @@ import {
   RiRocketLine,
   RiCloseLine,
   RiUser3Line,
-  RiMapLine,
   RiBarChartLine,
   RiSunLine,
-  RiFileTextLine,
-  RiShieldCheckLine,
   RiBrainLine,
   RiFocus3Line,
+  RiTimeLine,
+  RiFileTextLine,
+  RiShieldCheckLine,
 } from "react-icons/ri";
 
 interface SidebarProps {
@@ -84,7 +84,7 @@ export default function Sidebar({
         <RiCloseLine size={20} />
       </button>
 
-      <div className={styles.logo} onClick={() => navigate("/dashboard")}>
+      <div className={styles.logo} onClick={() => navigate("/my-work")}>
         <div className={styles.logoMark}>T</div>
         {!collapsed && <span className={styles.logoName}>Trackly</span>}
       </div>
@@ -99,7 +99,6 @@ export default function Sidebar({
           {/* ── WORK ── */}
           {sectionLabel("Work")}
           {nav(<RiRocketLine size={18} />, "Spaces", "/spaces")}
-          {nav(<RiMapLine size={18} />, "Roadmap", "/roadmap")}
           {nav(<RiFocus3Line size={18} />, "Goals", "/goals")}
 
           {/* ── KNOWLEDGE ── */}
@@ -112,6 +111,10 @@ export default function Sidebar({
           {sectionLabel("Intelligence")}
           {nav(<RiBrainLine size={18} />, "Nova", "/nova")}
           {nav(<RiBarChartLine size={18} />, "Analytics", "/analytics")}
+
+          {/* ── TIME ── */}
+          {sectionLabel("Time")}
+          {nav(<RiTimeLine size={18} />, "Timesheets", "/timesheets/weekly")}
 
           {/* ── PEOPLE ── */}
           {sectionLabel("People")}

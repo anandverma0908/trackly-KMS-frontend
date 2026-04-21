@@ -5,16 +5,10 @@ import RequireAuth from "@/components/guards/RequireAuth";
 import RequireRole from "@/components/guards/RequireRole";
 import AppShell from "@/components/layout/AppShell";
 import LoginPage from "@/features/auth/LoginPage";
-import DashboardPage from "@/features/dashboard/DashboardPage";
 import TicketsPage from "@/features/tickets/TicketsPage";
 import TeamPage from "@/features/team/TeamPage";
-import ExportPage from "@/features/export/ExportPage";
 import SettingsPage from "@/features/settings/SettingsPage";
-import ManualEntryPage from "@/features/manual-entry/ManualEntryPage";
-
-
 import WikiPage from "@/features/wiki/WikiPage";
-import KanbanBoard from "@/features/kanban/KanbanBoard";
 
 import StandupPage from "@/features/standup/StandupPage";
 import AnalyticsPage from "@/features/analytics/AnalyticsPage";
@@ -28,7 +22,6 @@ import NovaPage from "@/features/nova/NovaPage";
 import DecisionsPage from "@/features/decisions/DecisionsPage";
 import ProcessesPage from "@/features/processes/ProcessesPage";
 import GoalsPage from "@/features/goals/GoalsPage";
-import RoadmapPage from "@/features/roadmap/RoadmapPage";
 
 function useRouteDirection() {
   const location = useLocation();
@@ -119,16 +112,17 @@ function AnimatedRoutes() {
           >
             <Route element={<RequireRole />}>
               <Route index element={<Navigate to="/my-work" replace />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/dashboard" element={<Navigate to="/my-work" replace />} />
               <Route path="/tickets" element={<TicketsPage />} />
-              <Route path="/kanban" element={<KanbanBoard />} />
               <Route path="/sprints" element={<Navigate to="/spaces" replace />} />
+              <Route path="/kanban" element={<Navigate to="/spaces" replace />} />
+              <Route path="/roadmap" element={<Navigate to="/spaces" replace />} />
               <Route path="/wiki" element={<WikiPage />} />
               <Route path="/standup" element={<StandupPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/team" element={<TeamPage />} />
-              <Route path="/export" element={<ExportPage />} />
-              <Route path="/manual-entry" element={<ManualEntryPage />} />
+              <Route path="/export" element={<Navigate to="/settings" replace />} />
+              <Route path="/manual-entry" element={<Navigate to="/timesheets/weekly" replace />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/timesheets/weekly" element={<WeeklyTimeGrid />} />
               <Route path="/admin/users" element={<Navigate to="/settings" replace />} />
@@ -139,7 +133,6 @@ function AnimatedRoutes() {
               <Route path="/decisions" element={<DecisionsPage />} />
               <Route path="/processes" element={<ProcessesPage />} />
               <Route path="/goals" element={<GoalsPage />} />
-              <Route path="/roadmap" element={<RoadmapPage />} />
             </Route>
           </Route>
         </Route>

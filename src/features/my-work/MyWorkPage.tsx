@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useMyWork, fetchTicket } from "./useMyWork";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
-import TodayStandup from "@/features/dashboard/widgets/TodayStandup";
 import styles from "./MyWorkPage.module.css";
 
 import {
@@ -25,8 +24,6 @@ import {
   RiCalendarLine,
   RiLineChartLine,
   RiShieldLine,
-  RiRobotLine,
-  RiHeartLine,
 } from "react-icons/ri";
 
 import type { AITicket, Insight, FocusBlock, TimeEnergy, SprintRisk } from "./useMyWork";
@@ -95,9 +92,8 @@ export default function MyWorkPage() {
       {/* ── Gen 2: Proactive Intelligence ── */}
       <Gen2ProactiveSection aiTickets={aiTickets} loading={loading} onTicketClick={setSelectedKey} />
 
-      {/* ── Standup + Delivery Forecast ── */}
+      {/* ── Delivery Forecast ── */}
       <div className={`${styles.deliveryRow} fade-up-3`}>
-        <TodayStandup />
         <NovaDeliveryForecast risk={sprintRisk} />
       </div>
 
@@ -109,13 +105,8 @@ export default function MyWorkPage() {
         <NovaKnowledgeGaps gaps={knowledgeGaps} loading={loadingGaps} />
       )}
 
-      {/* ── Autonomous Intelligence ── */}
-      <div className={`${styles.gen4LiveGrid} fade-up-4`}>
-        <AmbientAwarenessWidget aiTickets={aiTickets} />
-        <AICopilotWidget aiTickets={aiTickets} />
-        <CareerTrajectoryWidget aiTickets={aiTickets} loading={loading} />
-        <WellbeingSignalsWidget aiTickets={aiTickets} loading={loading} />
-      </div>
+      {/* ── Ambient Awareness ── */}
+      <AmbientAwarenessWidget aiTickets={aiTickets} />
 
       {/* ── Ticket Detail Drawer ── */}
       {selectedKey && (
@@ -1187,271 +1178,6 @@ function AmbientAwarenessWidget({ aiTickets }: { aiTickets: AITicket[] }) {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-
-/* ══════════════════════════════════════════════════════════════
-   PERSONAL AI COPILOT
-   ══════════════════════════════════════════════════════════════ */
-
-const COPILOT_SUGGESTIONS = [
-  "Move low-priority tickets to next sprint",
-  "Draft a status update for the client",
-  "Reschedule tomorrow's standup",
-  "Summarise my week for the team",
-];
-
-const COPILOT_RESPONSES: Record<string, string> = {
-  "Move low-priority tickets to next sprint":
-    "Done. 3 low-priority tickets (UI-040, UI-041, INFRA-085) moved to Sprint 12. Sprint 11 scope is now 26 pts — well within capacity.",
-  "Draft a status update for the client":
-    "Here's a draft:\n\n\"Hi team — quick update: AUTH-221 is 65% complete and on track for Thursday. UI-045 slipped by 1 day due to a design review delay, but we're back on track. No blockers at this time.\"",
-  "Reschedule tomorrow's standup":
-    "Standup moved from 9:00am → 10:30am tomorrow. Calendar invite updated. Sarah and Dev notified.",
-  "Summarise my week for the team":
-    "This week: closed 4 tickets (18 pts), unblocked AUTH-221, reviewed 2 PRs, and flagged 1 scope risk on INFRA-089. Velocity: 4.5 pts/day — 12% above your average.",
-};
-
-function AICopilotWidget({ aiTickets }: { aiTickets: AITicket[] }) {
-  const [input, setInput] = useState("");
-  const [thinking, setThinking] = useState(false);
-  const [history, setHistory] = useState<{ cmd: string; reply: string }[]>([]);
-
-  function submit(cmd: string) {
-    if (!cmd.trim() || thinking) return;
-    setThinking(true);
-    const normalised = cmd.trim();
-    setTimeout(() => {
-      const reply =
-        COPILOT_RESPONSES[normalised] ??
-        `Got it — "${normalised}". Processing your request across ${aiTickets.length} open tickets…`;
-      setHistory((h) => [{ cmd: normalised, reply }, ...h].slice(0, 3));
-      setThinking(false);
-      setInput("");
-    }, 900);
-  }
-
-  return (
-    <div className={styles.copilotCard}>
-      <div className={styles.copilotHeader}>
-        <RiRobotLine size={14} color="var(--accent)" />
-        <span>Personal AI Copilot</span>
-      </div>
-
-      {history.length > 0 && (
-        <div className={styles.copilotHistory}>
-          {history.map((h, i) => (
-            <div key={i} className={styles.copilotHistoryItem}>
-              <div className={styles.copilotUserLine}>
-                <span className={styles.copilotUserBubble}>{h.cmd}</span>
-              </div>
-              <div className={styles.copilotReplyLine}>
-                <RiSparklingLine size={10} color="var(--accent)" style={{ flexShrink: 0, marginTop: 2 }} />
-                <p className={styles.copilotReplyText}>{h.reply}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {thinking && (
-        <div className={styles.copilotThinking}>
-          <span className={styles.copilotThinkingDot} />
-          <span className={styles.copilotThinkingDot} />
-          <span className={styles.copilotThinkingDot} />
-        </div>
-      )}
-
-      {history.length === 0 && !thinking && (
-        <div className={styles.copilotChips}>
-          {COPILOT_SUGGESTIONS.map((s) => (
-            <button key={s} className={styles.copilotChip} onClick={() => submit(s)}>
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className={styles.copilotInputRow}>
-        <input
-          className={styles.copilotInput}
-          placeholder="Ask EOS anything…"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submit(input)}
-        />
-        <button className={styles.copilotSendBtn} onClick={() => submit(input)} disabled={!input.trim() || thinking}>
-          <RiSendPlaneLine size={14} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-
-/* ══════════════════════════════════════════════════════════════
-   CAREER TRAJECTORY
-   ══════════════════════════════════════════════════════════════ */
-
-const SKILL_DOMAINS = [
-  { domain: "Frontend",       tickets: 23, max: 30, color: "var(--accent)" },
-  { domain: "Authentication", tickets: 8,  max: 30, color: "var(--green)" },
-  { domain: "Testing / QA",   tickets: 5,  max: 30, color: "var(--amber)" },
-  { domain: "API / Backend",  tickets: 3,  max: 30, color: "var(--accent)" },
-  { domain: "Infrastructure", tickets: 0,  max: 30, color: "var(--red)" },
-];
-
-const CAREER_RECS = [
-  { label: "SSO Architecture wiki", reason: "covers the infra work your team owns next quarter" },
-  { label: "Kubernetes basics runbook", reason: "gap in your infra knowledge detected" },
-];
-
-function CareerTrajectoryWidget({ aiTickets, loading }: { aiTickets: AITicket[]; loading: boolean }) {
-  const dominated = aiTickets.reduce<Record<string, number>>((acc, t) => {
-    acc[t.issue_type] = (acc[t.issue_type] || 0) + 1;
-    return acc;
-  }, {});
-
-  const totalReal = Object.values(dominated).reduce((s, v) => s + v, 0);
-  const domains = totalReal > 4
-    ? Object.entries(dominated).slice(0, 5).map(([domain, tickets], i) => ({
-        domain,
-        tickets,
-        max: Math.max(...Object.values(dominated)),
-        color: ["var(--accent)", "var(--green)", "var(--amber)", "var(--accent)", "var(--red)"][i] ?? "var(--accent)",
-      }))
-    : SKILL_DOMAINS;
-
-  const gap = domains.find((d) => d.tickets === 0) ?? domains[domains.length - 1];
-
-  return (
-    <div className={styles.careerCard}>
-      <div className={styles.careerHeader}>
-        <RiBarChartBoxLine size={14} color="var(--accent)" />
-        <span>Career Trajectory</span>
-      </div>
-      {loading ? (
-        <div className={styles.proactiveSkeleton} />
-      ) : (
-        <>
-          <div className={styles.careerBars}>
-            {domains.map((d) => (
-              <div key={d.domain} className={styles.careerBarRow}>
-                <span className={styles.careerBarLabel}>{d.domain}</span>
-                <div className={styles.careerBarTrack}>
-                  <div
-                    className={styles.careerBarFill}
-                    style={{
-                      width: `${d.max > 0 ? (d.tickets / d.max) * 100 : 0}%`,
-                      background: d.tickets === 0 ? "var(--surface-3)" : d.color,
-                    }}
-                  />
-                </div>
-                <span className={styles.careerBarCount} style={{ color: d.tickets === 0 ? "var(--red)" : "var(--text-3)" }}>
-                  {d.tickets === 0 ? "0 ⚠" : d.tickets}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className={styles.careerGapAlert}>
-            <RiSparklingLine size={10} />
-            <span>
-              You've done <strong>{domains[0].tickets} {domains[0].domain}</strong> tickets but zero{" "}
-              <strong>{gap.domain}</strong> — your team's next quarter includes this work.
-            </span>
-          </div>
-          <div className={styles.careerRecs}>
-            <span className={styles.careerRecsLabel}>Recommended reading</span>
-            {CAREER_RECS.map((r) => (
-              <div key={r.label} className={styles.careerRecItem}>
-                <RiBookOpenLine size={11} />
-                <div>
-                  <span className={styles.careerRecTitle}>{r.label}</span>
-                  <span className={styles.careerRecReason}>{r.reason}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-
-/* ══════════════════════════════════════════════════════════════
-   WELL-BEING SIGNALS
-   ══════════════════════════════════════════════════════════════ */
-
-const WELLBEING_HOURS = [9.5, 10.2, 11.1, 11.4, 10.8, 11.2, 8.5, 7.8, 9.1, 11.0, 11.3, 10.9, 11.6, 8.0];
-const WELLBEING_LABELS = ["M", "T", "W", "T", "F", "M", "T", "W", "T", "F", "M", "T", "W", "T"];
-const LATE_NIGHT_COMMITS = 4;
-
-function WellbeingSignalsWidget({ aiTickets, loading }: { aiTickets: AITicket[]; loading: boolean }) {
-  const overworkDays = WELLBEING_HOURS.filter((h) => h >= 10).length;
-  const consecutiveHigh = 5;
-  const avgHours = (WELLBEING_HOURS.reduce((s, h) => s + h, 0) / WELLBEING_HOURS.length).toFixed(1);
-  const wellScore = Math.max(0, Math.round(100 - overworkDays * 4 - LATE_NIGHT_COMMITS * 3));
-  const scoreColor = wellScore >= 70 ? "var(--green)" : wellScore >= 50 ? "var(--amber)" : "var(--red)";
-  const maxH = Math.max(...WELLBEING_HOURS);
-
-  const blockedCount = aiTickets.filter((t) => t.status.toLowerCase().includes("block")).length;
-
-  return (
-    <div className={styles.wellbeingCard}>
-      <div className={styles.wellbeingHeader}>
-        <RiHeartLine size={14} color="var(--red)" />
-        <span>Well-being Signals</span>
-        <span className={styles.wellbeingScore} style={{ color: scoreColor }}>{wellScore}</span>
-      </div>
-      {loading ? (
-        <div className={styles.proactiveSkeleton} />
-      ) : (
-        <>
-          <div className={styles.wellbeingAlert}>
-            <RiAlertLine size={12} color="var(--amber)" />
-            <span>
-              You've worked <strong>{consecutiveHigh}-hour days</strong> for 5 consecutive days — velocity
-              actually drops after day 3.
-            </span>
-          </div>
-          <div className={styles.wellbeingChart}>
-            {WELLBEING_HOURS.map((h, i) => (
-              <div key={i} className={styles.wellbeingBarWrap}>
-                <div
-                  className={styles.wellbeingBar}
-                  style={{
-                    height: `${(h / maxH) * 100}%`,
-                    background: h >= 11 ? "var(--red)" : h >= 9.5 ? "var(--amber)" : "var(--green)",
-                  }}
-                  title={`${WELLBEING_LABELS[i]}: ${h}h`}
-                />
-                <span className={styles.wellbeingBarLabel}>{WELLBEING_LABELS[i]}</span>
-              </div>
-            ))}
-          </div>
-          <div className={styles.wellbeingStats}>
-            <div className={styles.wellbeingStat}>
-              <span className={styles.wellbeingStatVal}>{avgHours}h</span>
-              <span className={styles.wellbeingStatLbl}>avg / day</span>
-            </div>
-            <div className={styles.wellbeingStat}>
-              <span className={styles.wellbeingStatVal} style={{ color: LATE_NIGHT_COMMITS > 2 ? "var(--amber)" : "var(--text)" }}>{LATE_NIGHT_COMMITS}</span>
-              <span className={styles.wellbeingStatLbl}>late commits</span>
-            </div>
-            <div className={styles.wellbeingStat}>
-              <span className={styles.wellbeingStatVal} style={{ color: blockedCount > 0 ? "var(--red)" : "var(--text)" }}>{blockedCount}</span>
-              <span className={styles.wellbeingStatLbl}>blockers</span>
-            </div>
-          </div>
-          <p className={styles.wellbeingRec}>
-            <RiSparklingLine size={10} />
-            Consider a half-day reset tomorrow — your focus score recovers 34% after rest.
-          </p>
-        </>
-      )}
     </div>
   );
 }

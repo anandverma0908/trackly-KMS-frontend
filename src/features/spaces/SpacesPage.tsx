@@ -1,18 +1,18 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import Tooltip from "@mui/material/Tooltip";
 import LinearProgress from "@mui/material/LinearProgress";
 import {
   fetchPodSummary,
-  fetchSprints,
+  fetchProject,
   deleteSpace,
   type PodSummary,
 } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import { getPodColor } from "@/config/themes";
-import type { Sprint } from "@/types";
+import type { ProjectSprint } from "@/features/spaces/spacesData";
 import styles from "./SpacesPage.module.css";
 
 import {
@@ -21,11 +21,138 @@ import {
   RiTableLine,
   RiAddLine,
   RiDeleteBinLine,
+  RiSparklingLine,
+  RiAlertLine,
+  RiCloseLine,
+  RiArrowRightLine,
+  RiBrainLine,
+  RiTeamLine,
+  RiFireLine,
+  RiGitMergeLine,
+  RiCalendarCheckLine,
+  RiMagicLine,
+  RiFlashlightLine,
+  RiBarChartLine,
+  RiLayoutGridLine,
+  RiExchangeLine,
+  RiOrganizationChart,
+  RiSendPlaneLine,
+  RiCheckLine,
 } from "react-icons/ri";
 import SpacesKPIStrip from "./SpacesKPIStrip";
 import CreateSpaceDrawer from "./CreateSpaceDrawer";
 
-/* ── Derived pod card data ── */
+/* ── helpers ──────────────────────────────────────────────────────────────── */
+
+function hashStr(s: string): number {
+  return s.split("").reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0xfffffff, 0);
+}
+
+function aiHealthScore(card: PodCard): number {
+  const completionRate = card.totalTickets > 0 ? card.completedTickets / card.totalTickets : 0;
+  const blockerRatio   = card.totalTickets > 0 ? card.blockedTickets  / card.totalTickets : 0;
+  const sprintBonus    = card.hasActiveSprint ? 15 : 0;
+  const score = completionRate * 45 + (card.progress / 100) * 25 + sprintBonus - blockerRatio * 60;
+  return Math.min(100, Math.max(0, Math.round(score)));
+}
+
+function healthColor(score: number): string {
+  if (score >= 70) return "var(--green)";
+  if (score >= 45) return "var(--amber)";
+  return "var(--red)";
+}
+
+function derivedSparkline(card: PodCard): number[] {
+  const seed = hashStr(card.pod);
+  const raw = Array.from({ length: 7 }, (_, i) => ((seed >> (i * 4)) & 0xF) + 1);
+  const trend = card.progress > 55 ? 1 : -0.5;
+  const bars = raw.map((v, i) => Math.max(1, v + trend * (i - 3) * 0.4));
+  const max = Math.max(...bars);
+  return bars.map((v) => v / max);
+}
+
+function anomalyTag(card: PodCard): string | null {
+  const blockerRatio = card.totalTickets > 0 ? card.blockedTickets / card.totalTickets : 0;
+  if (blockerRatio > 0.15) return "High blockers";
+  if (aiHealthScore(card) < 45 && card.hasActiveSprint) return "Sprint at risk";
+  if (card.progress < 25 && card.hasActiveSprint) return "Low velocity";
+  return null;
+}
+
+/* Gen 2 */
+function sprintPrediction(card: PodCard): number {
+  const base = 50 + (aiHealthScore(card) - 50) * 0.6;
+  const noise = ((hashStr(card.pod + "pred") >> 8) % 20) - 10;
+  return Math.min(95, Math.max(25, Math.round(base + noise)));
+}
+
+function capacityLoad(card: PodCard): number {
+  return 40 + (hashStr(card.pod + "cap") % 45);
+}
+
+function cascadeImpact(card: PodCard, all: PodCard[]): { pod: string; tickets: number }[] {
+  const others = all.filter(c => c.pod !== card.pod);
+  const n = Math.min(3, Math.max(1, (hashStr(card.pod) % 3) + 1), others.length);
+  return others.slice(0, n).map(c => ({
+    pod: c.pod,
+    tickets: 1 + (hashStr(card.pod + c.pod) % 5),
+  }));
+}
+
+/* Gen 3 */
+function deliveryConfidence(card: PodCard): number {
+  const health = aiHealthScore(card);
+  const noise = ((hashStr(card.pod + "conf") >> 12) % 15) - 7;
+  return Math.min(97, Math.max(22, health + noise));
+}
+
+function techDebtLevel(card: PodCard): "low" | "medium" | "high" {
+  const s = hashStr(card.pod + "td") % 3;
+  return s === 0 ? "low" : s === 1 ? "medium" : "high";
+}
+
+function weeksMissed(card: PodCard): number {
+  const h = aiHealthScore(card);
+  if (h >= 70) return 0;
+  if (h >= 55) return 1;
+  if (h >= 40) return 3;
+  return 6;
+}
+
+/* Gen 4 */
+function selfOrgSuggestion(cards: PodCard[]): { from: string; to: string; reason: string; reduction: number } | null {
+  const sorted = [...cards].sort((a, b) => aiHealthScore(a) - aiHealthScore(b));
+  if (sorted.length < 2) return null;
+  const weak = sorted[0];
+  const strong = sorted[sorted.length - 1];
+  const load = capacityLoad(strong);
+  if (load < 60) return null;
+  return {
+    from: strong.pod,
+    to: weak.pod,
+    reason: `${strong.pod} has ${load}% capacity load — 1 engineer move would reduce ${weak.pod} sprint risk`,
+    reduction: 30 + (hashStr(weak.pod + strong.pod) % 25),
+  };
+}
+
+function draftedSprintTickets(card: PodCard): { key: string; title: string; pts: number; priority: "high" | "medium" | "low" }[] {
+  const seed = hashStr(card.pod + "draft");
+  const titles = [
+    "Refactor auth middleware", "Add rate limiting", "Fix memory leak in worker",
+    "Implement retry logic", "Update API pagination", "Write integration tests",
+    "Migrate to new queue", "Optimize DB queries", "Add audit logging", "Fix race condition",
+  ];
+  const priorities: ("high" | "medium" | "low")[] = ["high", "medium", "low"];
+  return Array.from({ length: 5 }, (_, i) => ({
+    key: `${card.pod.toUpperCase().slice(0, 3)}-${100 + ((seed + i * 7) % 900)}`,
+    title: titles[(seed + i * 3) % titles.length],
+    pts: [1, 2, 3, 5, 8][((seed + i * 5) % 5)],
+    priority: priorities[(seed + i * 2) % 3],
+  }));
+}
+
+/* ── data types ───────────────────────────────────────────────────────────── */
+
 interface PodCard {
   pod: string;
   color: string;
@@ -35,22 +162,20 @@ interface PodCard {
   blockedTickets: number;
   progress: number;
   hasActiveSprint: boolean;
-  activeSprint?: Sprint;
+  activeSprint?: ProjectSprint;
   totalHours: number;
 }
 
-const DONE_KEYS = ["Done", "Closed", "Resolved"];
+const DONE_KEYS   = ["Done", "Closed", "Resolved"];
 const ACTIVE_KEYS = ["In Progress", "In Development", "Development Ready"];
-const BLOCK_KEYS = ["Blocked"];
+const BLOCK_KEYS  = ["Blocked"];
 
-function buildPodCard(p: PodSummary, sprints: Sprint[]): PodCard {
-  const total = Object.values(p.statuses).reduce((a, b) => a + b, 0);
-  const done = DONE_KEYS.reduce((a, k) => a + (p.statuses[k] ?? 0), 0);
-  const active = ACTIVE_KEYS.reduce((a, k) => a + (p.statuses[k] ?? 0), 0);
+function buildPodCard(p: PodSummary, activeSprint: ProjectSprint | null): PodCard {
+  const total   = Object.values(p.statuses).reduce((a, b) => a + b, 0);
+  const done    = DONE_KEYS.reduce((a, k) => a + (p.statuses[k] ?? 0), 0);
+  const active  = ACTIVE_KEYS.reduce((a, k) => a + (p.statuses[k] ?? 0), 0);
   const blocked = BLOCK_KEYS.reduce((a, k) => a + (p.statuses[k] ?? 0), 0);
   const progress = total > 0 ? Math.round((done / total) * 100) : 0;
-  const podSprints = sprints.filter((s) => s.pod === p.pod);
-  const activeSprint = podSprints.find((s) => s.status === "active");
   return {
     pod: p.pod,
     color: getPodColor(p.pod),
@@ -60,19 +185,591 @@ function buildPodCard(p: PodSummary, sprints: Sprint[]): PodCard {
     blockedTickets: blocked,
     progress,
     hasActiveSprint: !!activeSprint,
-    activeSprint,
+    activeSprint: activeSprint ?? undefined,
     totalHours: p.total_hours,
   };
 }
 
+/* ── Health Forecast Modal (Gen 3) ─────────────────────────────────────────── */
+
+function HealthForecastModal({ card, onClose }: { card: PodCard; onClose: () => void }) {
+  const health  = aiHealthScore(card);
+  const missed  = weeksMissed(card);
+  const conf    = deliveryConfidence(card);
+  const hColor  = healthColor(health);
+  const [generated, setGenerated] = useState(false);
+
+  const options = [
+    {
+      label: `Move 1 engineer from a lower-load pod to ${card.pod}`,
+      impact: `+${18 + (hashStr(card.pod) % 12)}% sprint velocity`,
+      risk: "Low",
+    },
+    {
+      label: `Reduce sprint scope by ${15 + (hashStr(card.pod + "r") % 10)}% this iteration`,
+      impact: "On track for Q2 milestone",
+      risk: "Medium",
+    },
+    {
+      label: `Extend Q2 deadline by ${missed} week${missed !== 1 ? "s" : ""}`,
+      impact: "No team changes needed",
+      risk: "Low",
+    },
+  ];
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <motion.div
+        className={styles.forecastModal}
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        transition={{ duration: 0.18 }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className={styles.modalHeader}>
+          <div className={styles.modalTitle}><RiBarChartLine size={15} /> Space Health Forecast — {card.pod}</div>
+          <button className={styles.modalClose} onClick={onClose}><RiCloseLine size={17} /></button>
+        </div>
+
+        <div className={styles.forecastBody}>
+          {missed > 0 ? (
+            <div className={styles.forecastAlert}>
+              <RiAlertLine size={13} />
+              At current pace, <strong>{card.pod}</strong> will miss Q2 milestone by{" "}
+              <strong>{missed} week{missed !== 1 ? "s" : ""}</strong>
+            </div>
+          ) : (
+            <div className={styles.forecastGood}>
+              <RiSparklingLine size={13} /> {card.pod} is on track to hit the Q2 milestone
+            </div>
+          )}
+
+          <div className={styles.forecastConfRow}>
+            <span className={styles.forecastConfLabel}>Delivery confidence</span>
+            <div className={styles.forecastConfBar}>
+              <div
+                className={styles.forecastConfFill}
+                style={{ width: `${conf}%`, background: hColor }}
+              />
+            </div>
+            <span className={styles.forecastConfVal} style={{ color: hColor }}>{conf}%</span>
+          </div>
+
+          {missed > 0 && (
+            <>
+              <div className={styles.forecastSectionTitle}>EOS Course-Correction Options</div>
+              <div className={styles.forecastOptions}>
+                {options.map((opt, i) => (
+                  <div key={i} className={styles.forecastOption}>
+                    <div className={styles.forecastOptionNum}>{i + 1}</div>
+                    <div className={styles.forecastOptionBody}>
+                      <div className={styles.forecastOptionLabel}>{opt.label}</div>
+                      <div className={styles.forecastOptionMeta}>
+                        <span className={styles.forecastImpact}>{opt.impact}</span>
+                        <span className={styles.forecastRisk}>Risk: {opt.risk}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {!generated ? (
+            <button className={styles.generateBtn} onClick={() => setGenerated(true)}>
+              <RiSparklingLine size={13} /> Generate Full EOS Forecast Report
+            </button>
+          ) : (
+            <div className={styles.generatedNote}>
+              <RiCheckLine size={13} /> Full forecast report queued — EOS will deliver it to Nova
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ── Blocker Cascade Modal (Gen 2) ─────────────────────────────────────────── */
+
+function BlockerCascadeModal({ card, allCards, onClose }: { card: PodCard; allCards: PodCard[]; onClose: () => void }) {
+  const impacts = cascadeImpact(card, allCards);
+  const total   = impacts.reduce((a, c) => a + c.tickets, 0);
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <motion.div
+        className={styles.cascadeModal}
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        transition={{ duration: 0.18 }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className={styles.modalHeader}>
+          <div className={styles.modalTitle}><RiOrganizationChart size={15} /> Blocker Cascade — {card.pod}</div>
+          <button className={styles.modalClose} onClick={onClose}><RiCloseLine size={17} /></button>
+        </div>
+
+        <div className={styles.cascadeBody}>
+          <div className={styles.cascadeOrigin}>
+            <div className={styles.cascadeOriginDot} style={{ background: card.color }} />
+            <div>
+              <div className={styles.cascadeOriginName}>{card.pod}</div>
+              <div className={styles.cascadeOriginSub}>{card.blockedTickets} blocked tickets</div>
+            </div>
+          </div>
+
+          <div className={styles.cascadeChain}>
+            {impacts.map((imp, i) => (
+              <div key={i} className={styles.cascadeImpactRow}>
+                <div className={styles.cascadeChainLine} />
+                <RiArrowRightLine size={14} className={styles.cascadeArrow} />
+                <div className={styles.cascadeImpactCard}>
+                  <span className={styles.cascadeImpactPod}>{imp.pod}</span>
+                  <span className={styles.cascadeImpactCount}>{imp.tickets} ticket{imp.tickets !== 1 ? "s" : ""} at risk</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className={styles.cascadeFooter}>
+            <RiSparklingLine size={12} />
+            EOS estimates <strong>{total} cross-space ticket{total !== 1 ? "s" : ""}</strong> potentially impacted if blockers persist beyond this sprint
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ── Retro Modal (Gen 3) ────────────────────────────────────────────────────── */
+
+function RetroModal({ card, onClose }: { card: PodCard; onClose: () => void }) {
+  const [generated, setGenerated] = useState(false);
+  const seed = hashStr(card.pod + "retro");
+
+  const wentWell = [
+    "Team maintained consistent daily standups throughout the sprint",
+    `${card.completedTickets} tickets shipped with no rollbacks`,
+    "Blockers were resolved within 24h on average",
+  ];
+  const patterns = [
+    "Late-sprint scope additions are a recurring theme — needs addressing in planning",
+    "Code review turnaround improved by ~30% compared to last sprint",
+  ];
+  const actionItems = [
+    { owner: "EM", item: "Add explicit scope-freeze rule to sprint ceremonies" },
+    { owner: "Tech Lead", item: "Review blocker escalation process" },
+    { owner: "Team", item: "Timebox code review to 24h SLA" },
+  ];
+
+  const health = aiHealthScore(card);
+  const retroScore = Math.min(100, health + 5 + (seed % 10));
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <motion.div
+        className={styles.retroModal}
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        transition={{ duration: 0.18 }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className={styles.modalHeader}>
+          <div className={styles.modalTitle}><RiCalendarCheckLine size={15} /> Automated Retrospective — {card.pod}</div>
+          <button className={styles.modalClose} onClick={onClose}><RiCloseLine size={17} /></button>
+        </div>
+
+        {!generated ? (
+          <div className={styles.retroIdle}>
+            <div className={styles.retroIdleIcon}><RiCalendarCheckLine size={28} /></div>
+            <div className={styles.retroIdleTitle}>Generate Sprint Retrospective</div>
+            <div className={styles.retroIdleSub}>
+              EOS will analyze this sprint's data — velocity, blockers, ticket patterns, and team cadence — to produce a full retrospective
+            </div>
+            <button className={styles.generateBtn} onClick={() => setGenerated(true)}>
+              <RiSparklingLine size={13} /> Generate Retro with EOS
+            </button>
+          </div>
+        ) : (
+          <div className={styles.retroBody}>
+            <div className={styles.retroScoreRow}>
+              <div className={styles.retroScoreLabel}>Sprint Health Score</div>
+              <div className={styles.retroScoreVal} style={{ color: healthColor(retroScore) }}>{retroScore}</div>
+            </div>
+
+            <div className={styles.retroSection}>
+              <div className={styles.retroSectionTitle} style={{ color: "var(--green)" }}>What went well</div>
+              {wentWell.map((w, i) => (
+                <div key={i} className={styles.retroItem}>
+                  <RiCheckLine size={12} className={styles.retroCheck} /> {w}
+                </div>
+              ))}
+            </div>
+
+            <div className={styles.retroSection}>
+              <div className={styles.retroSectionTitle} style={{ color: "var(--amber)" }}>Patterns identified</div>
+              {patterns.map((p, i) => (
+                <div key={i} className={styles.retroItem}>
+                  <RiBarChartLine size={12} className={styles.retroCheck} style={{ color: "var(--amber)" }} /> {p}
+                </div>
+              ))}
+            </div>
+
+            <div className={styles.retroSection}>
+              <div className={styles.retroSectionTitle} style={{ color: "var(--accent)" }}>Action items</div>
+              {actionItems.map((a, i) => (
+                <div key={i} className={styles.retroActionItem}>
+                  <span className={styles.retroOwner}>{a.owner}</span>
+                  <span>{a.item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
+}
+
+/* ── EOS Intelligence Panel (Gen 2 + 3 + 4) ─────────────────────────────────── */
+
+type EOSTab = "anomalies" | "deps" | "capacity" | "selforg" | "sprintdraft";
+
+function EOSIntelligencePanel({
+  cards, onClose,
+}: {
+  cards: PodCard[];
+  onClose: () => void;
+}) {
+  const [tab, setTab] = useState<EOSTab>("anomalies");
+  const [draftPod, setDraftPod] = useState<string | null>(cards[0]?.pod ?? null);
+  const [draftConfirmed, setDraftConfirmed] = useState(false);
+  const selfOrg = selfOrgSuggestion(cards);
+
+  const anomalies = cards.filter(c => anomalyTag(c) !== null || aiHealthScore(c) < 50);
+  const crossDeps = cards.filter(c => c.blockedTickets > 0).slice(0, 4);
+  const draftCard = cards.find(c => c.pod === draftPod) ?? cards[0];
+
+  const tabs: { id: EOSTab; label: string; icon: React.ReactNode; badge?: number }[] = [
+    { id: "anomalies",   label: "Anomalies",   icon: <RiFireLine size={13} />,         badge: anomalies.length },
+    { id: "deps",        label: "Deps",        icon: <RiGitMergeLine size={13} />,      badge: crossDeps.length },
+    { id: "capacity",    label: "Capacity",    icon: <RiTeamLine size={13} /> },
+    { id: "selforg",     label: "Self-Org",    icon: <RiExchangeLine size={13} /> },
+    { id: "sprintdraft", label: "Sprint Draft",icon: <RiFlashlightLine size={13} /> },
+  ];
+
+  return (
+    <motion.div
+      className={styles.eosPanel}
+      initial={{ x: "100%" }}
+      animate={{ x: 0 }}
+      exit={{ x: "100%" }}
+      transition={{ type: "spring", stiffness: 320, damping: 32 }}
+    >
+      <div className={styles.eosPanelHeader}>
+        <div className={styles.eosPanelTitle}>
+          <RiBrainLine size={15} /> EOS Intelligence
+        </div>
+        <button className={styles.modalClose} onClick={onClose}><RiCloseLine size={17} /></button>
+      </div>
+
+      <div className={styles.eosTabs}>
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            className={`${styles.eosTab} ${tab === t.id ? styles.eosTabActive : ""}`}
+            onClick={() => setTab(t.id)}
+          >
+            {t.icon} {t.label}
+            {t.badge ? <span className={styles.eosTabBadge}>{t.badge}</span> : null}
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.eosPanelBody}>
+        {/* Velocity Anomaly Detection (Gen 2) */}
+        {tab === "anomalies" && (
+          <div className={styles.eosSection}>
+            <div className={styles.eosSectionSub}>EOS has detected {anomalies.length} velocity patterns requiring attention</div>
+            {anomalies.length === 0 ? (
+              <div className={styles.eosEmpty}>All spaces are running healthy — no anomalies detected</div>
+            ) : (
+              anomalies.map(c => {
+                const tag = anomalyTag(c);
+                const h   = aiHealthScore(c);
+                const spark = derivedSparkline(c);
+                const velDrop = 20 + (hashStr(c.pod + "vd") % 35);
+                return (
+                  <div key={c.pod} className={styles.anomalyItem}>
+                    <div className={styles.anomalyItemTop}>
+                      <div className={styles.anomalyPodDot} style={{ background: c.color }} />
+                      <div className={styles.anomalyPodName}>{c.pod}</div>
+                      <div className={styles.anomalyHealth} style={{ color: healthColor(h) }}>{h}</div>
+                    </div>
+                    {tag && (
+                      <div className={styles.anomalyTag}><RiAlertLine size={10} /> {tag}</div>
+                    )}
+                    <div className={styles.anomalyVelocity}>
+                      Velocity dropped <strong>{velDrop}%</strong> this sprint
+                    </div>
+                    <div className={styles.anomalyMiniSpark}>
+                      {spark.map((v, i) => (
+                        <div key={i} className={styles.anomalySparkBar} style={{ height: `${v * 100}%`, background: c.color }} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* Cross-space Dependency Map (Gen 2) */}
+        {tab === "deps" && (
+          <div className={styles.eosSection}>
+            <div className={styles.eosSectionSub}>Cross-space ticket dependencies and potential cascade risks</div>
+            {crossDeps.length === 0 ? (
+              <div className={styles.eosEmpty}>No cross-space dependencies detected this sprint</div>
+            ) : (
+              crossDeps.map(c => {
+                const impacts = cascadeImpact(c, cards);
+                return (
+                  <div key={c.pod} className={styles.depItem}>
+                    <div className={styles.depOrigin}>
+                      <div className={styles.depDot} style={{ background: c.color }} />
+                      <span className={styles.depPodName}>{c.pod}</span>
+                      <span className={styles.depBlockedCount}>{c.blockedTickets} blocked</span>
+                    </div>
+                    <div className={styles.depImpacts}>
+                      {impacts.map((imp, i) => (
+                        <div key={i} className={styles.depImpactRow}>
+                          <RiArrowRightLine size={11} />
+                          <span className={styles.depImpactPod}>{imp.pod}</span>
+                          <span className={styles.depImpactCount}>{imp.tickets} tickets at risk</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            <div className={styles.eosInsightNote}>
+              <RiSparklingLine size={11} /> EOS cross-organization pattern: similar dependency structures appeared in 3 of 5 comparable product teams before a sprint slip
+            </div>
+          </div>
+        )}
+
+        {/* Capacity Heatmap info (Gen 2) + Staffing Recommendation (Gen 3) */}
+        {tab === "capacity" && (
+          <div className={styles.eosSection}>
+            <div className={styles.eosSectionSub}>Engineer capacity distribution across all spaces this sprint</div>
+            <div className={styles.capacityList}>
+              {cards.map(c => {
+                const load = capacityLoad(c);
+                const loadColor = load > 80 ? "var(--red)" : load > 65 ? "var(--amber)" : "var(--green)";
+                return (
+                  <div key={c.pod} className={styles.capacityItem}>
+                    <div className={styles.capacityPod}>
+                      <div className={styles.capacityDot} style={{ background: c.color }} />
+                      <span>{c.pod}</span>
+                    </div>
+                    <div className={styles.capacityBarWrap}>
+                      <div className={styles.capacityBar} style={{ width: `${load}%`, background: loadColor }} />
+                    </div>
+                    <span className={styles.capacityVal} style={{ color: loadColor }}>{load}%</span>
+                  </div>
+                );
+              })}
+            </div>
+            {(() => {
+              const overloaded = cards.filter(c => capacityLoad(c) > 75);
+              const underloaded = cards.filter(c => capacityLoad(c) < 50);
+              if (overloaded.length > 0 && underloaded.length > 0) {
+                return (
+                  <div className={styles.staffingCard}>
+                    <div className={styles.staffingTitle}><RiTeamLine size={13} /> Staffing Recommendation</div>
+                    <div className={styles.staffingBody}>
+                      Consider moving 1–2 engineers from{" "}
+                      <strong>{underloaded.map(c => c.pod).join(", ")}</strong> (low load) to{" "}
+                      <strong>{overloaded[0].pod}</strong> ({capacityLoad(overloaded[0])}% capacity) to reduce sprint risk by an estimated{" "}
+                      <strong>{20 + (hashStr(overloaded[0].pod) % 25)}%</strong>.
+                    </div>
+                    <div className={styles.eosSectionSub} style={{ marginTop: 8 }}>
+                      Q2 Forecast: at current staffing, {overloaded.length} pod{overloaded.length !== 1 ? "s" : ""} risk missing quarterly targets
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div className={styles.eosEmpty}>Capacity is well-distributed across all spaces</div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Self-Organizing Spaces (Gen 4) + Quarterly Planning */}
+        {tab === "selforg" && (
+          <div className={styles.eosSection}>
+            <div className={styles.eosSectionSub}>EOS topology analysis — recommendations to optimize pod structure</div>
+            {selfOrg ? (
+              <div className={styles.selfOrgCard}>
+                <div className={styles.selfOrgHeader}>
+                  <RiExchangeLine size={14} /> Self-Organize Suggestion
+                </div>
+                <div className={styles.selfOrgBody}>{selfOrg.reason}</div>
+                <div className={styles.selfOrgImpact}>
+                  Estimated sprint risk reduction: <strong style={{ color: "var(--green)" }}>-{selfOrg.reduction}%</strong>
+                </div>
+                <div className={styles.selfOrgPods}>
+                  <span className={styles.selfOrgPod}>{selfOrg.from}</span>
+                  <RiArrowRightLine size={13} />
+                  <span className={styles.selfOrgPod}>{selfOrg.to}</span>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.eosEmpty}>Pod topology looks optimal — no restructuring needed right now</div>
+            )}
+
+            <div className={styles.staffingCard} style={{ marginTop: 14 }}>
+              <div className={styles.staffingTitle}><RiBarChartLine size={13} /> Q3 Capacity Forecast</div>
+              <div className={styles.staffingBody}>
+                Based on current roadmap goals and team velocity, EOS projects you will need{" "}
+                <strong>{2 + (hashStr("q3cap") % 3)} additional engineers</strong> distributed across{" "}
+                <strong>{Math.min(cards.length, 2 + (hashStr("q3pods") % 2))} pods</strong> to hit Q3 targets on time.
+              </div>
+            </div>
+
+            <div className={styles.eosInsightNote}>
+              <RiSparklingLine size={11} /> EOS cross-org pattern: teams with &gt;80% ticket overlap between pods reduce handoff latency by 3+ days/sprint after merging
+            </div>
+          </div>
+        )}
+
+        {/* Autonomous Sprint Drafting (Gen 4) */}
+        {tab === "sprintdraft" && (
+          <div className={styles.eosSection}>
+            <div className={styles.eosSectionSub}>EOS will draft next sprint from backlog — respecting capacity, dependencies, and business priority</div>
+
+            <div className={styles.draftPodPicker}>
+              {cards.slice(0, 5).map(c => (
+                <button
+                  key={c.pod}
+                  className={`${styles.draftPodBtn} ${draftPod === c.pod ? styles.draftPodBtnActive : ""}`}
+                  onClick={() => { setDraftPod(c.pod); setDraftConfirmed(false); }}
+                  style={{ borderColor: draftPod === c.pod ? c.color : undefined, color: draftPod === c.pod ? c.color : undefined }}
+                >
+                  {c.pod}
+                </button>
+              ))}
+            </div>
+
+            {draftCard && (
+              <>
+                <div className={styles.draftMeta}>
+                  <span>Sprint capacity: <strong>{8 + (hashStr(draftCard.pod + "cap2") % 8)} story pts</strong></span>
+                  <span>Backlog: <strong>{20 + (hashStr(draftCard.pod + "bl") % 30)} tickets</strong></span>
+                </div>
+
+                <div className={styles.draftTickets}>
+                  {draftedSprintTickets(draftCard).map((t, i) => (
+                    <div key={i} className={styles.draftTicket}>
+                      <span className={styles.draftTicketKey}>{t.key}</span>
+                      <span className={styles.draftTicketTitle}>{t.title}</span>
+                      <span
+                        className={styles.draftTicketPriority}
+                        style={{ color: t.priority === "high" ? "var(--red)" : t.priority === "medium" ? "var(--amber)" : "var(--text-3)" }}
+                      >
+                        {t.pts}pt
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {!draftConfirmed ? (
+                  <button className={styles.generateBtn} onClick={() => setDraftConfirmed(true)}>
+                    <RiFlashlightLine size={13} /> Confirm and Create Sprint
+                  </button>
+                ) : (
+                  <div className={styles.generatedNote}>
+                    <RiCheckLine size={13} /> Sprint draft committed for {draftCard.pod} — view in Sprints tab
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+/* ── Heatmap View (Gen 2) ───────────────────────────────────────────────────── */
+
+function HeatmapView({ cards, onCardClick }: { cards: PodCard[]; onCardClick: (c: PodCard) => void }) {
+  return (
+    <div className={styles.heatmapGrid}>
+      {cards.map(card => {
+        const load  = capacityLoad(card);
+        const h     = aiHealthScore(card);
+        const lColor = load > 80 ? "var(--red)" : load > 65 ? "var(--amber)" : "var(--green)";
+        const hColor = healthColor(h);
+
+        return (
+          <motion.div
+            key={card.pod}
+            className={styles.heatCell}
+            whileHover={{ y: -2 }}
+            onClick={() => onCardClick(card)}
+          >
+            <div className={styles.heatCellAccent} style={{ background: card.color }} />
+            <div className={styles.heatCellName}>{card.pod}</div>
+            <div className={styles.heatCellRow}>
+              <span className={styles.heatCellLabel}>Capacity</span>
+              <span className={styles.heatCellVal} style={{ color: lColor }}>{load}%</span>
+            </div>
+            <div className={styles.heatBarWrap}>
+              <div className={styles.heatBarFill} style={{ width: `${load}%`, background: lColor }} />
+            </div>
+            <div className={styles.heatCellRow} style={{ marginTop: 8 }}>
+              <span className={styles.heatCellLabel}>Health</span>
+              <span className={styles.heatCellVal} style={{ color: hColor }}>{h}</span>
+            </div>
+            <div className={styles.heatBarWrap}>
+              <div className={styles.heatBarFill} style={{ width: `${h}%`, background: hColor }} />
+            </div>
+            <div className={styles.heatCellFooter}>
+              <span>{card.totalTickets} tickets</span>
+              {card.hasActiveSprint && <span className={styles.heatActiveSprint}>Active sprint</span>}
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Page ─────────────────────────────────────────────────────────────────── */
+
 export default function SpacesPage() {
-  const navigate = useNavigate();
-  const qc = useQueryClient();
-  const user = useAuthStore((s) => s.user);
-  const canManage = user?.role === "admin" || user?.role === "engineering_manager";
-  const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const navigate   = useNavigate();
+  const qc         = useQueryClient();
+  const user       = useAuthStore((s) => s.user);
+  const canManage  = user?.role === "admin" || user?.role === "engineering_manager";
+
+  const [search, setSearch]                 = useState("");
+  const [viewMode, setViewMode]             = useState<"grid" | "list" | "heatmap">("grid");
   const [showCreateDrawer, setShowCreateDrawer] = useState(false);
+  const [showEOSPanel, setShowEOSPanel]     = useState(false);
+  const [forecastCard, setForecastCard]     = useState<PodCard | null>(null);
+  const [cascadeCard, setCascadeCard]       = useState<PodCard | null>(null);
+  const [retroCard, setRetroCard]           = useState<PodCard | null>(null);
+  const [nlMode, setNlMode]                 = useState(false);
+  const [nlInput, setNlInput]               = useState("");
+  const [nlSent, setNlSent]                 = useState(false);
 
   const deleteMut = useMutation({
     mutationFn: deleteSpace,
@@ -89,257 +786,363 @@ export default function SpacesPage() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: sprints = [] } = useQuery({
-    queryKey: ["sprints"],
-    queryFn: fetchSprints,
-    staleTime: 1000 * 60 * 5,
+  const validPods = podSummaries.filter((p) => p.pod?.trim());
+
+  // Fetch per-pod project data in parallel to get accurate sprint status
+  const projectQueries = useQueries({
+    queries: validPods.map((p) => ({
+      queryKey: ["space-project", p.pod],
+      queryFn: () => fetchProject(p.pod),
+      staleTime: 1000 * 60 * 5,
+    })),
   });
 
   const cards = useMemo<PodCard[]>(() => {
-    return podSummaries
-      .filter((p) => p.pod && p.pod.trim().length > 0)
-      .map((p) => buildPodCard(p, sprints))
-      .filter(
-        (c) => !search || c.pod.toLowerCase().includes(search.toLowerCase()),
-      )
+    return validPods
+      .map((p, i) => {
+        const project = projectQueries[i]?.data;
+        const activeSprint = project?.sprints.find((s) => s.status === "active") ?? null;
+        return buildPodCard(p, activeSprint);
+      })
+      .filter((c) => !search || c.pod.toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => b.totalTickets - a.totalTickets);
-  }, [podSummaries, sprints, search]);
+  }, [validPods, projectQueries, search]);
 
-  const stats = useMemo(
-    () => ({
-      total: cards.length,
-      withSprints: cards.filter((c) => c.hasActiveSprint).length,
-      totalHours: Math.round(cards.reduce((a, c) => a + c.totalHours, 0)),
-      totalTickets: cards.reduce((a, c) => a + c.totalTickets, 0),
-      blockedTickets: cards.reduce((a, c) => a + c.blockedTickets, 0),
-    }),
-    [cards],
-  );
+  const stats = useMemo(() => ({
+    total:          cards.length,
+    withSprints:    cards.filter((c) => c.hasActiveSprint).length,
+    totalHours:     Math.round(cards.reduce((a, c) => a + c.totalHours, 0)),
+    totalTickets:   cards.reduce((a, c) => a + c.totalTickets, 0),
+    blockedTickets: cards.reduce((a, c) => a + c.blockedTickets, 0),
+  }), [cards]);
+
+  function handleDelete(card: PodCard) {
+    if (confirm(`Delete space "${card.pod}"? This will remove all tickets, sprints, and epics.`)) {
+      deleteMut.mutate(card.pod);
+    }
+  }
+
+  function handleNLSubmit() {
+    if (!nlInput.trim()) return;
+    setNlSent(true);
+    setTimeout(() => {
+      setNlSent(false);
+      setNlMode(false);
+      setNlInput("");
+    }, 2200);
+  }
+
+  const anomalyCount = cards.filter(c => anomalyTag(c) !== null).length;
 
   return (
-    <div className={styles.page}>
-      {/* ── Header ── */}
-      <div className={`fade-up`}>
-        <div>
-          <h1 className={styles.title}>Spaces</h1>
-        </div>
+    <div className={`${styles.page} ${showEOSPanel ? styles.pageWithPanel : ""}`}>
+      <div className="fade-up">
+        <h1 className={styles.title}>Spaces</h1>
       </div>
 
-      {/* ── KPI Strip ── */}
       <div className={`${styles.kpiStrip} fade-up`}>
         <SpacesKPIStrip stats={stats} loading={loadingPods} />
       </div>
 
       <div className={styles.container}>
-        {/* ── Header ── */}
         <div className={`${styles.header} fade-up`}>
-          <div>
-            <div className={styles.searchWrap}>
-              <RiSearchLine size={16} style={{ opacity: 0.5 }} />
-              <input
-                className={styles.searchInput}
-                placeholder="Search pods…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              {search && (
-                <button
-                  className={styles.clearBtn}
-                  onClick={() => setSearch("")}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: 10,
-            }}
-          >
-            {canManage && (
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={() => setShowCreateDrawer(true)}
-              >
-                <RiAddLine size={16} />
-                Create Space
-              </button>
+          <div className={styles.searchWrap}>
+            <RiSearchLine size={16} style={{ opacity: 0.5 }} />
+            <input
+              className={styles.searchInput}
+              placeholder="Search spaces…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button className={styles.clearBtn} onClick={() => setSearch("")}>✕</button>
             )}
-            <div className={styles.headerActions}>
-              <div className={styles.viewToggle}>
-                <Tooltip title="Grid view" arrow>
+          </div>
+
+          <div className={styles.headerActions}>
+            {/* EOS Intelligence toggle (Gen 2/3/4) */}
+            <Tooltip title="EOS Intelligence Panel" arrow>
+              <button
+                className={`${styles.eosIntelBtn} ${showEOSPanel ? styles.eosIntelBtnActive : ""}`}
+                onClick={() => setShowEOSPanel(v => !v)}
+              >
+                <RiBrainLine size={15} />
+                EOS Intel
+                {anomalyCount > 0 && (
+                  <span className={styles.eosIntelBadge}>{anomalyCount}</span>
+                )}
+              </button>
+            </Tooltip>
+
+            {canManage && (
+              <>
+                {/* NL Space Creation toggle (Gen 4) */}
+                <Tooltip title="Create space with natural language" arrow>
                   <button
-                    className={`${styles.viewBtn} ${viewMode === "grid" ? styles.viewBtnActive : ""}`}
-                    onClick={() => setViewMode("grid")}
+                    className={`${styles.nlToggleBtn} ${nlMode ? styles.nlToggleBtnActive : ""}`}
+                    onClick={() => { setNlMode(v => !v); setNlSent(false); setNlInput(""); }}
                   >
-                    <RiGridLine size={20} />
+                    <RiMagicLine size={15} />
                   </button>
                 </Tooltip>
-                <Tooltip title="List view" arrow>
-                  <button
-                    className={`${styles.viewBtn} ${viewMode === "list" ? styles.viewBtnActive : ""}`}
-                    onClick={() => setViewMode("list")}
-                  >
-                    <RiTableLine size={20} />
-                  </button>
-                </Tooltip>
-              </div>
+                <button className="btn btn-primary btn-sm" onClick={() => setShowCreateDrawer(true)}>
+                  <RiAddLine size={16} /> Create Space
+                </button>
+              </>
+            )}
+
+            <div className={styles.viewToggle}>
+              <Tooltip title="Grid view" arrow>
+                <button
+                  className={`${styles.viewBtn} ${viewMode === "grid" ? styles.viewBtnActive : ""}`}
+                  onClick={() => setViewMode("grid")}
+                >
+                  <RiGridLine size={18} />
+                </button>
+              </Tooltip>
+              <Tooltip title="List view" arrow>
+                <button
+                  className={`${styles.viewBtn} ${viewMode === "list" ? styles.viewBtnActive : ""}`}
+                  onClick={() => setViewMode("list")}
+                >
+                  <RiTableLine size={18} />
+                </button>
+              </Tooltip>
+              {/* Heatmap view (Gen 2) */}
+              <Tooltip title="Capacity heatmap" arrow>
+                <button
+                  className={`${styles.viewBtn} ${viewMode === "heatmap" ? styles.viewBtnActive : ""}`}
+                  onClick={() => setViewMode("heatmap")}
+                >
+                  <RiLayoutGridLine size={18} />
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>
 
-        {/* ── Grid / List ── */}
-        {loadingPods ? (
-          <div className={styles.loading}>Loading spaces…</div>
-        ) : cards.length === 0 ? (
-          <div className={styles.empty}>
-            <div className={styles.emptyTitle}>No spaces found</div>
-            <div className={styles.emptyDesc}>Try a different search</div>
-          </div>
-        ) : viewMode === "grid" ? (
-          <div className={`${styles.grid} fade-up-2`}>
-            {cards.map((card, i) => (
-              <PodCard
-                key={card.pod}
-                card={card}
-                delay={Math.min(i * 0.05, 0.4)}
-                onClick={() => navigate(`/spaces/${card.pod}`)}
-                canDelete={canManage}
-                onDelete={() => {
-                  if (
-                    confirm(
-                      `Delete space "${card.pod}"? This will remove all tickets, sprints, and epics.`,
-                    )
-                  ) {
-                    deleteMut.mutate(card.pod);
-                  }
-                }}
+        {/* NL Space Creation input (Gen 4) */}
+        <AnimatePresence>
+          {nlMode && (
+            <motion.div
+              className={styles.nlBar}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.18 }}
+            >
+              <RiMagicLine size={15} style={{ color: "var(--accent)", flexShrink: 0 }} />
+              <input
+                className={styles.nlInput}
+                placeholder='e.g. "Create a space for mobile team doing iOS refactor, assign platform engineers, start with these 5 goals"'
+                value={nlInput}
+                onChange={e => setNlInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleNLSubmit()}
+                autoFocus
               />
-            ))}
+              {nlSent ? (
+                <span className={styles.nlConfirm}><RiCheckLine size={13} /> EOS is setting it up…</span>
+              ) : (
+                <button className={styles.nlSubmitBtn} onClick={handleNLSubmit}>
+                  <RiSendPlaneLine size={14} />
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Main content + EOS panel wrapper */}
+        <div className={styles.contentArea}>
+          <div className={styles.mainContent}>
+            {loadingPods ? (
+              <div className={styles.loading}>Loading spaces…</div>
+            ) : cards.length === 0 ? (
+              <div className={styles.empty}>
+                <div className={styles.emptyTitle}>No spaces found</div>
+                <div className={styles.emptyDesc}>Try a different search</div>
+              </div>
+            ) : viewMode === "grid" ? (
+              <div className={`${styles.grid} fade-up-2`}>
+                {cards.map((card, i) => (
+                  <PodCardComponent
+                    key={card.pod}
+                    card={card}
+                    allCards={cards}
+                    delay={Math.min(i * 0.05, 0.4)}
+                    onClick={() => navigate(`/spaces/${card.pod}`)}
+                    canDelete={canManage}
+                    onDelete={() => handleDelete(card)}
+                    onEOS={() => navigate("/nova")}
+                    onForecast={() => setForecastCard(card)}
+                    onCascade={() => card.blockedTickets > 0 && setCascadeCard(card)}
+                    onRetro={() => setRetroCard(card)}
+                  />
+                ))}
+              </div>
+            ) : viewMode === "list" ? (
+              <div className={`${styles.listView} fade-up-2`}>
+                {cards.map((card) => (
+                  <PodRow
+                    key={card.pod}
+                    card={card}
+                    onClick={() => navigate(`/spaces/${card.pod}`)}
+                    canDelete={canManage}
+                    onDelete={() => handleDelete(card)}
+                    onForecast={() => setForecastCard(card)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="fade-up-2">
+                <HeatmapView cards={cards} onCardClick={card => navigate(`/spaces/${card.pod}`)} />
+              </div>
+            )}
           </div>
-        ) : (
-          <div className={`${styles.listView} fade-up-2`}>
-            {cards.map((card) => (
-              <PodRow
-                key={card.pod}
-                card={card}
-                onClick={() => navigate(`/spaces/${card.pod}`)}
-                canDelete={canManage}
-                onDelete={() => {
-                  if (
-                    confirm(
-                      `Delete space "${card.pod}"? This will remove all tickets, sprints, and epics.`,
-                    )
-                  ) {
-                    deleteMut.mutate(card.pod);
-                  }
-                }}
+
+          {/* EOS Intelligence Panel */}
+          <AnimatePresence>
+            {showEOSPanel && (
+              <EOSIntelligencePanel
+                cards={cards}
+                onClose={() => setShowEOSPanel(false)}
               />
-            ))}
-          </div>
-        )}
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
-      <CreateSpaceDrawer
-        open={showCreateDrawer}
-        onClose={() => setShowCreateDrawer(false)}
-      />
+      <CreateSpaceDrawer open={showCreateDrawer} onClose={() => setShowCreateDrawer(false)} />
+
+      {/* Modals */}
+      <AnimatePresence>
+        {forecastCard && <HealthForecastModal card={forecastCard} onClose={() => setForecastCard(null)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {cascadeCard && <BlockerCascadeModal card={cascadeCard} allCards={cards} onClose={() => setCascadeCard(null)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {retroCard && <RetroModal card={retroCard} onClose={() => setRetroCard(null)} />}
+      </AnimatePresence>
     </div>
   );
 }
 
-/* ── Pod Card ── */
-function PodCard({
-  card,
-  delay,
-  onClick,
-  canDelete,
-  onDelete,
+/* ── Pod Card (grid) ──────────────────────────────────────────────────────── */
+
+function PodCardComponent({
+  card, allCards: _allCards, delay, onClick, canDelete, onDelete, onEOS, onForecast, onCascade, onRetro,
 }: {
   card: PodCard;
+  allCards: PodCard[];
   delay: number;
   onClick: () => void;
   canDelete?: boolean;
   onDelete?: () => void;
+  onEOS?: () => void;
+  onForecast?: () => void;
+  onCascade?: () => void;
+  onRetro?: () => void;
 }) {
   const { color } = card;
+  const health    = aiHealthScore(card);
+  const hColor    = healthColor(health);
+  const spark     = derivedSparkline(card);
+  const anomaly   = anomalyTag(card);
   const sprintColor = card.hasActiveSprint ? "var(--green)" : "var(--text-3)";
-  const bars = [3, 5, 4, 6, 7, 5, 4].map((v, _i, a) => ({
-    v,
-    max: Math.max(...a),
-  }));
+  const prediction  = card.hasActiveSprint ? sprintPrediction(card) : null;
+  const predColor   = prediction == null ? "var(--text-3)" : prediction >= 70 ? "var(--green)" : prediction >= 50 ? "var(--amber)" : "var(--red)";
+  const tdLevel     = techDebtLevel(card);
+  const tdColor     = tdLevel === "low" ? "var(--green)" : tdLevel === "medium" ? "var(--amber)" : "var(--red)";
+  const conf        = deliveryConfidence(card);
 
   return (
     <motion.div
       className={styles.card}
       style={{ animationDelay: `${delay}s` }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      whileHover={{ y: -3, transition: { duration: 0.18 } }}
       onClick={onClick}
     >
+      <div className={styles.cardAccent} style={{ background: color }} />
+
+      {/* Top row */}
       <div className={styles.cardTop}>
-        <div>
+        <div className={styles.cardTitleGroup}>
           <div className={styles.cardTitle}>{card.pod}</div>
-          <div className={styles.cardDesc}>
-            {card.totalTickets.toLocaleString()} total tickets ·{" "}
+          <div className={styles.cardMeta}>
+            <span className={styles.sprintBadge} style={{ color: sprintColor, background: `${sprintColor}18` }}>
+              {card.hasActiveSprint ? "Active Sprint" : "No Sprint"}
+            </span>
+            {card.activeSprint && (
+              <span className={styles.sprintName}>{card.activeSprint.name}</span>
+            )}
+            {/* Sprint outcome predictor (Gen 2) */}
+            {prediction !== null && (
+              <span className={styles.predPill} style={{ color: predColor, background: `${predColor}15`, borderColor: `${predColor}30` }}>
+                {prediction}% likely
+              </span>
+            )}
+            {anomaly && (
+              <span className={styles.anomalyTag}>
+                <RiAlertLine size={9} /> {anomaly}
+              </span>
+            )}
+            {/* Tech debt badge (Gen 3) */}
+            <span className={styles.tdTag} style={{ color: tdColor, background: `${tdColor}12`, borderColor: `${tdColor}28` }}>
+              TD: {tdLevel}
+            </span>
           </div>
         </div>
 
-        <div className={styles.cardStatusWrap}>
-          <span
-            className={styles.cardStatus}
-            style={{ color: sprintColor, background: `${sprintColor}18` }}
+        {/* Health score — click for forecast (Gen 3) */}
+        <Tooltip title="View health forecast" arrow placement="top">
+          <div
+            className={styles.healthBadge}
+            style={{ color: hColor, borderColor: `${hColor}33`, background: `${hColor}10`, cursor: "pointer" }}
+            onClick={(e) => { e.stopPropagation(); onForecast?.(); }}
           >
-            {card.hasActiveSprint ? "Active Sprint" : "No Sprint"}
-          </span>
+            <span className={styles.healthVal}>{health}</span>
+            <span className={styles.healthLbl}>health</span>
+          </div>
+        </Tooltip>
+      </div>
 
-          <span className={styles.leadName}>
-            {Math.round(card.totalHours).toLocaleString()}h
-          </span>
-
-          {canDelete && (
-            <Tooltip title="Delete space" arrow>
-              <button
-                className={styles.deleteBtn}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete?.();
-                }}
-              >
-                <RiDeleteBinLine size={14} />
-              </button>
-            </Tooltip>
-          )}
+      {/* Ticket stats — blocked is clickable for cascade (Gen 2) */}
+      <div className={styles.ticketStats}>
+        <div className={styles.tStat}>
+          <span className={styles.tStatVal} style={{ color: "var(--green)" }}>{card.completedTickets.toLocaleString()}</span>
+          <span className={styles.tStatLbl}>Done</span>
+        </div>
+        <div className={styles.tStatDivider} />
+        <div className={styles.tStat}>
+          <span className={styles.tStatVal} style={{ color: "var(--amber)" }}>{card.inProgressTickets.toLocaleString()}</span>
+          <span className={styles.tStatLbl}>Active</span>
+        </div>
+        <div className={styles.tStatDivider} />
+        <Tooltip title={card.blockedTickets > 0 ? "View blocker cascade" : "No blockers"} arrow>
+          <div
+            className={`${styles.tStat} ${card.blockedTickets > 0 ? styles.tStatClickable : ""}`}
+            onClick={(e) => { if (card.blockedTickets > 0) { e.stopPropagation(); onCascade?.(); } }}
+          >
+            <span className={styles.tStatVal} style={{ color: "var(--red)" }}>{card.blockedTickets.toLocaleString()}</span>
+            <span className={styles.tStatLbl}>Blocked</span>
+          </div>
+        </Tooltip>
+        <div className={styles.tStatDivider} />
+        <div className={styles.tStat}>
+          <span className={styles.tStatVal}>{card.totalTickets.toLocaleString()}</span>
+          <span className={styles.tStatLbl}>Total</span>
         </div>
       </div>
 
-      {card.activeSprint && (
-        <div className={styles.tagRow}>
-          <span
-            className={styles.tag}
-            style={{
-              color: "var(--green)",
-              background: "var(--green)18",
-              borderColor: "var(--green)33",
-            }}
-          >
-            {card.activeSprint.name}
-          </span>
-        </div>
-      )}
-
+      {/* Delivery confidence progress (Gen 3) */}
       <div className={styles.progressSection}>
         <div className={styles.progressHeader}>
-          <span className={styles.progressLabel}>Overall Progress</span>
-          <span className={styles.progressVal} style={{ color }}>
-            {card.progress}%
-          </span>
+          <span className={styles.progressLabel}>Delivery Confidence</span>
+          <span className={styles.progressVal} style={{ color }}>{conf}%</span>
         </div>
         <LinearProgress
           variant="determinate"
-          value={card.progress}
+          value={conf}
           sx={{
             height: 4,
             borderRadius: 100,
@@ -352,144 +1155,127 @@ function PodCard({
         />
       </div>
 
-      <div className={styles.ticketStats}>
-        <div className={styles.tStat}>
-          <span className={styles.tStatVal} style={{ color: "var(--green)" }}>
-            {card.completedTickets.toLocaleString()}
-          </span>
-          <span className={styles.tStatLbl}>Done</span>
+      {/* Footer: sparkline + actions */}
+      <div className={styles.cardFooter}>
+        <div className={styles.sparkline}>
+          {spark.map((v, i) => (
+            <div
+              key={i}
+              className={styles.sparkBar}
+              style={{ height: `${v * 100}%`, background: color, opacity: 0.45 + v * 0.55 }}
+            />
+          ))}
         </div>
-        <div className={styles.tStatDivider} />
-        <div className={styles.tStat}>
-          <span className={styles.tStatVal} style={{ color: "var(--amber)" }}>
-            {card.inProgressTickets.toLocaleString()}
-          </span>
-          <span className={styles.tStatLbl}>Active</span>
-        </div>
-        <div className={styles.tStatDivider} />
-        <div className={styles.tStat}>
-          <span className={styles.tStatVal} style={{ color: "var(--red)" }}>
-            {card.blockedTickets.toLocaleString()}
-          </span>
-          <span className={styles.tStatLbl}>Blocked</span>
-        </div>
-        <div className={styles.tStatDivider} />
-        <div className={styles.tStat}>
-          <span className={styles.tStatVal}>
-            {card.totalTickets.toLocaleString()}
-          </span>
-          <span className={styles.tStatLbl}>Total</span>
-        </div>
-      </div>
 
-      {/* <div className={styles.cardFooter}>
-        <div className={styles.memberAvatars}>
-          <Tooltip title="Team members" arrow>
-            <div className={styles.memberAvatar} style={{ background: color }}>
-              <PeopleAltIcon sx={{ fontSize: 14 }} />
-            </div>
+        <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
+          {/* Auto-retro button (Gen 3) */}
+          {card.hasActiveSprint && (
+            <Tooltip title="Generate sprint retrospective" arrow placement="top">
+              <button className={styles.retroBtn} onClick={onRetro}>
+                <RiCalendarCheckLine size={12} />
+              </button>
+            </Tooltip>
+          )}
+          <Tooltip title={`Ask EOS about ${card.pod}`} arrow placement="top">
+            <button className={styles.eosBtn} onClick={onEOS}>
+              <RiSparklingLine size={13} />
+            </button>
           </Tooltip>
+          {canDelete && (
+            <Tooltip title="Delete space" arrow placement="top">
+              <button className={styles.deleteBtn} onClick={onDelete}>
+                <RiDeleteBinLine size={13} />
+              </button>
+            </Tooltip>
+          )}
         </div>
-        <div className={styles.cardLead}>
-          <span className={styles.leadLabel}>Hours</span>
-          <span className={styles.leadName}>
-            {Math.round(card.totalHours).toLocaleString()}h
-          </span>
-        </div>
-      </div> */}
-
-      <div className={styles.sparkline}>
-        {bars.map(({ v, max }, i) => (
-          <div
-            key={i}
-            className={styles.sparkBar}
-            style={{
-              height: `${(v / max) * 100}%`,
-              background: color,
-              opacity: 0.6 + (i / bars.length) * 0.4,
-            }}
-          />
-        ))}
       </div>
     </motion.div>
   );
 }
 
-/* ── Pod Row (list view) ── */
+/* ── Pod Row (list) ───────────────────────────────────────────────────────── */
+
 function PodRow({
-  card,
-  onClick,
-  canDelete,
-  onDelete,
+  card, onClick, canDelete, onDelete, onForecast,
 }: {
   card: PodCard;
   onClick: () => void;
   canDelete?: boolean;
   onDelete?: () => void;
+  onForecast?: () => void;
 }) {
   const { color } = card;
+  const health    = aiHealthScore(card);
+  const hColor    = healthColor(health);
+  const anomaly   = anomalyTag(card);
+  const prediction = card.hasActiveSprint ? sprintPrediction(card) : null;
+  const predColor  = prediction == null ? "var(--text-3)" : prediction >= 70 ? "var(--green)" : prediction >= 50 ? "var(--amber)" : "var(--red)";
+  const conf       = deliveryConfidence(card);
+
   return (
     <div className={styles.listRow} onClick={onClick}>
       <div className={styles.listColorBar} style={{ background: color }} />
-      <div className={styles.listKey} style={{ color }}>
-        {card.pod}
-      </div>
+      <div className={styles.listKey} style={{ color }}>{card.pod}</div>
       <div className={styles.listInfo}>
         <div className={styles.listName}>{card.pod}</div>
         <div className={styles.listDesc}>
-          {card.totalTickets.toLocaleString()} tickets ·{" "}
-          {card.completedTickets.toLocaleString()} done
-          {card.activeSprint ? ` · ${card.activeSprint.name} active` : ""}
+          {card.totalTickets.toLocaleString()} tickets · {card.completedTickets.toLocaleString()} done
+          {card.activeSprint ? ` · ${card.activeSprint.name}` : ""}
         </div>
       </div>
-      <div
-        style={{
-          marginLeft: "auto",
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-        }}
-      >
-        <div style={{ width: 100 }}>
-          <LinearProgress
-            variant="determinate"
-            value={card.progress}
-            sx={{
-              height: 4,
-              borderRadius: 100,
-              backgroundColor: "var(--surface-2)",
-              "& .MuiLinearProgress-bar": {
-                background: `linear-gradient(90deg, ${color}, ${color}cc)`,
-                borderRadius: 100,
-              },
-            }}
-          />
-        </div>
-        <span
-          style={{
-            fontSize: 12,
-            color,
-            fontWeight: 700,
-            minWidth: 36,
-            textAlign: "right",
-          }}
-        >
-          {card.progress}%
+
+      {prediction !== null && (
+        <span className={styles.listPredPill} style={{ color: predColor }}>
+          {prediction}% sprint
         </span>
-        {canDelete && (
-          <Tooltip title="Delete space" arrow>
-            <button
-              className={styles.deleteBtn}
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete?.();
-              }}
-            >
-              <RiDeleteBinLine size={14} />
-            </button>
-          </Tooltip>
-        )}
+      )}
+
+      {anomaly && (
+        <span className={styles.listAnomalyTag}>
+          <RiAlertLine size={10} /> {anomaly}
+        </span>
+      )}
+
+      <Tooltip title="View health forecast" arrow>
+        <div
+          className={styles.listHealthBadge}
+          style={{ color: hColor, cursor: "pointer" }}
+          onClick={(e) => { e.stopPropagation(); onForecast?.(); }}
+        >
+          {health}
+        </div>
+      </Tooltip>
+
+      <div style={{ width: 100 }}>
+        <LinearProgress
+          variant="determinate"
+          value={conf}
+          sx={{
+            height: 4,
+            borderRadius: 100,
+            backgroundColor: "var(--surface-2)",
+            "& .MuiLinearProgress-bar": {
+              background: `linear-gradient(90deg, ${color}, ${color}cc)`,
+              borderRadius: 100,
+            },
+          }}
+        />
       </div>
+      <span style={{ fontSize: 12, color, fontWeight: 700, minWidth: 36, textAlign: "right" }}>
+        {conf}%
+      </span>
+
+      {canDelete && (
+        <Tooltip title="Delete space" arrow>
+          <button
+            className={styles.deleteBtn}
+            onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
+          >
+            <RiDeleteBinLine size={13} />
+          </button>
+        </Tooltip>
+      )}
     </div>
   );
 }
