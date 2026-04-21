@@ -1616,6 +1616,62 @@
   animation: skPulse 1.4s ease-in-out infinite;
 }
 
+.proactiveEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 0 8px;
+  text-align: center;
+}
+.proactiveEmpty p {
+  font-size: 11px;
+  color: var(--text-3);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Velocity bar chart */
+.velocityBars {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  height: 80px;
+  margin-top: 10px;
+}
+.velocityBarCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  height: 100%;
+}
+.velocityBarWrap {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  background: var(--surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.velocityBarFill {
+  width: 100%;
+  border-radius: 4px;
+  transition: height 0.6s ease;
+  min-height: 2px;
+}
+.velocityBarLabel {
+  font-size: 10px;
+  color: var(--text-3);
+}
+.velocityBarVal {
+  font-size: 10px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+
 .proactiveFocusList {
   display: flex;
   flex-direction: column;
@@ -2769,3 +2825,120 @@
   margin-top: 2px;
   color: var(--green);
 }
+
+/* ── Quick Action Modals ───────────────────────────────────── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modalCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.modalClose {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+.modalClose:hover { color: var(--text); }
+
+.modalSub {
+  font-size: 12px;
+  color: var(--text-3);
+  margin: 0;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modalField {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.modalLabel {
+  font-size: 11px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.modalInput,
+.modalTextarea {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  resize: none;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.modalInput:focus,
+.modalTextarea:focus {
+  border-color: var(--accent);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.modalCancel {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.modalCancel:hover { background: var(--surface-2); }
+
+.modalSave {
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+}
+.modalSave:hover { opacity: 0.88; }
+.modalSave:disabled { opacity: 0.45; cursor: not-allowed; }

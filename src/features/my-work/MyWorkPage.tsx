@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { useMyWork, fetchTicket } from "./useMyWork";
+import { updateTicketStatus, updateTicket, logTime, createComment } from "@/services/api";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
 import styles from "./MyWorkPage.module.css";
 
@@ -26,7 +29,11 @@ import {
   RiShieldLine,
 } from "react-icons/ri";
 
-import type { AITicket, Insight, FocusBlock, TimeEnergy, SprintRisk, CognitiveData, AmbientEvent } from "./useMyWork";
+import type {
+  AITicket, Insight, FocusBlock, TimeEnergy, SprintRisk,
+  CognitiveData, AmbientEvent, VelocityPattern,
+  MyWorkFlowAnalysis, MyWorkBlockerPrediction,
+} from "./useMyWork";
 import type { KnowledgeGap } from "@/types";
 
 /* ═══════════════════════════════════════════════════════════
@@ -34,6 +41,9 @@ import type { KnowledgeGap } from "@/types";
    ═══════════════════════════════════════════════════════════ */
 
 export default function MyWorkPage() {
+  const navigate      = useNavigate();
+  const queryClient   = useQueryClient();
+
   const {
     aiTickets,
     sprintRisk,
@@ -44,18 +54,67 @@ export default function MyWorkPage() {
     briefChips,
     cognitiveData,
     ambientEvents,
+    flowAnalysis,
+    blockerPredictions,
+    velocityPatterns,
     knowledgeGaps,
     loading,
     loadingGaps,
   } = useMyWork();
 
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [selectedKey,    setSelectedKey]    = useState<string | null>(null);
+  const [logTimeTicket,  setLogTimeTicket]  = useState<AITicket | null>(null);
+  const [commentTicket,  setCommentTicket]  = useState<AITicket | null>(null);
 
   const { data: selectedTicketData } = useQuery({
     queryKey: ["ticket", selectedKey],
     queryFn: () => fetchTicket(selectedKey!),
     enabled: !!selectedKey,
   });
+
+  async function handleStatusUpdate(key: string, status: string) {
+    const tid = toast.loading("Updating status…");
+    try {
+      await updateTicketStatus(key, status);
+      queryClient.invalidateQueries({ queryKey: ["my-work"] });
+      toast.success(`${key} moved to ${status}`, { id: tid });
+    } catch {
+      toast.error("Failed to update status", { id: tid });
+    }
+  }
+
+  async function handleEscalate(key: string) {
+    const tid = toast.loading("Escalating…");
+    try {
+      await updateTicket(key, { priority: "Highest" });
+      queryClient.invalidateQueries({ queryKey: ["my-work"] });
+      toast.success(`${key} escalated to Highest priority`, { id: tid });
+    } catch {
+      toast.error("Failed to escalate", { id: tid });
+    }
+  }
+
+  function handleQuickAction(actionId: string, ticket: AITicket) {
+    switch (actionId) {
+      case "open":
+      case "ping-blocker":
+      case "ping-reviewer":
+        setSelectedKey(ticket.key);
+        break;
+      case "draft-unblock":
+        setCommentTicket(ticket);
+        break;
+      case "log-time":
+        setLogTimeTicket(ticket);
+        break;
+      case "approve":
+        handleStatusUpdate(ticket.key, "Done");
+        break;
+      case "escalate":
+        handleEscalate(ticket.key);
+        break;
+    }
+  }
 
   return (
     <div className={styles.page}>
@@ -75,7 +134,7 @@ export default function MyWorkPage() {
       <EosAgentBrief text={morningBrief} chips={briefChips} loading={loading} />
 
       {/* ── Nova Insight Feed ── */}
-      <NovaInsightFeed insights={insights} loading={loading} onTicketClick={setSelectedKey} />
+      <NovaInsightFeed insights={insights} loading={loading} onTicketClick={setSelectedKey} onNavigate={navigate} />
 
       {/* ── Smart Focus Block ── */}
       {focusBlock && <SmartFocusBlock block={focusBlock} onTicketClick={setSelectedKey} />}
@@ -83,7 +142,7 @@ export default function MyWorkPage() {
       {/* ── Main content ── */}
       <div className={`${styles.mainRow} fade-up-2`}>
         {/* Left: AI Priority Queue */}
-        <AIPriorityQueue tickets={aiTickets} loading={loading} onTicketClick={setSelectedKey} />
+        <AIPriorityQueue tickets={aiTickets} loading={loading} onQuickAction={handleQuickAction} />
 
         {/* Right: Risk + Time */}
         <div className={styles.sideColumn}>
@@ -93,7 +152,14 @@ export default function MyWorkPage() {
       </div>
 
       {/* ── Gen 2: Proactive Intelligence ── */}
-      <Gen2ProactiveSection aiTickets={aiTickets} loading={loading} onTicketClick={setSelectedKey} />
+      <Gen2ProactiveSection
+        aiTickets={aiTickets}
+        flowAnalysis={flowAnalysis}
+        blockerPredictions={blockerPredictions}
+        velocityPatterns={velocityPatterns}
+        loading={loading}
+        onTicketClick={setSelectedKey}
+      />
 
       {/* ── Delivery Forecast ── */}
       <div className={`${styles.deliveryRow} fade-up-3`}>
@@ -110,6 +176,43 @@ export default function MyWorkPage() {
 
       {/* ── Ambient Awareness ── */}
       <AmbientAwarenessWidget ambientEvents={ambientEvents} />
+
+      {/* ── Quick Log Time Modal ── */}
+      {logTimeTicket && (
+        <QuickLogTimeModal
+          ticket={logTimeTicket}
+          onClose={() => setLogTimeTicket(null)}
+          onSave={async (hours, comment) => {
+            const tid = toast.loading("Logging time…");
+            try {
+              await logTime(logTimeTicket.key, hours, comment, new Date().toISOString().slice(0, 10));
+              queryClient.invalidateQueries({ queryKey: ["my-work"] });
+              toast.success(`${hours}h logged on ${logTimeTicket.key}`, { id: tid });
+              setLogTimeTicket(null);
+            } catch {
+              toast.error("Failed to log time", { id: tid });
+            }
+          }}
+        />
+      )}
+
+      {/* ── Quick Comment Modal ── */}
+      {commentTicket && (
+        <QuickCommentModal
+          ticket={commentTicket}
+          onClose={() => setCommentTicket(null)}
+          onSend={async (text) => {
+            const tid = toast.loading("Posting comment…");
+            try {
+              await createComment(commentTicket.key, text);
+              toast.success(`Comment posted on ${commentTicket.key}`, { id: tid });
+              setCommentTicket(null);
+            } catch {
+              toast.error("Failed to post comment", { id: tid });
+            }
+          }}
+        />
+      )}
 
       {/* ── Ticket Detail Drawer ── */}
       {selectedKey && (
@@ -237,10 +340,12 @@ function NovaInsightFeed({
   insights,
   loading,
   onTicketClick,
+  onNavigate,
 }: {
   insights: Insight[];
   loading: boolean;
   onTicketClick: (key: string) => void;
+  onNavigate: (path: string) => void;
 }) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
@@ -292,11 +397,13 @@ function NovaInsightFeed({
                 {insight.actionLabel && (
                   <button
                     className={styles.insightActionBtn}
-                    onClick={() =>
-                      insight.actionTarget
-                        ? onTicketClick(insight.actionTarget)
-                        : undefined
-                    }
+                    onClick={() => {
+                      if (insight.actionTarget) {
+                        onTicketClick(insight.actionTarget);
+                      } else if (insight.actionLabel === "Draft wiki") {
+                        onNavigate("/wiki");
+                      }
+                    }}
                   >
                     {insight.actionLabel}
                   </button>
@@ -329,8 +436,6 @@ function SmartFocusBlock({
 }) {
   if (!block.recommendedTicket) return null;
   const t = block.recommendedTicket;
-  const hrs = Math.floor(block.availableMinutes / 60);
-  const mins = block.availableMinutes % 60;
 
   return (
     <div className={`${styles.focusCard} fade-up-1`}>
@@ -339,8 +444,10 @@ function SmartFocusBlock({
           <RiFocus3Line size={16} color="var(--accent)" />
           <span>Smart Focus Block</span>
         </div>
-        <p className={styles.focusMessage}>{block.message}</p>
-        <p className={styles.focusSub}>{block.submessage}</p>
+        <p className={styles.focusMessage}>Your top priority right now.</p>
+        <p className={styles.focusSub}>
+          {t.key} needs ~{t.remaining_estimate_hours || t.original_estimate_hours || 2}h — start here.
+        </p>
       </div>
       <div className={styles.focusRight}>
         <div className={styles.focusTicket}>
@@ -355,10 +462,6 @@ function SmartFocusBlock({
             <RiFlashlightLine size={14} />
             Start Focus
           </button>
-          <span className={styles.focusTime}>
-            <RiTimeLine size={12} />
-            {hrs}h {mins}m available
-          </span>
         </div>
       </div>
     </div>
@@ -369,11 +472,11 @@ function SmartFocusBlock({
 function AIPriorityQueue({
   tickets,
   loading,
-  onTicketClick,
+  onQuickAction,
 }: {
   tickets: AITicket[];
   loading: boolean;
-  onTicketClick: (key: string) => void;
+  onQuickAction: (actionId: string, ticket: AITicket) => void;
 }) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
@@ -574,9 +677,7 @@ function AIPriorityQueue({
                           <button
                             key={qa.id}
                             className={styles.quickActionBtn}
-                            onClick={() => {
-                              if (qa.id === "open") onTicketClick(t.key);
-                            }}
+                            onClick={() => onQuickAction(qa.id, t)}
                           >
                             <QuickActionIcon icon={qa.icon} />
                             {qa.label}
@@ -777,61 +878,59 @@ function NovaKnowledgeGaps({
 
 interface BlockerPred { key: string; reason: string; hoursUntilBlock: number; }
 
-const MOCK_BLOCKER_PREDS: BlockerPred[] = [
-  { key: "AUTH-221", reason: "Design hasn't responded to the pending Figma comment in 36h", hoursUntilBlock: 48 },
-  { key: "UI-045", reason: "Awaiting product sign-off on scope change — 3rd request sent", hoursUntilBlock: 8 },
-];
-
-const MOCK_VELOCITY_DATA = {
-  bestDays: ["Tuesday", "Wednesday"],
-  boostPct: 28,
-  peakWindow: "9–11am",
-  calendarConflicts: 3,
-  heatmap: [
-    [2, 8, 7, 5, 1],
-    [3, 9, 8, 8, 2],
-    [3, 9, 7, 8, 1],
-    [2, 7, 6, 6, 2],
-    [1, 6, 5, 4, 0],
-  ],
-};
 
 function Gen2ProactiveSection({
   aiTickets,
+  flowAnalysis,
+  blockerPredictions,
+  velocityPatterns,
   loading,
   onTicketClick,
 }: {
-  aiTickets: AITicket[];
-  loading: boolean;
-  onTicketClick: (key: string) => void;
+  aiTickets:          AITicket[];
+  flowAnalysis:       MyWorkFlowAnalysis;
+  blockerPredictions: MyWorkBlockerPrediction[];
+  velocityPatterns:   VelocityPattern[];
+  loading:            boolean;
+  onTicketClick:      (key: string) => void;
 }) {
-  const wip = aiTickets.filter((t) => t.status === "In Progress").length;
-  const contextSwitches = Math.max(wip, 1);
-  const weeklyAvg = Math.max(1, Math.floor(contextSwitches / 2));
+  // Map backend blocker predictions to the local shape
+  const predictions: BlockerPred[] = blockerPredictions.length > 0
+    ? blockerPredictions.map((p) => ({
+        key:             p.key,
+        reason:          p.reason,
+        hoursUntilBlock: p.hours_until_block,
+      }))
+    : aiTickets
+        .filter((t) => !t.status.toLowerCase().includes("block") && t.daysInStatus > 1)
+        .slice(0, 2)
+        .map((t, i) => ({
+          key:   t.key,
+          reason: t.daysInStatus > 3
+            ? `No update for ${t.daysInStatus} days — external dependency at risk`
+            : i === 0 ? "Awaiting review — comment unanswered for 2d" : "Dependency stalled",
+          hoursUntilBlock: i === 0 ? 48 : 16,
+        }));
 
-  const realPreds: BlockerPred[] = aiTickets
-    .filter((t) => !t.status.toLowerCase().includes("block") && t.daysInStatus > 1)
-    .slice(0, 2)
-    .map((t, i) => ({
-      key: t.key,
-      reason: t.daysInStatus > 3
-        ? `No status update for ${t.daysInStatus} days — external dependency at risk`
-        : i === 0 ? "Awaiting review — comment unanswered for 2d" : "Dependency stalled",
-      hoursUntilBlock: i === 0 ? 48 : 16,
-    }));
-  const predictions = realPreds.length >= 2 ? realPreds : MOCK_BLOCKER_PREDS;
+  // Focus-on tickets from backend AI or fall back to top 2
+  const focusKeys = flowAnalysis.focus_on.length > 0 ? flowAnalysis.focus_on : [];
+  const topTickets = focusKeys.length > 0
+    ? focusKeys.map((k) => aiTickets.find((t) => t.key === k)).filter(Boolean) as AITicket[]
+    : aiTickets.slice(0, 2);
 
   return (
     <div className={`${styles.genSection} fade-up-2`}>
       <div className={styles.gen2Grid}>
         <FlowStateCard
-          contextSwitches={contextSwitches}
-          weeklyAvg={weeklyAvg}
-          topTickets={aiTickets.slice(0, 2)}
+          contextSwitches={flowAnalysis.context_switches}
+          weeklyAvg={Math.max(1, Math.floor(flowAnalysis.context_switches / 2))}
+          flowState={flowAnalysis.flow_state}
+          recommendation={flowAnalysis.recommendation}
+          topTickets={topTickets}
           onTicketClick={onTicketClick}
           loading={loading}
         />
-        <VelocityPatternCard />
+        <VelocityPatternCard velocityPatterns={velocityPatterns} />
         <BlockerPredictionCard predictions={predictions} onTicketClick={onTicketClick} loading={loading} />
       </div>
     </div>
@@ -841,18 +940,22 @@ function Gen2ProactiveSection({
 function FlowStateCard({
   contextSwitches,
   weeklyAvg,
+  flowState,
+  recommendation,
   topTickets,
   onTicketClick,
   loading,
 }: {
   contextSwitches: number;
-  weeklyAvg: number;
-  topTickets: AITicket[];
-  onTicketClick: (key: string) => void;
-  loading: boolean;
+  weeklyAvg:       number;
+  flowState:       "focused" | "disrupted" | "scattered";
+  recommendation:  string;
+  topTickets:      AITicket[];
+  onTicketClick:   (key: string) => void;
+  loading:         boolean;
 }) {
-  const ratio = weeklyAvg > 0 ? (contextSwitches / weeklyAvg).toFixed(1) : "1.0";
-  const isHigh = contextSwitches > 3;
+  const isHigh = flowState !== "focused";
+  const ratio  = weeklyAvg > 0 ? (contextSwitches / weeklyAvg).toFixed(1) : "1.0";
 
   return (
     <div className={`${styles.proactiveCard} ${isHigh ? styles.proactiveCardAlert : ""}`}>
@@ -875,7 +978,7 @@ function FlowStateCard({
           </p>
           {isHigh && topTickets.length > 0 ? (
             <div className={styles.proactiveFocusList}>
-              <span className={styles.proactiveFocusLabel}>Focus on these 2:</span>
+              <span className={styles.proactiveFocusLabel}>{recommendation}</span>
               {topTickets.slice(0, 2).map((t) => (
                 <button key={t.key} className={styles.proactiveFocusItem} onClick={() => onTicketClick(t.key)}>
                   <span className={styles.proactiveFocusKey}>{t.key}</span>
@@ -885,9 +988,7 @@ function FlowStateCard({
               ))}
             </div>
           ) : (
-            <p className={styles.proactiveGood}>
-              Focus is healthy — {contextSwitches} active stream{contextSwitches !== 1 ? "s" : ""}, within your norm.
-            </p>
+            <p className={styles.proactiveGood}>{recommendation}</p>
           )}
         </>
       )}
@@ -895,9 +996,9 @@ function FlowStateCard({
   );
 }
 
-function VelocityPatternCard() {
-  const { bestDays, boostPct, peakWindow, calendarConflicts, heatmap } = MOCK_VELOCITY_DATA;
-  const days = ["M", "T", "W", "T", "F"];
+function VelocityPatternCard({ velocityPatterns }: { velocityPatterns: VelocityPattern[] }) {
+  const hasData = velocityPatterns.some((v) => v.completed > 0);
+  const maxVal  = Math.max(...velocityPatterns.map((v) => v.completed), 1);
 
   return (
     <div className={styles.proactiveCard}>
@@ -905,37 +1006,34 @@ function VelocityPatternCard() {
         <RiLineChartLine size={14} color="var(--accent)" />
         <span>Velocity Patterns</span>
       </div>
-      <p className={styles.proactiveMessage}>
-        You complete{" "}
-        <strong style={{ color: "var(--green)" }}>{boostPct}% more tickets</strong> on{" "}
-        <strong>{bestDays.join(" & ")}</strong> during <strong>{peakWindow}</strong>.
-      </p>
-      <div className={styles.velocityHeatmap}>
-        {days.map((d, di) => (
-          <div key={d + di} className={styles.heatmapCol}>
-            {heatmap[di].map((v, si) => (
-              <div
-                key={si}
-                className={styles.heatmapCell}
-                style={{
-                  background:
-                    v >= 8 ? "rgba(79,207,140,0.75)"
-                    : v >= 6 ? "rgba(79,126,255,0.55)"
-                    : v >= 3 ? "rgba(251,191,36,0.35)"
-                    : "var(--surface-3)",
-                }}
-              />
-            ))}
-            <span className={styles.heatmapDayLabel}>{d}</span>
-          </div>
-        ))}
-      </div>
-      {calendarConflicts > 0 && (
-        <div className={styles.proactiveWarning}>
-          <RiCalendarLine size={12} />
-          <span>{calendarConflicts} meetings conflict with your peak window this week</span>
-          <button className={styles.proactiveActionLink}>Reschedule?</button>
+      {!hasData ? (
+        <div className={styles.proactiveEmpty}>
+          <RiLineChartLine size={24} color="var(--text-3)" />
+          <p>No worklog data yet — log time on tickets to see your velocity patterns.</p>
         </div>
+      ) : (
+        <>
+          <p className={styles.proactiveMessage}>Hours logged over the last 5 business days.</p>
+          <div className={styles.velocityBars}>
+            {velocityPatterns.map((v) => (
+              <div key={v.day} className={styles.velocityBarCol}>
+                <div className={styles.velocityBarWrap}>
+                  <div
+                    className={styles.velocityBarFill}
+                    style={{
+                      height: `${(v.completed / maxVal) * 100}%`,
+                      background: v.completed >= 6 ? "var(--green)"
+                        : v.completed >= 3 ? "var(--accent)"
+                        : "var(--amber)",
+                    }}
+                  />
+                </div>
+                <span className={styles.velocityBarLabel}>{v.day}</span>
+                <span className={styles.velocityBarVal}>{v.completed}h</span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -995,11 +1093,6 @@ function BlockerPredictionCard({
    ══════════════════════════════════════════════════════════════ */
 
 
-const MOCK_COMPLETION_PREDS = [
-  { key: "AUTH-221", predictedBy: "Thursday", daysAway: 2, sprintEnd: "Friday", onTrack: true },
-  { key: "UI-045", predictedBy: "Monday", daysAway: 6, sprintEnd: "Friday", onTrack: false },
-  { key: "INFRA-089", predictedBy: "Wednesday", daysAway: 1, sprintEnd: "Friday", onTrack: true },
-];
 
 function Gen3PredictiveSection({
   aiTickets,
@@ -1080,40 +1173,15 @@ function CognitiveLoadCard({
 }
 
 function FocusWindowCard() {
-  const timeSlots = ["6am", "9am", "12pm", "3pm", "6pm", "9pm"];
-  const peakSlotIndices = [1, 2];
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-
   return (
     <div className={styles.predictiveCard}>
       <div className={styles.predictiveHeader}>
         <RiCalendarLine size={14} color="#a78bfa" />
         <span>Focus Windows</span>
       </div>
-      <p className={styles.predictiveMessage}>
-        Your deepest focus work happens{" "}
-        <strong style={{ color: "#a78bfa" }}>9–11am weekdays</strong>.
-      </p>
-      <div className={styles.focusWindowGrid}>
-        {days.map((day, di) => (
-          <div key={day} className={styles.focusWindowCol}>
-            {timeSlots.map((_slot, si) => {
-              const isPeak = peakSlotIndices.includes(si);
-              const isReserved = isPeak && di === 1;
-              return (
-                <div
-                  key={si}
-                  className={`${styles.focusWindowCell} ${isPeak ? styles.focusWindowPeak : ""} ${isReserved ? styles.focusWindowReserved : ""}`}
-                />
-              );
-            })}
-            <span className={styles.focusWindowLabel}>{day[0]}</span>
-          </div>
-        ))}
-      </div>
-      <div className={styles.predictiveCallout}>
-        <RiSparklingLine size={11} />
-        <span>Tomorrow morning is clear — EOS reserved <strong>9–11am</strong> for AUTH-221</span>
+      <div className={styles.proactiveEmpty}>
+        <RiCalendarLine size={24} color="var(--text-3)" />
+        <p>No calendar connected — focus windows need calendar integration to detect your deep work blocks.</p>
       </div>
     </div>
   );
@@ -1130,21 +1198,19 @@ function CompletionPredictionCard({
 }) {
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const topTickets = aiTickets.slice(0, 3);
-  const preds = topTickets.length >= 2
-    ? topTickets.map((t) => {
-        const est = t.remaining_estimate_hours || t.original_estimate_hours || 4;
-        const daysAway = Math.ceil(est / 2.5);
-        const future = new Date();
-        future.setDate(future.getDate() + daysAway);
-        return {
-          key: t.key,
-          predictedBy: days[future.getDay()],
-          daysAway,
-          sprintEnd: sprintRisk ? `${sprintRisk.daysLeft}d left` : "Friday",
-          onTrack: daysAway <= (sprintRisk?.daysLeft ?? 5),
-        };
-      })
-    : MOCK_COMPLETION_PREDS;
+  const preds = topTickets.map((t) => {
+    const est = t.remaining_estimate_hours || t.original_estimate_hours || 4;
+    const daysAway = Math.ceil(est / 2.5);
+    const future = new Date();
+    future.setDate(future.getDate() + daysAway);
+    return {
+      key:         t.key,
+      predictedBy: days[future.getDay()],
+      daysAway,
+      sprintEnd:   sprintRisk ? `${sprintRisk.daysLeft}d left` : "—",
+      onTrack:     daysAway <= (sprintRisk?.daysLeft ?? 5),
+    };
+  });
 
   return (
     <div className={styles.predictiveCard}>
@@ -1154,6 +1220,11 @@ function CompletionPredictionCard({
       </div>
       {loading ? (
         <div className={styles.proactiveSkeleton} />
+      ) : preds.length === 0 ? (
+        <div className={styles.proactiveEmpty}>
+          <RiRocketLine size={24} color="var(--text-3)" />
+          <p>No open tickets to predict — queue is clear.</p>
+        </div>
       ) : (
         <div className={styles.completionList}>
           {preds.map((p) => (
@@ -1221,6 +1292,121 @@ function AmbientAwarenessWidget({ ambientEvents }: { ambientEvents: AmbientEvent
   );
 }
 
+
+/* ── Quick Log Time Modal ────────────────────────────────── */
+function QuickLogTimeModal({
+  ticket,
+  onClose,
+  onSave,
+}: {
+  ticket: AITicket;
+  onClose: () => void;
+  onSave: (hours: number, comment: string) => Promise<void>;
+}) {
+  const [hours,   setHours]   = useState("1");
+  const [comment, setComment] = useState("");
+  const [saving,  setSaving]  = useState(false);
+
+  async function handleSave() {
+    const h = parseFloat(hours);
+    if (!h || h <= 0) return;
+    setSaving(true);
+    await onSave(h, comment || `Work on ${ticket.key}`);
+    setSaving(false);
+  }
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <RiTimeLine size={15} color="var(--accent)" />
+          <span>Log Time — {ticket.key}</span>
+          <button className={styles.modalClose} onClick={onClose}><RiCloseLine size={16} /></button>
+        </div>
+        <p className={styles.modalSub}>{ticket.summary}</p>
+        <div className={styles.modalField}>
+          <label className={styles.modalLabel}>Hours spent</label>
+          <input
+            className={styles.modalInput}
+            type="number"
+            min="0.25"
+            step="0.25"
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <div className={styles.modalField}>
+          <label className={styles.modalLabel}>Comment (optional)</label>
+          <textarea
+            className={styles.modalTextarea}
+            placeholder="What did you work on?"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={2}
+          />
+        </div>
+        <div className={styles.modalActions}>
+          <button className={styles.modalCancel} onClick={onClose}>Cancel</button>
+          <button className={styles.modalSave} onClick={handleSave} disabled={saving}>
+            {saving ? "Saving…" : "Log Time"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Quick Comment Modal ─────────────────────────────────── */
+function QuickCommentModal({
+  ticket,
+  onClose,
+  onSend,
+}: {
+  ticket: AITicket;
+  onClose: () => void;
+  onSend: (text: string) => Promise<void>;
+}) {
+  const [text,   setText]   = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSend() {
+    if (!text.trim()) return;
+    setSaving(true);
+    await onSend(text.trim());
+    setSaving(false);
+  }
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <RiMessage2Line size={15} color="var(--accent)" />
+          <span>Comment on {ticket.key}</span>
+          <button className={styles.modalClose} onClick={onClose}><RiCloseLine size={16} /></button>
+        </div>
+        <p className={styles.modalSub}>{ticket.summary}</p>
+        <div className={styles.modalField}>
+          <label className={styles.modalLabel}>Message</label>
+          <textarea
+            className={styles.modalTextarea}
+            placeholder="Describe the blocker or what's needed to unblock…"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={4}
+            autoFocus
+          />
+        </div>
+        <div className={styles.modalActions}>
+          <button className={styles.modalCancel} onClick={onClose}>Cancel</button>
+          <button className={styles.modalSave} onClick={handleSend} disabled={saving || !text.trim()}>
+            {saving ? "Sending…" : "Post Comment"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function QueueStatusBadge({ status }: { status: string }) {
   const isBlocked = status.toLowerCase().includes("block");

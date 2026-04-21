@@ -628,6 +628,77 @@ export async function fetchMyBrief(): Promise<MyBriefResponse> {
   return data;
 }
 
+/* ── My Work (AI-powered consolidated endpoint) ── */
+
+export interface MyWorkAIRanking {
+  key:     string;
+  rank:    number;
+  score:   number;
+  urgency: "critical" | "high" | "medium" | "low";
+  reason:  string;
+  action:  string;
+}
+
+export interface MyWorkFlowAnalysis {
+  context_switches: number;
+  flow_state:       "focused" | "disrupted" | "scattered";
+  recommendation:   string;
+  focus_on:         string[];
+}
+
+export interface MyWorkBlockerPrediction {
+  key:               string;
+  reason:            string;
+  hours_until_block: number;
+  confidence:        number;
+}
+
+export interface MyWorkSprintRisk {
+  committed:    number;
+  completed:    number;
+  remaining:    number;
+  probability:  number;
+  days_left:    number;
+  wip_count:    number;
+  status:       "on_track" | "at_risk" | "off_track";
+  coaching:     string;
+  sprint_name?: string;
+}
+
+export interface MyWorkTimeEnergy {
+  total_logged:    number;
+  total_estimated: number;
+  overrun_count:   number;
+  velocity_by_day: number[];
+  peak_window:     string;
+  focus_score:     number;
+}
+
+export interface MyWorkActivity {
+  key:     string;
+  summary: string;
+  change:  string;
+  time:    string;
+  type:    "status" | "comment" | "assign" | "blocker";
+}
+
+export interface MyWorkResponse {
+  tickets:             any[];
+  priority_queue:      MyWorkAIRanking[];
+  flow_analysis:       MyWorkFlowAnalysis;
+  blocker_predictions: MyWorkBlockerPrediction[];
+  sprint_risk:         MyWorkSprintRisk | null;
+  time_energy:         MyWorkTimeEnergy;
+  brief:               string;
+  brief_chips:         Array<{ label: string; type: "critical" | "warning" | "info" | "action" }>;
+  recent_activity:     MyWorkActivity[];
+}
+
+export async function fetchMyWork(): Promise<MyWorkResponse> {
+  const { data } = await api.get("/nova/my-work");
+  return data;
+}
+
 /* ── Timer / Time logging ── */
 export async function logTime(ticketKey: string, hours: number, comment: string, date: string) {
   const { data } = await api.post(`/tickets/${ticketKey}/worklogs`, { hours, comment, date });
