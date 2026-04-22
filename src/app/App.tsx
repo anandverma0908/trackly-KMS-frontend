@@ -22,6 +22,7 @@ import NovaPage from "@/features/nova/NovaPage";
 import DecisionsPage from "@/features/decisions/DecisionsPage";
 import ProcessesPage from "@/features/processes/ProcessesPage";
 import GoalsPage from "@/features/goals/GoalsPage";
+import KanbanBoard from "@/features/kanban/KanbanBoard";
 
 function useRouteDirection() {
   const location = useLocation();
@@ -114,9 +115,7 @@ function AnimatedRoutes() {
               <Route index element={<Navigate to="/my-work" replace />} />
               <Route path="/dashboard" element={<Navigate to="/my-work" replace />} />
               <Route path="/tickets" element={<TicketsPage />} />
-              <Route path="/sprints" element={<Navigate to="/spaces" replace />} />
-              <Route path="/kanban" element={<Navigate to="/spaces" replace />} />
-              <Route path="/roadmap" element={<Navigate to="/spaces" replace />} />
+              <Route path="/kanban" element={<KanbanBoard />} />
               <Route path="/wiki" element={<WikiPage />} />
               <Route path="/standup" element={<StandupPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />

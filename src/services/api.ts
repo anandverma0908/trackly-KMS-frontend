@@ -495,16 +495,144 @@ export async function detectKnowledgeGaps() {
 }
 
 /* ── Pod Analytics ── */
+export interface PodRiskFlags {
+  blocked: number;
+  overdue: number;
+  bug_rate: number;
+  stale: number;
+}
+
 export interface PodSummary {
   pod: string;
   statuses: Record<string, number>;
   total_hours: number;
+  health_score: number;
+  delivery_confidence: number;
+  sprint_prediction: number | null;
+  has_active_sprint: boolean;
+  sprint_name: string | null;
+  risk_flags: PodRiskFlags;
+  trend: number[];
 }
 
 export async function fetchPodSummary(): Promise<PodSummary[]> {
   if (mock()?.fetchPodSummary) return mock().fetchPodSummary();
   const { data } = await api.get<PodSummary[]>("/analytics/pod-summary");
   return data ?? [];
+}
+
+export interface SpaceHealthRadar {
+  delivery: number; velocity: number; clarity: number;
+  momentum: number; flow: number; quality: number; on_time: number;
+}
+
+export interface SpaceHealth {
+  health_score: number;
+  radar: SpaceHealthRadar;
+  delivery_confidence: number;
+  sprint_prediction: number | null;
+  trend: number[];
+  risk_flags: PodRiskFlags;
+}
+
+export async function fetchSpaceHealth(pod: string): Promise<SpaceHealth> {
+  const { data } = await api.get<SpaceHealth>(`/spaces/${pod}/health`);
+  return data;
+}
+
+export interface SpaceAnomaly {
+  pod: string;
+  type: string;
+  severity: "high" | "medium" | "low";
+  description: string;
+  detected_at: string;
+}
+
+export async function fetchAnomalies(): Promise<SpaceAnomaly[]> {
+  const { data } = await api.get<SpaceAnomaly[]>("/spaces/anomalies");
+  return data ?? [];
+}
+
+export interface SpaceDependency {
+  from_pod: string;
+  to_pod: string;
+  blocker_ticket_key: string;
+  blocker_summary: string;
+  impact_score: number;
+}
+
+export async function fetchDependencies(): Promise<SpaceDependency[]> {
+  const { data } = await api.get<SpaceDependency[]>("/spaces/dependencies");
+  return data ?? [];
+}
+
+export interface CapacityEntry {
+  engineer: string;
+  pod: string;
+  allocated_pts: number;
+  ticket_count: number;
+  capacity_pct: number;
+  overloaded: boolean;
+}
+
+export async function fetchCapacity(): Promise<CapacityEntry[]> {
+  const { data } = await api.get<CapacityEntry[]>("/analytics/capacity");
+  return data ?? [];
+}
+
+export interface SpacesBriefResult {
+  pod: string;
+  health_score: number;
+  brief: string;
+  velocity_signal: string;
+  risk_signal: string;
+  recommendation: string;
+  nova_powered: boolean;
+}
+
+export async function fetchSpacesBrief(pod: string): Promise<SpacesBriefResult> {
+  const { data } = await api.post<SpacesBriefResult>(`/nova/spaces-brief/${pod}`);
+  return data;
+}
+
+export interface SelfOrgSuggestion {
+  from_pod: string;
+  to_pod: string;
+  reason: string;
+  confidence: number;
+  urgency: "high" | "medium" | "low";
+}
+
+export interface SelfOrgResult {
+  suggestions: SelfOrgSuggestion[];
+  nova_powered: boolean;
+  pod_snapshots: { pod: string; health_score: number; blocked: number; member_count: number }[];
+}
+
+export async function fetchSelfOrg(): Promise<SelfOrgResult> {
+  const { data } = await api.get<SelfOrgResult>("/nova/self-org");
+  return data;
+}
+
+export interface SprintDraftTicket {
+  key: string;
+  summary: string;
+  suggested_points: number;
+  priority: string;
+  rationale: string;
+}
+
+export interface SprintDraftResult {
+  pod: string;
+  tickets: SprintDraftTicket[];
+  total_points: number;
+  rationale: string;
+  nova_powered: boolean;
+}
+
+export async function fetchSprintDraft(pod: string): Promise<SprintDraftResult> {
+  const { data } = await api.post<SprintDraftResult>(`/nova/sprint-draft/${pod}`);
+  return data;
 }
 
 /* ── Sprint Detail (with tickets) ── */

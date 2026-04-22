@@ -1,18 +1,24 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Tooltip from "@mui/material/Tooltip";
 import LinearProgress from "@mui/material/LinearProgress";
 import {
   fetchPodSummary,
-  fetchProject,
+  fetchAnomalies,
+  fetchDependencies,
+  fetchCapacity,
+  fetchSelfOrg,
+  fetchSprintDraft,
   deleteSpace,
   type PodSummary,
+  type SpaceAnomaly,
+  type SpaceDependency,
+  type SprintDraftResult,
 } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import { getPodColor } from "@/config/themes";
-import type { ProjectSprint } from "@/features/spaces/spacesData";
 import styles from "./SpacesPage.module.css";
 
 import {
@@ -30,13 +36,11 @@ import {
   RiFireLine,
   RiGitMergeLine,
   RiCalendarCheckLine,
-  RiMagicLine,
   RiFlashlightLine,
   RiBarChartLine,
   RiLayoutGridLine,
   RiExchangeLine,
   RiOrganizationChart,
-  RiSendPlaneLine,
   RiCheckLine,
 } from "react-icons/ri";
 import SpacesKPIStrip from "./SpacesKPIStrip";
@@ -44,111 +48,30 @@ import CreateSpaceDrawer from "./CreateSpaceDrawer";
 
 /* ── helpers ──────────────────────────────────────────────────────────────── */
 
-function hashStr(s: string): number {
-  return s.split("").reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0xfffffff, 0);
-}
-
-function aiHealthScore(card: PodCard): number {
-  const completionRate = card.totalTickets > 0 ? card.completedTickets / card.totalTickets : 0;
-  const blockerRatio   = card.totalTickets > 0 ? card.blockedTickets  / card.totalTickets : 0;
-  const sprintBonus    = card.hasActiveSprint ? 15 : 0;
-  const score = completionRate * 45 + (card.progress / 100) * 25 + sprintBonus - blockerRatio * 60;
-  return Math.min(100, Math.max(0, Math.round(score)));
-}
-
 function healthColor(score: number): string {
   if (score >= 70) return "var(--green)";
   if (score >= 45) return "var(--amber)";
   return "var(--red)";
 }
 
-function derivedSparkline(card: PodCard): number[] {
-  const seed = hashStr(card.pod);
-  const raw = Array.from({ length: 7 }, (_, i) => ((seed >> (i * 4)) & 0xF) + 1);
-  const trend = card.progress > 55 ? 1 : -0.5;
-  const bars = raw.map((v, i) => Math.max(1, v + trend * (i - 3) * 0.4));
-  const max = Math.max(...bars);
-  return bars.map((v) => v / max);
+function normalizeTrend(trend: number[]): number[] {
+  const max = Math.max(...trend, 1);
+  return trend.map((v) => v / max);
 }
 
 function anomalyTag(card: PodCard): string | null {
-  const blockerRatio = card.totalTickets > 0 ? card.blockedTickets / card.totalTickets : 0;
-  if (blockerRatio > 0.15) return "High blockers";
-  if (aiHealthScore(card) < 45 && card.hasActiveSprint) return "Sprint at risk";
-  if (card.progress < 25 && card.hasActiveSprint) return "Low velocity";
+  if (card.riskFlags.blocked >= 3) return "High blockers";
+  if ((card.sprintPrediction ?? 100) < 50 && card.hasActiveSprint) return "Sprint at risk";
+  if (card.riskFlags.bug_rate > 30) return "Quality risk";
   return null;
 }
 
-/* Gen 2 */
-function sprintPrediction(card: PodCard): number {
-  const base = 50 + (aiHealthScore(card) - 50) * 0.6;
-  const noise = ((hashStr(card.pod + "pred") >> 8) % 20) - 10;
-  return Math.min(95, Math.max(25, Math.round(base + noise)));
-}
-
-function capacityLoad(card: PodCard): number {
-  return 40 + (hashStr(card.pod + "cap") % 45);
-}
-
-function cascadeImpact(card: PodCard, all: PodCard[]): { pod: string; tickets: number }[] {
-  const others = all.filter(c => c.pod !== card.pod);
-  const n = Math.min(3, Math.max(1, (hashStr(card.pod) % 3) + 1), others.length);
-  return others.slice(0, n).map(c => ({
-    pod: c.pod,
-    tickets: 1 + (hashStr(card.pod + c.pod) % 5),
-  }));
-}
-
-/* Gen 3 */
-function deliveryConfidence(card: PodCard): number {
-  const health = aiHealthScore(card);
-  const noise = ((hashStr(card.pod + "conf") >> 12) % 15) - 7;
-  return Math.min(97, Math.max(22, health + noise));
-}
-
-function techDebtLevel(card: PodCard): "low" | "medium" | "high" {
-  const s = hashStr(card.pod + "td") % 3;
-  return s === 0 ? "low" : s === 1 ? "medium" : "high";
-}
-
 function weeksMissed(card: PodCard): number {
-  const h = aiHealthScore(card);
+  const h = card.healthScore;
   if (h >= 70) return 0;
   if (h >= 55) return 1;
   if (h >= 40) return 3;
   return 6;
-}
-
-/* Gen 4 */
-function selfOrgSuggestion(cards: PodCard[]): { from: string; to: string; reason: string; reduction: number } | null {
-  const sorted = [...cards].sort((a, b) => aiHealthScore(a) - aiHealthScore(b));
-  if (sorted.length < 2) return null;
-  const weak = sorted[0];
-  const strong = sorted[sorted.length - 1];
-  const load = capacityLoad(strong);
-  if (load < 60) return null;
-  return {
-    from: strong.pod,
-    to: weak.pod,
-    reason: `${strong.pod} has ${load}% capacity load — 1 engineer move would reduce ${weak.pod} sprint risk`,
-    reduction: 30 + (hashStr(weak.pod + strong.pod) % 25),
-  };
-}
-
-function draftedSprintTickets(card: PodCard): { key: string; title: string; pts: number; priority: "high" | "medium" | "low" }[] {
-  const seed = hashStr(card.pod + "draft");
-  const titles = [
-    "Refactor auth middleware", "Add rate limiting", "Fix memory leak in worker",
-    "Implement retry logic", "Update API pagination", "Write integration tests",
-    "Migrate to new queue", "Optimize DB queries", "Add audit logging", "Fix race condition",
-  ];
-  const priorities: ("high" | "medium" | "low")[] = ["high", "medium", "low"];
-  return Array.from({ length: 5 }, (_, i) => ({
-    key: `${card.pod.toUpperCase().slice(0, 3)}-${100 + ((seed + i * 7) % 900)}`,
-    title: titles[(seed + i * 3) % titles.length],
-    pts: [1, 2, 3, 5, 8][((seed + i * 5) % 5)],
-    priority: priorities[(seed + i * 2) % 3],
-  }));
 }
 
 /* ── data types ───────────────────────────────────────────────────────────── */
@@ -162,15 +85,20 @@ interface PodCard {
   blockedTickets: number;
   progress: number;
   hasActiveSprint: boolean;
-  activeSprint?: ProjectSprint;
+  sprintName: string | null;
   totalHours: number;
+  healthScore: number;
+  deliveryConfidence: number;
+  sprintPrediction: number | null;
+  trend: number[];
+  riskFlags: { blocked: number; overdue: number; bug_rate: number; stale: number };
 }
 
 const DONE_KEYS   = ["Done", "Closed", "Resolved"];
 const ACTIVE_KEYS = ["In Progress", "In Development", "Development Ready"];
 const BLOCK_KEYS  = ["Blocked"];
 
-function buildPodCard(p: PodSummary, activeSprint: ProjectSprint | null): PodCard {
+function buildPodCard(p: PodSummary): PodCard {
   const total   = Object.values(p.statuses).reduce((a, b) => a + b, 0);
   const done    = DONE_KEYS.reduce((a, k) => a + (p.statuses[k] ?? 0), 0);
   const active  = ACTIVE_KEYS.reduce((a, k) => a + (p.statuses[k] ?? 0), 0);
@@ -184,29 +112,34 @@ function buildPodCard(p: PodSummary, activeSprint: ProjectSprint | null): PodCar
     inProgressTickets: active,
     blockedTickets: blocked,
     progress,
-    hasActiveSprint: !!activeSprint,
-    activeSprint: activeSprint ?? undefined,
+    hasActiveSprint: p.has_active_sprint ?? false,
+    sprintName: p.sprint_name ?? null,
     totalHours: p.total_hours,
+    healthScore: p.health_score ?? 0,
+    deliveryConfidence: p.delivery_confidence ?? 0,
+    sprintPrediction: p.sprint_prediction ?? null,
+    trend: p.trend ?? [],
+    riskFlags: p.risk_flags ?? { blocked: 0, overdue: 0, bug_rate: 0, stale: 0 },
   };
 }
 
 /* ── Health Forecast Modal (Gen 3) ─────────────────────────────────────────── */
 
 function HealthForecastModal({ card, onClose }: { card: PodCard; onClose: () => void }) {
-  const health  = aiHealthScore(card);
+  const health  = card.healthScore;
   const missed  = weeksMissed(card);
-  const conf    = deliveryConfidence(card);
+  const conf    = card.deliveryConfidence;
   const hColor  = healthColor(health);
   const [generated, setGenerated] = useState(false);
 
   const options = [
     {
       label: `Move 1 engineer from a lower-load pod to ${card.pod}`,
-      impact: `+${18 + (hashStr(card.pod) % 12)}% sprint velocity`,
+      impact: `+18–30% sprint velocity`,
       risk: "Low",
     },
     {
-      label: `Reduce sprint scope by ${15 + (hashStr(card.pod + "r") % 10)}% this iteration`,
+      label: `Reduce sprint scope by 15–25% this iteration`,
       impact: "On track for Q2 milestone",
       risk: "Medium",
     },
@@ -293,8 +226,20 @@ function HealthForecastModal({ card, onClose }: { card: PodCard; onClose: () => 
 
 /* ── Blocker Cascade Modal (Gen 2) ─────────────────────────────────────────── */
 
-function BlockerCascadeModal({ card, allCards, onClose }: { card: PodCard; allCards: PodCard[]; onClose: () => void }) {
-  const impacts = cascadeImpact(card, allCards);
+function BlockerCascadeModal({ card, onClose }: { card: PodCard; onClose: () => void }) {
+  const { data: deps = [] } = useQuery({
+    queryKey: ["space-deps"],
+    queryFn: fetchDependencies,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Group deps for this pod by affected pod
+  const impactMap: Record<string, SpaceDependency[]> = {};
+  for (const d of deps.filter((d: SpaceDependency) => d.from_pod === card.pod)) {
+    if (!impactMap[d.to_pod]) impactMap[d.to_pod] = [];
+    impactMap[d.to_pod].push(d);
+  }
+  const impacts = Object.entries(impactMap).map(([pod, ds]) => ({ pod, tickets: ds.length }));
   const total   = impacts.reduce((a, c) => a + c.tickets, 0);
 
   return (
@@ -348,7 +293,6 @@ function BlockerCascadeModal({ card, allCards, onClose }: { card: PodCard; allCa
 
 function RetroModal({ card, onClose }: { card: PodCard; onClose: () => void }) {
   const [generated, setGenerated] = useState(false);
-  const seed = hashStr(card.pod + "retro");
 
   const wentWell = [
     "Team maintained consistent daily standups throughout the sprint",
@@ -365,8 +309,7 @@ function RetroModal({ card, onClose }: { card: PodCard; onClose: () => void }) {
     { owner: "Team", item: "Timebox code review to 24h SLA" },
   ];
 
-  const health = aiHealthScore(card);
-  const retroScore = Math.min(100, health + 5 + (seed % 10));
+  const retroScore = Math.min(100, card.healthScore + 5);
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -435,31 +378,75 @@ function RetroModal({ card, onClose }: { card: PodCard; onClose: () => void }) {
   );
 }
 
-/* ── EOS Intelligence Panel (Gen 2 + 3 + 4) ─────────────────────────────────── */
+/* ── EOS Intelligence Panel ────────────────────────────────────────────────── */
 
 type EOSTab = "anomalies" | "deps" | "capacity" | "selforg" | "sprintdraft";
 
-function EOSIntelligencePanel({
-  cards, onClose,
-}: {
-  cards: PodCard[];
-  onClose: () => void;
-}) {
-  const [tab, setTab] = useState<EOSTab>("anomalies");
-  const [draftPod, setDraftPod] = useState<string | null>(cards[0]?.pod ?? null);
+function EOSIntelligencePanel({ cards, onClose }: { cards: PodCard[]; onClose: () => void }) {
+  const [tab, setTab]               = useState<EOSTab>("anomalies");
+  const [draftPod, setDraftPod]     = useState<string | null>(cards[0]?.pod ?? null);
   const [draftConfirmed, setDraftConfirmed] = useState(false);
-  const selfOrg = selfOrgSuggestion(cards);
 
-  const anomalies = cards.filter(c => anomalyTag(c) !== null || aiHealthScore(c) < 50);
-  const crossDeps = cards.filter(c => c.blockedTickets > 0).slice(0, 4);
+  const { data: anomalies = [], isLoading: loadingAnomalies } = useQuery({
+    queryKey: ["space-anomalies"],
+    queryFn: fetchAnomalies,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: deps = [], isLoading: loadingDeps } = useQuery({
+    queryKey: ["space-deps"],
+    queryFn: fetchDependencies,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: capacityRows = [], isLoading: loadingCapacity } = useQuery({
+    queryKey: ["capacity"],
+    queryFn: fetchCapacity,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: selfOrgData, isLoading: loadingSelfOrg } = useQuery({
+    queryKey: ["nova-self-org"],
+    queryFn: fetchSelfOrg,
+    staleTime: 1000 * 60 * 30,
+    enabled: tab === "selforg",
+  });
+
+  const { data: draftData, isLoading: draftLoading, refetch: refetchDraft } = useQuery({
+    queryKey: ["nova-sprint-draft", draftPod],
+    queryFn: () => fetchSprintDraft(draftPod!),
+    staleTime: 1000 * 60 * 15,
+    enabled: !!draftPod && tab === "sprintdraft",
+  });
+
+  // Aggregate capacity per pod (max across engineers)
+  const podCapacityMap = useMemo<Record<string, number>>(() => {
+    const map: Record<string, number> = {};
+    for (const r of capacityRows) {
+      map[r.pod] = Math.max(map[r.pod] ?? 0, r.capacity_pct);
+    }
+    return map;
+  }, [capacityRows]);
+
+  // Group deps by from_pod
+  const depsByPod = useMemo<Record<string, SpaceDependency[]>>(() => {
+    const map: Record<string, SpaceDependency[]> = {};
+    for (const d of deps) {
+      if (!map[d.from_pod]) map[d.from_pod] = [];
+      map[d.from_pod].push(d);
+    }
+    return map;
+  }, [deps]);
+
+  const selfOrg = selfOrgData?.suggestions?.[0] ?? null;
   const draftCard = cards.find(c => c.pod === draftPod) ?? cards[0];
 
   const tabs: { id: EOSTab; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { id: "anomalies",   label: "Anomalies",   icon: <RiFireLine size={13} />,         badge: anomalies.length },
-    { id: "deps",        label: "Deps",        icon: <RiGitMergeLine size={13} />,      badge: crossDeps.length },
-    { id: "capacity",    label: "Capacity",    icon: <RiTeamLine size={13} /> },
-    { id: "selforg",     label: "Self-Org",    icon: <RiExchangeLine size={13} /> },
-    { id: "sprintdraft", label: "Sprint Draft",icon: <RiFlashlightLine size={13} /> },
+    { id: "anomalies",   label: "Anomalies",    icon: <RiFireLine size={13} />,        badge: anomalies.length },
+    { id: "deps",        label: "Deps",         icon: <RiGitMergeLine size={13} />,    badge: Object.keys(depsByPod).length },
+    { id: "capacity",    label: "Capacity",     icon: <RiTeamLine size={13} /> },
+    { id: "selforg",     label: "Self-Org",     icon: <RiExchangeLine size={13} /> },
+    { id: "sprintdraft", label: "Sprint Draft", icon: <RiFlashlightLine size={13} /> },
   ];
 
   return (
@@ -471,9 +458,7 @@ function EOSIntelligencePanel({
       transition={{ type: "spring", stiffness: 320, damping: 32 }}
     >
       <div className={styles.eosPanelHeader}>
-        <div className={styles.eosPanelTitle}>
-          <RiBrainLine size={15} /> EOS Intelligence
-        </div>
+        <div className={styles.eosPanelTitle}><RiBrainLine size={15} /> EOS Intelligence</div>
         <button className={styles.modalClose} onClick={onClose}><RiCloseLine size={17} /></button>
       </div>
 
@@ -491,36 +476,38 @@ function EOSIntelligencePanel({
       </div>
 
       <div className={styles.eosPanelBody}>
-        {/* Velocity Anomaly Detection (Gen 2) */}
+        {/* Anomalies */}
         {tab === "anomalies" && (
           <div className={styles.eosSection}>
-            <div className={styles.eosSectionSub}>EOS has detected {anomalies.length} velocity patterns requiring attention</div>
-            {anomalies.length === 0 ? (
-              <div className={styles.eosEmpty}>All spaces are running healthy — no anomalies detected</div>
+            <div className={styles.eosSectionSub}>
+              {loadingAnomalies ? "Scanning pods…" : `EOS detected ${anomalies.length} patterns requiring attention`}
+            </div>
+            {anomalies.length === 0 && !loadingAnomalies ? (
+              <div className={styles.eosEmpty}>All spaces running healthy — no anomalies detected</div>
             ) : (
-              anomalies.map(c => {
-                const tag = anomalyTag(c);
-                const h   = aiHealthScore(c);
-                const spark = derivedSparkline(c);
-                const velDrop = 20 + (hashStr(c.pod + "vd") % 35);
+              anomalies.map((a: SpaceAnomaly, i) => {
+                const card = cards.find(c => c.pod === a.pod);
+                const spark = normalizeTrend(card?.trend ?? []);
                 return (
-                  <div key={c.pod} className={styles.anomalyItem}>
+                  <div key={i} className={styles.anomalyItem}>
                     <div className={styles.anomalyItemTop}>
-                      <div className={styles.anomalyPodDot} style={{ background: c.color }} />
-                      <div className={styles.anomalyPodName}>{c.pod}</div>
-                      <div className={styles.anomalyHealth} style={{ color: healthColor(h) }}>{h}</div>
+                      <div className={styles.anomalyPodDot} style={{ background: card?.color ?? "#8B8FA8" }} />
+                      <div className={styles.anomalyPodName}>{a.pod}</div>
+                      <div className={styles.anomalyHealth} style={{ color: healthColor(card?.healthScore ?? 0) }}>
+                        {card?.healthScore ?? "—"}
+                      </div>
                     </div>
-                    {tag && (
-                      <div className={styles.anomalyTag}><RiAlertLine size={10} /> {tag}</div>
+                    <div className={styles.anomalyTag}>
+                      <RiAlertLine size={10} /> {a.description}
+                    </div>
+                    {spark.length > 0 && (
+                      <div className={styles.anomalyMiniSpark}>
+                        {spark.map((v, j) => (
+                          <div key={j} className={styles.anomalySparkBar}
+                            style={{ height: `${Math.max(v, 0.05) * 100}%`, background: card?.color ?? "#8B8FA8" }} />
+                        ))}
+                      </div>
                     )}
-                    <div className={styles.anomalyVelocity}>
-                      Velocity dropped <strong>{velDrop}%</strong> this sprint
-                    </div>
-                    <div className={styles.anomalyMiniSpark}>
-                      {spark.map((v, i) => (
-                        <div key={i} className={styles.anomalySparkBar} style={{ height: `${v * 100}%`, background: c.color }} />
-                      ))}
-                    </div>
                   </div>
                 );
               })
@@ -528,28 +515,30 @@ function EOSIntelligencePanel({
           </div>
         )}
 
-        {/* Cross-space Dependency Map (Gen 2) */}
+        {/* Cross-space Dependencies */}
         {tab === "deps" && (
           <div className={styles.eosSection}>
-            <div className={styles.eosSectionSub}>Cross-space ticket dependencies and potential cascade risks</div>
-            {crossDeps.length === 0 ? (
+            <div className={styles.eosSectionSub}>Cross-space blocker dependencies — cascade risk map</div>
+            {loadingDeps ? (
+              <div className={styles.eosEmpty}>Loading dependencies…</div>
+            ) : Object.keys(depsByPod).length === 0 ? (
               <div className={styles.eosEmpty}>No cross-space dependencies detected this sprint</div>
             ) : (
-              crossDeps.map(c => {
-                const impacts = cascadeImpact(c, cards);
+              Object.entries(depsByPod).map(([fromPod, podDeps]) => {
+                const card = cards.find(c => c.pod === fromPod);
                 return (
-                  <div key={c.pod} className={styles.depItem}>
+                  <div key={fromPod} className={styles.depItem}>
                     <div className={styles.depOrigin}>
-                      <div className={styles.depDot} style={{ background: c.color }} />
-                      <span className={styles.depPodName}>{c.pod}</span>
-                      <span className={styles.depBlockedCount}>{c.blockedTickets} blocked</span>
+                      <div className={styles.depDot} style={{ background: card?.color ?? "#8B8FA8" }} />
+                      <span className={styles.depPodName}>{fromPod}</span>
+                      <span className={styles.depBlockedCount}>{podDeps.length} blocker{podDeps.length !== 1 ? "s" : ""}</span>
                     </div>
                     <div className={styles.depImpacts}>
-                      {impacts.map((imp, i) => (
+                      {podDeps.slice(0, 3).map((d, i) => (
                         <div key={i} className={styles.depImpactRow}>
                           <RiArrowRightLine size={11} />
-                          <span className={styles.depImpactPod}>{imp.pod}</span>
-                          <span className={styles.depImpactCount}>{imp.tickets} tickets at risk</span>
+                          <span className={styles.depImpactPod}>{d.to_pod}</span>
+                          <span className={styles.depImpactCount}>{d.blocker_ticket_key} — {d.blocker_summary}</span>
                         </div>
                       ))}
                     </div>
@@ -558,101 +547,96 @@ function EOSIntelligencePanel({
               })
             )}
             <div className={styles.eosInsightNote}>
-              <RiSparklingLine size={11} /> EOS cross-organization pattern: similar dependency structures appeared in 3 of 5 comparable product teams before a sprint slip
+              <RiSparklingLine size={11} /> Blockers are detected via shared sprints and clients across spaces
             </div>
           </div>
         )}
 
-        {/* Capacity Heatmap info (Gen 2) + Staffing Recommendation (Gen 3) */}
+        {/* Capacity */}
         {tab === "capacity" && (
           <div className={styles.eosSection}>
             <div className={styles.eosSectionSub}>Engineer capacity distribution across all spaces this sprint</div>
-            <div className={styles.capacityList}>
-              {cards.map(c => {
-                const load = capacityLoad(c);
-                const loadColor = load > 80 ? "var(--red)" : load > 65 ? "var(--amber)" : "var(--green)";
-                return (
-                  <div key={c.pod} className={styles.capacityItem}>
-                    <div className={styles.capacityPod}>
-                      <div className={styles.capacityDot} style={{ background: c.color }} />
-                      <span>{c.pod}</span>
-                    </div>
-                    <div className={styles.capacityBarWrap}>
-                      <div className={styles.capacityBar} style={{ width: `${load}%`, background: loadColor }} />
-                    </div>
-                    <span className={styles.capacityVal} style={{ color: loadColor }}>{load}%</span>
-                  </div>
-                );
-              })}
-            </div>
-            {(() => {
-              const overloaded = cards.filter(c => capacityLoad(c) > 75);
-              const underloaded = cards.filter(c => capacityLoad(c) < 50);
-              if (overloaded.length > 0 && underloaded.length > 0) {
-                return (
-                  <div className={styles.staffingCard}>
-                    <div className={styles.staffingTitle}><RiTeamLine size={13} /> Staffing Recommendation</div>
-                    <div className={styles.staffingBody}>
-                      Consider moving 1–2 engineers from{" "}
-                      <strong>{underloaded.map(c => c.pod).join(", ")}</strong> (low load) to{" "}
-                      <strong>{overloaded[0].pod}</strong> ({capacityLoad(overloaded[0])}% capacity) to reduce sprint risk by an estimated{" "}
-                      <strong>{20 + (hashStr(overloaded[0].pod) % 25)}%</strong>.
-                    </div>
-                    <div className={styles.eosSectionSub} style={{ marginTop: 8 }}>
-                      Q2 Forecast: at current staffing, {overloaded.length} pod{overloaded.length !== 1 ? "s" : ""} risk missing quarterly targets
-                    </div>
-                  </div>
-                );
-              }
-              return (
-                <div className={styles.eosEmpty}>Capacity is well-distributed across all spaces</div>
-              );
-            })()}
+            {loadingCapacity ? (
+              <div className={styles.eosEmpty}>Loading capacity data…</div>
+            ) : (
+              <>
+                <div className={styles.capacityList}>
+                  {cards.map(c => {
+                    const load = podCapacityMap[c.pod] ?? 0;
+                    const loadColor = load > 85 ? "var(--red)" : load > 65 ? "var(--amber)" : "var(--green)";
+                    return (
+                      <div key={c.pod} className={styles.capacityItem}>
+                        <div className={styles.capacityPod}>
+                          <div className={styles.capacityDot} style={{ background: c.color }} />
+                          <span>{c.pod}</span>
+                        </div>
+                        <div className={styles.capacityBarWrap}>
+                          <div className={styles.capacityBar} style={{ width: `${Math.min(load, 100)}%`, background: loadColor }} />
+                        </div>
+                        <span className={styles.capacityVal} style={{ color: loadColor }}>{load}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {(() => {
+                  const overloaded  = cards.filter(c => (podCapacityMap[c.pod] ?? 0) > 85);
+                  const underloaded = cards.filter(c => (podCapacityMap[c.pod] ?? 0) < 50 && (podCapacityMap[c.pod] ?? 0) > 0);
+                  if (overloaded.length > 0 && underloaded.length > 0) {
+                    return (
+                      <div className={styles.staffingCard}>
+                        <div className={styles.staffingTitle}><RiTeamLine size={13} /> Staffing Recommendation</div>
+                        <div className={styles.staffingBody}>
+                          Consider moving engineers from{" "}
+                          <strong>{underloaded.map(c => c.pod).join(", ")}</strong> (under-allocated) to{" "}
+                          <strong>{overloaded[0].pod}</strong> ({podCapacityMap[overloaded[0].pod]}% capacity) to reduce sprint risk.
+                        </div>
+                      </div>
+                    );
+                  }
+                  return capacityRows.length === 0
+                    ? <div className={styles.eosEmpty}>No active sprint data — capacity unavailable</div>
+                    : <div className={styles.eosEmpty}>Capacity is well-distributed across all spaces</div>;
+                })()}
+              </>
+            )}
           </div>
         )}
 
-        {/* Self-Organizing Spaces (Gen 4) + Quarterly Planning */}
+        {/* Self-Org */}
         {tab === "selforg" && (
           <div className={styles.eosSection}>
-            <div className={styles.eosSectionSub}>EOS topology analysis — recommendations to optimize pod structure</div>
-            {selfOrg ? (
+            <div className={styles.eosSectionSub}>EOS topology analysis — recommendations to optimise pod structure</div>
+            {loadingSelfOrg ? (
+              <div className={styles.eosEmpty}>EOS is analysing pod topology…</div>
+            ) : selfOrg ? (
               <div className={styles.selfOrgCard}>
-                <div className={styles.selfOrgHeader}>
-                  <RiExchangeLine size={14} /> Self-Organize Suggestion
-                </div>
+                <div className={styles.selfOrgHeader}><RiExchangeLine size={14} /> Self-Organise Suggestion</div>
                 <div className={styles.selfOrgBody}>{selfOrg.reason}</div>
                 <div className={styles.selfOrgImpact}>
-                  Estimated sprint risk reduction: <strong style={{ color: "var(--green)" }}>-{selfOrg.reduction}%</strong>
+                  Urgency: <strong style={{ color: selfOrg.urgency === "high" ? "var(--red)" : selfOrg.urgency === "medium" ? "var(--amber)" : "var(--green)" }}>
+                    {selfOrg.urgency}
+                  </strong>{" "}· Confidence: <strong>{Math.round(selfOrg.confidence * 100)}%</strong>
                 </div>
                 <div className={styles.selfOrgPods}>
-                  <span className={styles.selfOrgPod}>{selfOrg.from}</span>
+                  <span className={styles.selfOrgPod}>{selfOrg.from_pod}</span>
                   <RiArrowRightLine size={13} />
-                  <span className={styles.selfOrgPod}>{selfOrg.to}</span>
+                  <span className={styles.selfOrgPod}>{selfOrg.to_pod}</span>
                 </div>
               </div>
             ) : (
               <div className={styles.eosEmpty}>Pod topology looks optimal — no restructuring needed right now</div>
             )}
-
-            <div className={styles.staffingCard} style={{ marginTop: 14 }}>
-              <div className={styles.staffingTitle}><RiBarChartLine size={13} /> Q3 Capacity Forecast</div>
-              <div className={styles.staffingBody}>
-                Based on current roadmap goals and team velocity, EOS projects you will need{" "}
-                <strong>{2 + (hashStr("q3cap") % 3)} additional engineers</strong> distributed across{" "}
-                <strong>{Math.min(cards.length, 2 + (hashStr("q3pods") % 2))} pods</strong> to hit Q3 targets on time.
-              </div>
-            </div>
-
             <div className={styles.eosInsightNote}>
-              <RiSparklingLine size={11} /> EOS cross-org pattern: teams with &gt;80% ticket overlap between pods reduce handoff latency by 3+ days/sprint after merging
+              <RiSparklingLine size={11} />{" "}
+              {selfOrgData?.nova_powered ? "EOS analysis powered by NOVA" : "Analysis based on health and capacity signals"}
             </div>
           </div>
         )}
 
-        {/* Autonomous Sprint Drafting (Gen 4) */}
+        {/* Sprint Draft */}
         {tab === "sprintdraft" && (
           <div className={styles.eosSection}>
-            <div className={styles.eosSectionSub}>EOS will draft next sprint from backlog — respecting capacity, dependencies, and business priority</div>
+            <div className={styles.eosSectionSub}>EOS drafts next sprint from backlog — respecting capacity, priority, and dependencies</div>
 
             <div className={styles.draftPodPicker}>
               {cards.slice(0, 5).map(c => (
@@ -667,38 +651,45 @@ function EOSIntelligencePanel({
               ))}
             </div>
 
-            {draftCard && (
+            {draftLoading ? (
+              <div className={styles.eosEmpty}>EOS is drafting sprint for {draftPod}…</div>
+            ) : draftData ? (
               <>
                 <div className={styles.draftMeta}>
-                  <span>Sprint capacity: <strong>{8 + (hashStr(draftCard.pod + "cap2") % 8)} story pts</strong></span>
-                  <span>Backlog: <strong>{20 + (hashStr(draftCard.pod + "bl") % 30)} tickets</strong></span>
+                  <span>Total points: <strong>{draftData.total_points} pts</strong></span>
+                  <span>{draftData.tickets.length} tickets selected</span>
                 </div>
-
                 <div className={styles.draftTickets}>
-                  {draftedSprintTickets(draftCard).map((t, i) => (
+                  {(draftData as SprintDraftResult).tickets.map((t, i) => (
                     <div key={i} className={styles.draftTicket}>
                       <span className={styles.draftTicketKey}>{t.key}</span>
-                      <span className={styles.draftTicketTitle}>{t.title}</span>
+                      <span className={styles.draftTicketTitle}>{t.summary}</span>
                       <span
                         className={styles.draftTicketPriority}
-                        style={{ color: t.priority === "high" ? "var(--red)" : t.priority === "medium" ? "var(--amber)" : "var(--text-3)" }}
+                        style={{ color: t.priority.toLowerCase() === "high" || t.priority.toLowerCase() === "critical" ? "var(--red)" : t.priority.toLowerCase() === "medium" ? "var(--amber)" : "var(--text-3)" }}
                       >
-                        {t.pts}pt
+                        {t.suggested_points}pt
                       </span>
                     </div>
                   ))}
                 </div>
-
+                <div className={styles.eosInsightNote}>
+                  <RiSparklingLine size={11} /> {draftData.rationale}
+                </div>
                 {!draftConfirmed ? (
                   <button className={styles.generateBtn} onClick={() => setDraftConfirmed(true)}>
                     <RiFlashlightLine size={13} /> Confirm and Create Sprint
                   </button>
                 ) : (
                   <div className={styles.generatedNote}>
-                    <RiCheckLine size={13} /> Sprint draft committed for {draftCard.pod} — view in Sprints tab
+                    <RiCheckLine size={13} /> Sprint draft committed for {draftCard?.pod} — view in Sprints tab
                   </div>
                 )}
               </>
+            ) : (
+              <button className={styles.generateBtn} onClick={() => refetchDraft()}>
+                <RiFlashlightLine size={13} /> Draft Sprint with EOS
+              </button>
             )}
           </div>
         )}
@@ -709,13 +700,17 @@ function EOSIntelligencePanel({
 
 /* ── Heatmap View (Gen 2) ───────────────────────────────────────────────────── */
 
-function HeatmapView({ cards, onCardClick }: { cards: PodCard[]; onCardClick: (c: PodCard) => void }) {
+function HeatmapView({ cards, podCapacityMap, onCardClick }: {
+  cards: PodCard[];
+  podCapacityMap: Record<string, number>;
+  onCardClick: (c: PodCard) => void;
+}) {
   return (
     <div className={styles.heatmapGrid}>
       {cards.map(card => {
-        const load  = capacityLoad(card);
-        const h     = aiHealthScore(card);
-        const lColor = load > 80 ? "var(--red)" : load > 65 ? "var(--amber)" : "var(--green)";
+        const load   = podCapacityMap[card.pod] ?? card.deliveryConfidence;
+        const h      = card.healthScore;
+        const lColor = load > 85 ? "var(--red)" : load > 65 ? "var(--amber)" : "var(--green)";
         const hColor = healthColor(h);
 
         return (
@@ -767,10 +762,6 @@ export default function SpacesPage() {
   const [forecastCard, setForecastCard]     = useState<PodCard | null>(null);
   const [cascadeCard, setCascadeCard]       = useState<PodCard | null>(null);
   const [retroCard, setRetroCard]           = useState<PodCard | null>(null);
-  const [nlMode, setNlMode]                 = useState(false);
-  const [nlInput, setNlInput]               = useState("");
-  const [nlSent, setNlSent]                 = useState(false);
-
   const deleteMut = useMutation({
     mutationFn: deleteSpace,
     onSuccess: () => {
@@ -788,25 +779,24 @@ export default function SpacesPage() {
 
   const validPods = podSummaries.filter((p) => p.pod?.trim());
 
-  // Fetch per-pod project data in parallel to get accurate sprint status
-  const projectQueries = useQueries({
-    queries: validPods.map((p) => ({
-      queryKey: ["space-project", p.pod],
-      queryFn: () => fetchProject(p.pod),
-      staleTime: 1000 * 60 * 5,
-    })),
+  const { data: capacityRows = [] } = useQuery({
+    queryKey: ["capacity"],
+    queryFn: fetchCapacity,
+    staleTime: 1000 * 60 * 5,
   });
+
+  const podCapacityMap = useMemo<Record<string, number>>(() => {
+    const map: Record<string, number> = {};
+    for (const r of capacityRows) map[r.pod] = Math.max(map[r.pod] ?? 0, r.capacity_pct);
+    return map;
+  }, [capacityRows]);
 
   const cards = useMemo<PodCard[]>(() => {
     return validPods
-      .map((p, i) => {
-        const project = projectQueries[i]?.data;
-        const activeSprint = project?.sprints.find((s) => s.status === "active") ?? null;
-        return buildPodCard(p, activeSprint);
-      })
+      .map((p) => buildPodCard(p))
       .filter((c) => !search || c.pod.toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => b.totalTickets - a.totalTickets);
-  }, [validPods, projectQueries, search]);
+  }, [validPods, search]);
 
   const stats = useMemo(() => ({
     total:          cards.length,
@@ -822,17 +812,7 @@ export default function SpacesPage() {
     }
   }
 
-  function handleNLSubmit() {
-    if (!nlInput.trim()) return;
-    setNlSent(true);
-    setTimeout(() => {
-      setNlSent(false);
-      setNlMode(false);
-      setNlInput("");
-    }, 2200);
-  }
-
-  const anomalyCount = cards.filter(c => anomalyTag(c) !== null).length;
+  const anomalyCount = cards.filter(c => anomalyTag(c) !== null || c.healthScore < 50).length;
 
   return (
     <div className={`${styles.page} ${showEOSPanel ? styles.pageWithPanel : ""}`}>
@@ -875,20 +855,9 @@ export default function SpacesPage() {
             </Tooltip>
 
             {canManage && (
-              <>
-                {/* NL Space Creation toggle (Gen 4) */}
-                <Tooltip title="Create space with natural language" arrow>
-                  <button
-                    className={`${styles.nlToggleBtn} ${nlMode ? styles.nlToggleBtnActive : ""}`}
-                    onClick={() => { setNlMode(v => !v); setNlSent(false); setNlInput(""); }}
-                  >
-                    <RiMagicLine size={15} />
-                  </button>
-                </Tooltip>
-                <button className="btn btn-primary btn-sm" onClick={() => setShowCreateDrawer(true)}>
-                  <RiAddLine size={16} /> Create Space
-                </button>
-              </>
+              <button className="btn btn-primary btn-sm" onClick={() => setShowCreateDrawer(true)}>
+                <RiAddLine size={16} /> Create Space
+              </button>
             )}
 
             <div className={styles.viewToggle}>
@@ -920,36 +889,6 @@ export default function SpacesPage() {
             </div>
           </div>
         </div>
-
-        {/* NL Space Creation input (Gen 4) */}
-        <AnimatePresence>
-          {nlMode && (
-            <motion.div
-              className={styles.nlBar}
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.18 }}
-            >
-              <RiMagicLine size={15} style={{ color: "var(--accent)", flexShrink: 0 }} />
-              <input
-                className={styles.nlInput}
-                placeholder='e.g. "Create a space for mobile team doing iOS refactor, assign platform engineers, start with these 5 goals"'
-                value={nlInput}
-                onChange={e => setNlInput(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleNLSubmit()}
-                autoFocus
-              />
-              {nlSent ? (
-                <span className={styles.nlConfirm}><RiCheckLine size={13} /> EOS is setting it up…</span>
-              ) : (
-                <button className={styles.nlSubmitBtn} onClick={handleNLSubmit}>
-                  <RiSendPlaneLine size={14} />
-                </button>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Main content + EOS panel wrapper */}
         <div className={styles.contentArea}>
@@ -994,7 +933,7 @@ export default function SpacesPage() {
               </div>
             ) : (
               <div className="fade-up-2">
-                <HeatmapView cards={cards} onCardClick={card => navigate(`/spaces/${card.pod}`)} />
+                <HeatmapView cards={cards} podCapacityMap={podCapacityMap} onCardClick={card => navigate(`/spaces/${card.pod}`)} />
               </div>
             )}
           </div>
@@ -1018,7 +957,7 @@ export default function SpacesPage() {
         {forecastCard && <HealthForecastModal card={forecastCard} onClose={() => setForecastCard(null)} />}
       </AnimatePresence>
       <AnimatePresence>
-        {cascadeCard && <BlockerCascadeModal card={cascadeCard} allCards={cards} onClose={() => setCascadeCard(null)} />}
+        {cascadeCard && <BlockerCascadeModal card={cascadeCard} onClose={() => setCascadeCard(null)} />}
       </AnimatePresence>
       <AnimatePresence>
         {retroCard && <RetroModal card={retroCard} onClose={() => setRetroCard(null)} />}
@@ -1044,16 +983,14 @@ function PodCardComponent({
   onRetro?: () => void;
 }) {
   const { color } = card;
-  const health    = aiHealthScore(card);
-  const hColor    = healthColor(health);
-  const spark     = derivedSparkline(card);
-  const anomaly   = anomalyTag(card);
+  const health      = card.healthScore;
+  const hColor      = healthColor(health);
+  const spark       = normalizeTrend(card.trend);
+  const anomaly     = anomalyTag(card);
   const sprintColor = card.hasActiveSprint ? "var(--green)" : "var(--text-3)";
-  const prediction  = card.hasActiveSprint ? sprintPrediction(card) : null;
+  const prediction  = card.hasActiveSprint ? card.sprintPrediction : null;
   const predColor   = prediction == null ? "var(--text-3)" : prediction >= 70 ? "var(--green)" : prediction >= 50 ? "var(--amber)" : "var(--red)";
-  const tdLevel     = techDebtLevel(card);
-  const tdColor     = tdLevel === "low" ? "var(--green)" : tdLevel === "medium" ? "var(--amber)" : "var(--red)";
-  const conf        = deliveryConfidence(card);
+  const conf        = card.deliveryConfidence;
 
   return (
     <motion.div
@@ -1072,8 +1009,8 @@ function PodCardComponent({
             <span className={styles.sprintBadge} style={{ color: sprintColor, background: `${sprintColor}18` }}>
               {card.hasActiveSprint ? "Active Sprint" : "No Sprint"}
             </span>
-            {card.activeSprint && (
-              <span className={styles.sprintName}>{card.activeSprint.name}</span>
+            {card.sprintName && (
+              <span className={styles.sprintName}>{card.sprintName}</span>
             )}
             {/* Sprint outcome predictor (Gen 2) */}
             {prediction !== null && (
@@ -1086,10 +1023,6 @@ function PodCardComponent({
                 <RiAlertLine size={9} /> {anomaly}
               </span>
             )}
-            {/* Tech debt badge (Gen 3) */}
-            <span className={styles.tdTag} style={{ color: tdColor, background: `${tdColor}12`, borderColor: `${tdColor}28` }}>
-              TD: {tdLevel}
-            </span>
           </div>
         </div>
 
@@ -1206,12 +1139,12 @@ function PodRow({
   onForecast?: () => void;
 }) {
   const { color } = card;
-  const health    = aiHealthScore(card);
-  const hColor    = healthColor(health);
-  const anomaly   = anomalyTag(card);
-  const prediction = card.hasActiveSprint ? sprintPrediction(card) : null;
+  const health     = card.healthScore;
+  const hColor     = healthColor(health);
+  const anomaly    = anomalyTag(card);
+  const prediction = card.hasActiveSprint ? card.sprintPrediction : null;
   const predColor  = prediction == null ? "var(--text-3)" : prediction >= 70 ? "var(--green)" : prediction >= 50 ? "var(--amber)" : "var(--red)";
-  const conf       = deliveryConfidence(card);
+  const conf       = card.deliveryConfidence;
 
   return (
     <div className={styles.listRow} onClick={onClick}>
@@ -1221,7 +1154,7 @@ function PodRow({
         <div className={styles.listName}>{card.pod}</div>
         <div className={styles.listDesc}>
           {card.totalTickets.toLocaleString()} tickets · {card.completedTickets.toLocaleString()} done
-          {card.activeSprint ? ` · ${card.activeSprint.name}` : ""}
+          {card.sprintName ? ` · ${card.sprintName}` : ""}
         </div>
       </div>
 

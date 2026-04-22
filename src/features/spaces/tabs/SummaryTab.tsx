@@ -1,15 +1,18 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { novaQuery } from "@/services/api";
+import { fetchSpaceHealth, fetchSpacesBrief, fetchPodSummary } from "@/services/api";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  BarChart, Bar, Tooltip as ReTooltip, ResponsiveContainer,
+  BarChart, Bar, LineChart, Line,
+  Tooltip as ReTooltip, ResponsiveContainer,
 } from "recharts";
 import LinearProgress from "@mui/material/LinearProgress";
 import {
   RiSparklingLine, RiAlertLine, RiCheckLine,
   RiCloseLine, RiRefreshLine, RiBarChartBoxLine,
   RiTimeLine, RiTeamLine, RiLightbulbLine,
+  RiArrowUpLine, RiArrowDownLine,
+  RiCalendarLine, RiUserLine,
 } from "react-icons/ri";
 import type { Project, ProjectTask } from "../spacesData";
 import SummaryKPIStrip from "./SummaryKPIStrip";
@@ -42,27 +45,29 @@ export default function SummaryTab({ project }: { project: Project }) {
     return { total, done, blocked, overdue, updated };
   }, [allTasks]);
 
-  /* ── Health score & radar ── */
-  const radarData = useMemo(() => {
-    const bugCount    = allTasks.filter((t) => t.type === "Bug").length;
-    const doneRate    = allTasks.length > 0 ? Math.round((kpis.done / allTasks.length) * 100) : 0;
-    const blockedRate = allTasks.length > 0 ? Math.round((1 - kpis.blocked / allTasks.length) * 100) : 100;
-    const overduePen  = allTasks.length > 0 ? Math.max(0, Math.round((1 - (kpis.overdue / allTasks.length) * 2) * 100)) : 100;
-    const velocity    = Math.min(100, Math.round(project.progress + 10));
-    const momentum    = Math.min(100, project.weeklyActivity.reduce((s, v) => s + v, 0) * 3);
-    const quality     = Math.round((1 - bugCount / Math.max(allTasks.length, 1)) * 100);
-    return [
-      { metric: "Delivery",  score: doneRate },
-      { metric: "Velocity",  score: velocity },
-      { metric: "Clarity",   score: 72 },
-      { metric: "Momentum",  score: momentum },
-      { metric: "Flow",      score: blockedRate },
-      { metric: "Quality",   score: quality },
-      { metric: "On-Time",   score: overduePen },
-    ];
-  }, [allTasks, kpis, project]);
+  /* ── Health score & radar — from unified backend algorithm ── */
+  const healthQuery = useQuery({
+    queryKey: ["space-health", project.key],
+    queryFn: () => fetchSpaceHealth(project.key),
+    staleTime: 1000 * 60 * 15,
+    retry: 1,
+  });
 
-  const healthScore = Math.round(radarData.reduce((s, d) => s + d.score, 0) / radarData.length);
+  const radarData = useMemo(() => {
+    if (!healthQuery.data) return [];
+    const r = healthQuery.data.radar;
+    return [
+      { metric: "Delivery",  score: r.delivery },
+      { metric: "Velocity",  score: r.velocity },
+      { metric: "Clarity",   score: r.clarity },
+      { metric: "Momentum",  score: r.momentum },
+      { metric: "Flow",      score: r.flow },
+      { metric: "Quality",   score: r.quality },
+      { metric: "On-Time",   score: r.on_time },
+    ];
+  }, [healthQuery.data]);
+
+  const healthScore = healthQuery.data?.health_score ?? 0;
   const healthColor = healthScore >= 70 ? "var(--green)" : healthScore >= 50 ? "var(--amber)" : "var(--red)";
 
   /* ── Weekly activity ── */
@@ -87,47 +92,70 @@ export default function SummaryTab({ project }: { project: Project }) {
       .slice(0, 6);
   }, [allTasks]);
 
-  /* ── EOS Project Brief (streaming-style via novaQuery) ── */
-  const briefPrompt = useMemo(() => {
-    const activeSprint = project.sprints.find((s) => s.status === "active");
-    const bugCount = allTasks.filter((t) => t.type === "Bug").length;
-    return `Write a 2-sentence executive brief for project "${project.key}": Health score ${healthScore}/100, ${kpis.done}/${kpis.total} tasks done, ${kpis.blocked} blocked, ${kpis.overdue} overdue, ${bugCount} bugs, ${project.progress}% overall progress. Active sprint: ${activeSprint?.name ?? "none"}. Be direct and specific. Start with the most important signal.`;
-  }, [project, kpis, allTasks, healthScore]);
-
-  const brief = useQuery({
-    queryKey: ["eos-brief", project.key],
-    queryFn: () => novaQuery(briefPrompt),
+  /* ── EOS Project Brief + 3 insight signals — single backend call ── */
+  const spacesBrief = useQuery({
+    queryKey: ["spaces-brief", project.key],
+    queryFn: () => fetchSpacesBrief(project.key),
     staleTime: 1000 * 60 * 15,
     retry: 1,
   });
 
-  /* ── EOS Insight Cards (3 fixed types) ── */
-  const insightPrompt = useMemo(() => {
-    const top = [...workloadData].sort((a, b) => b.total - a.total)[0];
-    const bugCount = allTasks.filter((t) => t.type === "Bug").length;
-    return `Analyze project "${project.key}" and give exactly 3 insights — one velocity signal, one risk signal, one recommendation.
-Stats: ${kpis.total} tasks, ${kpis.done} done, ${kpis.blocked} blocked, ${kpis.overdue} overdue, ${bugCount} bugs, ${project.progress}% progress.
-Top engineer: ${top?.name ?? "N/A"} (${top?.total ?? 0} tasks).
-Format: each line starts with "VELOCITY:", "RISK:", or "REC:" then a space then the insight (max 90 chars each).`;
-  }, [project, kpis, allTasks, workloadData]);
+  const parsedInsights = useMemo(() => {
+    if (!spacesBrief.data) return null;
+    return {
+      velocity: spacesBrief.data.velocity_signal,
+      risk:     spacesBrief.data.risk_signal,
+      rec:      spacesBrief.data.recommendation,
+    };
+  }, [spacesBrief.data]);
 
-  const insights = useQuery({
-    queryKey: ["eos-insights", project.key],
-    queryFn: () => novaQuery(insightPrompt),
-    staleTime: 1000 * 60 * 20,
+  /* ── Cross-project comparison ── */
+  const podSummaryQuery = useQuery({
+    queryKey: ["pod-summary"],
+    queryFn: fetchPodSummary,
+    staleTime: 1000 * 60 * 15,
     retry: 1,
   });
 
-  const parsedInsights = useMemo(() => {
-    if (!insights.data) return null;
-    const lines = insights.data.answer.split("\n").map((l) => l.trim()).filter(Boolean);
-    const get = (prefix: string) => lines.find((l) => l.startsWith(prefix))?.replace(prefix, "").trim() ?? null;
-    return {
-      velocity: get("VELOCITY:"),
-      risk:     get("RISK:"),
-      rec:      get("REC:"),
-    };
-  }, [insights.data]);
+  const { avgHealth, healthDiff, totalPods } = useMemo(() => {
+    const all = podSummaryQuery.data ?? [];
+    if (all.length < 2) return { avgHealth: null, healthDiff: null, totalPods: 0 };
+    const scores = all.filter(p => p.health_score != null).map(p => p.health_score);
+    const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+    return { avgHealth: avg, healthDiff: healthScore - avg, totalPods: all.length };
+  }, [podSummaryQuery.data, healthScore]);
+
+  /* ── Health trend (last 4 sprints — delivery score proxy) ── */
+  const trendData = useMemo(() => {
+    const last4 = [...project.sprints].slice(-4);
+    return last4.map(s => ({
+      name: s.name.replace(/Sprint\s*/i, "S"),
+      score: s.totalPoints > 0 ? Math.round((s.donePoints / s.totalPoints) * 100) : 0,
+    }));
+  }, [project.sprints]);
+
+  /* ── Delivery prediction ── */
+  const deliveryWeeks = useMemo(() => {
+    const completed = project.sprints.filter(s => s.status === "completed" && s.totalPoints > 0);
+    if (completed.length === 0) return null;
+    const avgDone = completed.reduce((a, s) => a + s.donePoints, 0) / completed.length;
+    if (avgDone <= 0) return null;
+    const remaining = project.sprints
+      .filter(s => s.status !== "completed")
+      .reduce((a, s) => a + Math.max(0, s.totalPoints - s.donePoints), 0);
+    return Math.max(1, Math.round((remaining / avgDone) * 2));
+  }, [project.sprints]);
+
+  /* ── Bottleneck member ── */
+  const bottleneckMember = useMemo(() => {
+    const inProgressByMember = project.members.map(m => ({
+      name: m.name,
+      inProgress: allTasks.filter(t => t.assignee === m.name && t.status === "In Progress").length,
+    }));
+    const sorted = inProgressByMember.sort((a, b) => b.inProgress - a.inProgress);
+    const avg = inProgressByMember.reduce((a, m) => a + m.inProgress, 0) / Math.max(inProgressByMember.length, 1);
+    return sorted[0]?.inProgress > avg * 1.5 && sorted[0].inProgress > 1 ? sorted[0].name : null;
+  }, [project.members, allTasks]);
 
   /* ── Risk flags ── */
   const riskFlags = useMemo(() => {
@@ -149,9 +177,9 @@ Format: each line starts with "VELOCITY:", "RISK:", or "REC:" then a space then 
           <div className={styles.briefContent}>
             <RiSparklingLine size={14} color="var(--accent)" className={styles.briefIcon} />
             <div className={styles.briefText}>
-              {brief.isPending && <span className={styles.briefLoading}>EOS is analysing {project.key}…</span>}
-              {brief.data && <span>{brief.data.answer.split("\n").slice(0, 2).join(" ")}</span>}
-              {brief.isError && <span className={styles.briefLoading}>Could not load EOS brief.</span>}
+              {spacesBrief.isPending && <span className={styles.briefLoading}>EOS is analysing {project.key}…</span>}
+              {spacesBrief.data && <span>{spacesBrief.data.brief}</span>}
+              {spacesBrief.isError && <span className={styles.briefLoading}>Could not load EOS brief.</span>}
             </div>
             <EOSBadge />
             <button className={styles.briefClose} onClick={() => setBriefDismissed(true)}>
@@ -199,7 +227,7 @@ Format: each line starts with "VELOCITY:", "RISK:", or "REC:" then a space then 
             </div>
           </div>
           <p className={styles.insightCardBody}>
-            {insights.isPending ? <span className={styles.insightLoading}>EOS analysing…</span>
+            {spacesBrief.isPending ? <span className={styles.insightLoading}>EOS analysing…</span>
               : parsedInsights?.velocity ?? `${project.progress}% complete across ${project.sprints.length} sprints.`}
           </p>
           <div className={styles.insightStat}>
@@ -222,7 +250,7 @@ Format: each line starts with "VELOCITY:", "RISK:", or "REC:" then a space then 
             </div>
           </div>
           <p className={styles.insightCardBody}>
-            {insights.isPending ? <span className={styles.insightLoading}>EOS analysing…</span>
+            {spacesBrief.isPending ? <span className={styles.insightLoading}>EOS analysing…</span>
               : parsedInsights?.risk ?? (kpis.blocked > 0 ? `${kpis.blocked} tickets blocked, ${kpis.overdue} overdue.` : "No critical blockers detected.")}
           </p>
           <div className={styles.insightStat}>
@@ -243,17 +271,98 @@ Format: each line starts with "VELOCITY:", "RISK:", or "REC:" then a space then 
             </div>
           </div>
           <p className={styles.insightCardBody}>
-            {insights.isPending ? <span className={styles.insightLoading}>EOS analysing…</span>
+            {spacesBrief.isPending ? <span className={styles.insightLoading}>EOS analysing…</span>
               : parsedInsights?.rec ?? "Keep momentum — protect team focus and avoid mid-sprint scope changes."}
           </p>
           <button
             className={styles.insightRefresh}
-            onClick={() => qc.invalidateQueries({ queryKey: ["eos-insights", project.key] })}
+            onClick={() => qc.invalidateQueries({ queryKey: ["spaces-brief", project.key] })}
             title="Refresh EOS insights"
           >
             <RiRefreshLine size={12} /> Refresh
           </button>
         </div>
+      </div>
+
+      {/* ── Metrics Row: trend + delivery forecast + cross-project comparison ── */}
+      <div className={styles.metricsRow}>
+
+        {/* Health trend */}
+        <div className={styles.metricCard}>
+          <div className={styles.metricCardHeader}>
+            <span className={styles.cardLabel}>Delivery Trend</span>
+            <span className={styles.metricSub}>last {trendData.length} sprints</span>
+          </div>
+          <ResponsiveContainer width="100%" height={72}>
+            <LineChart data={trendData} margin={{ top: 4, right: 4, left: -30, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 9, fill: "var(--text-3)" }} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: "var(--text-3)" }} />
+              <ReTooltip
+                contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 6, fontSize: 11 }}
+                formatter={(v: number) => [`${v}%`, "Delivery"]}
+              />
+              <Line type="monotone" dataKey="score" stroke={project.color} strokeWidth={2} dot={{ r: 3, fill: project.color }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Delivery forecast */}
+        <div className={styles.metricCard}>
+          <div className={styles.metricCardHeader}>
+            <span className={styles.cardLabel}>Delivery Forecast</span>
+            <RiCalendarLine size={13} color="var(--text-3)" />
+          </div>
+          {deliveryWeeks != null ? (
+            <>
+              <div className={styles.forecastNumber} style={{ color: deliveryWeeks <= 4 ? "var(--green)" : deliveryWeeks <= 8 ? "var(--amber)" : "var(--red)" }}>
+                ~{deliveryWeeks}w
+              </div>
+              <div className={styles.forecastLabel}>at current sprint pace</div>
+              <div className={styles.forecastSub}>
+                {project.sprints.filter(s => s.status === "completed").length} sprints done ·{" "}
+                {project.sprints.filter(s => s.status !== "completed").length} remaining
+              </div>
+            </>
+          ) : (
+            <div className={styles.forecastLabel} style={{ color: "var(--text-3)", marginTop: 8 }}>Not enough sprint data</div>
+          )}
+        </div>
+
+        {/* Cross-project comparison */}
+        <div className={styles.metricCard}>
+          <div className={styles.metricCardHeader}>
+            <span className={styles.cardLabel}>vs All Spaces</span>
+            <EOSBadge />
+          </div>
+          {healthDiff != null ? (
+            <>
+              <div className={styles.comparisonScore}>
+                <span className={styles.comparisonVal} style={{ color: healthDiff >= 0 ? "var(--green)" : "var(--red)" }}>
+                  {healthDiff >= 0 ? <RiArrowUpLine size={14} /> : <RiArrowDownLine size={14} />}
+                  {Math.abs(healthDiff)} pts
+                </span>
+                <span className={styles.comparisonLbl}>{healthDiff >= 0 ? "above" : "below"} avg</span>
+              </div>
+              <div className={styles.forecastSub}>
+                Avg health across {totalPods} spaces: <strong>{avgHealth}</strong>
+              </div>
+              <div className={styles.comparisonBar}>
+                <div className={styles.comparisonBarFill} style={{ width: `${avgHealth}%`, background: "var(--surface-3)" }} />
+                <div className={styles.comparisonBarThis} style={{ width: `${healthScore}%`, background: project.color }} />
+              </div>
+              <div className={styles.comparisonBarLabels}>
+                <span>avg {avgHealth}</span>
+                <span style={{ color: project.color }}>this {healthScore}</span>
+              </div>
+            </>
+          ) : (
+            <div className={styles.forecastLabel} style={{ color: "var(--text-3)", marginTop: 8 }}>
+              {podSummaryQuery.isPending ? "Loading…" : "Only one space"}
+            </div>
+          )}
+        </div>
+
       </div>
 
       {/* ── KPI Pills ── */}
@@ -325,23 +434,37 @@ Format: each line starts with "VELOCITY:", "RISK:", or "REC:" then a space then 
           </div>
           {/* Member breakdown */}
           <div className={styles.memberList}>
-            {project.members.slice(0, 4).map((m) => {
-              const mTasks = allTasks.filter((t) => t.assignee === m.name);
-              const mDone  = mTasks.filter((t) => t.status === "Done").length;
-              const mPct   = mTasks.length > 0 ? Math.round((mDone / mTasks.length) * 100) : 0;
-              const overloaded = mTasks.length > (allTasks.length / Math.max(project.members.length, 1)) * 1.4;
-              return (
-                <div key={m.id} className={styles.memberRow}>
-                  <div className={styles.memberAvatar} style={{ background: m.color }}>{m.initials}</div>
-                  <div className={styles.memberInfo}>
-                    <span className={styles.memberName}>{m.name.split(" ")[0]}</span>
-                    {overloaded && <span className={styles.overloadedBadge}><RiAlertLine size={9} /> Overloaded</span>}
+            {project.members
+              .map(m => {
+                const mTasks      = allTasks.filter(t => t.assignee === m.name);
+                const mDone       = mTasks.filter(t => t.status === "Done").length;
+                const mInProgress = mTasks.filter(t => t.status === "In Progress").length;
+                const mPct        = mTasks.length > 0 ? Math.round((mDone / mTasks.length) * 100) : 0;
+                return { m, mTasks, mDone, mInProgress, mPct };
+              })
+              .sort((a, b) => b.mInProgress - a.mInProgress)
+              .slice(0, 4)
+              .map(({ m, mTasks, mInProgress, mPct }) => {
+                const isBottleneck = bottleneckMember === m.name;
+                const avgLoad = allTasks.length / Math.max(project.members.length, 1);
+                const overloaded = mTasks.length > avgLoad * 1.4;
+                return (
+                  <div key={m.id} className={styles.memberRow}>
+                    <div className={styles.memberAvatar} style={{ background: m.color }}>{m.initials}</div>
+                    <div className={styles.memberInfo}>
+                      <span className={styles.memberName}>{m.name.split(" ")[0]}</span>
+                      {isBottleneck && (
+                        <span className={styles.bottleneckBadge}><RiUserLine size={9} /> Bottleneck</span>
+                      )}
+                      {!isBottleneck && overloaded && (
+                        <span className={styles.overloadedBadge}><RiAlertLine size={9} /> Overloaded</span>
+                      )}
+                    </div>
+                    <span className={styles.memberInProgress}>{mInProgress} WIP</span>
+                    <span className={styles.memberPct} style={{ color: project.color }}>{mPct}%</span>
                   </div>
-                  <span className={styles.memberPct} style={{ color: project.color }}>{mPct}%</span>
-                  <span className={styles.memberTasks}>{mTasks.length}t</span>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
       </div>

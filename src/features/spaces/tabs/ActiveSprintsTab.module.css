@@ -320,27 +320,27 @@
 
 /* ── Kanban Board ── */
 .board {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  flex: 1;
+  display: flex;
+  gap: 12px;
+  height: calc(100vh - 280px);
+  min-width: max-content;
   overflow-x: auto;
-  min-height: 400px;
 }
 
 /* ── Column ── */
 .column {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--bg-2);
   border-radius: var(--r);
+  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  min-width: 200px;
-  transition: background 0.15s, border-color 0.15s;
+  overflow: hidden;
+  transition: border-color 0.15s;
 }
 
 .columnDragOver {
-  background: var(--surface-3);
   border-color: var(--accent-border);
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
@@ -348,135 +348,120 @@
 .colHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px 6px;
+  gap: 7px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .colHeaderLeft {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: contents;
 }
 
-.colEmoji { font-size: 13px; }
+.colDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.colEmoji { display: none; }
 
 .colLabel {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
 }
 
 .colCount {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 100px;
+  font-size: 0.72rem;
+  color: var(--text-3);
+  background: var(--surface-2);
+  padding: 2px 7px;
+  border-radius: 99px;
   font-family: var(--font-mono);
 }
 
 .colAddBtn {
-  width: 22px;
-  height: 22px;
+  width: 22px; height: 22px;
   border-radius: 6px;
   border: 1px solid var(--border-2);
   background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--text-3);
-  transition: all 0.15s;
-  font-family: var(--font-sans);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-3);
+  transition: all 0.15s; font-family: var(--font-sans);
 }
 .colAddBtn:hover { background: var(--surface-3); color: var(--text); border-color: var(--border-3); }
 
-.colBar {
-  height: 2px;
-  background: var(--border);
-  margin: 0 12px 8px;
-  border-radius: 100px;
-  overflow: hidden;
-}
-.colBarFill {
-  height: 100%;
-  border-radius: 100px;
-  transition: width 0.6s ease;
-  background: var(--accent);
-}
+.colBar { display: none; }
+.colBarFill { display: none; }
 
 .cardList {
   flex: 1;
-  padding: 0 8px 8px;
+  overflow-y: auto;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  overflow-y: auto;
-  max-height: 60vh;
+  gap: 6px;
   scrollbar-width: thin;
   scrollbar-color: var(--border-2) transparent;
 }
 
 .emptyCol {
-  text-align: center;
-  font-size: 11px;
-  color: var(--text-3);
+  border: 2px dashed var(--border);
+  border-radius: var(--r-sm);
   padding: 20px;
-  font-weight: 600;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 0.78rem;
 }
 
 /* ── Kanban Card ── */
 .kanbanCard {
   background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: 9px;
-  padding: 10px;
-  cursor: grab;
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.2s;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
 }
 .kanbanCard:active { cursor: grabbing; }
-.kanbanCard:hover { border-color: var(--border-3); }
-
-.cardPriorityBar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 3px;
-  bottom: 0;
-  border-radius: 9px 0 0 9px;
+.kanbanCard:hover {
+  border-color: var(--accent-border);
+  box-shadow: 0 2px 12px rgba(79,126,255,0.1);
+  transform: translateY(-1px);
 }
+
+.cardPriorityBar { display: none; }
 
 .cardHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 6px;
-  padding-left: 6px;
+  padding-left: 0;
 }
 
 .cardKey {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--accent);
   font-family: var(--font-mono);
-  background: var(--accent-glow);
-  padding: 1px 5px;
-  border-radius: 4px;
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 600;
 }
 
-.cardTypeIcon { font-size: 11px; }
+.cardTypeIcon { font-size: 14px; }
 
 .cardTitle {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 0.83rem;
+  font-weight: 500;
   color: var(--text);
   line-height: 1.4;
-  margin-bottom: 6px;
-  padding-left: 6px;
+  margin: 0 0 8px;
+  padding-left: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -486,13 +471,12 @@
   flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 6px;
-  padding-left: 6px;
 }
 .cardLabel {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 100px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 99px;
   background: var(--surface-2);
   color: var(--text-3);
   border: 1px solid var(--border-2);
@@ -501,25 +485,20 @@
 .cardFooter {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding-left: 6px;
+  gap: 6px;
 }
 
-.cardMeta {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
+.cardSpacer { flex: 1; }
 
-.priorityBadge {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 100px;
+.priorityDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .dueBadge {
-  font-size: 9px;
+  font-size: 0.65rem;
   font-weight: 600;
   font-family: var(--font-mono);
 }
@@ -531,30 +510,27 @@
 }
 
 .spBubble {
-  width: 20px;
-  height: 20px;
+  width: 20px; height: 20px;
   border-radius: 50%;
   background: var(--surface-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem;
   font-weight: 800;
   color: var(--text-2);
   font-family: var(--font-mono);
 }
 
 .assigneeChip {
-  width: 24px;
-  height: 24px;
+  width: 22px; height: 22px;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 8px;
-  font-weight: 800;
-  color: #fff;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--accent);
   cursor: default;
+  flex-shrink: 0;
 }
 
 .blockedBanner {
@@ -711,6 +687,101 @@
 }
 .emptyTitle { font-size: 16px; font-weight: 700; }
 .emptyDesc { font-size: 12px; color: var(--text-3); }
+
+/* ── Flow Metrics Strip ── */
+.flowStrip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 8px 14px;
+  flex-shrink: 0;
+}
+.flowStripLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.flowMetrics {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  overflow-x: auto;
+}
+.flowMetric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 14px;
+  gap: 1px;
+}
+.flowMetricVal {
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text);
+  white-space: nowrap;
+}
+.flowMetricLbl {
+  font-size: 0.65rem;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.flowMetricWarn .flowMetricVal { color: var(--amber); }
+.flowMetricWarn .flowMetricLbl { color: var(--amber); opacity: 0.8; }
+.flowMetricDanger .flowMetricVal { color: var(--red); }
+.flowMetricDanger .flowMetricLbl { color: var(--red); opacity: 0.8; }
+.flowDivider {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ── WIP warning ── */
+.wipWarning {
+  display: flex;
+  align-items: center;
+  color: var(--amber);
+  flex-shrink: 0;
+}
+
+/* ── Card aging states ── */
+.cardAgingAmber { border-left: 3px solid var(--amber) !important; }
+.cardAgingRed {
+  border-left: 3px solid var(--red) !important;
+  background: color-mix(in srgb, var(--red) 4%, var(--surface)) !important;
+}
+
+/* ── EOS enrichment hint ── */
+.eosHint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  color: var(--accent);
+  border-top: 1px solid var(--accent-border);
+  padding: 5px 0 0;
+  margin-top: 6px;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.15s, max-height 0.15s;
+  pointer-events: none;
+}
+.kanbanCard:hover .eosHint {
+  opacity: 1;
+  max-height: 40px;
+}
 
 /* ── Responsive ── */
 @media (max-width: 1100px) {

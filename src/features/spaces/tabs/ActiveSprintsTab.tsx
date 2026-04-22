@@ -1,10 +1,17 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+
+const WIP_LIMIT = 5;
+
+function daysSince(dateStr: string | undefined): number {
+  if (!dateStr) return 0;
+  return Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000));
+}
 import Tooltip from "@mui/material/Tooltip";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import type { Project, ProjectTask } from "../spacesData";
-import { getPriorityColor, getTaskStatusColor } from "../spacesData";
+import { getPriorityColor } from "../spacesData";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
 import { createTicket, updateTicketStatus } from "@/services/api";
 import type { TicketCreate } from "@/types";
@@ -12,17 +19,13 @@ import styles from "./ActiveSprintsTab.module.css";
 
 import {
   RiSearchLine,
-  RiFileHistoryLine,
   RiUserLine,
   RiFilter3Line,
   RiSparklingLine,
   RiAlertLine,
   RiCheckLine,
 } from "react-icons/ri";
-import { PiBugBeetle } from "react-icons/pi";
-import { BiTask } from "react-icons/bi";
-import { GoTag } from "react-icons/go";
-import { TbSubtask } from "react-icons/tb";
+import { IssueTypeBadge } from "@/components/ui/Badge";
 
 const AI_FILTERS = [
   { id: "blockers"     as const, label: "Blockers",     color: "var(--red)",    icon: "🚫" },
@@ -51,6 +54,53 @@ type AIFilter =
   | "bugs"
   | "my-tasks"
   | null;
+
+/* ── Flow Metrics Strip ── */
+function FlowMetricsStrip({ tasks }: { tasks: ProjectTask[] }) {
+  const inProgress = tasks.filter(t => t.status === "In Progress");
+  const blocked    = tasks.filter(t => t.status === "Blocked");
+  const inReview   = tasks.filter(t => t.status === "In Review");
+  const avgAge = inProgress.length > 0
+    ? Math.round(inProgress.reduce((a, t) => a + daysSince(t.updatedAt), 0) / inProgress.length)
+    : 0;
+  const bottleneck = [
+    { label: "In Progress", count: inProgress.length },
+    { label: "In Review",   count: inReview.length },
+    { label: "Blocked",     count: blocked.length },
+  ].sort((a, b) => b.count - a.count)[0];
+
+  return (
+    <div className={styles.flowStrip}>
+      <span className={styles.flowStripLabel}><RiSparklingLine size={11} /> EOS Flow</span>
+      <div className={styles.flowMetrics}>
+        <div className={`${styles.flowMetric} ${inProgress.length > WIP_LIMIT ? styles.flowMetricWarn : ""}`}>
+          <span className={styles.flowMetricVal}>{inProgress.length}</span>
+          <span className={styles.flowMetricLbl}>in progress{inProgress.length > WIP_LIMIT ? " ⚠" : ""}</span>
+        </div>
+        <div className={styles.flowDivider} />
+        <div className={styles.flowMetric}>
+          <span className={styles.flowMetricVal}>{avgAge}d</span>
+          <span className={styles.flowMetricLbl}>avg WIP age</span>
+        </div>
+        <div className={styles.flowDivider} />
+        <div className={`${styles.flowMetric} ${blocked.length > 0 ? styles.flowMetricDanger : ""}`}>
+          <span className={styles.flowMetricVal}>{blocked.length}</span>
+          <span className={styles.flowMetricLbl}>blocked</span>
+        </div>
+        <div className={styles.flowDivider} />
+        <div className={styles.flowMetric}>
+          <span className={styles.flowMetricVal}>{inReview.length}</span>
+          <span className={styles.flowMetricLbl}>in review</span>
+        </div>
+        <div className={styles.flowDivider} />
+        <div className={`${styles.flowMetric} ${bottleneck.count > WIP_LIMIT ? styles.flowMetricWarn : ""}`}>
+          <span className={styles.flowMetricVal}>{bottleneck.label}</span>
+          <span className={styles.flowMetricLbl}>bottleneck ({bottleneck.count})</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ActiveSprintsTab({
   project,
@@ -440,6 +490,9 @@ export default function ActiveSprintsTab({
         </div>
       )}
 
+      {/* ── Flow Metrics Strip ── */}
+      <FlowMetricsStrip tasks={allSprintTasks} />
+
       {/* ── Toolbar: member chips + search + my tasks + AI filters + create ── */}
       <div className={styles.toolbar}>
         {/* Member avatar filter chips */}
@@ -599,26 +652,21 @@ export default function ActiveSprintsTab({
           >
             {/* Column header */}
             <div className={styles.colHeader}>
-              <div className={styles.colHeaderLeft}>
-                <span className={styles.colLabel}>{col.label}</span>
-                <span
-                  className={styles.colCount}
-                  // style={{ background: `${col.color}22`, color: col.color }}
-                >
-                  {col.tasks.length}
+              <span className={styles.colDot} style={{ background: col.color }} />
+              <span className={styles.colLabel}>{col.label}</span>
+              {(col.id === "In Progress" || col.id === "Blocked") && col.tasks.length > WIP_LIMIT && (
+                <span className={styles.wipWarning} title={`WIP limit exceeded (${col.tasks.length}/${WIP_LIMIT})`}>
+                  <RiAlertLine size={11} />
                 </span>
-              </div>
-              {/* <Tooltip title={`Add to ${col.label}`} arrow>
-                <button
-                  className={styles.colAddBtn}
-                  onClick={() => {
-                    setCreateColumn(col.id);
-                    setShowCreateModal(true);
-                  }}
-                >
-                  <RiAddLine size={14} />
-                </button>
-              </Tooltip> */}
+              )}
+              <span
+                className={styles.colCount}
+                style={col.id === "In Progress" && col.tasks.length > WIP_LIMIT
+                  ? { color: "var(--amber)", background: "rgba(251,191,36,0.12)" }
+                  : {}}
+              >
+                {col.tasks.length}
+              </span>
             </div>
 
             {/* Progress micro-bar */}
@@ -742,45 +790,32 @@ function KanbanCard({
   onDragEnd: () => void;
   onView?: (task: ProjectTask) => void;
 }) {
-  const statusColor = getTaskStatusColor(task.status);
   const priorityColor = getPriorityColor(task.priority);
 
-  const typeIcons: Record<string, string | JSX.Element> = {
-    Story: (
-      <RiFileHistoryLine
-        size={14}
-        style={{ verticalAlign: "middle", color: "var(--accent)" }}
-      />
-    ),
-    Bug: (
-      <PiBugBeetle
-        size={14}
-        style={{ verticalAlign: "middle", color: "var(--red)" }}
-      />
-    ),
-    Task: (
-      <BiTask
-        size={14}
-        style={{ verticalAlign: "middle", color: "var(--purple)" }}
-      />
-    ),
-    Epic: (
-      <GoTag
-        size={14}
-        style={{ verticalAlign: "middle", color: "var(--amber)" }}
-      />
-    ),
-    Subtask: (
-      <TbSubtask
-        size={14}
-        style={{ verticalAlign: "middle", color: "var(--green)" }}
-      />
-    ),
-  };
+  const age = daysSince(task.updatedAt);
+  const isDone = task.status === "Done";
+  const agingClass = !isDone && age > 14
+    ? styles.cardAgingRed
+    : !isDone && age > 5
+    ? styles.cardAgingAmber
+    : "";
+
+  const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+  const daysUntilDue = dueDate ? Math.ceil((dueDate.getTime() - Date.now()) / 86_400_000) : null;
+
+  const eosHint = (() => {
+    if (task.status === "Blocked") return `Blocked · ${age} day${age !== 1 ? "s" : ""} in this status`;
+    if (!isDone && age > 14) return `Stale for ${age} days — no recent activity`;
+    if (daysUntilDue !== null && daysUntilDue <= 3 && !isDone)
+      return daysUntilDue <= 0 ? `Overdue by ${Math.abs(daysUntilDue)} day(s)` : `Due in ${daysUntilDue} day(s) — needs attention`;
+    if ((task.priority === "Critical" || task.priority === "High") && age > 3 && !isDone)
+      return `${task.priority} priority · ${age} days without update`;
+    return `Last updated ${age} day${age !== 1 ? "s" : ""} ago · ${task.status}`;
+  })();
 
   return (
     <motion.div
-      className={styles.kanbanCard}
+      className={`${styles.kanbanCard} ${agingClass}`}
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
@@ -788,80 +823,64 @@ function KanbanCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       layout
-      whileHover={{ y: -2, boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
       onClick={() => onView?.(task)}
     >
-      {/* Priority indicator */}
-      <div
-        className={styles.cardPriorityBar}
-        style={{ background: statusColor }}
-      />
-
       {/* Header */}
       <div className={styles.cardHeader}>
         <span className={styles.cardKey}>{task.key}</span>
-        <span className={styles.cardTypeIcon}>
-          {typeIcons[task.type] ?? "🔵"}
-        </span>
+        <IssueTypeBadge type={task.type} />
       </div>
 
       {/* Title */}
-      <div className={styles.cardTitle}>{task.title}</div>
+      <p className={styles.cardTitle}>{task.title}</p>
 
       {/* Labels */}
       {task.labels && task.labels.length > 0 && (
         <div className={styles.cardLabels}>
           {task.labels.map((l) => (
-            <span key={l} className={styles.cardLabel}>
-              {l}
-            </span>
+            <span key={l} className={styles.cardLabel}>{l}</span>
           ))}
         </div>
       )}
 
-      {/* Footer */}
+      {/* Footer — matches KanbanBoard layout */}
       <div className={styles.cardFooter}>
-        <div className={styles.cardMeta}>
+        <span
+          className={styles.priorityDot}
+          style={{ background: priorityColor }}
+          title={task.priority}
+        />
+        {task.dueDate && (
           <span
-            className={styles.priorityBadge}
-            style={{ color: priorityColor, background: `${priorityColor}18` }}
+            className={styles.dueBadge}
+            style={{
+              color: new Date(task.dueDate) < new Date() && !isDone
+                ? "var(--red)"
+                : "var(--text-3)",
+            }}
           >
-            {task.priority}
+            {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </span>
-          {task.dueDate && (
-            <span
-              className={styles.dueBadge}
-              style={{
-                color:
-                  new Date(task.dueDate) < new Date() && task.status !== "Done"
-                    ? "var(--red)"
-                    : "var(--text-3)",
-              }}
-            >
-              {new Date(task.dueDate).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
-          )}
-        </div>
-        <div className={styles.cardRight}>
+        )}
+        {task.storyPoints > 0 && (
           <span className={styles.spBubble}>{task.storyPoints}</span>
-          <Tooltip title={task.assignee} arrow>
-            <div
-              className={styles.assigneeChip}
-              style={{ background: task.assigneeColor }}
-            >
-              {task.assigneeInitials}
-            </div>
-          </Tooltip>
-        </div>
+        )}
+        <div className={styles.cardSpacer} />
+        <Tooltip title={task.assignee} arrow>
+          <div className={styles.assigneeChip}>{task.assigneeInitials}</div>
+        </Tooltip>
       </div>
 
       {/* Blocked banner */}
       {task.status === "Blocked" && (
         <div className={styles.blockedBanner}>Blocked</div>
       )}
+
+      {/* EOS enrichment hint — visible on hover */}
+      <div className={styles.eosHint}>
+        <RiSparklingLine size={9} style={{ flexShrink: 0 }} />
+        {eosHint}
+      </div>
     </motion.div>
   );
 }
