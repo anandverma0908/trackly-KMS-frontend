@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { RiSparklingLine, RiAlertLine, RiCheckLine, RiCalendarLine, RiFlashlightLine, RiTeamLine, RiArrowRightLine } from "react-icons/ri";
+import { RiSparklingLine, RiAlertLine, RiCheckLine, RiTeamLine, RiArrowRightLine } from "react-icons/ri";
 import type { Project, ProjectSprint } from "../spacesData";
 import styles from "./SprintsTab.module.css";
 
@@ -11,41 +11,8 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function SprintsTab({ project }: { project: Project }) {
-  const activeSprint    = project.sprints.find((s) => s.status === "active") ?? null;
   const completedSprints = project.sprints.filter((s) => s.status === "completed");
 
-  /* ── Sprint Health Predictor ── */
-  const sprintHealth = useMemo(() => {
-    if (!activeSprint) return null;
-    const now        = new Date();
-    const start      = new Date(activeSprint.startDate);
-    const end        = new Date(activeSprint.endDate);
-    const totalDays  = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86_400_000));
-    const daysElapsed = Math.max(1, Math.ceil((now.getTime() - start.getTime()) / 86_400_000));
-    const daysLeft   = Math.max(0, totalDays - daysElapsed);
-    const done       = activeSprint.donePoints;
-    const committed  = activeSprint.totalPoints;
-    const remaining  = committed - done;
-    const pace       = done / daysElapsed;
-    const neededPace = daysLeft > 0 ? remaining / daysLeft : remaining > 0 ? 0 : pace;
-    const probability = Math.min(100, Math.round((neededPace > 0 ? pace / neededPace : 1) * 100));
-    const blockedCount = activeSprint.tasks.filter((t) => t.status === "Blocked").length;
-    const atRiskTickets = activeSprint.tasks.filter(
-      (t) => t.status === "Blocked" || (t.dueDate && new Date(t.dueDate) < now && t.status !== "Done")
-    );
-    const recommendation =
-      probability >= 80
-        ? "Sprint is on track. Protect the team from scope additions."
-        : probability >= 50
-        ? `Sprint is at risk. ${blockedCount > 0 ? `Unblock ${blockedCount} ticket${blockedCount > 1 ? "s" : ""} immediately.` : "Consider moving low-priority items to backlog."}`
-        : "Sprint is unlikely to complete. Escalate blockers and negotiate scope now.";
-    return { probability, daysLeft, committed, done, remaining, blockedCount, atRiskTickets, recommendation };
-  }, [activeSprint]);
-
-  const healthColor = !sprintHealth ? "var(--text-3)"
-    : sprintHealth.probability >= 80 ? "var(--green)"
-    : sprintHealth.probability >= 50 ? "var(--amber)"
-    : "var(--red)";
 
   /* ── Velocity chart ── */
   const velocityData = completedSprints.map((s) => ({
@@ -135,80 +102,6 @@ export default function SprintsTab({ project }: { project: Project }) {
         </div>
       )}
 
-      {/* ── Active Sprint Health ── */}
-      {activeSprint && sprintHealth ? (
-        <div className={styles.healthCard}>
-          <div className={styles.healthHeader}>
-            <div className={styles.healthHeaderLeft}>
-              <RiFlashlightLine size={14} color={healthColor} />
-              <span className={styles.healthTitle}>{activeSprint.name}</span>
-              <span className={styles.statusDot} style={{ background: "var(--accent)" }} />
-              <span className={styles.activeLabel}>Active</span>
-              <span className={styles.eosBadge}><RiSparklingLine size={9} /> EOS</span>
-            </div>
-            <span className={styles.sprintDates}>
-              <RiCalendarLine size={12} />
-              {activeSprint.startDate} → {activeSprint.endDate}
-            </span>
-          </div>
-
-          <div className={styles.healthBody}>
-            <div className={styles.healthMeter}>
-              <div className={styles.healthProbRow}>
-                <span className={styles.healthProbVal} style={{ color: healthColor }}>{sprintHealth.probability}%</span>
-                <span className={styles.healthProbLbl}>completion probability</span>
-                <span className={styles.healthStatusChip} style={{ color: healthColor, borderColor: healthColor, background: `${healthColor}18` }}>
-                  {sprintHealth.probability >= 80 ? "On Track" : sprintHealth.probability >= 50 ? "At Risk" : "Behind"}
-                </span>
-              </div>
-              <div className={styles.healthProbBar}>
-                <div className={styles.healthProbFill} style={{ width: `${sprintHealth.probability}%`, background: healthColor }} />
-              </div>
-            </div>
-            <div className={styles.healthStats}>
-              {[
-                { val: `${sprintHealth.done} pts`, lbl: "Done" },
-                { val: `${sprintHealth.remaining} pts`, lbl: "Remaining" },
-                { val: `${sprintHealth.daysLeft}d`, lbl: "Days Left" },
-                { val: sprintHealth.blockedCount, lbl: "Blocked" },
-              ].map(({ val, lbl }) => (
-                <div key={lbl} className={styles.healthStat}>
-                  <span className={styles.healthStatVal}>{val}</span>
-                  <span className={styles.healthStatLbl}>{lbl}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.healthRec}>
-            {sprintHealth.probability >= 80 ? <RiCheckLine size={13} color="var(--green)" /> : <RiAlertLine size={13} color="var(--amber)" />}
-            <span>{sprintHealth.recommendation}</span>
-          </div>
-
-          {sprintHealth.atRiskTickets.length > 0 && (
-            <div className={styles.atRiskList}>
-              <span className={styles.atRiskLabel}>At-risk tickets</span>
-              {sprintHealth.atRiskTickets.slice(0, 4).map((t) => (
-                <div key={t.id} className={styles.atRiskItem}>
-                  <span className={styles.atRiskKey}>{t.key}</span>
-                  <span className={styles.atRiskTitle}>{t.title}</span>
-                  <span className={styles.atRiskStatus} style={{ color: t.status === "Blocked" ? "var(--red)" : "var(--amber)" }}>{t.status}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className={styles.sprintGoalRow}>
-            <span className={styles.sprintGoalLabel}>Goal:</span>
-            <span className={styles.sprintGoalText}>{activeSprint.goal}</span>
-          </div>
-        </div>
-      ) : (
-        <div className={styles.noActive}>
-          <RiFlashlightLine size={18} color="var(--text-3)" />
-          <span>No active sprint — start one from the Backlog tab.</span>
-        </div>
-      )}
 
       {/* ── Velocity Chart ── */}
       {completedSprints.length > 0 && (

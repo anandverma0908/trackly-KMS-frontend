@@ -13,8 +13,9 @@ import {
   startSprint,
   completeSprint,
   createSprint,
-  novaQuery,
+  fetchSprintDraft,
 } from "@/services/api";
+import type { SprintDraftResult } from "@/services/api";
 import type { TicketCreate } from "@/types";
 import styles from "./BacklogTab.module.css";
 
@@ -31,6 +32,8 @@ import {
   RiArrowRightLine,
   RiListCheck2,
   RiArrowGoBackLine,
+  RiAlertLine,
+  RiCheckLine,
 } from "react-icons/ri";
 
 const ISSUE_TYPE_ICONS: Record<string, string> = {
@@ -45,6 +48,50 @@ type SortBy = "priority" | "created" | "updated" | "points" | "key";
 const PRIORITY_ORDER = ["Critical", "High", "Medium", "Low"];
 
 /* ══════════════════════════════════════════════════════════════════════════ */
+/*  Velocity Ring SVG                                                         */
+/* ══════════════════════════════════════════════════════════════════════════ */
+
+function VelocityRing({ done, total, size = 34 }: { done: number; total: number; size?: number }) {
+  const r = (size - 5) / 2;
+  const circ = 2 * Math.PI * r;
+  const pct = total > 0 ? Math.min(done / total, 1) : 0;
+  const color = pct >= 1 ? "var(--green)" : pct >= 0.5 ? "var(--accent)" : "var(--amber)";
+  return (
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)", flexShrink: 0 }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border-2)" strokeWidth={3} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={3}
+        strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)} strokeLinecap="round"
+        style={{ transition: "stroke-dashoffset 0.5s ease" }}
+      />
+    </svg>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════ */
+/*  Sprint Health                                                             */
+/* ══════════════════════════════════════════════════════════════════════════ */
+
+function computeSprintHealth(sprint: ProjectSprint) {
+  if (sprint.status !== "active" || !sprint.startDate || !sprint.endDate) return null;
+  const now = new Date();
+  const start = new Date(sprint.startDate);
+  const end = new Date(sprint.endDate);
+  const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86_400_000));
+  const daysElapsed = Math.max(1, Math.ceil((now.getTime() - start.getTime()) / 86_400_000));
+  const daysLeft = Math.max(0, totalDays - daysElapsed);
+  const done = sprint.donePoints;
+  const total = sprint.totalPoints;
+  const remaining = total - done;
+  const pace = done / daysElapsed;
+  const neededPace = daysLeft > 0 ? remaining / daysLeft : remaining > 0 ? 0 : pace;
+  const probability = Math.min(100, Math.round((neededPace > 0 ? pace / neededPace : 1) * 100));
+  const status = probability >= 80 ? "on-track" : probability >= 50 ? "at-risk" : "behind";
+  const color = status === "on-track" ? "var(--green)" : status === "at-risk" ? "var(--amber)" : "var(--red)";
+  return { probability, status, color, daysLeft, done, total };
+}
+
+/* ══════════════════════════════════════════════════════════════════════════ */
 /*  Main Component                                                            */
 /* ══════════════════════════════════════════════════════════════════════════ */
 
@@ -56,7 +103,6 @@ export default function BacklogTab({ project }: { project: Project }) {
   const [sortBy, setSortBy] = useState<SortBy>("priority");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  // Which sections are collapsed (sprint ids + "backlog")
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const [showCreateDrawer, setShowCreateDrawer] = useState(false);
@@ -64,17 +110,19 @@ export default function BacklogTab({ project }: { project: Project }) {
   const [localTasks, setLocalTasks] = useState<ProjectTask[]>([]);
   const [viewingTask, setViewingTask] = useState<ProjectTask | null>(null);
 
-  // Modals
   const [startSprintModal, setStartSprintModal] = useState<ProjectSprint | null>(null);
   const [completeSprintModal, setCompleteSprintModal] = useState<ProjectSprint | null>(null);
   const [showCreateSprintModal, setShowCreateSprintModal] = useState(false);
 
-  /* ── AI Prioritize ── */
-  const [aiPriLoading, setAiPriLoading] = useState(false);
-  const [aiPriResult, setAiPriResult] = useState<string | null>(null);
+  /* ── EOS Plan Sprint ── */
+  const [aiPlanLoading, setAiPlanLoading] = useState(false);
+  const [aiPlanResult, setAiPlanResult] = useState<SprintDraftResult | null>(null);
+
+  /* ── Duplicate detection / quick create ── */
+  const [quickCreateSprintId, setQuickCreateSprintId] = useState<string | null>(null);
+  const [defaultTitle, setDefaultTitle] = useState("");
 
   /* ── Derived data ── */
-  // Show planning + active sprints in backlog view; hide completed ones (unless we want to toggle later)
   const visibleSprints = useMemo(
     () => project.sprints.filter((s) => s.status !== "completed"),
     [project.sprints],
@@ -85,7 +133,11 @@ export default function BacklogTab({ project }: { project: Project }) {
     return [...localTasks, ...base];
   }, [project.backlogTasks, localTasks]);
 
-  // Apply search + sort to any task list
+  const allTasksPool = useMemo(() => {
+    const sprintTasks = project.sprints.flatMap((s) => s.tasks);
+    return [...backlogTasks, ...sprintTasks];
+  }, [backlogTasks, project.sprints]);
+
   function filterAndSort(tasks: ProjectTask[]): ProjectTask[] {
     let result = tasks;
     if (search) {
@@ -153,7 +205,6 @@ export default function BacklogTab({ project }: { project: Project }) {
     mutationFn: (payload: { name: string; goal: string; start_date: string; end_date: string }) =>
       createSprint({ ...payload, project_id: project.id }),
     onSuccess: async (newSprint) => {
-      // If backlog items were selected, add them to the newly created sprint
       if (selected.size > 0 && newSprint?.id) {
         const keys = Array.from(selected);
         await Promise.all(keys.map((k) => addTicketToSprint(newSprint.id, k)));
@@ -194,7 +245,6 @@ export default function BacklogTab({ project }: { project: Project }) {
     });
   }
 
-  // selected stores ticket KEYS (e.g. "DPAI-101"), not internal IDs
   function toggleSelect(key: string) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -215,29 +265,16 @@ export default function BacklogTab({ project }: { project: Project }) {
       .catch((e) => toast.error(e.message));
   }
 
-  async function handleAiPrioritize() {
-    if (backlogTasks.length === 0) {
-      toast.error("No backlog tasks to prioritize");
-      return;
-    }
-    setAiPriLoading(true);
-    setAiPriResult(null);
+  async function handleEosPlanSprint() {
+    setAiPlanLoading(true);
+    setAiPlanResult(null);
     try {
-      const taskList = backlogTasks
-        .slice(0, 30)
-        .map(
-          (t, i) =>
-            `${i + 1}. [${t.key}] ${t.title} (${t.priority}, ${t.type}, ${t.storyPoints}pts, ${t.status})`,
-        )
-        .join("\n");
-      const res = await novaQuery(
-        `You are a sprint planning assistant. Suggest a priority order for this backlog.\n\nBacklog:\n${taskList}\n\nRespond with a numbered list: the ticket key, then one sentence explaining why it should be prioritized. Focus on blockers, high priority, and bugs first.`,
-      );
-      setAiPriResult(res.answer);
+      const result = await fetchSprintDraft(project.key);
+      setAiPlanResult(result);
     } catch {
-      toast.error("AI prioritization failed");
+      toast.error("EOS sprint planning failed");
     } finally {
-      setAiPriLoading(false);
+      setAiPlanLoading(false);
     }
   }
 
@@ -249,7 +286,7 @@ export default function BacklogTab({ project }: { project: Project }) {
       {/* ── Toolbar ── */}
       <div className={styles.toolbar}>
         <div className={styles.searchWrap}>
-          <RiSearchLine size={15} style={{ opacity: 0.5 }} />
+          <RiSearchLine size={14} style={{ opacity: 0.4, flexShrink: 0 }} />
           <input
             className={styles.searchInput}
             placeholder="Search tickets, keys, assignees…"
@@ -264,21 +301,21 @@ export default function BacklogTab({ project }: { project: Project }) {
         </div>
 
         <div className={styles.toolbarRight}>
-          <div className={styles.selectWrap}>
-            <RiArrowUpDownLine size={14} />
+          <div className={styles.sortWrap}>
+            <RiArrowUpDownLine size={12} style={{ opacity: 0.5 }} />
             <select
               className={styles.select}
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortBy)}
             >
-              <option value="priority">Sort: Priority</option>
-              <option value="points">Sort: Story Points</option>
-              <option value="key">Sort: Key</option>
+              <option value="priority">Priority</option>
+              <option value="points">Story Points</option>
+              <option value="key">Key</option>
             </select>
           </div>
 
           {selected.size > 0 && visibleSprints.length > 0 && (
-            <div className={styles.selectWrap}>
+            <div className={styles.sortWrap}>
               <select
                 className={styles.select}
                 value=""
@@ -295,44 +332,25 @@ export default function BacklogTab({ project }: { project: Project }) {
           )}
 
           <button
-            className={styles.aiPriBtn}
-            onClick={handleAiPrioritize}
-            disabled={aiPriLoading}
+            className={styles.eosBtn}
+            onClick={handleEosPlanSprint}
+            disabled={aiPlanLoading}
           >
-            {aiPriLoading ? (
-              <>
-                <span className={styles.aiPriSpinner} /> Analysing…
-              </>
+            {aiPlanLoading ? (
+              <><span className={styles.spinner} /> Planning…</>
             ) : (
-              <>
-                <RiSparklingLine size={12} /> AI Prioritize
-              </>
+              <><RiSparklingLine size={13} /> EOS Plan Sprint</>
             )}
           </button>
         </div>
       </div>
-
-      {/* ── AI Priority Panel ── */}
-      {aiPriResult && (
-        <div className={styles.aiPriPanel}>
-          <div className={styles.aiPriHeader}>
-            <span className={styles.aiPriTitle}>
-              <RiSparklingLine size={13} /> EOS Priority Suggestion
-            </span>
-            <button className={styles.aiPriClose} onClick={() => setAiPriResult(null)}>
-              <RiCloseLine size={16} />
-            </button>
-          </div>
-          <div className={styles.aiPriText}>{aiPriResult}</div>
-        </div>
-      )}
 
       {/* ── Sprint Sections ── */}
       <div className={styles.boardContainer}>
 
         {visibleSprints.length === 0 && (
           <div className={styles.emptySprintsHint}>
-            <RiListCheck2 size={28} style={{ opacity: 0.3 }} />
+            <RiListCheck2 size={28} style={{ opacity: 0.25 }} />
             <p>No active sprints yet. Create a sprint to start planning.</p>
           </div>
         )}
@@ -340,86 +358,116 @@ export default function BacklogTab({ project }: { project: Project }) {
         {visibleSprints.map((sprint) => {
           const tasks = filterAndSort(sprint.tasks);
           const isCollapsed = collapsed.has(sprint.id);
-          const donePct = sprint.totalPoints > 0
-            ? Math.round((sprint.donePoints / sprint.totalPoints) * 100)
-            : 0;
           return (
             <div key={sprint.id} className={styles.sprintSection}>
+
               {/* ── Sprint Header ── */}
               <div className={styles.sprintHeader}>
-                <button
-                  className={styles.sprintCollapseBtn}
-                  onClick={() => toggleCollapse(sprint.id)}
-                >
-                  <span
-                    className={styles.collapseArrow}
-                    style={{ transform: isCollapsed ? "rotate(-90deg)" : "none" }}
+
+                {/* Left: collapse + name + meta */}
+                <div className={styles.sprintHeaderLeft}>
+                  <button
+                    className={styles.sprintCollapseBtn}
+                    onClick={() => toggleCollapse(sprint.id)}
                   >
-                    ▾
-                  </span>
-                </button>
-
-                <div className={styles.sprintHeaderInfo}>
-                  <div className={styles.sprintTitleRow}>
-                    <span className={styles.sprintName}>{sprint.name}</span>
                     <span
-                      className={`${styles.sprintStatusBadge} ${
-                        sprint.status === "active"
-                          ? styles.badgeActive
-                          : styles.badgePlanning
-                      }`}
+                      className={styles.collapseArrow}
+                      style={{ transform: isCollapsed ? "rotate(-90deg)" : "none" }}
                     >
-                      {sprint.status === "active" ? "Active" : "Planning"}
+                      ▾
                     </span>
-                    {(sprint.startDate || sprint.endDate) && (
-                      <span className={styles.sprintDates}>
-                        <RiCalendarLine size={11} />
-                        {sprint.startDate
-                          ? new Date(sprint.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                          : "—"}
-                        {" – "}
-                        {sprint.endDate
-                          ? new Date(sprint.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                          : "—"}
+                  </button>
+                  <div className={styles.sprintHeaderInfo}>
+                    <div className={styles.sprintTitleRow}>
+                      <span className={styles.sprintName}>{sprint.name}</span>
+                      <span
+                        className={`${styles.sprintStatusBadge} ${
+                          sprint.status === "active" ? styles.badgeActive : styles.badgePlanning
+                        }`}
+                      >
+                        {sprint.status === "active" ? "Active" : "Planning"}
                       </span>
-                    )}
-                    {sprint.goal && (
-                      <span className={styles.sprintGoal} title={sprint.goal}>
-                        {sprint.goal.length > 60 ? sprint.goal.slice(0, 60) + "…" : sprint.goal}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className={styles.sprintMeta}>
-                    <span className={styles.sprintIssueCount}>
-                      {sprint.tasks.length} issue{sprint.tasks.length !== 1 ? "s" : ""}
-                    </span>
-                    {sprint.totalPoints > 0 && (
-                      <>
-                        <span className={styles.metaDivider}>·</span>
-                        <span className={styles.sprintPoints}>
-                          {sprint.donePoints}/{sprint.totalPoints} pts
+                      {sprint.goal && (
+                        <span className={styles.sprintGoal} title={sprint.goal}>
+                          {sprint.goal.length > 55 ? sprint.goal.slice(0, 55) + "…" : sprint.goal}
                         </span>
-                        {sprint.status === "active" && (
-                          <div className={styles.sprintProgressWrap}>
-                            <div
-                              className={styles.sprintProgressBar}
-                              style={{ width: `${donePct}%` }}
-                            />
-                          </div>
-                        )}
-                      </>
-                    )}
+                      )}
+                    </div>
+                    <div className={styles.sprintMeta}>
+                      <span className={styles.sprintIssueCount}>
+                        {sprint.tasks.length} issue{sprint.tasks.length !== 1 ? "s" : ""}
+                      </span>
+                      {(sprint.startDate || sprint.endDate) && (
+                        <>
+                          <span className={styles.metaDivider}>·</span>
+                          <span className={styles.sprintDates}>
+                            <RiCalendarLine size={10} />
+                            {sprint.startDate
+                              ? new Date(sprint.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                              : "—"}
+                            {" – "}
+                            {sprint.endDate
+                              ? new Date(sprint.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                              : "—"}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
+                {/* Center: EOS health (active) or velocity ring (planning) */}
+                {(() => {
+                  const health = computeSprintHealth(sprint);
+                  if (health) {
+                    return (
+                      <div className={styles.sprintHeaderCenter}>
+                        <VelocityRing done={sprint.donePoints} total={sprint.totalPoints} />
+                        <div className={styles.healthInfo}>
+                          <div className={styles.healthTopRow}>
+                            <span className={styles.healthProb} style={{ color: health.color }}>
+                              {health.probability}%
+                            </span>
+                            <span
+                              className={styles.healthBadge}
+                              style={{ color: health.color, background: `${health.color}18`, border: `1px solid ${health.color}33` }}
+                            >
+                              {health.status === "on-track"
+                                ? <><RiCheckLine size={9} /> On Track</>
+                                : health.status === "at-risk"
+                                ? <><RiAlertLine size={9} /> At Risk</>
+                                : <><RiAlertLine size={9} /> Behind</>}
+                            </span>
+                          </div>
+                          <span className={styles.healthMeta}>
+                            {health.done}/{health.total} pts · {health.daysLeft}d left
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  if (sprint.totalPoints > 0) {
+                    return (
+                      <div className={styles.sprintHeaderCenter}>
+                        <VelocityRing done={sprint.donePoints} total={sprint.totalPoints} />
+                        <div className={styles.velocityLabel}>
+                          <span className={styles.velocityDone}>{sprint.donePoints}</span>
+                          <span className={styles.velocityTotal}>/{sprint.totalPoints} pts</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Right: action buttons */}
                 <div className={styles.sprintActions}>
                   {canManageSprints && sprint.status === "planning" && (
                     <button
                       className={styles.startSprintBtn}
                       onClick={() => setStartSprintModal(sprint)}
                     >
-                      <RiPlayCircleLine size={14} />
+                      <RiPlayCircleLine size={13} />
                       Start Sprint
                     </button>
                   )}
@@ -428,7 +476,7 @@ export default function BacklogTab({ project }: { project: Project }) {
                       className={styles.completeSprintBtn}
                       onClick={() => setCompleteSprintModal(sprint)}
                     >
-                      <RiCheckboxCircleLine size={14} />
+                      <RiCheckboxCircleLine size={13} />
                       Complete Sprint
                     </button>
                   )}
@@ -472,16 +520,26 @@ export default function BacklogTab({ project }: { project: Project }) {
                         />
                       ))
                     )}
-                    <div
-                      className={styles.addRow}
-                      onClick={() => {
-                        setCreateForSprint(sprint.id);
-                        setShowCreateDrawer(true);
-                      }}
-                    >
-                      <RiAddLine size={13} color="var(--text-3)" />
-                      <span className={styles.addRowText}>Create issue</span>
-                    </div>
+                    {quickCreateSprintId === sprint.id ? (
+                      <QuickCreateRow
+                        allTasks={allTasksPool}
+                        onConfirm={(title) => {
+                          setDefaultTitle(title);
+                          setCreateForSprint(sprint.id);
+                          setShowCreateDrawer(true);
+                          setQuickCreateSprintId(null);
+                        }}
+                        onCancel={() => setQuickCreateSprintId(null)}
+                      />
+                    ) : (
+                      <div
+                        className={styles.addRow}
+                        onClick={() => setQuickCreateSprintId(sprint.id)}
+                      >
+                        <RiAddLine size={12} color="var(--text-3)" />
+                        <span className={styles.addRowText}>Create issue</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -490,32 +548,33 @@ export default function BacklogTab({ project }: { project: Project }) {
         })}
 
         {/* ── Backlog Section ── */}
-        <div className={styles.sprintSection}>
+        <div className={`${styles.sprintSection} ${styles.backlogSection}`}>
           <div className={`${styles.sprintHeader} ${styles.backlogHeader}`}>
-            <button
-              className={styles.sprintCollapseBtn}
-              onClick={() => toggleCollapse("backlog")}
-            >
-              <span
-                className={styles.collapseArrow}
-                style={{ transform: collapsed.has("backlog") ? "rotate(-90deg)" : "none" }}
+            <div className={styles.sprintHeaderLeft}>
+              <button
+                className={styles.sprintCollapseBtn}
+                onClick={() => toggleCollapse("backlog")}
               >
-                ▾
-              </span>
-            </button>
-
-            <div className={styles.sprintHeaderInfo}>
-              <div className={styles.sprintTitleRow}>
-                <span className={styles.sprintName}>Backlog</span>
-                <span className={styles.sprintIssueCount}>
-                  {backlogTasks.length} issue{backlogTasks.length !== 1 ? "s" : ""}
+                <span
+                  className={styles.collapseArrow}
+                  style={{ transform: collapsed.has("backlog") ? "rotate(-90deg)" : "none" }}
+                >
+                  ▾
                 </span>
-                {totalBacklogSP > 0 && (
-                  <>
-                    <span className={styles.metaDivider}>·</span>
-                    <span className={styles.sprintPoints}>{totalBacklogSP} pts</span>
-                  </>
-                )}
+              </button>
+              <div className={styles.sprintHeaderInfo}>
+                <div className={styles.sprintTitleRow}>
+                  <span className={styles.sprintName}>Backlog</span>
+                  <span className={styles.sprintIssueCount}>
+                    {backlogTasks.length} issue{backlogTasks.length !== 1 ? "s" : ""}
+                  </span>
+                  {totalBacklogSP > 0 && (
+                    <>
+                      <span className={styles.metaDivider}>·</span>
+                      <span className={styles.sprintPoints}>{totalBacklogSP} pts</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -525,7 +584,7 @@ export default function BacklogTab({ project }: { project: Project }) {
                   className={styles.createSprintBtn}
                   onClick={() => setShowCreateSprintModal(true)}
                 >
-                  <RiAddLine size={14} />
+                  <RiAddLine size={13} />
                   Create Sprint
                 </button>
               )}
@@ -563,19 +622,30 @@ export default function BacklogTab({ project }: { project: Project }) {
                       }
                       onMoveToBacklog={undefined}
                       onClick={() => setViewingTask(task)}
+                      isBacklog
                     />
                   ))
                 )}
-                <div
-                  className={styles.addRow}
-                  onClick={() => {
-                    setCreateForSprint(undefined);
-                    setShowCreateDrawer(true);
-                  }}
-                >
-                  <RiAddLine size={13} color="var(--text-3)" />
-                  <span className={styles.addRowText}>Create issue</span>
-                </div>
+                {quickCreateSprintId === "backlog" ? (
+                  <QuickCreateRow
+                    allTasks={allTasksPool}
+                    onConfirm={(title) => {
+                      setDefaultTitle(title);
+                      setCreateForSprint(undefined);
+                      setShowCreateDrawer(true);
+                      setQuickCreateSprintId(null);
+                    }}
+                    onCancel={() => setQuickCreateSprintId(null)}
+                  />
+                ) : (
+                  <div
+                    className={styles.addRow}
+                    onClick={() => setQuickCreateSprintId("backlog")}
+                  >
+                    <RiAddLine size={12} color="var(--text-3)" />
+                    <span className={styles.addRowText}>Create issue</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -642,7 +712,9 @@ export default function BacklogTab({ project }: { project: Project }) {
         onClose={() => {
           setShowCreateDrawer(false);
           setCreateForSprint(undefined);
+          setDefaultTitle("");
         }}
+        initialData={defaultTitle ? { title: defaultTitle } : undefined}
         defaultStatus="To Do"
         defaultPod={project.key}
         members={project.members}
@@ -678,6 +750,58 @@ export default function BacklogTab({ project }: { project: Project }) {
           createMut.mutate(payload);
         }}
       />
+
+      {/* ── EOS Plan Sprint Drawer ── */}
+      {aiPlanResult && (
+        <>
+          <div className={styles.eosOverlay} onClick={() => setAiPlanResult(null)} />
+          <div className={styles.eosDrawer}>
+            <div className={styles.eosDrawerHeader}>
+              <div className={styles.eosDrawerTitle}>
+                <RiSparklingLine size={14} />
+                EOS Sprint Plan
+                {aiPlanResult.nova_powered
+                  ? <span className={styles.novaPoweredBadge}>AI</span>
+                  : <span className={styles.novaFallbackBadge}>Deterministic</span>}
+              </div>
+              <div className={styles.eosDrawerMeta}>
+                <span>{aiPlanResult.tickets.length} tickets</span>
+                <span>·</span>
+                <span className={styles.eosDrawerPts}>{aiPlanResult.total_points} pts</span>
+              </div>
+              <button className={styles.eosDrawerClose} onClick={() => setAiPlanResult(null)}>
+                <RiCloseLine size={16} />
+              </button>
+            </div>
+            {aiPlanResult.rationale && (
+              <p className={styles.eosDrawerRationale}>{aiPlanResult.rationale}</p>
+            )}
+            <div className={styles.eosDrawerTickets}>
+              {aiPlanResult.tickets.map((t) => {
+                const dotColor =
+                  t.priority === "Critical" || t.priority === "Highest"
+                    ? "var(--red)"
+                    : t.priority === "High"
+                    ? "var(--amber)"
+                    : "var(--accent)";
+                return (
+                  <div key={t.key} className={styles.eosTicket}>
+                    <div className={styles.eosTicketTop}>
+                      <span className={styles.eosTicketKey}>{t.key}</span>
+                      <span className={styles.eosTicketDot} style={{ background: dotColor }} title={t.priority} />
+                      <span className={styles.eosTicketTitle}>{t.summary}</span>
+                      <span className={styles.eosTicketSP}>{t.suggested_points}pt</span>
+                    </div>
+                    {t.rationale && (
+                      <p className={styles.eosTicketReason}>{t.rationale}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -692,8 +816,6 @@ function TableHeader() {
       <div className={styles.thCheck} />
       <div className={styles.thKey}>Key</div>
       <div className={styles.thTitle}>Summary</div>
-      <div className={styles.thType}>Type</div>
-      <div className={styles.thPriority}>Priority</div>
       <div className={styles.thStatus}>Status</div>
       <div className={styles.thAssignee}>Assignee</div>
       <div className={styles.thSP}>SP</div>
@@ -716,6 +838,7 @@ const TaskRow = React.memo(function TaskRow({
   onMoveToSprint,
   onMoveToBacklog,
   onClick,
+  isBacklog,
 }: {
   task: ProjectTask;
   selected: boolean;
@@ -725,9 +848,12 @@ const TaskRow = React.memo(function TaskRow({
   onMoveToSprint: (sprintId: string) => void;
   onMoveToBacklog: (() => void) | undefined;
   onClick?: () => void;
+  isBacklog?: boolean;
 }) {
   const priorityColor = getPriorityColor(task.priority);
   const statusColor = getTaskStatusColor(task.status);
+  const staleDays = _daysSince(task.updatedAt);
+  const isStale = staleDays >= 30;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -746,7 +872,8 @@ const TaskRow = React.memo(function TaskRow({
 
   return (
     <div
-      className={`${styles.row} ${selected ? styles.rowSelected : ""}`}
+      className={`${styles.row} ${selected ? styles.rowSelected : ""} ${menuOpen ? styles.rowMenuOpen : ""} ${isStale && isBacklog ? styles.rowStale : ""}`}
+      style={{ "--priority-color": priorityColor } as React.CSSProperties}
       onClick={onClick}
     >
       <div className={styles.tdCheck} onClick={(e) => e.stopPropagation()}>
@@ -763,20 +890,14 @@ const TaskRow = React.memo(function TaskRow({
       <div className={styles.tdTitle}>
         <span className={styles.issueTypeIcon}>{ISSUE_TYPE_ICONS[task.type] ?? "🔵"}</span>
         <span className={styles.titleText}>{task.title}</span>
-        {task.labels?.map((l) => (
-          <span key={l} className={styles.labelTag}>
-            {l}
+        {isStale && (
+          <span className={styles.staleBadge} title={`No updates in ${staleDays} days`}>
+            <RiAlertLine size={9} /> {staleDays}d
           </span>
+        )}
+        {task.labels?.map((l) => (
+          <span key={l} className={styles.labelTag}>{l}</span>
         ))}
-      </div>
-      <div className={styles.tdType}>
-        <span className={styles.typeChip}>{task.type}</span>
-      </div>
-      <div className={styles.tdPriority}>
-        <span className={styles.priorityDot} style={{ background: priorityColor }} />
-        <span className={styles.priorityLabel} style={{ color: priorityColor }}>
-          {task.priority}
-        </span>
       </div>
       <div className={styles.tdStatus}>
         <span
@@ -798,7 +919,7 @@ const TaskRow = React.memo(function TaskRow({
         </Tooltip>
       </div>
       <div className={styles.tdSP}>
-        <span className={styles.spBadge}>{task.storyPoints}</span>
+        <span className={styles.spBadge}>{task.storyPoints || "—"}</span>
       </div>
       <div className={styles.tdDue}>
         {task.dueDate ? (
@@ -828,7 +949,7 @@ const TaskRow = React.memo(function TaskRow({
           className={styles.actionMenuBtn}
           onClick={() => setMenuOpen((v) => !v)}
         >
-          <RiMore2Line size={15} />
+          <RiMore2Line size={14} />
         </button>
         {menuOpen && (
           <div className={styles.actionMenu}>
@@ -872,6 +993,64 @@ const TaskRow = React.memo(function TaskRow({
     </div>
   );
 });
+
+/* ══════════════════════════════════════════════════════════════════════════ */
+/*  Quick Create Row                                                          */
+/* ══════════════════════════════════════════════════════════════════════════ */
+
+function QuickCreateRow({
+  allTasks,
+  onConfirm,
+  onCancel,
+}: {
+  allTasks: ProjectTask[];
+  onConfirm: (title: string) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const duplicates = useMemo(() => _findDuplicates(title, allTasks), [title, allTasks]);
+
+  return (
+    <div className={styles.quickCreateWrap}>
+      <div className={styles.quickCreateInputRow}>
+        <RiAddLine size={13} color="var(--accent)" style={{ flexShrink: 0 }} />
+        <input
+          ref={inputRef}
+          className={styles.quickCreateInput}
+          placeholder="Issue title… (Enter to open, Esc to cancel)"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && title.trim()) onConfirm(title.trim());
+            if (e.key === "Escape") onCancel();
+          }}
+        />
+        {title.trim() && (
+          <button className={styles.quickCreateBtn} onClick={() => onConfirm(title.trim())}>
+            Create →
+          </button>
+        )}
+        <button className={styles.quickCreateCancel} onClick={onCancel}>✕</button>
+      </div>
+      {duplicates.length > 0 && (
+        <div className={styles.dupeBanner}>
+          <RiAlertLine size={11} style={{ flexShrink: 0 }} />
+          <span className={styles.dupeBannerLabel}>Similar tickets already exist:</span>
+          {duplicates.map((d) => (
+            <span key={d.key} className={styles.dupeChip}>
+              <span className={styles.dupeKey}>{d.key}</span>
+              {d.title.length > 45 ? d.title.slice(0, 45) + "…" : d.title}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ══════════════════════════════════════════════════════════════════════════ */
 /*  Start Sprint Modal                                                        */
@@ -965,7 +1144,7 @@ function StartSprintModal({
             disabled={isLoading}
           >
             {isLoading ? (
-              <><span className={styles.aiPriSpinner} /> Starting…</>
+              <><span className={styles.spinner} /> Starting…</>
             ) : (
               <><RiPlayCircleLine size={14} /> Start Sprint</>
             )}
@@ -1053,7 +1232,7 @@ function CompleteSprintModal({
             disabled={isLoading}
           >
             {isLoading ? (
-              <><span className={styles.aiPriSpinner} /> Completing…</>
+              <><span className={styles.spinner} /> Completing…</>
             ) : (
               <><RiCheckboxCircleLine size={14} /> Complete Sprint</>
             )}
@@ -1145,7 +1324,7 @@ function CreateSprintModal({
             disabled={isLoading || !name.trim()}
           >
             {isLoading ? (
-              <><span className={styles.aiPriSpinner} /> Creating…</>
+              <><span className={styles.spinner} /> Creating…</>
             ) : (
               <><RiAddLine size={14} /> Create Sprint</>
             )}
@@ -1159,6 +1338,19 @@ function CreateSprintModal({
 /* ══════════════════════════════════════════════════════════════════════════ */
 /*  Utils                                                                     */
 /* ══════════════════════════════════════════════════════════════════════════ */
+
+function _daysSince(dateStr: string | undefined): number {
+  if (!dateStr) return 0;
+  return Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000));
+}
+
+function _findDuplicates(title: string, tasks: ProjectTask[]): ProjectTask[] {
+  if (title.trim().length < 3) return [];
+  const words = title.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+  return tasks
+    .filter((t) => words.some((w) => t.title.toLowerCase().includes(w)))
+    .slice(0, 3);
+}
 
 function _normalizeStatus(s: string | undefined): string {
   if (!s) return "To Do";

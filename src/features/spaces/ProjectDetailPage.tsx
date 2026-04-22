@@ -22,12 +22,28 @@ import {
   RiTaskLine,
   RiBarChartBoxLine,
   RiFlashlightLine,
-  RiTimeLine,
   RiAddLine,
   RiSparklingLine,
   RiRoadMapLine,
   RiCalendar2Line,
+  RiCheckLine,
+  RiAlertLine,
 } from "react-icons/ri";
+
+function VelocityRing({ done, total, size = 28 }: { done: number; total: number; size?: number }) {
+  const r = (size - 4) / 2;
+  const circ = 2 * Math.PI * r;
+  const pct = total > 0 ? Math.min(done / total, 1) : 0;
+  const color = pct >= 1 ? "var(--green)" : pct >= 0.5 ? "var(--accent)" : "var(--amber)";
+  return (
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)", flexShrink: 0 }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border-2)" strokeWidth={2.5} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={2.5}
+        strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)} strokeLinecap="round"
+        style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+    </svg>
+  );
+}
 
 type Tab = "summary" | "backlog" | "board" | "sprints" | "roadmap" | "nova";
 
@@ -144,20 +160,35 @@ export default function ProjectDetailPage() {
 
   const statusColor = getStatusColor(project.status);
   const activeSprint = project.sprints.find((s) => s.status === "active");
-  const sprintPct =
-    activeSprint && activeSprint.totalPoints > 0
-      ? Math.round((activeSprint.donePoints / activeSprint.totalPoints) * 100)
-      : null;
-  const daysLeft =
-    activeSprint && activeSprint.endDate
-      ? Math.max(
-          0,
-          Math.ceil(
-            (new Date(activeSprint.endDate).getTime() - Date.now()) /
-              86_400_000,
-          ),
-        )
-      : null;
+
+  const sprintHealth = (() => {
+    if (!activeSprint?.startDate || !activeSprint?.endDate) return null;
+    const now = new Date();
+    const start = new Date(activeSprint.startDate);
+    const end = new Date(activeSprint.endDate);
+    const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86_400_000));
+    const daysElapsed = Math.max(1, Math.ceil((now.getTime() - start.getTime()) / 86_400_000));
+    const daysLeft = Math.max(0, totalDays - daysElapsed);
+    const done = activeSprint.donePoints;
+    const total = activeSprint.totalPoints;
+    const remaining = total - done;
+    const pace = done / daysElapsed;
+    const neededPace = daysLeft > 0 ? remaining / daysLeft : remaining > 0 ? 0 : pace;
+    const probability = Math.min(100, Math.round((neededPace > 0 ? pace / neededPace : 1) * 100));
+    const status = probability >= 80 ? "on-track" : probability >= 50 ? "at-risk" : "behind";
+    const color = status === "on-track" ? "var(--green)" : status === "at-risk" ? "var(--amber)" : "var(--red)";
+    const blockedCount = activeSprint.tasks.filter((t) => t.status === "Blocked").length;
+    const recommendation =
+      probability >= 80
+        ? "Sprint on track — protect the team from scope additions."
+        : probability >= 50
+        ? blockedCount > 0
+          ? `At risk — unblock ${blockedCount} ticket${blockedCount > 1 ? "s" : ""} immediately.`
+          : "At risk — consider moving low-priority items to backlog."
+        : "Behind — escalate blockers and negotiate scope now.";
+    const sprintPct = total > 0 ? Math.round((done / total) * 100) : 0;
+    return { probability, status, color, daysLeft, done, total, blockedCount, recommendation, sprintPct };
+  })();
 
   return (
     <div className={styles.page}>
@@ -212,89 +243,48 @@ export default function ProjectDetailPage() {
         </div>
 
         <div className={styles.headerRight}>
-          {activeSprint ? (
-            <div className={styles.sprintCard}>
-              <div className={styles.sprintCardHeader}>
-                <div className={styles.sprintCardStat}>
-                  <span
-                    className={styles.sprintCardStatVal}
-                    style={{ color: "var(--green)" }}
-                  >
-                    {activeSprint.donePoints}
-                  </span>
-                  <span className={styles.sprintCardStatLbl}>Done pts</span>
+          {activeSprint && sprintHealth ? (
+            <div className={styles.healthWidget}>
+              {/* Row 1: ring + probability + badge + bar + pts + days + blocked */}
+              <div className={styles.hwRow1}>
+                <VelocityRing done={sprintHealth.done} total={sprintHealth.total} size={28} />
+                <span className={styles.hwProb} style={{ color: sprintHealth.color }}>
+                  {sprintHealth.probability}%
+                </span>
+                <span
+                  className={styles.hwBadge}
+                  style={{ color: sprintHealth.color, background: `${sprintHealth.color}18`, border: `1px solid ${sprintHealth.color}33` }}
+                >
+                  {sprintHealth.status === "on-track"
+                    ? <><RiCheckLine size={9} /> On Track</>
+                    : sprintHealth.status === "at-risk"
+                    ? <><RiAlertLine size={9} /> At Risk</>
+                    : <><RiAlertLine size={9} /> Behind</>}
+                </span>
+                <div className={styles.hwBar}>
+                  <div className={styles.hwBarFill} style={{ width: `${sprintHealth.sprintPct}%`, background: sprintHealth.color }} />
                 </div>
-                <div className={styles.stripDivider} />
-                <div className={styles.sprintCardStat}>
-                  <span className={styles.sprintCardStatVal}>
-                    {activeSprint.totalPoints}
-                  </span>
-                  <span className={styles.sprintCardStatLbl}>Total pts</span>
-                </div>
-                {/* <div className={styles.stripDivider} /> */}
-
-                <div className={styles.sprintCardMeta}>
-                  {daysLeft !== null && (
-                    <span className={styles.sprintBadge}>
-                      <RiTimeLine size={11} />
-                      {daysLeft}d left
-                    </span>
-                  )}
-                  <span
-                    className={styles.sprintCardPct}
-                    style={{ color: podColor }}
-                  >
-                    {sprintPct ?? 0}%
-                  </span>
-                </div>
+                <span className={styles.hwStats}>{sprintHealth.done}/{sprintHealth.total} pts</span>
+                <span className={styles.hwDot}>·</span>
+                <span className={styles.hwStats}>{sprintHealth.daysLeft}d left</span>
+                {sprintHealth.blockedCount > 0 && (
+                  <>
+                    <span className={styles.hwDot}>·</span>
+                    <span className={styles.hwBlocked}>🚫 {sprintHealth.blockedCount}</span>
+                  </>
+                )}
               </div>
-              <div className={styles.sprintBarWrap}>
-                <div
-                  className={styles.sprintBarBg}
-                  style={{ background: `${podColor}22` }}
-                >
-                  <div
-                    className={styles.sprintBarFill}
-                    style={{
-                      width: `${sprintPct ?? 0}%`,
-                      background: `linear-gradient(90deg, ${podColor}, ${podColor}cc)`,
-                    }}
-                  />
-                </div>
+              {/* Row 2: EOS recommendation */}
+              <div className={styles.hwRow2}>
+                <RiSparklingLine size={9} color="var(--accent)" style={{ flexShrink: 0 }} />
+                <span className={styles.hwRec}>{sprintHealth.recommendation}</span>
               </div>
-              <div className={styles.sprintCardStats}></div>
-
-              {/* {!predictionLoaded && (
-                <button
-                  className={styles.predictionTrigger}
-                  onClick={() => loadPrediction(activeSprint)}
-                >
-                  <RiSparklingLine size={10} /> Ask EOS to predict
-                </button>
-              )}
-              {predictionLoaded && !predictionText && (
-                <div className={styles.predictionLoading}>
-                  <span className={styles.predDot} /> EOS analysing…
-                </div>
-              )}
-              {predictionText && (
-                <div
-                  className={styles.predictionChip}
-                  style={{
-                    borderColor: predictionText.startsWith("✓")
-                      ? "var(--green)"
-                      : "var(--amber)",
-                    color: predictionText.startsWith("✓")
-                      ? "var(--green)"
-                      : "var(--amber)",
-                    background: predictionText.startsWith("✓")
-                      ? "rgba(52,211,153,0.08)"
-                      : "rgba(251,191,36,0.08)",
-                  }}
-                >
-                  {predictionText}
-                </div>
-              )} */}
+            </div>
+          ) : activeSprint ? (
+            <div className={styles.healthWidget}>
+              <div className={styles.hwRow1}>
+                <span className={styles.hwStats}>{activeSprint.donePoints}/{activeSprint.totalPoints} pts</span>
+              </div>
             </div>
           ) : null}
         </div>

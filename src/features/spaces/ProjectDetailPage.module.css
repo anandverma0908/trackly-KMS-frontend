@@ -145,117 +145,101 @@
   color: var(--text-2);
 }
 
-/* Sprint card in header */
-.sprintCard {
-  min-width: 220px;
+/* ── Compact health widget in header ── */
+.healthWidget {
+  min-width: 280px;
+  max-width: 440px;
   background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: var(--r);
-  padding: 8px 12px;
+  padding: 7px 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
-.sprintCardHeader {
+.hwRow1 {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
-.sprintCardTitle {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.sprintCardMeta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: 30px;
-}
-
-.sprintBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 100px;
-  background: var(--accent-glow);
-  color: var(--accent);
-  border: 1px solid var(--accent-border);
-}
-
-.sprintCardPct {
+.hwProb {
   font-size: 14px;
   font-weight: 800;
   font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
-.sprintBarWrap {
-  width: 100%;
+.hwBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.sprintBarBg {
-  height: 5px;
-  border-radius: 100px;
+.hwBar {
+  flex: 1;
+  height: 3px;
+  background: var(--border-2);
+  border-radius: 99px;
+  overflow: hidden;
+  min-width: 40px;
+}
+
+.hwBarFill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+
+.hwStats {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.hwDot {
+  font-size: 10px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.hwBlocked {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--red);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.hwRow2 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   overflow: hidden;
 }
 
-.sprintBarFill {
-  height: 100%;
-  border-radius: 100px;
-  transition: width 0.6s ease;
-}
-
-.sprintCardStats {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.sprintCardStat {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-}
-
-.sprintCardStatVal {
-  font-size: 13px;
-  font-weight: 800;
-  font-family: var(--font-mono);
-}
-
-.sprintCardStatLbl {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-3);
-}
-
-.sprintCardEmpty {
-  min-width: 220px;
-  background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r);
-  padding: 12px 14px;
-  text-align: center;
-}
-
-.sprintCardEmptyText {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-3);
-  display: block;
-}
-
-.sprintCardEmptySub {
+.hwRec {
   font-size: 10px;
   color: var(--text-3);
-  opacity: 0.8;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
 }
 
 /* Accent line */

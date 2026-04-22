@@ -23,7 +23,6 @@ import {
   RiFilter3Line,
   RiSparklingLine,
   RiAlertLine,
-  RiCheckLine,
 } from "react-icons/ri";
 import { IssueTypeBadge } from "@/components/ui/Badge";
 
@@ -125,25 +124,6 @@ export default function ActiveSprintsTab({
     [activeSprints, project],
   );
 
-  /* ── Sprint Health (EOS) ── */
-  const sprintHealth = useMemo(() => {
-    if (!selectedSprint || selectedSprint.status !== "active") return null;
-    const now = new Date();
-    const start = new Date(selectedSprint.startDate);
-    const end   = new Date(selectedSprint.endDate);
-    const totalDays   = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86_400_000));
-    const daysElapsed = Math.max(1, Math.ceil((now.getTime() - start.getTime()) / 86_400_000));
-    const daysLeft    = Math.max(0, totalDays - daysElapsed);
-    const done        = selectedSprint.donePoints;
-    const total       = selectedSprint.totalPoints;
-    const remaining   = total - done;
-    const pace        = done / daysElapsed;
-    const neededPace  = daysLeft > 0 ? remaining / daysLeft : remaining > 0 ? 0 : pace;
-    const probability = Math.min(100, Math.round((neededPace > 0 ? pace / neededPace : 1) * 100));
-    const status      = probability >= 80 ? "on-track" : probability >= 50 ? "at-risk" : "behind";
-    const color       = status === "on-track" ? "var(--green)" : status === "at-risk" ? "var(--amber)" : "var(--red)";
-    return { probability, status, color, daysLeft, done, total, remaining };
-  }, [selectedSprint]);
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(
     new Set(),
   );
@@ -465,30 +445,6 @@ export default function ActiveSprintsTab({
           />
         </div>
       </div> */}
-
-      {/* ── EOS Sprint Health Bar ── */}
-      {sprintHealth && (
-        <div className={styles.healthStrip} style={{ borderColor: sprintHealth.color }}>
-          <div className={styles.healthStripLeft}>
-            <RiSparklingLine size={12} color="var(--accent)" />
-            <span className={styles.healthStripLabel}>EOS Sprint Health</span>
-            <span className={styles.healthStripProb} style={{ color: sprintHealth.color }}>
-              {sprintHealth.probability}%
-            </span>
-            <span className={styles.healthStripStatus} style={{ color: sprintHealth.color, borderColor: sprintHealth.color, background: `${sprintHealth.color}18` }}>
-              {sprintHealth.status === "on-track" ? <><RiCheckLine size={10} /> On Track</> : sprintHealth.status === "at-risk" ? <><RiAlertLine size={10} /> At Risk</> : <><RiAlertLine size={10} /> Behind</>}
-            </span>
-          </div>
-          <div className={styles.healthStripBar}>
-            <div className={styles.healthStripFill} style={{ width: `${sprintHealth.probability}%`, background: sprintHealth.color }} />
-          </div>
-          <div className={styles.healthStripStats}>
-            <span>{sprintHealth.done}/{sprintHealth.total} pts</span>
-            <span>·</span>
-            <span>{sprintHealth.daysLeft}d left</span>
-          </div>
-        </div>
-      )}
 
       {/* ── Flow Metrics Strip ── */}
       <FlowMetricsStrip tasks={allSprintTasks} />
