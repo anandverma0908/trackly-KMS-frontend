@@ -1,6 +1,6 @@
 import { DUMMY_SUMMARY, DUMMY_TICKETS, DUMMY_FILTERS, DUMMY_SPRINTS } from '@/utils/dummyData'
 import { MOCK_PROJECTS } from '@/features/spaces/spacesData'
-import type { FilterState, TicketCreate } from '@/types'
+import type { FilterState, TicketCreate, Goal, GoalsResponse } from '@/types'
 import type { Project } from '@/features/spaces/spacesData'
 
 const delay = (ms = 450) => new Promise(r => setTimeout(r, ms))
@@ -55,6 +55,58 @@ function _hashColor(name: string | null | undefined): string {
   for (const c of n) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff
   return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length]
 }
+
+/* ── Mock Goals ── */
+const DUMMY_GOALS: Goal[] = [
+  {
+    id: "g1",
+    quarter: "Q2 2025",
+    title: "Reduce API latency by 40%",
+    description: "Make Trackly feel instant. All API endpoints should respond under 200ms at p99.",
+    owner: "Priya S.",
+    status: "at_risk",
+    overall_progress: 52,
+    nova_insight: "At current velocity, you will miss this goal by ~2 weeks. TRK-142 (auth token refresh) is on the critical path — resolving it unlocks 3 downstream tickets worth ~8 points.",
+    linked_sprints: ["Sprint 8", "Sprint 9"],
+    key_results: [
+      { id: "kr1", title: "p99 latency < 200ms on /api/tickets", current: 280, target: 200, unit: "ms", linked_tickets: ["TRK-134", "TRK-141"], status: "at_risk" },
+      { id: "kr2", title: "Database query time < 50ms avg", current: 48, target: 50, unit: "ms", linked_tickets: ["TRK-129"], status: "on_track" },
+      { id: "kr3", title: "Nova query response < 3s p95", current: 2.1, target: 3, unit: "s", linked_tickets: ["TRK-156"], status: "on_track" },
+    ],
+  },
+  {
+    id: "g2",
+    quarter: "Q2 2025",
+    title: "Nova answers 80% of process questions accurately",
+    description: "Nova should be the team's first stop for 'how do we do X' questions, not Slack.",
+    owner: "Anand V.",
+    status: "behind",
+    overall_progress: 31,
+    nova_insight: "Missing structured data is the blocker. Only 5 ADRs and 0 runbooks are currently indexed. Adding Decisions + Processes to the knowledge base would immediately improve accuracy.",
+    linked_sprints: ["Sprint 9"],
+    key_results: [
+      { id: "kr4", title: "30+ ADRs in Decisions log", current: 5, target: 30, unit: "records", linked_tickets: ["TRK-161"], status: "behind" },
+      { id: "kr5", title: "10+ runbooks in Processes", current: 2, target: 10, unit: "runbooks", linked_tickets: ["TRK-163"], status: "behind" },
+      { id: "kr6", title: "Nova accuracy score ≥ 80% (internal eval)", current: 61, target: 80, unit: "%", linked_tickets: [], status: "behind" },
+    ],
+  },
+  {
+    id: "g3",
+    quarter: "Q2 2025",
+    title: "Ship duplicate detection + smart routing to 100% of users",
+    description: "The two biggest AI features that make Trackly feel magical in demos. Must be in production.",
+    owner: "Rahul M.",
+    status: "on_track",
+    overall_progress: 78,
+    nova_insight: "On track. Backend duplicate detection is complete. Frontend UI for routing is the last piece (TRK-156). At current velocity, this ships in Sprint 9.",
+    linked_sprints: ["Sprint 8", "Sprint 9"],
+    key_results: [
+      { id: "kr7", title: "Duplicate detection live banner in create drawer", current: 1, target: 1, unit: "shipped", linked_tickets: ["TRK-152"], status: "on_track" },
+      { id: "kr8", title: "Smart routing UI with explanation", current: 0, target: 1, unit: "shipped", linked_tickets: ["TRK-156"], status: "at_risk" },
+      { id: "kr9", title: "95% uptime for AI features", current: 99.1, target: 95, unit: "%", linked_tickets: [], status: "complete" },
+    ],
+  },
+];
 
 function _buildMockProject(pod: string): Project {
   const base = (MOCK_PROJECTS as any[]).find((p) => p.key === pod) || MOCK_PROJECTS[0]
@@ -286,6 +338,74 @@ export function enableMocks() {
       const t = DUMMY_TICKETS.tickets.find((x: any) => x.key === ticketKey || x.jira_key === ticketKey)
       if (t && (t as any).sprint_id === sprintId) (t as any).sprint_id = null
       return { sprintId, ticketKey }
+    },
+
+    /* ── Goals ── */
+    fetchGoals: async (quarter?: string) => {
+      await delay(350)
+      const goals = quarter ? DUMMY_GOALS.filter((g) => g.quarter === quarter) : [...DUMMY_GOALS]
+      const quarters = Array.from(new Set(DUMMY_GOALS.map((g) => g.quarter)))
+      return { goals, quarters } as GoalsResponse
+    },
+
+    fetchGoal: async (id: string) => {
+      await delay(250)
+      const g = DUMMY_GOALS.find((x) => x.id === id)
+      if (!g) throw new Error('Goal not found')
+      return g
+    },
+
+    createGoal: async (payload: any) => {
+      await delay(400)
+      const id = `g${Date.now()}`
+      const goal: Goal = {
+        id,
+        quarter: payload.quarter || 'Q2 2025',
+        title: payload.title || 'New Goal',
+        description: payload.description || '',
+        owner: payload.owner || 'Unassigned',
+        status: payload.status || 'on_track',
+        overall_progress: payload.overall_progress ?? 0,
+        key_results: payload.key_results || [],
+        linked_sprints: payload.linked_sprints || [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+      DUMMY_GOALS.push(goal)
+      return goal
+    },
+
+    updateGoal: async (id: string, payload: any) => {
+      await delay(350)
+      const g = DUMMY_GOALS.find((x) => x.id === id)
+      if (!g) throw new Error('Goal not found')
+      if (payload.title !== undefined) g.title = payload.title
+      if (payload.description !== undefined) g.description = payload.description
+      if (payload.owner !== undefined) g.owner = payload.owner
+      if (payload.status !== undefined) g.status = payload.status
+      if (payload.overall_progress !== undefined) g.overall_progress = payload.overall_progress
+      if (payload.key_results !== undefined) g.key_results = payload.key_results
+      if (payload.linked_sprints !== undefined) g.linked_sprints = payload.linked_sprints
+      if (payload.quarter !== undefined) g.quarter = payload.quarter
+      g.updated_at = new Date().toISOString()
+      return g
+    },
+
+    deleteGoal: async (id: string) => {
+      await delay(300)
+      const idx = DUMMY_GOALS.findIndex((x) => x.id === id)
+      if (idx !== -1) DUMMY_GOALS.splice(idx, 1)
+    },
+
+    fetchGoalNovaInsight: async (_goalId: string) => {
+      await delay(800)
+      const insights = [
+        "Velocity is 12% below the rolling average. Consider reducing scope or adding capacity in the next sprint.",
+        "Three tickets on the critical path have not been updated in 4+ days. Risk of missing the milestone is medium-high.",
+        "Team focus score is strong. No context-switching red flags. Maintain current allocation.",
+        "Key result #2 is blocked by an external dependency. Escalate to stakeholder by EOD to stay on track.",
+      ]
+      return insights[Math.floor(Math.random() * insights.length)]
     },
   }
   console.info('[EAP] Mock API enabled — using dummy data')

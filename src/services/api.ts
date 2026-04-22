@@ -26,6 +26,8 @@ import type {
   ClientBudget,
   BurnRateAlert,
   WorkloadEntry,
+  Goal,
+  GoalsResponse,
 } from "@/types";
 import type { Project } from "@/features/spaces/spacesData";
 import { getAuthHeader } from "@/features/auth/useAuthStore";
@@ -297,6 +299,20 @@ export async function uploadAttachment(key: string, file: File): Promise<TicketA
 
 export async function fetchTicketActivity(key: string): Promise<TicketActivity[]> {
   const { data } = await api.get(`/tickets/${key}/activity`);
+  return data;
+}
+
+export interface CodeContextResult {
+  connected: boolean;
+  files: { path: string; url: string; repo?: string }[];
+  prs: { number: string; title: string; status: "open" | "merged" | "closed"; url: string; repo?: string }[];
+  search_terms?: string[];
+}
+
+export async function fetchTicketCodeContext(key: string, title: string, description?: string): Promise<CodeContextResult> {
+  const { data } = await api.get(`/tickets/${encodeURIComponent(key)}/code-context`, {
+    params: { title, description: description?.slice(0, 500) ?? "" },
+  });
   return data;
 }
 
@@ -928,4 +944,34 @@ export async function fetchMyWork(): Promise<MyWorkResponse> {
 export async function logTime(ticketKey: string, hours: number, comment: string, date: string) {
   const { data } = await api.post(`/tickets/${ticketKey}/worklogs`, { hours, comment, date });
   return data;
+}
+
+/* ── Goals / OKRs ── */
+export async function fetchGoals(quarter?: string): Promise<GoalsResponse> {
+  const { data } = await api.get<GoalsResponse>("/goals", { params: quarter ? { quarter } : undefined });
+  return data;
+}
+
+export async function fetchGoal(id: string): Promise<Goal> {
+  const { data } = await api.get<Goal>(`/goals/${id}`);
+  return data;
+}
+
+export async function createGoal(payload: Omit<Goal, "id" | "created_at" | "updated_at" | "nova_insight">): Promise<Goal> {
+  const { data } = await api.post<Goal>("/goals", payload);
+  return data;
+}
+
+export async function updateGoal(id: string, payload: Partial<Omit<Goal, "id" | "created_at" | "updated_at">>): Promise<Goal> {
+  const { data } = await api.patch<Goal>(`/goals/${id}`, payload);
+  return data;
+}
+
+export async function deleteGoal(id: string): Promise<void> {
+  await api.delete(`/goals/${id}`);
+}
+
+export async function fetchGoalNovaInsight(goalId: string): Promise<string> {
+  const { data } = await api.post<{ insight: string }>("/nova/goals-insight", { goal_id: goalId });
+  return data.insight;
 }

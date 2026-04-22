@@ -5,6 +5,8 @@ export const QUERY_KEYS = {
   summary: (params: Record<string, string | string[] | null | undefined>) =>
     ["summary", params] as const,
   filters: () => ["filters"] as const,
+  goals: (quarter?: string) => ["goals", quarter] as const,
+  goal: (id: string) => ["goal", id] as const,
 } as const;
 
 /* ── Date presets ── */

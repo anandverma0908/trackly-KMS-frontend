@@ -116,8 +116,8 @@ function AnimatedRoutes() {
               <Route index element={<Navigate to="/my-work" replace />} />
               <Route path="/dashboard" element={<Navigate to="/my-work" replace />} />
               <Route path="/tickets" element={<TicketsPage />} />
-              <Route path="/kanban" element={<KanbanBoard />} />
-              <Route path="/sprints" element={<SprintPage />} />
+              {/* <Route path="/kanban" element={<KanbanBoard />} />
+              <Route path="/sprints" element={<SprintPage />} /> */}
               <Route path="/wiki" element={<WikiPage />} />
               <Route path="/standup" element={<StandupPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />

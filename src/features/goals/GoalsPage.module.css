@@ -399,3 +399,145 @@
   border-radius: 100px;
   padding: 2px 8px;
 }
+
+/* ── Goal actions ── */
+.goalActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.actionBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-2);
+  background: transparent;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.actionBtn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.actionBtnDanger:hover {
+  background: var(--red-glow);
+  color: var(--red);
+  border-color: var(--red);
+}
+
+/* ── Nova insight refresh ── */
+.novaInsightHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.novaLabel {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.novaRefresh {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-glow);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+}
+.novaRefresh:hover {
+  background: var(--accent-border);
+}
+.novaRefresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.novaText {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ── Empty state ── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: var(--text-3);
+  text-align: center;
+}
+.emptyState p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ── Skeleton loading ── */
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeletonCard {
+  height: 180px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ── Refresh button ── */
+.refreshBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--surface);
+  color: var(--text-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all 0.15s;
+}
+.refreshBtn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}

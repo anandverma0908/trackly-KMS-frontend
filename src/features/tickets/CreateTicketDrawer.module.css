@@ -1,9 +1,47 @@
 /* ── Create Ticket Drawer ── */
 
-.drawerBody {
+.bodyFlush {
+  padding: 0 !important;
+}
+
+.twoColumnLayout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  min-height: 100%;
+}
+
+.leftColumn {
+  padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  border-right: 1px solid var(--border);
+}
+
+.rightColumn {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* Classification grid stacks vertically in the narrow left column */
+.leftColumn .classificationGrid {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 900px) {
+  .twoColumnLayout {
+    grid-template-columns: 1fr;
+  }
+  .leftColumn {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .leftColumn .classificationGrid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
 }
 
 /* ── NOVA Panel ── */
@@ -673,36 +711,36 @@
 }
 
 /* ── MUI overrides scoped to drawer ── */
-.drawerBody :global(.MuiOutlinedInput-root) {
+.twoColumnLayout :global(.MuiOutlinedInput-root) {
   font-size: 13px;
   background: var(--surface);
   border-radius: 8px;
 }
-.drawerBody :global(.MuiOutlinedInput-root fieldset) {
+.twoColumnLayout :global(.MuiOutlinedInput-root fieldset) {
   border-color: var(--border-2);
   transition: border-color 0.15s;
 }
-.drawerBody :global(.MuiOutlinedInput-root:hover fieldset) {
+.twoColumnLayout :global(.MuiOutlinedInput-root:hover fieldset) {
   border-color: var(--border-3);
 }
-.drawerBody :global(.MuiOutlinedInput-root.Mui-focused fieldset) {
+.twoColumnLayout :global(.MuiOutlinedInput-root.Mui-focused fieldset) {
   border-color: var(--accent-border);
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
-.drawerBody :global(.MuiInputLabel-root) {
+.twoColumnLayout :global(.MuiInputLabel-root) {
   font-size: 12px;
   color: var(--text-3);
 }
-.drawerBody :global(.MuiInputLabel-root.Mui-focused) {
+.twoColumnLayout :global(.MuiInputLabel-root.Mui-focused) {
   color: var(--accent);
 }
-.drawerBody :global(.MuiInputBase-input) {
+.twoColumnLayout :global(.MuiInputBase-input) {
   color: var(--text);
 }
-.drawerBody :global(.MuiSelect-icon) {
+.twoColumnLayout :global(.MuiSelect-icon) {
   color: var(--text-3);
 }
-.drawerBody :global(.MuiAutocomplete-popper) {
+.twoColumnLayout :global(.MuiAutocomplete-popper) {
   font-size: 13px;
 }
 
@@ -1173,4 +1211,37 @@
   display: flex; align-items: center; gap: 5px;
   font-size: 0.68rem; color: var(--text-3);
   padding-top: 2px;
+}
+
+.codeCtxNoAccess {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; padding: 16px 12px; text-align: center;
+}
+.codeCtxNoAccessTitle {
+  font-size: 0.82rem; font-weight: 600; color: var(--text);
+}
+.codeCtxNoAccessDesc {
+  font-size: 0.75rem; color: var(--text-2); line-height: 1.5;
+  max-width: 300px;
+}
+.codeCtxSteps {
+  display: flex; flex-direction: column; gap: 6px;
+  width: 100%; text-align: left; margin-top: 4px;
+}
+.codeCtxStep {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 0.73rem; color: var(--text-2); line-height: 1.5;
+}
+.codeCtxStep code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 3px;
+  padding: 0px 4px; color: var(--accent);
+}
+.codeCtxStep strong { color: var(--text); font-weight: 600; }
+.codeCtxStepNum {
+  flex-shrink: 0; width: 18px; height: 18px;
+  background: var(--accent-glow); border: 1px solid var(--accent-border);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 700; color: var(--accent);
 }

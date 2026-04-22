@@ -340,6 +340,18 @@
   font-size: 12px;
 }
 
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 80px 24px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
 /* ── Release Notes ───────────────────────────────────────────────────────────── */
 .releaseVersionRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .releaseVersion { font-size: 15px; font-weight: 800; font-family: var(--font-mono); color: var(--accent); letter-spacing: -0.02em; }

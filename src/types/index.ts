@@ -535,3 +535,36 @@ export interface TimerState {
   ticketKey?: string
   ticketTitle?: string
 }
+
+/* ── Goals / OKRs ── */
+export type GoalStatus = "on_track" | "at_risk" | "behind" | "complete";
+
+export interface KeyResult {
+  id: string;
+  title: string;
+  current: number;
+  target: number;
+  unit: string;
+  linked_tickets: string[];
+  status: GoalStatus;
+}
+
+export interface Goal {
+  id: string;
+  quarter: string;
+  title: string;
+  description: string;
+  owner: string;
+  status: GoalStatus;
+  overall_progress: number;
+  key_results: KeyResult[];
+  nova_insight?: string;
+  linked_sprints: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface GoalsResponse {
+  goals: Goal[];
+  quarters: string[];
+}

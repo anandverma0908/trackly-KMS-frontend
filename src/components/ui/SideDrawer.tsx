@@ -28,6 +28,8 @@ interface SideDrawerProps {
 
   // Body content
   children: React.ReactNode;
+
+  bodyClassName?: string;
 }
 
 const SIZE_MAP: Record<DrawerSize, string> = {
@@ -46,6 +48,7 @@ export default function SideDrawer({
   badge,
   stats,
   footer,
+  bodyClassName,
   children,
 }: SideDrawerProps) {
   if (!open) return null;
@@ -94,7 +97,7 @@ export default function SideDrawer({
         )}
 
         {/* Body */}
-        <div className={styles.body}>{children}</div>
+        <div className={`${styles.body} ${bodyClassName || ""}`}>{children}</div>
 
         {/* Footer */}
         {footer && <div className={styles.footer}>{footer}</div>}
