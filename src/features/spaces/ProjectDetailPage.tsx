@@ -1,20 +1,15 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import {
-  fetchProject,
-  generateSprintRetro,
-  generateReleaseNotes,
-} from "@/services/api";
+import { useQuery } from "@tanstack/react-query";
+import { fetchProject } from "@/services/api";
 import { getPodColor } from "@/config/themes";
 import { getStatusColor } from "./spacesData";
 import BacklogTab from "./tabs/BacklogTab";
-import toast from "react-hot-toast";
-
 import SummaryTab from "./tabs/SummaryTab";
 import ActiveSprintsTab from "./tabs/ActiveSprintsTab";
 import RoadmapTab from "./tabs/RoadmapTab";
 import SprintsTab from "./tabs/SprintsTab";
+import EOSTab from "./tabs/EOSTab";
 import styles from "./ProjectDetailPage.module.css";
 
 import {
@@ -62,10 +57,7 @@ export default function ProjectDetailPage() {
   const [activeTab, setActiveTab] = useState<Tab>("summary");
   const [showCreateTask, setShowCreateTask] = useState(false);
 
-  /* ── EOS NOVA tab state ── */
-  const [retroResult, setRetroResult] = useState<string | null>(null);
-  const [releaseResult, setReleaseResult] = useState<string | null>(null);
-  // const [predictionLoaded, setPredictionLoaded] = useState(false);
+  /* ── EOS tab state (handled inside EOSTab component) ── */
 
   /* ── Fetch project data ── */
   const { data: project, isLoading } = useQuery({
@@ -77,62 +69,6 @@ export default function ProjectDetailPage() {
 
   const podColor = getPodColor(pod ?? "");
 
-  /* ── Sprint retro mutation ── */
-  const retroMut = useMutation({
-    mutationFn: (sprintId: string) => generateSprintRetro(sprintId),
-    onSuccess: (data) => {
-      const text =
-        data?.retro ?? data?.content ?? data?.result ?? JSON.stringify(data);
-      setRetroResult(text);
-      toast.success("Sprint retro generated!");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const releaseMut = useMutation({
-    mutationFn: (sprintId: string) => generateReleaseNotes(sprintId),
-    onSuccess: (data) => {
-      const text =
-        data?.release_notes ??
-        data?.content ??
-        data?.result ??
-        JSON.stringify(data);
-      setReleaseResult(text);
-      toast.success("Release notes generated!");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  /* ── Sprint prediction (lazy, fires once per project load) ── */
-  // async function loadPrediction(sprint: {
-  //   name: string;
-  //   donePoints: number;
-  //   totalPoints: number;
-  //   endDate?: string;
-  // }) {
-  //   if (predictionLoaded) return;
-  //   setPredictionLoaded(true);
-  //   const pct =
-  //     sprint.totalPoints > 0
-  //       ? Math.round((sprint.donePoints / sprint.totalPoints) * 100)
-  //       : 0;
-  //   const daysLeft = sprint.endDate
-  //     ? Math.max(
-  //         0,
-  //         Math.ceil(
-  //           (new Date(sprint.endDate).getTime() - Date.now()) / 86_400_000,
-  //         ),
-  //       )
-  //     : "unknown";
-  //   try {
-  //     const res = await novaQuery(
-  //       `Sprint "${sprint.name}" is ${pct}% done with ${daysLeft} days left. Done: ${sprint.donePoints}pts, Total: ${sprint.totalPoints}pts. In one short sentence (max 80 chars), predict if this sprint will complete on time. Start with ✓ if on track or ⚠ if at risk.`,
-  //     );
-  //     // setPredictionText(res.answer.split("\n")[0].trim());
-  //   } catch {
-  //     /* silent — prediction is non-critical */
-  //   }
-  // }
 
   if (isLoading) {
     return (
@@ -343,92 +279,7 @@ export default function ProjectDetailPage() {
             />
           )}
           {activeTab === "nova" && (
-            <div className={styles.novaTab}>
-              <div className={styles.novaTabHeader}>
-                <RiSparklingLine size={16} color="var(--accent)" />
-                <span className={styles.novaTabTitle}>EOS Intelligence</span>
-                <span className={styles.novaTabSub}>
-                  Powered by Llama 3.1 · 100% Local
-                </span>
-              </div>
-
-              <div className={styles.novaActions}>
-                {/* Sprint Retro */}
-                <div className={styles.novaCard}>
-                  <div className={styles.novaCardTitle}>
-                    <RiFlashlightLine size={14} color="var(--accent)" />
-                    Sprint Retrospective
-                  </div>
-                  <p className={styles.novaCardDesc}>
-                    EOS analyses all Done tickets from the active sprint and
-                    generates a structured retrospective — What went well,
-                    Delta, and Action items.
-                  </p>
-                  <button
-                    className={styles.novaGenBtn}
-                    disabled={!activeSprint || retroMut.isPending}
-                    onClick={() =>
-                      activeSprint && retroMut.mutate(activeSprint.id)
-                    }
-                  >
-                    {retroMut.isPending ? (
-                      <>
-                        <span className={styles.novaSpinner} /> Generating…
-                      </>
-                    ) : (
-                      <>
-                        <RiSparklingLine size={12} /> Generate Retro
-                      </>
-                    )}
-                  </button>
-                  {!activeSprint && (
-                    <p className={styles.novaCardEmpty}>
-                      No active sprint to generate retro for.
-                    </p>
-                  )}
-                  {retroResult && (
-                    <div className={styles.novaResult}>{retroResult}</div>
-                  )}
-                </div>
-
-                {/* Release Notes */}
-                <div className={styles.novaCard}>
-                  <div className={styles.novaCardTitle}>
-                    <RiTaskLine size={14} color="var(--accent)" />
-                    Release Notes
-                  </div>
-                  <p className={styles.novaCardDesc}>
-                    EOS groups all Done tickets by type (Features, Bug Fixes,
-                    Improvements) and produces a clean changelog ready to share.
-                  </p>
-                  <button
-                    className={styles.novaGenBtn}
-                    disabled={!activeSprint || releaseMut.isPending}
-                    onClick={() =>
-                      activeSprint && releaseMut.mutate(activeSprint.id)
-                    }
-                  >
-                    {releaseMut.isPending ? (
-                      <>
-                        <span className={styles.novaSpinner} /> Generating…
-                      </>
-                    ) : (
-                      <>
-                        <RiSparklingLine size={12} /> Generate Notes
-                      </>
-                    )}
-                  </button>
-                  {!activeSprint && (
-                    <p className={styles.novaCardEmpty}>
-                      No active sprint to generate notes for.
-                    </p>
-                  )}
-                  {releaseResult && (
-                    <div className={styles.novaResult}>{releaseResult}</div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <EOSTab project={project} activeSprint={activeSprint} pod={pod ?? ""} />
           )}
         </div>
       </div>

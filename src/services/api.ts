@@ -379,13 +379,11 @@ export async function novaQuery(query: string, scope?: 'all' | 'wiki'): Promise<
 
 /* ── Sprints ── */
 export async function fetchSprints(): Promise<Sprint[]> {
-  if (mock()?.fetchSprints) return mock().fetchSprints();
   const { data } = await api.get("/sprints");
   return data?.sprints ?? data ?? [];
 }
 
 export async function fetchSprint(id: string): Promise<Sprint> {
-  if (mock()?.fetchSprint) return mock().fetchSprint(id);
   const { data } = await api.get(`/sprints/${id}`);
   return data;
 }
@@ -435,27 +433,126 @@ export async function fetchVelocity(): Promise<VelocityPoint[]> {
 }
 
 export async function generateSprintRetro(sprintId: string) {
-  if (mock()?.generateSprintRetro) return mock().generateSprintRetro(sprintId);
-  if (mock()) {
-    await new Promise((r) => setTimeout(r, 1000));
-    return {
-      retro: `**Sprint Retrospective (Demo Mode)**\n\n✅ What went well: Team maintained steady velocity and delivered key features on time.\n\n⚠️ What could improve: A few tickets were blocked longer than expected — improve early escalation.\n\n💡 Action items:\n- Schedule a mid-sprint sync to catch blockers early\n- Break large stories into smaller sub-tasks\n- Update ticket estimates before sprint start\n\n_EOS AI is in demo mode. Connect the backend for real retrospective analysis._`,
-    };
-  }
   const { data } = await api.post(`/nova/sprint-retro/${sprintId}`);
   return data;
 }
 
 export async function generateReleaseNotes(sprintId: string) {
-  if (mock()?.generateReleaseNotes) return mock().generateReleaseNotes(sprintId);
-  if (mock()) {
-    await new Promise((r) => setTimeout(r, 1000));
-    return {
-      notes: `**Release Notes (Demo Mode)**\n\n## What's New\n- Implemented kanban board with drag-and-drop support\n- Added sprint burndown chart and velocity tracking\n- Introduced EOS AI assistant for smart insights\n\n## Bug Fixes\n- Resolved ticket status sync issues\n- Fixed member filter in active sprints view\n\n## Improvements\n- Improved dashboard load performance\n- Enhanced ticket detail drawer with comment threading\n\n_EOS AI is in demo mode. Connect the backend for real release notes._`,
-    };
-  }
   const { data } = await api.post(`/nova/release-notes/${sprintId}`);
   return data;
+}
+
+/* ── Sprint Capacity ── */
+export async function fetchSprintCapacity(sprintId: string): Promise<import("@/types").SprintCapacity> {
+  const { data } = await api.get(`/sprints/${sprintId}/capacity`);
+  return data;
+}
+
+export async function fetchSprintBurnUp(sprintId: string): Promise<import("@/types").BurnUpPoint[]> {
+  const { data } = await api.get(`/sprints/${sprintId}/burnup`);
+  return data?.data ?? data ?? [];
+}
+
+/* ── Sprint Lifecycle ── */
+export async function freezeSprintScope(sprintId: string) {
+  const { data } = await api.post(`/sprints/${sprintId}/scope-freeze`);
+  return data;
+}
+
+export async function extendSprint(sprintId: string, extraDays: number) {
+  const { data } = await api.post(`/sprints/${sprintId}/extend`, { extra_days: extraDays });
+  return data;
+}
+
+export async function beginEosReview(sprintId: string) {
+  const { data } = await api.post(`/sprints/${sprintId}/eos-review`);
+  return data;
+}
+
+/* ── Sprint Blockers ── */
+export async function fetchSprintBlockers(sprintId: string): Promise<import("@/types").SprintBlocker[]> {
+  const { data } = await api.get(`/sprints/${sprintId}/blockers`);
+  return data?.blockers ?? data ?? [];
+}
+
+export async function escalateBlocker(sprintId: string, ticketKey: string) {
+  const { data } = await api.post(`/sprints/${sprintId}/blockers/${ticketKey}/escalate`);
+  return data;
+}
+
+/* ── Sprint Dependencies ── */
+export async function fetchSprintDependencies(sprintId: string): Promise<import("@/types").SprintDependencyGraph> {
+  const { data } = await api.get(`/sprints/${sprintId}/dependencies`);
+  return data;
+}
+
+/* ── Sprint What-If ── */
+export async function runWhatIfSimulation(
+  sprintId: string,
+  changes: { type: 'reassign' | 'remove' | 'add' | 'extend' | 'split'; ticket_key?: string; target_user?: string; extra_days?: number; description: string }[]
+): Promise<import("@/types").WhatIfScenario[]> {
+  const { data } = await api.post(`/sprints/${sprintId}/what-if`, { changes });
+  return data?.scenarios ?? data ?? [];
+}
+
+/* ── Sprint Timeline ── */
+export async function fetchSprintTimeline(sprintId: string): Promise<import("@/types").TimelineEvent[]> {
+  const { data } = await api.get(`/sprints/${sprintId}/timeline`);
+  return data?.events ?? data ?? [];
+}
+
+/* ── Sprint Team ── */
+export async function fetchSprintTeam(sprintId: string): Promise<{ members: import("@/types").SprintMemberCapacity[]; roster: { user_id: string; name: string; role: string; avatar?: string; capacity_hours: number; assigned_points: number; ticket_count: number }[] }> {
+  const { data } = await api.get(`/sprints/${sprintId}/team`);
+  return data;
+}
+
+/* ── Sprint Wiki Gaps ── */
+export async function fetchSprintWikiGaps(sprintId: string): Promise<import("@/types").SprintWikiGap[]> {
+  const { data } = await api.get(`/sprints/${sprintId}/wiki-gaps`);
+  return data?.gaps ?? data ?? [];
+}
+
+/* ── Sprint Forecast ── */
+export async function fetchSprintForecast(sprintId: string): Promise<import("@/types").SprintForecast> {
+  const { data } = await api.get(`/sprints/${sprintId}/forecast`);
+  return data;
+}
+
+/* ── Sprint Drift ── */
+export async function fetchSprintDrift(sprintId: string): Promise<{ drift_points: import("@/types").BurndownPoint[]; anomalies: { date: string; type: string; severity: 'high' | 'medium' | 'low'; description: string }[]; nova_summary: string }> {
+  const { data } = await api.get(`/sprints/${sprintId}/drift`);
+  return data;
+}
+
+/* ── Velocity Trend ── */
+export async function fetchVelocityTrend(pod?: string): Promise<import("@/types").VelocityPoint[]> {
+  const { data } = await api.get("/analytics/velocity-trend", { params: pod ? { pod } : {} });
+  return data?.data ?? data ?? [];
+}
+
+/* ── Sprint Comparison ── */
+export async function fetchSprintComparison(sprintA: string, sprintB: string): Promise<import("@/types").SprintComparison> {
+  const { data } = await api.get("/sprints/compare", { params: { sprint_a: sprintA, sprint_b: sprintB } });
+  return data;
+}
+
+/* ── Sprint Risk Heatmap ── */
+export async function fetchSprintRiskHeatmap(sprintId: string): Promise<import("@/types").SprintRiskTicket[]> {
+  const { data } = await api.get(`/sprints/${sprintId}/risk-heatmap`);
+  return data?.tickets ?? data ?? [];
+}
+
+/* ── Sprint AI Chat ── */
+export async function sendSprintChat(sprintId: string, message: string, history: { role: string; text: string }[]): Promise<import("@/types").SprintChatMessage> {
+  const { data } = await api.post(`/nova/sprint-chat/${sprintId}`, { message, history });
+  return {
+    id: data.id ?? `msg_${Date.now()}`,
+    role: 'assistant',
+    text: data.answer ?? data.text ?? "",
+    citations: data.citations ?? [],
+    created_at: data.created_at ?? new Date().toISOString(),
+  };
 }
 
 /* ── Standup ── */

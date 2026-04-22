@@ -1,145 +1,906 @@
-.tab { display: flex; flex-direction: column; gap: 16px; padding: 20px 0; }
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 18px 20px;
+.tab {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 0;
 }
-.cardHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.cardTitle  { font-size: 0.88rem; font-weight: 700; }
-.cardMeta   { font-size: 0.76rem; color: var(--text-3); }
 
-/* Health card */
-.healthCard {
+/* Sprint Tabs */
+.sprintTabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.sprintTab {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 0.8rem;
+  padding: 5px 11px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sprintTab:hover { border-color: var(--accent); color: var(--text); }
+.sprintTabActive { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
+
+.sprintStatus {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+}
+.status_planning  { background: var(--amber); }
+.status_active    { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status_scope_freeze { background: var(--accent); }
+.status_eos_review { background: var(--violet); }
+.status_completed { background: var(--text-3); }
+
+.sprintTabLive {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--green);
+  background: rgba(52, 211, 153, 0.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* Sprint Info */
+.sprintInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sprintMeta {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sprintName { font-weight: 600; font-size: 0.92rem; }
+.sprintGoal { color: var(--text-3); font-style: italic; font-size: 0.8rem; }
+
+.sprintActions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Status Flow */
+.statusFlow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+.statusFlowStep {
+  color: var(--text-3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-2);
+}
+.statusFlowDone { color: var(--green); background: rgba(52, 211, 153, 0.1); }
+.statusFlowCurrent { color: var(--accent); background: var(--accent-glow); border: 1px solid var(--accent-border); }
+
+/* Capacity Load Bar */
+.capacityLoadBar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.capacityLoadInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--text-2);
+  flex-wrap: wrap;
+}
+.capacityLoadInfo strong { color: var(--text); }
+.loadNormal { color: var(--green); font-weight: 700; }
+.loadHigh { color: var(--amber); font-weight: 700; }
+.loadOver { color: var(--red); font-weight: 700; }
+.capacityAiRec {
+  display: flex; align-items: center; gap: 4px;
+  color: var(--accent);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+.capacityLoadTrack {
+  height: 5px;
+  background: var(--border-2);
+  border-radius: 99px;
+  overflow: hidden;
+  display: flex;
+}
+.capacityLoadFill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+.capacityLoadHigh { background: var(--amber); }
+.capacityLoadOver { background: var(--red); }
+.capacityLoadOverflow {
+  height: 100%;
+  background: var(--red);
+  opacity: 0.5;
+  border-radius: 0 99px 99px 0;
+}
+
+/* View Tabs */
+.viewTabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.viewTabs::-webkit-scrollbar { display: none; }
+
+.viewTab {
+  display: flex; align-items: center; gap: 5px;
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-size: 0.8rem;
+  padding: 7px 12px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.viewTab:hover { color: var(--text); }
+.viewTabActive { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Retro Panel */
+.retroPanel {
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 16px;
+}
+.retroHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.retroClose {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+.retroClose:hover { color: var(--text); background: var(--surface); }
+
+.novaBadge {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--accent); font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.novaGlow {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.retroText {
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--text-2);
+  white-space: pre-wrap;
+  margin: 0;
+  font-family: var(--font-sans);
+}
+
+/* Empty */
+.empty {
+  font-size: 0.8rem;
+  color: var(--text-3);
+  padding: 16px;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Chart Card */
+.chartCard {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  padding: 18px 20px;
+  padding: 18px;
+}
+
+.chartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chartTitle {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.chartAiInsight {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Anomaly List */
+.anomalyList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+.anomalyItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border-radius: 7px;
+  font-size: 0.78rem;
+  border: 1px solid;
+}
+.anomaly_high {
+  background: rgba(248, 113, 113, 0.06);
+  border-color: rgba(248, 113, 113, 0.2);
+  color: var(--red);
+}
+.anomaly_medium {
+  background: rgba(251, 191, 36, 0.06);
+  border-color: rgba(251, 191, 36, 0.2);
+  color: var(--amber);
+}
+.anomaly_low {
+  background: rgba(79, 126, 255, 0.06);
+  border-color: rgba(79, 126, 255, 0.2);
+  color: var(--accent);
+}
+.anomalyTag {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-2);
+  margin-left: auto;
+}
+
+/* Forecast Overlay */
+.forecastOverlay {
+  margin-top: 12px;
+  padding: 10px;
+  background: var(--bg-2);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-2);
+}
+.forecastRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--text-2);
+}
+.forecastRow strong { color: var(--text); }
+.forecastProb {
+  margin-left: auto;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-glow);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   BOARD VIEW
+   ══════════════════════════════════════════════════════════ */
+.boardView {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.boardColumn {
+  min-width: 240px;
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  display: flex;
+  flex-direction: column;
+  max-height: 520px;
+}
+
+.boardColHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.boardColCount {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  background: var(--bg-2);
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+
+.boardColBody {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.boardCard {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 9px 11px;
+  cursor: grab;
+  transition: all 0.15s;
+}
+.boardCard:hover {
+  border-color: var(--accent);
+}
+
+.boardCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.boardCardKey {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.boardCardType {
+  font-size: 0.68rem;
+  color: var(--text-3);
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.boardCardTitle {
+  font-size: 0.8rem;
+  color: var(--text);
+  line-height: 1.35;
+  margin-bottom: 6px;
+}
+
+.boardCardMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+.boardCardAssignee {
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.boardCardPoints {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+/* ══════════════════════════════════════════════════════════
+   BACKLOG VIEW
+   ══════════════════════════════════════════════════════════ */
+.backlogView {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.backlogPanel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.84rem;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.panelCount {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  background: var(--bg-2);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.capacityBarWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.capacityBar {
+  flex: 1;
+  height: 4px;
+  background: var(--border-2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.capacityFill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+.capacityFillHigh { background: var(--amber); }
+.capacityFillOver { background: var(--red); }
+.capacityLabel {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ticketList {
+  max-height: 440px;
+  overflow-y: auto;
+}
+
+.backlogRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  transition: background 0.1s;
+}
+.backlogRow:hover { background: var(--surface-2); }
+.backlogRow:last-child { border-bottom: none; }
+
+.backlogKey {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 600;
+  min-width: 60px;
+}
+
+.backlogTitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.backlogType {
+  font-size: 0.68rem;
+  color: var(--text-3);
+  background: var(--bg-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.backlogStatus {
+  font-size: 0.68rem;
+  color: var(--text-3);
+}
+
+/* ══════════════════════════════════════════════════════════
+   CAPACITY VIEW
+   ══════════════════════════════════════════════════════════ */
+.capacityView {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-.healthHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.healthHeaderLeft { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.healthTitle { font-size: 0.9rem; font-weight: 700; }
-.statusDot { width: 7px; height: 7px; border-radius: 50%; }
-.activeLabel { font-size: 0.72rem; font-weight: 700; color: var(--accent); }
-.eosBadge {
-  display: inline-flex; align-items: center; gap: 3px;
-  background: var(--accent-glow); border: 1px solid var(--accent-border);
-  color: var(--accent); font-size: 0.66rem; font-weight: 700;
-  letter-spacing: 0.08em; padding: 2px 7px; border-radius: 99px;
+
+.capacitySummary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
 }
-.sprintDates { display: flex; align-items: center; gap: 5px; font-size: 0.76rem; color: var(--text-3); flex-shrink: 0; }
-
-.healthBody { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
-.healthMeter { flex: 1; min-width: 200px; }
-.healthProbRow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
-.healthProbVal { font-size: 2rem; font-weight: 800; font-family: var(--font-mono); line-height: 1; }
-.healthProbLbl { font-size: 0.78rem; color: var(--text-3); flex: 1; }
-.healthStatusChip { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 99px; border: 1px solid; flex-shrink: 0; }
-.healthProbBar { height: 6px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
-.healthProbFill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
-
-.healthStats { display: flex; gap: 20px; flex-wrap: wrap; }
-.healthStat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.healthStatVal { font-size: 1.1rem; font-weight: 800; font-family: var(--font-mono); }
-.healthStatLbl { font-size: 0.68rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }
-
-.healthRec {
-  display: flex; align-items: flex-start; gap: 7px;
-  background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: var(--r-sm); padding: 10px 12px;
-  font-size: 0.82rem; color: var(--text-2); line-height: 1.5;
+@media (max-width: 700px) {
+  .capacitySummary { grid-template-columns: repeat(2, 1fr); }
 }
 
-.atRiskList { display: flex; flex-direction: column; gap: 5px; }
-.atRiskLabel { font-size: 0.72rem; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; display: block; }
-.atRiskItem { display: flex; align-items: center; gap: 10px; padding: 7px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 0.8rem; }
-.atRiskKey   { font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent); font-weight: 700; flex-shrink: 0; }
-.atRiskTitle { flex: 1; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.atRiskStatus { font-size: 0.72rem; font-weight: 600; flex-shrink: 0; }
-
-.sprintGoalRow { display: flex; align-items: baseline; gap: 6px; font-size: 0.8rem; }
-.sprintGoalLabel { color: var(--text-3); font-weight: 600; }
-.sprintGoalText  { color: var(--text-2); font-style: italic; }
-
-.noActive {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 0.85rem; color: var(--text-3);
-  background: var(--surface); border: 1px dashed var(--border-2);
-  border-radius: var(--r); padding: 20px; text-align: center; justify-content: center;
-}
-
-/* Sprint list */
-.sprintList { display: flex; flex-direction: column; }
-.sprintRow {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 11px 0; border-bottom: 1px solid var(--border); gap: 16px;
-}
-.sprintRow:last-child { border-bottom: none; }
-.sprintRowLeft { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; }
-.sprintStatusDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
-.sprintRowName { font-size: 0.88rem; font-weight: 600; margin-bottom: 3px; }
-.sprintRowMeta { display: flex; gap: 6px; font-size: 0.74rem; color: var(--text-3); flex-wrap: wrap; }
-.sprintRowGoal { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
-.sprintRowRight { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.sprintStatusBadge { font-size: 0.7rem; font-weight: 700; padding: 2px 9px; border-radius: 99px; border: 1px solid; }
-.sprintPts { font-size: 0.8rem; color: var(--text-2); }
-.sprintPtsSep { color: var(--text-3); }
-.miniBar { width: 80px; height: 4px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
-.miniBarFill { height: 100%; border-radius: 99px; }
-.sprintPct { font-size: 0.78rem; font-weight: 700; font-family: var(--font-mono); color: var(--text-2); min-width: 36px; text-align: right; }
-.empty { font-size: 0.85rem; color: var(--text-3); padding: 16px 0; }
-
-/* ── Smart Sprint Planning Assistant ── */
-.planningCard {
+.capacityCard {
   background: var(--surface);
-  border: 1px solid var(--accent-border, rgba(79,126,255,0.3));
+  border: 1px solid var(--border);
   border-radius: var(--r);
-  padding: 16px;
-  display: flex; flex-direction: column; gap: 14px;
-  position: relative;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.planningHeader {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 0.84rem; font-weight: 600; color: var(--text);
-}
-.planningTitle { flex: 1; }
-.planningDismiss {
-  background: none; border: none; color: var(--text-3);
-  cursor: pointer; font-size: 0.8rem; padding: 2px 4px;
+.capacityCardVal {
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text);
   line-height: 1;
 }
-.planningDismiss:hover { color: var(--text); }
 
-.planningGrid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+.capacityCardLbl {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
-.planningMetric {
-  display: flex; flex-direction: column; gap: 2px;
+
+.capacityTableWrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.capacityTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.capacityTable th {
+  text-align: left;
+  padding: 9px 12px;
+  background: var(--surface-2);
+  color: var(--text-3);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.capacityTable td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.capacityRowOver {
+  background: rgba(248, 113, 113, 0.04);
+}
+
+.capacityMember {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.capacityAvatarFallback {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-glow);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.skillBar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 70px;
+}
+
+.skillBar > span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-3);
+  min-width: 26px;
+}
+
+.skillFill {
+  flex: 1;
+  height: 3px;
+  background: var(--green);
+  border-radius: 99px;
+}
+
+.capacityOverBadge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--red);
+  background: rgba(248, 113, 113, 0.12);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.capacityOkBadge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--green);
+  background: rgba(52, 211, 153, 0.12);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.capacityAiRecBox {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   padding: 10px 12px;
-  background: var(--surface-2); border: 1px solid var(--border);
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
   border-radius: var(--r-sm);
-}
-.planningMetricVal { font-size: 1.1rem; font-weight: 800; color: var(--text); }
-.planningMetricLbl { font-size: 0.68rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; }
-
-.planningRec {
-  display: flex; align-items: flex-start; gap: 8px;
-  padding: 10px 12px;
-  background: var(--surface-2); border-radius: var(--r-sm);
-  font-size: 0.82rem; color: var(--text-2); line-height: 1.55;
+  font-size: 0.8rem;
+  color: var(--text-2);
 }
 
-.planningActions { display: flex; gap: 8px; }
-.planningBtn {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: none; border: 1px solid var(--border);
-  border-radius: var(--r-sm); padding: 7px 14px;
-  font-size: 0.8rem; color: var(--text-2); cursor: pointer;
-  font-family: var(--font-sans); transition: all 0.15s;
+.capacityAiRecIcon {
+  color: var(--accent);
+  flex-shrink: 0;
 }
-.planningBtn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ══════════════════════════════════════════════════════════
+   TIMELINE VIEW
+   ══════════════════════════════════════════════════════════ */
+.timelineView {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px;
+}
+
+.timelineHeader {
+  margin-bottom: 14px;
+}
+
+.timelineDates {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+.timelineArrow {
+  color: var(--accent);
+}
+
+.timelineGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.timelineRow {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+@media (max-width: 800px) {
+  .timelineRow { grid-template-columns: 1fr; gap: 3px; }
+}
+
+.timelineRowLabel {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.78rem;
+  overflow: hidden;
+}
+
+.timelineKey {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--accent);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.timelineSummary {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.timelineAssignee {
+  font-size: 0.7rem;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.timelineTrack {
+  position: relative;
+  height: 18px;
+  background: var(--bg-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.timelineBar {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  background: var(--accent);
+  border-radius: 3px;
+  opacity: 0.7;
+  overflow: hidden;
+}
+
+.timelineBarCritical {
+  background: var(--red);
+  opacity: 0.8;
+}
+
+.timelineProgress {
+  height: 100%;
+  background: rgba(255,255,255,0.35);
+}
+
+/* ══════════════════════════════════════════════════════════
+   TEAM VIEW
+   ══════════════════════════════════════════════════════════ */
+.teamView {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.teamGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.teamCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.teamCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.teamAvatarFallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-glow);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.teamCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.teamCardName {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.teamCardRole {
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+.teamCardStats {
+  display: flex;
+  gap: 14px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.teamCardStats > div {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+.teamCardStats strong {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+.teamCardTickets {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.teamTicketChip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 7px;
+  background: var(--bg-2);
+  border-radius: 4px;
+  font-size: 0.72rem;
+}
+
+.teamTicketChip span:first-child {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.teamTicketMore {
+  font-size: 0.7rem;
+  color: var(--text-3);
+  text-align: center;
+  padding: 2px 0;
+}

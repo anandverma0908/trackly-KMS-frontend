@@ -23,6 +23,7 @@ import DecisionsPage from "@/features/decisions/DecisionsPage";
 import ProcessesPage from "@/features/processes/ProcessesPage";
 import GoalsPage from "@/features/goals/GoalsPage";
 import KanbanBoard from "@/features/kanban/KanbanBoard";
+import SprintPage from "@/features/sprint/SprintPage";
 
 function useRouteDirection() {
   const location = useLocation();
@@ -116,6 +117,7 @@ function AnimatedRoutes() {
               <Route path="/dashboard" element={<Navigate to="/my-work" replace />} />
               <Route path="/tickets" element={<TicketsPage />} />
               <Route path="/kanban" element={<KanbanBoard />} />
+              <Route path="/sprints" element={<SprintPage />} />
               <Route path="/wiki" element={<WikiPage />} />
               <Route path="/standup" element={<StandupPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />

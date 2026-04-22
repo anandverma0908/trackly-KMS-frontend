@@ -255,7 +255,7 @@ export interface OrgMember {
 }
 
 /* ── Sprint ── */
-export type SprintStatus = 'planning' | 'active' | 'completed'
+export type SprintStatus = 'planning' | 'active' | 'scope_freeze' | 'eos_review' | 'completed'
 
 export interface Sprint {
   id:              string
@@ -278,12 +278,169 @@ export interface BurndownPoint {
   ideal:      number
   actual:     number
   scope?:     number
+  trend?:     number
+  drift?:     number
+  anomaly?:   boolean
 }
 
 export interface VelocityPoint {
   sprint:      string
   committed:   number
   completed:   number
+  predicted?:  number
+  lower_bound?: number
+  upper_bound?: number
+}
+
+/* ── Sprint Capacity ── */
+export interface SprintMemberCapacity {
+  user_id:       string
+  name:          string
+  avatar?:       string
+  role:          string
+  total_hours:   number
+  allocated_hours: number
+  available_hours: number
+  pto_days:      number
+  skill_match_pct: number
+  tickets:       { key: string; summary: string; points: number; hours: number }[]
+  overloaded:    boolean
+}
+
+export interface SprintCapacity {
+  sprint_id:     string
+  total_capacity_hours: number
+  allocated_hours: number
+  available_hours: number
+  utilization_pct: number
+  members:       SprintMemberCapacity[]
+  nova_powered:  boolean
+  recommendation?: string
+}
+
+export interface BurnUpPoint {
+  date:          string
+  planned:       number
+  completed:     number
+  capacity:      number
+  scope_changes: number
+}
+
+/* ── Sprint Blockers ── */
+export interface SprintBlocker {
+  key:           string
+  summary:       string
+  status:        string
+  assignee:      string
+  blocked_since: string
+  hours_blocked: number
+  blocking_count: number
+  escalation_level: 'none' | 'alert' | 'escalated' | 'critical'
+  ai_reason:     string
+  suggested_action: string
+}
+
+/* ── Sprint Dependencies ── */
+export interface SprintDependencyNode {
+  key:           string
+  summary:       string
+  status:        string
+  assignee:      string
+  points:        number
+  x:             number
+  y:             number
+  critical_path: boolean
+  risk_level:    'low' | 'medium' | 'high'
+}
+
+export interface SprintDependencyEdge {
+  from:          string
+  to:            string
+  type:          'blocks' | 'relates_to' | 'duplicates'
+}
+
+export interface SprintDependencyGraph {
+  nodes:         SprintDependencyNode[]
+  edges:         SprintDependencyEdge[]
+  critical_path_length: number
+  slack_tickets: string[]
+  nova_analysis: string
+}
+
+/* ── Sprint What-If ── */
+export interface WhatIfScenario {
+  id:            string
+  name:          string
+  changes:       { type: 'reassign' | 'remove' | 'add' | 'extend' | 'split'; ticket_key?: string; description: string }[]
+  predicted_completion_pct: number
+  predicted_velocity: number
+  risk_change:   number
+  capacity_impact: number
+  days_impact:   number
+  recommendation: string
+}
+
+/* ── Sprint Timeline ── */
+export interface TimelineEvent {
+  key:           string
+  summary:       string
+  assignee:      string
+  start:         string
+  end:           string
+  status:        string
+  progress_pct:  number
+  dependencies:  string[]
+  critical_path: boolean
+}
+
+/* ── Sprint Forecast ── */
+export interface SprintForecast {
+  sprint_id:     string
+  current_probability: number
+  trend_probability: number
+  predicted_completion_date: string | null
+  predicted_points: number
+  confidence_interval: { lower: number; upper: number }
+  risk_factors:  { factor: string; impact: number; severity: 'high' | 'medium' | 'low' }[]
+  nova_summary:  string
+  historical_accuracy: number
+}
+
+/* ── Sprint Risk Heatmap ── */
+export interface SprintRiskTicket {
+  key:           string
+  summary:       string
+  assignee:      string
+  risk_score:    number
+  risk_factors:  { name: string; score: number }[]
+  days_in_status: number
+  deadline_risk: 'none' | 'near' | 'overdue'
+}
+
+/* ── Sprint Wiki Gaps ── */
+export interface SprintWikiGap {
+  topic:         string
+  ticket_count:  number
+  example_tickets: string[]
+  suggested_article_title: string
+  priority:      'high' | 'medium' | 'low'
+}
+
+/* ── Sprint Chat ── */
+export interface SprintChatMessage {
+  id:            string
+  role:          'user' | 'assistant'
+  text:          string
+  citations?:    { key: string; title: string; quote: string }[]
+  created_at:    string
+}
+
+/* ── Sprint Comparison ── */
+export interface SprintComparison {
+  sprint_a:      { name: string; committed: number; completed: number; velocity: number; blockers: number }
+  sprint_b:      { name: string; committed: number; completed: number; velocity: number; blockers: number }
+  delta:         { committed: number; completed: number; velocity: number; blockers: number }
+  nova_insight:  string
 }
 
 /* ── Standup ── */

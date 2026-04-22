@@ -3,6 +3,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-width: 1400px;
 }
 
 .header {
@@ -42,25 +43,42 @@
   border-radius: 50%;
 }
 .status_planning  { background: var(--amber); }
-.status_active    { background: var(--green); }
+.status_active    { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status_scope_freeze { background: var(--accent); }
+.status_eos_review { background: var(--violet); }
 .status_completed { background: var(--text-3); }
+
+.sprintTabLive {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--green);
+  background: rgba(52, 211, 153, 0.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
 
 /* View Tabs */
 .viewTabs {
   display: flex;
   gap: 2px;
   border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.viewTabs::-webkit-scrollbar { display: none; }
 
 .viewTab {
+  display: flex; align-items: center; gap: 5px;
   background: none;
   border: none;
   color: var(--text-2);
-  font-size: 0.85rem;
-  padding: 8px 16px;
+  font-size: 0.82rem;
+  padding: 8px 14px;
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all 0.15s;
+  white-space: nowrap;
 }
 .viewTab:hover     { color: var(--text); }
 .viewTabActive     { color: var(--accent); border-bottom-color: var(--accent); }
@@ -74,16 +92,88 @@
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   padding: 10px 14px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .sprintMeta {
   display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
 }
 
 .sprintName { font-weight: 600; font-size: 0.95rem; }
 .sprintGoal { color: var(--text-3); font-style: italic; font-size: 0.82rem; }
 
-.sprintActions { display: flex; gap: 8px; }
+.sprintActions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Status Flow */
+.statusFlow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+.statusFlowStep {
+  color: var(--text-3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-2);
+}
+.statusFlowDone { color: var(--green); background: rgba(52, 211, 153, 0.1); }
+.statusFlowCurrent { color: var(--accent); background: var(--accent-glow); border: 1px solid var(--accent-border); }
+
+/* Capacity Load Bar */
+.capacityLoadBar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.capacityLoadInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--text-2);
+  flex-wrap: wrap;
+}
+.capacityLoadInfo strong { color: var(--text); }
+.loadNormal { color: var(--green); font-weight: 700; }
+.loadHigh { color: var(--amber); font-weight: 700; }
+.loadOver { color: var(--red); font-weight: 700; }
+.capacityAiRec {
+  display: flex; align-items: center; gap: 4px;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.capacityLoadTrack {
+  height: 6px;
+  background: var(--border-2);
+  border-radius: 99px;
+  overflow: hidden;
+  display: flex;
+}
+.capacityLoadFill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+.capacityLoadHigh { background: var(--amber); }
+.capacityLoadOver { background: var(--red); }
+.capacityLoadOverflow {
+  height: 100%;
+  background: var(--red);
+  opacity: 0.5;
+  border-radius: 0 99px 99px 0;
+}
 
 /* Retro Panel */
 .retroPanel {
@@ -92,11 +182,26 @@
   border-radius: var(--r);
   padding: 16px;
 }
+.retroHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.retroClose {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+.retroClose:hover { color: var(--text); background: var(--surface); }
 
 .novaBadge {
   display: inline-flex; align-items: center; gap: 6px;
   color: var(--accent); font-size: 0.72rem; font-weight: 700;
-  letter-spacing: 0.08em; margin-bottom: 12px;
+  letter-spacing: 0.08em;
 }
 
 .novaGlow {
@@ -122,6 +227,9 @@
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
+@media (max-width: 900px) {
+  .backlogView { grid-template-columns: 1fr; }
+}
 
 .backlogPanel {
   background: var(--surface);
@@ -139,6 +247,7 @@
   background: var(--surface-2);
   font-size: 0.85rem;
   font-weight: 600;
+  flex-wrap: wrap;
 }
 
 .panelCount {
@@ -149,6 +258,12 @@
   border-radius: 99px;
 }
 
+.capacityBarWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
 .capacityBar {
   flex: 1;
   height: 4px;
@@ -156,16 +271,23 @@
   border-radius: 99px;
   overflow: hidden;
 }
-
 .capacityFill {
   height: 100%;
   background: var(--green);
   border-radius: 99px;
   transition: width 0.4s ease;
 }
+.capacityFillHigh { background: var(--amber); }
+.capacityFillOver { background: var(--red); }
+.capacityLabel {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  font-weight: 600;
+  white-space: nowrap;
+}
 
 .ticketList {
-  max-height: 400px;
+  max-height: 480px;
   overflow-y: auto;
 }
 
@@ -220,7 +342,7 @@
   font-style: italic;
 }
 
-/* Chart */
+/* Chart Card */
 .chartCard {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -228,10 +350,120 @@
   padding: 20px;
 }
 
+.chartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .chartTitle {
+  display: flex; align-items: center; gap: 6px;
   font-size: 0.9rem;
   font-weight: 600;
-  margin-bottom: 16px;
+}
+.chartSubtitle {
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+.chartAiInsight {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Anomaly List */
+.anomalyList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+}
+.anomalyItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  border: 1px solid;
+}
+.anomaly_high {
+  background: rgba(248, 113, 113, 0.06);
+  border-color: rgba(248, 113, 113, 0.2);
+  color: var(--red);
+}
+.anomaly_medium {
+  background: rgba(251, 191, 36, 0.06);
+  border-color: rgba(251, 191, 36, 0.2);
+  color: var(--amber);
+}
+.anomaly_low {
+  background: rgba(79, 126, 255, 0.06);
+  border-color: rgba(79, 126, 255, 0.2);
+  color: var(--accent);
+}
+.anomalyTag {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-2);
+  margin-left: auto;
+}
+
+/* Forecast Overlay */
+.forecastOverlay {
+  margin-top: 14px;
+  padding: 12px;
+  background: var(--bg-2);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-2);
+}
+.forecastRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.forecastRow strong { color: var(--text); }
+.forecastProb {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-glow);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+.forecastRisks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.forecastRiskTag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.risk_high {
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--red);
+}
+.risk_medium {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--amber);
+}
+.risk_low {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--green);
 }
 
 /* Modal */
@@ -269,232 +501,490 @@
   padding-top: 8px; border-top: 1px solid var(--border);
 }
 
-/* ── EOS Sprint Health Predictor ── */
-.healthCard {
-  background: var(--bgrnd);
-  border: 1px solid var(--accent-border);
-  border-radius: var(--r-xl);
-  padding: 16px 18px;
+/* ══════════════════════════════════════════════════════════
+   BOARD VIEW
+   ══════════════════════════════════════════════════════════ */
+.boardView {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-  box-shadow: 0 0 24px rgba(79, 126, 255, 0.06);
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
-.healthHeader {
+.boardColumn {
+  min-width: 260px;
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  display: flex;
+  flex-direction: column;
+  max-height: 600px;
+}
+
+.boardColHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.boardColCount {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  background: var(--bg-2);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.boardColBody {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.boardCard {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  cursor: grab;
+  transition: all 0.15s;
+}
+.boardCard:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.boardCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.boardCardKey {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.boardCardTitle {
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.boardCardMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+.boardCardAssignee {
+  background: var(--surface-2);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.boardCardPoints {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+/* ══════════════════════════════════════════════════════════
+   CAPACITY VIEW
+   ══════════════════════════════════════════════════════════ */
+.capacityView {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.capacitySummary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+@media (max-width: 700px) {
+  .capacitySummary { grid-template-columns: repeat(2, 1fr); }
+}
+
+.capacityCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.capacityCardVal {
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text);
+  line-height: 1;
+}
+
+.capacityCardLbl {
+  font-size: 0.75rem;
+  color: var(--text-3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.capacityTableWrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.capacityTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.capacityTable th {
+  text-align: left;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  color: var(--text-3);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.capacityTable td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.capacityRowOver {
+  background: rgba(248, 113, 113, 0.04);
+}
+
+.capacityMember {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.healthEosIcon {
+.capacityAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.capacityAvatarFallback {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-glow);
   color: var(--accent);
-}
-
-.healthTitle {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-  flex: 1;
-}
-
-.eosBadge {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.skillBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 80px;
+}
+
+.skillBar > span {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-3);
+  min-width: 28px;
+}
+
+.skillFill {
+  flex: 1;
+  height: 4px;
+  background: var(--green);
+  border-radius: 99px;
+}
+
+.capacityOverBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--red);
+  background: rgba(248, 113, 113, 0.12);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.capacityOkBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--green);
+  background: rgba(52, 211, 153, 0.12);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.capacityAiRecBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
   background: var(--accent-glow);
   border: 1px solid var(--accent-border);
-  border-radius: 20px;
-  padding: 2px 7px;
+  border-radius: var(--r-sm);
+  font-size: 0.82rem;
+  color: var(--text-2);
 }
 
-.healthBody {
+.capacityAiRecIcon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════
+   TIMELINE VIEW
+   ══════════════════════════════════════════════════════════ */
+.timelineView {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 20px;
+}
+
+.timelineHeader {
+  margin-bottom: 16px;
+}
+
+.timelineDates {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+.timelineArrow {
+  color: var(--accent);
+}
+
+.timelineGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.timelineRow {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+@media (max-width: 800px) {
+  .timelineRow { grid-template-columns: 1fr; gap: 4px; }
+}
+
+.timelineRowLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  overflow: hidden;
+}
+
+.timelineKey {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.timelineSummary {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.timelineAssignee {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.timelineTrack {
+  position: relative;
+  height: 20px;
+  background: var(--bg-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.timelineBar {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  background: var(--accent);
+  border-radius: 3px;
+  opacity: 0.7;
+  overflow: hidden;
+}
+
+.timelineBarCritical {
+  background: var(--red);
+  opacity: 0.8;
+}
+
+.timelineProgress {
+  height: 100%;
+  background: rgba(255,255,255,0.35);
+}
+
+/* ══════════════════════════════════════════════════════════
+   TEAM VIEW
+   ══════════════════════════════════════════════════════════ */
+.teamView {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.teamGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.teamCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.healthMeter {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.healthProbRow {
+.teamCardHeader {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.healthProbVal {
-  font-size: 28px;
-  font-weight: 800;
-  font-family: var(--font-mono);
-  letter-spacing: -0.04em;
-  line-height: 1;
+.teamAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
-.healthProbLbl {
-  font-size: 11px;
-  color: var(--text-3);
-  font-weight: 600;
-  flex: 1;
-}
-
-.healthStatusChip {
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border: 1px solid;
-  border-radius: 99px;
-  padding: 2px 10px;
-}
-
-.healthProbBar {
-  height: 7px;
-  background: var(--surface-3);
-  border-radius: 99px;
-  overflow: hidden;
-}
-
-.healthProbFill {
-  height: 100%;
-  border-radius: 99px;
-  transition: width 0.7s ease;
-  min-width: 4px;
-}
-
-.healthStats {
+.teamAvatarFallback {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent-glow);
+  color: var(--accent);
   display: flex;
-  gap: 20px;
-  padding: 10px 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
-.healthStat {
+.teamCardInfo {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.healthStatVal {
-  font-size: 18px;
-  font-weight: 800;
-  font-family: var(--font-mono);
-  line-height: 1;
-  letter-spacing: -0.02em;
+.teamCardName {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
 }
 
-.healthStatLbl {
-  font-size: 9px;
-  font-weight: 700;
+.teamCardRole {
+  font-size: 0.75rem;
   color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
-.healthRec {
+.teamCardStats {
+  display: flex;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.teamCardStats > div {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+
+.teamCardStats strong {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+.teamCardTickets {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.healthRecLabel {
-  font-size: 9px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--accent);
-}
-
-.healthRecText {
-  font-size: 12px;
-  color: var(--text-2);
-  line-height: 1.5;
-  margin: 0;
-  padding: 8px 10px;
-  background: var(--surface);
-  border-radius: 8px;
-  border-left: 2px solid var(--accent);
-}
-
-.healthRisks {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.healthRisksLabel {
+.teamTicketChip {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--red);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.healthRiskItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  background: rgba(248, 113, 113, 0.05);
-  border: 1px solid rgba(248, 113, 113, 0.12);
-  border-radius: 7px;
-}
-
-.healthRiskKey {
-  font-size: 10px;
-  font-weight: 700;
-  font-family: var(--font-mono);
-  color: var(--red);
-  background: rgba(248, 113, 113, 0.1);
-  padding: 1px 5px;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: var(--bg-2);
   border-radius: 4px;
-  flex-shrink: 0;
+  font-size: 0.75rem;
 }
 
-.healthRiskSummary {
-  flex: 1;
-  font-size: 11px;
-  color: var(--text-2);
+.teamTicketChip span:first-child {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-weight: 600;
 }
 
-.healthRiskStatus {
-  font-size: 9px;
-  font-weight: 700;
+.teamTicketMore {
+  font-size: 0.72rem;
   color: var(--text-3);
-  flex-shrink: 0;
-}
-
-.healthSuggest {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  font-size: 11px;
-  color: var(--text-2);
-  padding: 8px 10px;
-  background: rgba(52, 211, 153, 0.06);
-  border: 1px solid rgba(52, 211, 153, 0.18);
-  border-radius: 8px;
-}
-
-.healthSuggest svg {
-  color: var(--green);
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-.healthSuggest strong {
-  color: var(--text);
-  font-weight: 700;
+  text-align: center;
+  padding: 2px 0;
 }

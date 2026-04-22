@@ -1,0 +1,457 @@
+/* ── Root ──────────────────────────────────────────────────────────────────── */
+.root {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── Tab header ──────────────────────────────────────────────────────────────── */
+.tabHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tabHeaderTitle {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.eosBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 99px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sprintChip {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  margin-left: 4px;
+}
+
+.noSprintChip {
+  font-size: 10px;
+  color: var(--amber, #f5a623);
+  font-style: italic;
+  margin-left: 4px;
+}
+
+/* ── Capability card grid ────────────────────────────────────────────────────── */
+.capGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1000px) {
+  .capGrid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .capGrid { grid-template-columns: 1fr; }
+}
+
+/* ── Capability card ─────────────────────────────────────────────────────────── */
+.capCard {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-sans);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.capCard:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  transform: translateY(-1px);
+}
+.capCard:active:not(:disabled) {
+  transform: translateY(0);
+}
+.capCard:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.capCardIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.capCardBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.capCardTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.capCardDesc {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.capCardFooter {
+  padding-top: 6px;
+  border-top: 1px solid var(--border-2);
+}
+
+.capCardCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.capCardLoading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+/* ── Spinner ─────────────────────────────────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Drawer overlay ──────────────────────────────────────────────────────────── */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  z-index: 900;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawerPanel {
+  width: min(680px, 92vw);
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--border-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: -16px 0 48px rgba(0, 0, 0, 0.35);
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-2);
+  flex-shrink: 0;
+  background: var(--surface-2);
+}
+
+.drawerTitle {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.drawerClose {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: none;
+  border: 1px solid var(--border-2);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.drawerClose:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-3); }
+
+.drawerBody {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* ── Drawer loading ──────────────────────────────────────────────────────────── */
+.drawerLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 240px;
+}
+
+.drawerSpinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border-2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.drawerLoadingText {
+  font-size: 12px;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+/* ── Drawer content wrapper ──────────────────────────────────────────────────── */
+.drawerContent {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.drawerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drawerSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.drawerSectionTitle {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-2);
+}
+
+.drawerFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-2);
+}
+
+/* ── Shared output components ────────────────────────────────────────────────── */
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  color: var(--text-2);
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.copyBtn:hover { border-color: var(--border-3); color: var(--text); }
+
+.bulletList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.bulletItem { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--text-2); line-height: 1.55; }
+.bullet { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 6px; }
+
+.bodyText { font-size: 12px; color: var(--text-2); line-height: 1.65; margin: 0; }
+
+.mitBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.emptyDrawer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+/* ── Release Notes ───────────────────────────────────────────────────────────── */
+.releaseVersionRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.releaseVersion { font-size: 15px; font-weight: 800; font-family: var(--font-mono); color: var(--accent); letter-spacing: -0.02em; }
+.releaseList { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.releaseItem { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: var(--text-2); line-height: 1.5; }
+
+/* ── Risk cards ──────────────────────────────────────────────────────────────── */
+.riskCard {
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.riskCardHeader { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.riskNum { font-size: 10px; font-weight: 900; font-family: var(--font-mono); color: var(--text-3); flex-shrink: 0; }
+.riskTitle { font-size: 13px; font-weight: 700; color: var(--text); flex: 1; min-width: 0; }
+.riskDesc { font-size: 11.5px; color: var(--text-3); line-height: 1.6; margin: 0; }
+
+.impactBadge {
+  font-size: 9px; font-weight: 800; padding: 2px 7px; border-radius: 99px;
+  border: 1px solid; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; flex-shrink: 0;
+}
+
+.confRow { display: flex; align-items: center; gap: 7px; }
+.confLabel { font-size: 10px; font-weight: 600; color: var(--text-3); white-space: nowrap; flex-shrink: 0; }
+.confBarWrap { flex: 1; height: 3px; background: var(--border-2); border-radius: 99px; overflow: hidden; min-width: 40px; }
+.confBarFill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+.confValue { font-size: 10px; font-weight: 700; font-family: var(--font-mono); white-space: nowrap; flex-shrink: 0; }
+
+/* ── Tech Debt ───────────────────────────────────────────────────────────────── */
+.debtGaugeRow { display: flex; align-items: center; gap: 12px; }
+.debtGauge { flex: 1; height: 10px; background: var(--border-2); border-radius: 99px; overflow: visible; position: relative; }
+.debtGaugeFill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+.debtThresholdLine { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text-3); border-radius: 1px; opacity: 0.5; }
+.debtPct { font-size: 18px; font-weight: 900; font-family: var(--font-mono); letter-spacing: -0.02em; flex-shrink: 0; }
+.debtMeta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.debtLabel { font-size: 11px; font-weight: 700; }
+.debtThreshLabel { font-size: 10px; color: var(--text-3); }
+
+/* ── Team Performance ────────────────────────────────────────────────────────── */
+.memberCard { display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 9px; }
+.memberCardLeft { flex-shrink: 0; }
+.memberInitials { width: 34px; height: 34px; border-radius: 50%; background: var(--accent-glow); border: 1px solid var(--accent-border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: var(--accent); }
+.memberCardBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.memberNameRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.memberName { font-size: 13px; font-weight: 700; color: var(--text); }
+.memberRole { font-size: 10px; color: var(--text-3); }
+.overloadBadge { font-size: 9px; font-weight: 800; padding: 1px 6px; border-radius: 99px; background: #ff000015; border: 1px solid #ff000028; color: var(--red); text-transform: uppercase; letter-spacing: 0.04em; }
+.memberStats { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-3); }
+.utilRow { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.utilBar { flex: 1; height: 4px; background: var(--border-2); border-radius: 99px; overflow: hidden; }
+.utilFill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+.utilPct { font-size: 10px; font-weight: 700; font-family: var(--font-mono); white-space: nowrap; flex-shrink: 0; }
+
+/* ── Client Update ───────────────────────────────────────────────────────────── */
+.clientHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.clientReadyBadge { font-size: 10px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 0.05em; }
+.clientBody { font-size: 12.5px; color: var(--text-2); line-height: 1.75; white-space: pre-wrap; background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 9px; padding: 16px; }
+
+/* ── Forecast ────────────────────────────────────────────────────────────────── */
+.forecastProbRow { display: flex; align-items: center; gap: 16px; }
+.forecastRing { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+.forecastPct { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 15px; font-weight: 900; font-family: var(--font-mono); letter-spacing: -0.02em; }
+.forecastMeta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.forecastLabel { font-size: 13px; font-weight: 700; color: var(--text); }
+.forecastNote { font-size: 10.5px; color: var(--text-3); margin: 0; line-height: 1.4; }
+.factorRow { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: var(--text-2); line-height: 1.5; padding: 4px 0; border-bottom: 1px solid var(--border-2); }
+.factorRow:last-child { border-bottom: none; }
+.factorImpact { margin-left: auto; font-size: 10px; font-weight: 700; font-family: var(--font-mono); color: var(--red); flex-shrink: 0; }
+
+/* ── Anomaly ─────────────────────────────────────────────────────────────────── */
+.anomalyCard { background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 9px; padding: 12px; display: flex; flex-direction: column; gap: 5px; }
+.anomalyCardHeader { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.anomalySev { font-size: 9px; font-weight: 800; padding: 2px 7px; border-radius: 99px; border: 1px solid; text-transform: uppercase; letter-spacing: 0.05em; }
+.anomalyDate { font-size: 10px; color: var(--text-3); font-family: var(--font-mono); }
+.anomalyType { font-size: 12.5px; font-weight: 700; color: var(--text); line-height: 1.3; }
+.anomalyDesc { font-size: 11px; color: var(--text-3); line-height: 1.55; margin: 0; }
+
+/* ── Knowledge Gaps ──────────────────────────────────────────────────────────── */
+.gapCard { background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 9px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.gapCardHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.gapTopic { font-size: 12.5px; font-weight: 700; color: var(--text); }
+.gapPriority { font-size: 9px; font-weight: 800; padding: 2px 7px; border-radius: 99px; border: 1px solid; text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0; }
+.gapMeta { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-3); font-family: var(--font-mono); }
+
+/* ── Chat drawer ─────────────────────────────────────────────────────────────── */
+.chatDrawerBody { display: flex; flex-direction: column; height: 100%; }
+
+.chatMessages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+
+.chatMsg { display: flex; align-items: flex-start; gap: 8px; }
+.chatMsgUser { flex-direction: row-reverse; }
+
+.chatAvatar { width: 24px; height: 24px; border-radius: 7px; background: var(--accent-glow); border: 1px solid var(--accent-border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+.chatBubble { max-width: 80%; padding: 10px 13px; border-radius: 11px; font-size: 12.5px; line-height: 1.65; color: var(--text); }
+.chatMsgEOS .chatBubble { background: var(--surface-2); border: 1px solid var(--border-2); border-top-left-radius: 3px; }
+.chatMsgUser .chatBubble { background: var(--accent-glow); border: 1px solid var(--accent-border); color: var(--accent); border-top-right-radius: 3px; }
+
+.chatTyping { display: flex; align-items: center; gap: 4px; padding: 12px 14px; }
+.dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-3); animation: bounce 1.2s infinite; }
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-4px); opacity: 1; } }
+
+.chatInputRow { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border-2); flex-shrink: 0; }
+.chatField { flex: 1; padding: 9px 13px; background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 9px; font-size: 13px; font-family: var(--font-sans); color: var(--text); outline: none; transition: border-color 0.15s; }
+.chatField:focus { border-color: var(--accent-border); }
+.chatField::placeholder { color: var(--text-3); }
+.chatSend { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: opacity 0.15s; flex-shrink: 0; }
+.chatSend:hover { opacity: 0.85; }
+.chatSend:disabled { opacity: 0.35; cursor: not-allowed; }

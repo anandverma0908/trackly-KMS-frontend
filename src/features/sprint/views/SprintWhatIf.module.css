@@ -1,0 +1,345 @@
+.whatIfPage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.whatIfIntro {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+
+.whatIfIcon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.whatIfTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+
+.whatIfSubtitle {
+  font-size: 0.8rem;
+  color: var(--text-3);
+  margin: 2px 0 0;
+}
+
+.whatIfLayout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .whatIfLayout { grid-template-columns: 1fr; }
+}
+
+/* Changes Panel */
+.changesPanel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.changesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.changesHeader > span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.changeButtons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.changeBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.changeBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.noChanges {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 30px;
+  color: var(--text-3);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.changesList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.changeRow {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.changeRowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.changeType {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  background: var(--accent-glow);
+  padding: 1px 7px;
+  border-radius: 4px;
+}
+
+.changeRemove {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+}
+.changeRemove:hover { color: var(--red); background: rgba(248, 113, 113, 0.1); }
+
+.changeSelect, .changeInput {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  color: var(--text);
+  width: 100%;
+}
+.changeSelect:focus, .changeInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.simulateBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--accent);
+  border: none;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: auto;
+}
+.simulateBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.simulateBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Results Panel */
+.resultsPanel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 300px;
+}
+
+.resultsEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px;
+  color: var(--text-3);
+  text-align: center;
+  flex: 1;
+}
+
+.resultsEmptyIcon {
+  color: var(--accent);
+  opacity: 0.5;
+}
+
+.resultsLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  flex: 1;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border-2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.scenarioCard {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scenarioHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scenarioAiIcon {
+  color: var(--accent);
+}
+
+.scenarioName {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+}
+
+.scenarioBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.scenarioBadgeGood {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--green);
+}
+
+.scenarioBadgeBad {
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--red);
+}
+
+.scenarioChanges {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scenarioChangeItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-2);
+  padding: 4px 8px;
+  background: var(--surface);
+  border-radius: 5px;
+}
+
+.scenarioMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.scenarioMetrics > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.scenarioMetrics strong {
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+
+.scenarioMetrics span {
+  font-size: 0.7rem;
+  color: var(--text-3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.scenarioRec {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--accent);
+  padding: 8px 10px;
+  background: var(--accent-glow);
+  border-radius: 6px;
+}
+
+.scenarioRec svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}

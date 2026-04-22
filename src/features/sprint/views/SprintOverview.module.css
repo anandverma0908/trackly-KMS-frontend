@@ -1,0 +1,611 @@
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Top Grid */
+.topGrid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.9fr;
+  gap: 14px;
+}
+@media (max-width: 1100px) {
+  .topGrid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 700px) {
+  .topGrid { grid-template-columns: 1fr; }
+}
+
+/* Card Base */
+.healthCard, .forecastCard, .capacityCard, .miniChartCard, .blockerCard, .wikiCard, .riskTicketCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.aiIcon {
+  color: var(--accent);
+}
+
+.eosBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  border-radius: 20px;
+  padding: 2px 7px;
+  margin-left: auto;
+}
+
+.empty {
+  font-size: 0.8rem;
+  color: var(--text-3);
+  font-style: italic;
+  padding: 8px 0;
+}
+
+/* Health Card */
+.probRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.probVal {
+  font-size: 32px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.probLbl {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 600;
+  flex: 1;
+}
+
+.probChip {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid;
+  border-radius: 99px;
+  padding: 2px 10px;
+}
+
+.probBar {
+  height: 7px;
+  background: var(--surface-3);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.probFill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.7s ease;
+  min-width: 4px;
+}
+
+.healthStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.healthStat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.healthStat span:first-child {
+  font-size: 18px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.healthStat span:last-child {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.aiRec {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aiRecLabel {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.aiRec p {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--bg-2);
+  border-radius: 8px;
+  border-left: 2px solid var(--accent);
+}
+
+/* Forecast Card */
+.forecastMain {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.forecastItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+
+.forecastNum {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text);
+  line-height: 1;
+}
+
+.forecastItem span:last-child {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.confidenceBar {
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.confidenceRange {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+.confidenceTrack {
+  flex: 1;
+  height: 6px;
+  background: var(--border-2);
+  border-radius: 99px;
+  position: relative;
+}
+
+.confidenceFill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--green);
+  border-radius: 99px;
+  opacity: 0.6;
+}
+
+.forecastRisks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.riskTag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.risk_high { background: rgba(248, 113, 113, 0.12); color: var(--red); }
+.risk_medium { background: rgba(251, 191, 36, 0.12); color: var(--amber); }
+.risk_low { background: rgba(52, 211, 153, 0.12); color: var(--green); }
+
+.forecastNova {
+  font-size: 0.82rem;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--accent-glow);
+  border-radius: 8px;
+  border-left: 2px solid var(--accent);
+}
+
+.forecastAccuracy {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--green);
+  font-weight: 600;
+}
+
+/* Capacity Card */
+.capacityMain {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.capacityRingWrap {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  flex-shrink: 0;
+}
+
+.capacityRing {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.capacityRingText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+
+.capacityRingText strong {
+  font-size: 18px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+
+.capacityRingText span {
+  font-size: 9px;
+  color: var(--text-3);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.capacityBreakdown {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.capacityBreakdown > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+
+.capacityBreakdown strong {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+.overloadAlert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* Middle Grid */
+.middleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 14px;
+}
+@media (max-width: 1000px) {
+  .middleGrid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 700px) {
+  .middleGrid { grid-template-columns: 1fr; }
+}
+
+.miniChartCard {
+  gap: 8px;
+}
+
+.miniChartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.trendUp {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.72rem;
+  color: var(--green);
+  font-weight: 700;
+}
+
+.trendDown {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.72rem;
+  color: var(--red);
+  font-weight: 700;
+}
+
+/* Blocker Card */
+.blockerCard {
+  gap: 10px;
+}
+
+.blockerCount {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--red);
+  background: rgba(248, 113, 113, 0.12);
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+
+.blockerList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.blockerItem {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.escalation_none { border-left: 2px solid var(--text-3); }
+.escalation_alert { border-left: 2px solid var(--amber); background: rgba(251, 191, 36, 0.04); }
+.escalation_escalated { border-left: 2px solid var(--red); background: rgba(248, 113, 113, 0.04); }
+.escalation_critical { border-left: 2px solid var(--red); background: rgba(248, 113, 113, 0.08); }
+
+.blockerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.blockerKey {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.blockerHours {
+  font-size: 0.72rem;
+  color: var(--red);
+  font-weight: 700;
+}
+
+.blockerSummary {
+  font-size: 0.78rem;
+  color: var(--text);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockerAi {
+  font-size: 0.72rem;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.blockerMore {
+  font-size: 0.75rem;
+  color: var(--text-3);
+  text-align: center;
+  padding: 4px;
+}
+
+.noBlockers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--green);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Bottom Grid */
+.bottomGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 700px) {
+  .bottomGrid { grid-template-columns: 1fr; }
+}
+
+/* Wiki Card */
+.wikiCount {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--accent);
+  background: var(--accent-glow);
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+
+.wikiList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wikiItem {
+  padding: 8px 10px;
+  background: var(--bg-2);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.wikiTopic {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.wikiMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+.wikiPriority {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.priority_high { background: rgba(248, 113, 113, 0.12); color: var(--red); }
+.priority_medium { background: rgba(251, 191, 36, 0.12); color: var(--amber); }
+.priority_low { background: rgba(52, 211, 153, 0.12); color: var(--green); }
+
+.wikiSuggestion {
+  font-size: 0.72rem;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Risk Ticket Card */
+.riskTicketCount {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--red);
+  background: rgba(248, 113, 113, 0.12);
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+
+.riskTicketList {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.riskTicketItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: rgba(248, 113, 113, 0.04);
+  border: 1px solid rgba(248, 113, 113, 0.1);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.riskTicketItem:hover {
+  background: rgba(248, 113, 113, 0.08);
+  border-color: rgba(248, 113, 113, 0.2);
+}
+
+.riskTicketKey {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--red);
+  font-weight: 600;
+  background: rgba(248, 113, 113, 0.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.riskTicketSummary {
+  flex: 1;
+  font-size: 0.78rem;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.riskTicketStatus {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  font-weight: 600;
+  flex-shrink: 0;
+}
