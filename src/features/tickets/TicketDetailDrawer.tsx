@@ -30,7 +30,7 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("comments");
   const [commentText, setCommentText] = useState("");
-  const [replyTo, setReplyTo] = useState<number | null>(null);
+  const [replyTo, setReplyTo] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [dragging, setDragging] = useState(false);
@@ -85,7 +85,7 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
   });
 
   const commentMut = useMutation({
-    mutationFn: ({ content, parentId }: { content: string; parentId?: number }) =>
+    mutationFn: ({ content, parentId }: { content: string; parentId?: string }) =>
       createComment(ticket.key, content, parentId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ticket-comments", ticket.key] });
@@ -96,7 +96,7 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
   });
 
   const deleteMut = useMutation({
-    mutationFn: (id: number) => deleteComment(ticket.key, id),
+    mutationFn: (id: string) => deleteComment(ticket.key, id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ticket-comments", ticket.key] }),
   });
 
@@ -189,7 +189,7 @@ export default function TicketDetailDrawer({ ticket, onClose }: Props) {
 
   // Top-level comments
   const topLevel = comments.filter((c) => !c.parent_id);
-  const replies   = (parentId: number) => comments.filter((c) => c.parent_id === parentId);
+  const replies   = (parentId: string) => comments.filter((c) => c.parent_id === parentId);
 
   return (
     <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>

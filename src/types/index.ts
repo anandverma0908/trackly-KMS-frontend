@@ -145,23 +145,26 @@ export interface TicketCreate {
 }
 
 export interface TicketComment {
-  id:         number
-  ticket_key: string
-  author:     string
-  author_email: string
-  content:    string
-  parent_id?: number
-  created_at: string
-  replies?:   TicketComment[]
+  id:           string
+  ticket_key:   string
+  author:       string
+  author_email?: string
+  content:      string
+  body?:        string
+  parent_id?:   string
+  created_at:   string
+  replies?:     TicketComment[]
 }
 
 export interface TicketAttachment {
-  id:         number
-  ticket_key: string
-  filename:   string
-  url:        string
-  size:       number
-  uploaded_by: string
+  id:          string
+  ticket_key:  string
+  filename:    string
+  url:         string
+  filepath?:   string
+  size:        number
+  size_bytes?: number
+  uploaded_by?: string
   uploaded_at: string
 }
 

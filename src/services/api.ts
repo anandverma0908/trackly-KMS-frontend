@@ -271,21 +271,35 @@ export async function analyzeTicket(key: string): Promise<NLAnalysisResult> {
 
 export async function fetchTicketComments(key: string): Promise<TicketComment[]> {
   const { data } = await api.get(`/tickets/${key}/comments`);
-  return data;
+  return (data as any[]).map((c) => ({
+    ...c,
+    author: c.author_name ?? c.author ?? "Unknown",
+    content: c.body ?? c.content ?? "",
+  }));
 }
 
-export async function createComment(key: string, content: string, parentId?: number): Promise<TicketComment> {
+export async function createComment(key: string, content: string, parentId?: string): Promise<TicketComment> {
   const { data } = await api.post(`/tickets/${key}/comments`, { body: content, parent_id: parentId });
-  return data;
+  return { ...data, author: data.author_name ?? "Unknown", content: data.body ?? "" };
 }
 
-export async function deleteComment(key: string, commentId: number) {
+export async function editComment(key: string, commentId: string, content: string): Promise<TicketComment> {
+  const { data } = await api.put(`/tickets/${key}/comments/${commentId}`, { body: content });
+  return { ...data, author: data.author_name ?? "Unknown", content: data.body ?? "" };
+}
+
+export async function deleteComment(key: string, commentId: string) {
   await api.delete(`/tickets/${key}/comments/${commentId}`);
 }
 
 export async function fetchTicketAttachments(key: string): Promise<TicketAttachment[]> {
   const { data } = await api.get(`/tickets/${key}/attachments`);
-  return data;
+  return (data as any[]).map((a) => ({
+    ...a,
+    url: a.url ?? (a.filepath ? `/uploads/${a.filepath.split("/").pop()}` : ""),
+    size: a.size_bytes ?? a.size ?? 0,
+    uploaded_at: a.created_at ?? "",
+  }));
 }
 
 export async function uploadAttachment(key: string, file: File): Promise<TicketAttachment> {
@@ -294,12 +308,72 @@ export async function uploadAttachment(key: string, file: File): Promise<TicketA
   const { data } = await api.post(`/tickets/${key}/attachments`, form, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+  return {
+    ...data,
+    url: data.url ?? (data.filepath ? `/uploads/${data.filepath.split("/").pop()}` : ""),
+    size: data.size_bytes ?? 0,
+    uploaded_at: data.created_at ?? "",
+  };
+}
+
+export interface WorklogEntry {
+  id: string;
+  author: string;
+  author_email?: string;
+  log_date: string;
+  hours: number;
+  comment?: string;
+}
+
+export async function fetchTicketWorklogs(key: string): Promise<WorklogEntry[]> {
+  const { data } = await api.get(`/tickets/${key}/worklogs`);
+  return data ?? [];
+}
+
+export interface TicketLink {
+  id: string;
+  source_ticket_id: string;
+  target_key: string;
+  target_summary?: string;
+  link_type: string;
+  created_at: string;
+}
+
+export async function fetchTicketLinks(key: string): Promise<TicketLink[]> {
+  const { data } = await api.get(`/tickets/${key}/links`);
+  return data ?? [];
+}
+
+export async function createTicketLink(key: string, link_type: string, target_key: string): Promise<TicketLink> {
+  const { data } = await api.post(`/tickets/${key}/links`, { link_type, target_key });
   return data;
+}
+
+export async function deleteTicketLink(key: string, linkId: string) {
+  await api.delete(`/tickets/${key}/links/${linkId}`);
+}
+
+export async function searchTickets(query: string): Promise<{ key: string; summary: string }[]> {
+  const { data } = await api.get("/tickets", { params: { search: query, limit: 10 } });
+  return (data.tickets ?? []).map((t: any) => ({ key: t.key ?? t.jira_key, summary: t.summary }));
 }
 
 export async function fetchTicketActivity(key: string): Promise<TicketActivity[]> {
   const { data } = await api.get(`/tickets/${key}/activity`);
-  return data;
+  return (data as any[]).map((a) => {
+    const diffVals = a.diff ? Object.values(a.diff as Record<string, any>) : [];
+    const firstVal = diffVals[0] as any;
+    return {
+      id: a.id,
+      ticket_key: key,
+      actor: a.actor ?? "System",
+      action: a.action,
+      field: a.diff ? Object.keys(a.diff as object)[0] : undefined,
+      old_value: firstVal?.old?.toString(),
+      new_value: firstVal?.new?.toString(),
+      created_at: a.created_at ?? "",
+    };
+  });
 }
 
 export interface CodeContextResult {
