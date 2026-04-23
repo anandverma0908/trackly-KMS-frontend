@@ -10,9 +10,10 @@ import { TbFolder,TbFileText } from "react-icons/tb";
 interface Props {
   pageId: string;
   onSelect: (id: string) => void;
+  onTicketSelect?: (key: string) => void;
 }
 
-export default function RelatedDocsWidget({ pageId, onSelect }: Props) {
+export default function RelatedDocsWidget({ pageId, onSelect, onTicketSelect }: Props) {
   const { data: rawDocs = [], isLoading } = useQuery({
     queryKey: ["related-docs", pageId],
     queryFn: () => fetchRelatedDocs("wiki", pageId),
@@ -47,7 +48,10 @@ export default function RelatedDocsWidget({ pageId, onSelect }: Props) {
           <button
             key={doc.id}
             className={styles.item}
-            onClick={() => doc.type === "wiki" && onSelect(doc.id)}
+            onClick={() => {
+              if (doc.type === "wiki") onSelect(doc.id);
+              else if (doc.key) onTicketSelect?.(doc.key);
+            }}
           >
             <span className={styles.itemIcon}>
               {doc.type === "wiki" ? <TbFileText /> : <TbFolder />}

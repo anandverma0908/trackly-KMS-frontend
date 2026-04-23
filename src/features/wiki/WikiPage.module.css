@@ -100,6 +100,19 @@
   pointer-events: none;
 }
 
+.searchClear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--text-3);
+  line-height: 1;
+  padding: 2px 4px;
+}
+.searchClear:hover { color: var(--text-1); }
+
 .topbarRight {
   display: flex;
   align-items: center;

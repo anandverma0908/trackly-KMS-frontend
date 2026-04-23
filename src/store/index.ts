@@ -180,9 +180,14 @@ interface WikiStore {
   setActivePage:  (id: string | null) => void;
 }
 
-export const useWikiStore = create<WikiStore>((set) => ({
-  activeSpaceId:  null,
-  activePageId:   null,
-  setActiveSpace: (id) => set({ activeSpaceId: id }),
-  setActivePage:  (id) => set({ activePageId: id }),
-}));
+export const useWikiStore = create<WikiStore>()(
+  persist(
+    (set) => ({
+      activeSpaceId:  null,
+      activePageId:   null,
+      setActiveSpace: (id) => set({ activeSpaceId: id }),
+      setActivePage:  (id) => set({ activePageId: id }),
+    }),
+    { name: "trackly-wiki" },
+  ),
+);

@@ -3,7 +3,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useMyWork, fetchTicket } from "./useMyWork";
-import { updateTicketStatus, updateTicket, logTime, createComment } from "@/services/api";
+import {
+  updateTicketStatus,
+  updateTicket,
+  logTime,
+  createComment,
+} from "@/services/api";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
 import styles from "./MyWorkPage.module.css";
 
@@ -30,9 +35,16 @@ import {
 } from "react-icons/ri";
 
 import type {
-  AITicket, Insight, FocusBlock, TimeEnergy, SprintRisk,
-  CognitiveData, AmbientEvent, VelocityPattern,
-  MyWorkFlowAnalysis, MyWorkBlockerPrediction,
+  AITicket,
+  Insight,
+  FocusBlock,
+  TimeEnergy,
+  SprintRisk,
+  CognitiveData,
+  AmbientEvent,
+  VelocityPattern,
+  MyWorkFlowAnalysis,
+  MyWorkBlockerPrediction,
 } from "./useMyWork";
 import type { KnowledgeGap } from "@/types";
 
@@ -41,8 +53,8 @@ import type { KnowledgeGap } from "@/types";
    ═══════════════════════════════════════════════════════════ */
 
 export default function MyWorkPage() {
-  const navigate      = useNavigate();
-  const queryClient   = useQueryClient();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const {
     aiTickets,
@@ -62,9 +74,9 @@ export default function MyWorkPage() {
     loadingGaps,
   } = useMyWork();
 
-  const [selectedKey,    setSelectedKey]    = useState<string | null>(null);
-  const [logTimeTicket,  setLogTimeTicket]  = useState<AITicket | null>(null);
-  const [commentTicket,  setCommentTicket]  = useState<AITicket | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [logTimeTicket, setLogTimeTicket] = useState<AITicket | null>(null);
+  const [commentTicket, setCommentTicket] = useState<AITicket | null>(null);
 
   const { data: selectedTicketData } = useQuery({
     queryKey: ["ticket", selectedKey],
@@ -122,27 +134,38 @@ export default function MyWorkPage() {
       <div className={`${styles.header} fade-up`}>
         <div>
           <h1 className={styles.title}>My Work</h1>
-          <p className={styles.subtitle}>Nova-curated daily command center</p>
+          {/* <p className={styles.subtitle}>EOS-curated daily command center</p> */}
         </div>
-        <span className={styles.aiBadge}>
+        {/* <span className={styles.aiBadge}>
           <RiSparklingLine size={12} />
           AI Ranked
-        </span>
+        </span> */}
       </div>
 
       {/* ── EOS Agent Brief ── */}
       <EosAgentBrief text={morningBrief} chips={briefChips} loading={loading} />
 
-      {/* ── Nova Insight Feed ── */}
-      <NovaInsightFeed insights={insights} loading={loading} onTicketClick={setSelectedKey} onNavigate={navigate} />
+      {/* ── EOS Insight Feed ── */}
+      <NovaInsightFeed
+        insights={insights}
+        loading={loading}
+        onTicketClick={setSelectedKey}
+        onNavigate={navigate}
+      />
 
       {/* ── Smart Focus Block ── */}
-      {focusBlock && <SmartFocusBlock block={focusBlock} onTicketClick={setSelectedKey} />}
+      {focusBlock && (
+        <SmartFocusBlock block={focusBlock} onTicketClick={setSelectedKey} />
+      )}
 
       {/* ── Main content ── */}
       <div className={`${styles.mainRow} fade-up-2`}>
         {/* Left: AI Priority Queue */}
-        <AIPriorityQueue tickets={aiTickets} loading={loading} onQuickAction={handleQuickAction} />
+        <AIPriorityQueue
+          tickets={aiTickets}
+          loading={loading}
+          onQuickAction={handleQuickAction}
+        />
 
         {/* Right: Risk + Time */}
         <div className={styles.sideColumn}>
@@ -167,7 +190,12 @@ export default function MyWorkPage() {
       </div>
 
       {/* ── Gen 3: Predictive Intelligence ── */}
-      <Gen3PredictiveSection aiTickets={aiTickets} sprintRisk={sprintRisk} cognitiveData={cognitiveData} loading={loading} />
+      <Gen3PredictiveSection
+        aiTickets={aiTickets}
+        sprintRisk={sprintRisk}
+        cognitiveData={cognitiveData}
+        loading={loading}
+      />
 
       {/* ── Knowledge Gaps ── */}
       {(loadingGaps || knowledgeGaps.length > 0) && (
@@ -185,9 +213,16 @@ export default function MyWorkPage() {
           onSave={async (hours, comment) => {
             const tid = toast.loading("Logging time…");
             try {
-              await logTime(logTimeTicket.key, hours, comment, new Date().toISOString().slice(0, 10));
+              await logTime(
+                logTimeTicket.key,
+                hours,
+                comment,
+                new Date().toISOString().slice(0, 10),
+              );
               queryClient.invalidateQueries({ queryKey: ["my-work"] });
-              toast.success(`${hours}h logged on ${logTimeTicket.key}`, { id: tid });
+              toast.success(`${hours}h logged on ${logTimeTicket.key}`, {
+                id: tid,
+              });
               setLogTimeTicket(null);
             } catch {
               toast.error("Failed to log time", { id: tid });
@@ -205,7 +240,9 @@ export default function MyWorkPage() {
             const tid = toast.loading("Posting comment…");
             try {
               await createComment(commentTicket.key, text);
-              toast.success(`Comment posted on ${commentTicket.key}`, { id: tid });
+              toast.success(`Comment posted on ${commentTicket.key}`, {
+                id: tid,
+              });
               setCommentTicket(null);
             } catch {
               toast.error("Failed to post comment", { id: tid });
@@ -254,7 +291,10 @@ export default function MyWorkPage() {
 }
 
 /* ── EOS Agent Brief ─────────────────────────────────────── */
-type BriefChip = { label: string; type: "critical" | "warning" | "info" | "action" };
+type BriefChip = {
+  label: string;
+  type: "critical" | "warning" | "info" | "action";
+};
 
 function EosAgentBrief({
   text,
@@ -282,20 +322,24 @@ function EosAgentBrief({
 
   const chipColor: Record<BriefChip["type"], string> = {
     critical: "var(--red)",
-    warning:  "var(--amber)",
-    info:     "var(--accent)",
-    action:   "var(--green)",
+    warning: "var(--amber)",
+    info: "var(--accent)",
+    action: "var(--green)",
   };
 
   if (loading) {
     return (
       <div className={`${styles.agentCard} ${styles.agentCardLoading} fade-up`}>
         <div className={styles.agentAvatarWrap}>
-          <div className={styles.agentAvatar}><RiSparklingLine size={14} /></div>
+          <div className={styles.agentAvatar}>
+            <RiSparklingLine size={14} />
+          </div>
         </div>
         <div className={styles.agentContent}>
           <div className={styles.agentBubble}>
-            <span className={styles.agentLoadingText}>EOS is reading your queue…</span>
+            <span className={styles.agentLoadingText}>
+              EOS is analysing…
+            </span>
             <span className={styles.briefCursor}>|</span>
           </div>
         </div>
@@ -306,7 +350,9 @@ function EosAgentBrief({
   return (
     <div className={`${styles.agentCard} fade-up`}>
       <div className={styles.agentAvatarWrap}>
-        <div className={styles.agentAvatar}><RiSparklingLine size={14} /></div>
+        <div className={styles.agentAvatar}>
+          <RiSparklingLine size={14} />
+        </div>
         <div className={styles.agentPulse} />
       </div>
       <div className={styles.agentContent}>
@@ -314,28 +360,34 @@ function EosAgentBrief({
           <span className={styles.agentName}>EOS</span>
           <p className={styles.agentText}>
             {displayed}
-            {displayed.length < text.length && <span className={styles.briefCursor}>|</span>}
+            {displayed.length < text.length && (
+              <span className={styles.briefCursor}>|</span>
+            )}
           </p>
         </div>
-        {chips.length > 0 && (
+        {/* {chips.length > 0 && (
           <div className={styles.agentChips}>
             {chips.map((c) => (
               <span
                 key={c.label}
                 className={styles.agentChip}
-                style={{ color: chipColor[c.type], borderColor: `${chipColor[c.type]}40`, background: `${chipColor[c.type]}12` }}
+                style={{
+                  color: chipColor[c.type],
+                  borderColor: `${chipColor[c.type]}40`,
+                  background: `${chipColor[c.type]}12`,
+                }}
               >
                 {c.label}
               </span>
             ))}
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );
 }
 
-/* ── Nova Insight Feed ───────────────────────────────────── */
+/* ── EOS Insight Feed ───────────────────────────────────── */
 function NovaInsightFeed({
   insights,
   loading,
@@ -354,7 +406,7 @@ function NovaInsightFeed({
       <div className={`${styles.insightCard} fade-up-1`}>
         <div className={styles.insightHeader}>
           <RiSparklingLine size={14} />
-          <span>Nova Insights</span>
+          <span>EOS Insights</span>
         </div>
         <div className={styles.insightSkeleton}>
           {[1, 2, 3].map((i) => (
@@ -372,7 +424,7 @@ function NovaInsightFeed({
     <div className={`${styles.insightCard} fade-up-1`}>
       <div className={styles.insightHeader}>
         <RiSparklingLine size={14} />
-        <span>Nova Insights</span>
+        <span>EOS Insights</span>
         <span className={styles.insightCount}>{visible.length} new</span>
       </div>
       <div className={styles.insightList}>
@@ -446,7 +498,9 @@ function SmartFocusBlock({
         </div>
         <p className={styles.focusMessage}>Your top priority right now.</p>
         <p className={styles.focusSub}>
-          {t.key} needs ~{t.remaining_estimate_hours || t.original_estimate_hours || 2}h — start here.
+          {t.key} needs ~
+          {t.remaining_estimate_hours || t.original_estimate_hours || 2}h —
+          start here.
         </p>
       </div>
       <div className={styles.focusRight}>
@@ -553,7 +607,9 @@ function AIPriorityQueue({
                     <span className={styles.queueKey}>{t.key}</span>
                     <QueueStatusBadge status={t.status} />
                     {t.deadlineRisk && (
-                      <span className={styles.queueRiskBadge}>{t.deadlineRisk}</span>
+                      <span className={styles.queueRiskBadge}>
+                        {t.deadlineRisk}
+                      </span>
                     )}
                     {t.priority && (
                       <span
@@ -588,7 +644,7 @@ function AIPriorityQueue({
               {isExpanded && (
                 <div className={styles.queueDetail}>
                   <div className={styles.detailSection}>
-                    <span className={styles.detailLabel}>Nova Analysis</span>
+                    <span className={styles.detailLabel}>EOS Analysis</span>
                     <p className={styles.detailText}>
                       Ranked #{t.aiRank} because: {t.aiReason}.
                       {t.blockingCount > 0 &&
@@ -616,7 +672,8 @@ function AIPriorityQueue({
                           className={styles.detailMetaVal}
                           style={{
                             color:
-                              t.hours_spent > (t.original_estimate_hours || 0) * 1.3
+                              t.hours_spent >
+                              (t.original_estimate_hours || 0) * 1.3
                                 ? "var(--amber)"
                                 : "var(--green)",
                           }}
@@ -628,7 +685,9 @@ function AIPriorityQueue({
                     {t.story_points !== undefined && (
                       <div className={styles.detailMeta}>
                         <span className={styles.detailMetaLabel}>Points</span>
-                        <span className={styles.detailMetaVal}>{t.story_points}</span>
+                        <span className={styles.detailMetaVal}>
+                          {t.story_points}
+                        </span>
                       </div>
                     )}
                     {t.due_date && (
@@ -671,7 +730,9 @@ function AIPriorityQueue({
                   {/* Quick Actions */}
                   {t.quickActions.length > 0 && (
                     <div className={styles.quickActions}>
-                      <span className={styles.quickActionsLabel}>Quick Actions</span>
+                      <span className={styles.quickActionsLabel}>
+                        Quick Actions
+                      </span>
                       <div className={styles.quickActionsRow}>
                         {t.quickActions.map((qa) => (
                           <button
@@ -698,17 +759,24 @@ function AIPriorityQueue({
 
 function QuickActionIcon({ icon }: { icon: string }) {
   switch (icon) {
-    case "ping": return <RiSendPlaneLine size={12} />;
-    case "log": return <RiTimeLine size={12} />;
-    case "draft": return <RiMessage2Line size={12} />;
-    case "move": return <RiArrowRightLine size={12} />;
-    case "review": return <RiEyeLine size={12} />;
-    case "escalate": return <RiArrowUpLine size={12} />;
-    default: return <RiFlashlightLine size={12} />;
+    case "ping":
+      return <RiSendPlaneLine size={12} />;
+    case "log":
+      return <RiTimeLine size={12} />;
+    case "draft":
+      return <RiMessage2Line size={12} />;
+    case "move":
+      return <RiArrowRightLine size={12} />;
+    case "review":
+      return <RiEyeLine size={12} />;
+    case "escalate":
+      return <RiArrowUpLine size={12} />;
+    default:
+      return <RiFlashlightLine size={12} />;
   }
 }
 
-/* ── Nova Delivery Forecast ──────────────────────────────── */
+/* ── EOS Delivery Forecast ──────────────────────────────── */
 function NovaDeliveryForecast({ risk }: { risk: SprintRisk | null }) {
   if (!risk) {
     return (
@@ -717,7 +785,9 @@ function NovaDeliveryForecast({ risk }: { risk: SprintRisk | null }) {
           <RiRocketLine size={14} />
           <span>Delivery Forecast</span>
         </div>
-        <p className={styles.forecastEmpty}>No active sprint — start one to see your forecast.</p>
+        <p className={styles.forecastEmpty}>
+          No active sprint — start one to see your forecast.
+        </p>
       </div>
     );
   }
@@ -728,11 +798,15 @@ function NovaDeliveryForecast({ risk }: { risk: SprintRisk | null }) {
   const neededDays = pace > 0 ? risk.remaining / pace : Infinity;
   const buffer = risk.daysLeft - neededDays;
 
-  const pctDone = risk.committed > 0 ? Math.min(100, (risk.completed / risk.committed) * 100) : 0;
+  const pctDone =
+    risk.committed > 0
+      ? Math.min(100, (risk.completed / risk.committed) * 100)
+      : 0;
 
   const forecastColor =
     buffer >= 2 ? "var(--green)" : buffer >= 0 ? "var(--amber)" : "var(--red)";
-  const forecastLabel = buffer >= 2 ? "On Track" : buffer >= 0 ? "Tight" : "At Risk";
+  const forecastLabel =
+    buffer >= 2 ? "On Track" : buffer >= 0 ? "Tight" : "At Risk";
 
   let forecastText: string;
   if (pace === 0) {
@@ -769,7 +843,9 @@ function NovaDeliveryForecast({ risk }: { risk: SprintRisk | null }) {
 
       <div className={styles.forecastStats}>
         <div className={styles.forecastStat}>
-          <span className={styles.forecastStatVal}>{pace > 0 ? pace.toFixed(1) : "—"}</span>
+          <span className={styles.forecastStatVal}>
+            {pace > 0 ? pace.toFixed(1) : "—"}
+          </span>
           <span className={styles.forecastStatLbl}>pts/day</span>
         </div>
         <div className={styles.forecastStat}>
@@ -777,7 +853,10 @@ function NovaDeliveryForecast({ risk }: { risk: SprintRisk | null }) {
           <span className={styles.forecastStatLbl}>remaining</span>
         </div>
         <div className={styles.forecastStat}>
-          <span className={styles.forecastStatVal} style={{ color: forecastColor }}>
+          <span
+            className={styles.forecastStatVal}
+            style={{ color: forecastColor }}
+          >
             {pace > 0
               ? buffer >= 0
                 ? `+${Math.ceil(buffer)}d`
@@ -795,16 +874,22 @@ function NovaDeliveryForecast({ risk }: { risk: SprintRisk | null }) {
   );
 }
 
-/* ── Nova Knowledge Gaps ─────────────────────────────────── */
+/* ── EOS Knowledge Gaps ─────────────────────────────────── */
 function getGapAction(topic: string, count: number): string {
   const t = topic.toLowerCase();
-  if (t.includes("auth") || t.includes("security")) return "Review security runbook + schedule training session";
-  if (t.includes("test") || t.includes("qa")) return "Write test patterns wiki for the team";
-  if (t.includes("perf") || t.includes("optim")) return "Pair with infra team on a profiling session";
-  if (t.includes("api") || t.includes("integr")) return "Document integration patterns in the wiki";
-  if (t.includes("deploy") || t.includes("infra")) return "Schedule infra knowledge transfer with the team";
+  if (t.includes("auth") || t.includes("security"))
+    return "Review security runbook + schedule training session";
+  if (t.includes("test") || t.includes("qa"))
+    return "Write test patterns wiki for the team";
+  if (t.includes("perf") || t.includes("optim"))
+    return "Pair with infra team on a profiling session";
+  if (t.includes("api") || t.includes("integr"))
+    return "Document integration patterns in the wiki";
+  if (t.includes("deploy") || t.includes("infra"))
+    return "Schedule infra knowledge transfer with the team";
   if (count >= 5) return `High frequency — create a runbook for "${topic}"`;
-  if (count >= 3) return `Recurring pattern — schedule pair programming on this`;
+  if (count >= 3)
+    return `Recurring pattern — schedule pair programming on this`;
   return `Capture learnings in the wiki under "${topic}"`;
 }
 
@@ -831,19 +916,25 @@ function NovaKnowledgeGaps({
     );
   }
 
-  const sorted = [...gaps].sort((a, b) => b.ticket_count - a.ticket_count).slice(0, 5);
+  const sorted = [...gaps]
+    .sort((a, b) => b.ticket_count - a.ticket_count)
+    .slice(0, 5);
 
   return (
     <div className={`${styles.kgCard} fade-up-4`}>
       <div className={styles.kgHeader}>
         <RiBookOpenLine size={14} />
         <span>Knowledge Gaps</span>
-        <span className={styles.kgCount}>{sorted.length} detected by Nova</span>
+        <span className={styles.kgCount}>{sorted.length} detected by EOS</span>
       </div>
       <div className={styles.kgGrid}>
         {sorted.map((gap) => {
           const severity =
-            gap.ticket_count >= 5 ? "high" : gap.ticket_count >= 2 ? "medium" : "low";
+            gap.ticket_count >= 5
+              ? "high"
+              : gap.ticket_count >= 2
+                ? "medium"
+                : "low";
           const action = getGapAction(gap.topic, gap.ticket_count);
           const sevColor =
             severity === "high"
@@ -855,11 +946,16 @@ function NovaKnowledgeGaps({
             <div key={gap.id} className={styles.kgItem}>
               <div className={styles.kgItemTop}>
                 <span className={styles.kgTopic}>{gap.topic}</span>
-                <span className={styles.kgTicketCount} style={{ color: sevColor }}>
+                <span
+                  className={styles.kgTicketCount}
+                  style={{ color: sevColor }}
+                >
                   {gap.ticket_count} tickets
                 </span>
               </div>
-              {gap.suggestion && <p className={styles.kgDesc}>{gap.suggestion}</p>}
+              {gap.suggestion && (
+                <p className={styles.kgDesc}>{gap.suggestion}</p>
+              )}
               <div className={styles.kgAction}>
                 <RiSparklingLine size={10} />
                 <span>{action}</span>
@@ -876,8 +972,11 @@ function NovaKnowledgeGaps({
    GEN 2 — PROACTIVE  (2027–2028)
    ══════════════════════════════════════════════════════════════ */
 
-interface BlockerPred { key: string; reason: string; hoursUntilBlock: number; }
-
+interface BlockerPred {
+  key: string;
+  reason: string;
+  hoursUntilBlock: number;
+}
 
 function Gen2ProactiveSection({
   aiTickets,
@@ -887,36 +986,47 @@ function Gen2ProactiveSection({
   loading,
   onTicketClick,
 }: {
-  aiTickets:          AITicket[];
-  flowAnalysis:       MyWorkFlowAnalysis;
+  aiTickets: AITicket[];
+  flowAnalysis: MyWorkFlowAnalysis;
   blockerPredictions: MyWorkBlockerPrediction[];
-  velocityPatterns:   VelocityPattern[];
-  loading:            boolean;
-  onTicketClick:      (key: string) => void;
+  velocityPatterns: VelocityPattern[];
+  loading: boolean;
+  onTicketClick: (key: string) => void;
 }) {
   // Map backend blocker predictions to the local shape
-  const predictions: BlockerPred[] = blockerPredictions.length > 0
-    ? blockerPredictions.map((p) => ({
-        key:             p.key,
-        reason:          p.reason,
-        hoursUntilBlock: p.hours_until_block,
-      }))
-    : aiTickets
-        .filter((t) => !t.status.toLowerCase().includes("block") && t.daysInStatus > 1)
-        .slice(0, 2)
-        .map((t, i) => ({
-          key:   t.key,
-          reason: t.daysInStatus > 3
-            ? `No update for ${t.daysInStatus} days — external dependency at risk`
-            : i === 0 ? "Awaiting review — comment unanswered for 2d" : "Dependency stalled",
-          hoursUntilBlock: i === 0 ? 48 : 16,
-        }));
+  const predictions: BlockerPred[] =
+    blockerPredictions.length > 0
+      ? blockerPredictions.map((p) => ({
+          key: p.key,
+          reason: p.reason,
+          hoursUntilBlock: p.hours_until_block,
+        }))
+      : aiTickets
+          .filter(
+            (t) =>
+              !t.status.toLowerCase().includes("block") && t.daysInStatus > 1,
+          )
+          .slice(0, 2)
+          .map((t, i) => ({
+            key: t.key,
+            reason:
+              t.daysInStatus > 3
+                ? `No update for ${t.daysInStatus} days — external dependency at risk`
+                : i === 0
+                  ? "Awaiting review — comment unanswered for 2d"
+                  : "Dependency stalled",
+            hoursUntilBlock: i === 0 ? 48 : 16,
+          }));
 
   // Focus-on tickets from backend AI or fall back to top 2
-  const focusKeys = flowAnalysis.focus_on.length > 0 ? flowAnalysis.focus_on : [];
-  const topTickets = focusKeys.length > 0
-    ? focusKeys.map((k) => aiTickets.find((t) => t.key === k)).filter(Boolean) as AITicket[]
-    : aiTickets.slice(0, 2);
+  const focusKeys =
+    flowAnalysis.focus_on.length > 0 ? flowAnalysis.focus_on : [];
+  const topTickets =
+    focusKeys.length > 0
+      ? (focusKeys
+          .map((k) => aiTickets.find((t) => t.key === k))
+          .filter(Boolean) as AITicket[])
+      : aiTickets.slice(0, 2);
 
   return (
     <div className={`${styles.genSection} fade-up-2`}>
@@ -931,7 +1041,11 @@ function Gen2ProactiveSection({
           loading={loading}
         />
         <VelocityPatternCard velocityPatterns={velocityPatterns} />
-        <BlockerPredictionCard predictions={predictions} onTicketClick={onTicketClick} loading={loading} />
+        <BlockerPredictionCard
+          predictions={predictions}
+          onTicketClick={onTicketClick}
+          loading={loading}
+        />
       </div>
     </div>
   );
@@ -947,20 +1061,26 @@ function FlowStateCard({
   loading,
 }: {
   contextSwitches: number;
-  weeklyAvg:       number;
-  flowState:       "focused" | "disrupted" | "scattered";
-  recommendation:  string;
-  topTickets:      AITicket[];
-  onTicketClick:   (key: string) => void;
-  loading:         boolean;
+  weeklyAvg: number;
+  flowState: "focused" | "disrupted" | "scattered";
+  recommendation: string;
+  topTickets: AITicket[];
+  onTicketClick: (key: string) => void;
+  loading: boolean;
 }) {
   const isHigh = flowState !== "focused";
-  const ratio  = weeklyAvg > 0 ? (contextSwitches / weeklyAvg).toFixed(1) : "1.0";
+  const ratio =
+    weeklyAvg > 0 ? (contextSwitches / weeklyAvg).toFixed(1) : "1.0";
 
   return (
-    <div className={`${styles.proactiveCard} ${isHigh ? styles.proactiveCardAlert : ""}`}>
+    <div
+      className={`${styles.proactiveCard} ${isHigh ? styles.proactiveCardAlert : ""}`}
+    >
       <div className={styles.proactiveHeader}>
-        <RiShieldLine size={14} color={isHigh ? "var(--amber)" : "var(--accent)"} />
+        <RiShieldLine
+          size={14}
+          color={isHigh ? "var(--amber)" : "var(--accent)"}
+        />
         <span>Flow State Protection</span>
       </div>
       {loading ? (
@@ -973,16 +1093,26 @@ function FlowStateCard({
               {contextSwitches} context switches
             </strong>{" "}
             today — that's{" "}
-            <strong style={{ color: isHigh ? "var(--amber)" : "var(--text)" }}>{ratio}×</strong>{" "}
+            <strong style={{ color: isHigh ? "var(--amber)" : "var(--text)" }}>
+              {ratio}×
+            </strong>{" "}
             your weekly average.
           </p>
           {isHigh && topTickets.length > 0 ? (
             <div className={styles.proactiveFocusList}>
-              <span className={styles.proactiveFocusLabel}>{recommendation}</span>
+              <span className={styles.proactiveFocusLabel}>
+                {recommendation}
+              </span>
               {topTickets.slice(0, 2).map((t) => (
-                <button key={t.key} className={styles.proactiveFocusItem} onClick={() => onTicketClick(t.key)}>
+                <button
+                  key={t.key}
+                  className={styles.proactiveFocusItem}
+                  onClick={() => onTicketClick(t.key)}
+                >
                   <span className={styles.proactiveFocusKey}>{t.key}</span>
-                  <span className={styles.proactiveFocusSummary}>{t.summary}</span>
+                  <span className={styles.proactiveFocusSummary}>
+                    {t.summary}
+                  </span>
                   <RiArrowRightLine size={12} />
                 </button>
               ))}
@@ -996,9 +1126,13 @@ function FlowStateCard({
   );
 }
 
-function VelocityPatternCard({ velocityPatterns }: { velocityPatterns: VelocityPattern[] }) {
+function VelocityPatternCard({
+  velocityPatterns,
+}: {
+  velocityPatterns: VelocityPattern[];
+}) {
   const hasData = velocityPatterns.some((v) => v.completed > 0);
-  const maxVal  = Math.max(...velocityPatterns.map((v) => v.completed), 1);
+  const maxVal = Math.max(...velocityPatterns.map((v) => v.completed), 1);
 
   return (
     <div className={styles.proactiveCard}>
@@ -1009,11 +1143,16 @@ function VelocityPatternCard({ velocityPatterns }: { velocityPatterns: VelocityP
       {!hasData ? (
         <div className={styles.proactiveEmpty}>
           <RiLineChartLine size={24} color="var(--text-3)" />
-          <p>No worklog data yet — log time on tickets to see your velocity patterns.</p>
+          <p>
+            No worklog data yet — log time on tickets to see your velocity
+            patterns.
+          </p>
         </div>
       ) : (
         <>
-          <p className={styles.proactiveMessage}>Hours logged over the last 5 business days.</p>
+          <p className={styles.proactiveMessage}>
+            Hours logged over the last 5 business days.
+          </p>
           <div className={styles.velocityBars}>
             {velocityPatterns.map((v) => (
               <div key={v.day} className={styles.velocityBarCol}>
@@ -1022,9 +1161,12 @@ function VelocityPatternCard({ velocityPatterns }: { velocityPatterns: VelocityP
                     className={styles.velocityBarFill}
                     style={{
                       height: `${(v.completed / maxVal) * 100}%`,
-                      background: v.completed >= 6 ? "var(--green)"
-                        : v.completed >= 3 ? "var(--accent)"
-                        : "var(--amber)",
+                      background:
+                        v.completed >= 6
+                          ? "var(--green)"
+                          : v.completed >= 3
+                            ? "var(--accent)"
+                            : "var(--amber)",
                     }}
                   />
                 </div>
@@ -1057,24 +1199,34 @@ function BlockerPredictionCard({
       {loading ? (
         <div className={styles.proactiveSkeleton} />
       ) : predictions.length === 0 ? (
-        <p className={styles.proactiveGood}>No blocker risks detected in your queue.</p>
+        <p className={styles.proactiveGood}>
+          No blocker risks detected in your queue.
+        </p>
       ) : (
         <div className={styles.predictionList}>
           {predictions.map((p) => {
             const urgencyColor =
-              p.hoursUntilBlock <= 12 ? "var(--red)"
-              : p.hoursUntilBlock <= 24 ? "var(--amber)"
-              : "var(--text-3)";
+              p.hoursUntilBlock <= 12
+                ? "var(--red)"
+                : p.hoursUntilBlock <= 24
+                  ? "var(--amber)"
+                  : "var(--text-3)";
             return (
               <div key={p.key} className={styles.predictionItem}>
                 <div className={styles.predictionTop}>
                   <span className={styles.predictionKey}>{p.key}</span>
-                  <span className={styles.predictionHours} style={{ color: urgencyColor }}>
+                  <span
+                    className={styles.predictionHours}
+                    style={{ color: urgencyColor }}
+                  >
                     ~{p.hoursUntilBlock}h until blocked
                   </span>
                 </div>
                 <p className={styles.predictionReason}>{p.reason}</p>
-                <button className={styles.predictionCta} onClick={() => onTicketClick(p.key)}>
+                <button
+                  className={styles.predictionCta}
+                  onClick={() => onTicketClick(p.key)}
+                >
                   <RiSendPlaneLine size={11} />
                   Follow up now
                 </button>
@@ -1087,12 +1239,9 @@ function BlockerPredictionCard({
   );
 }
 
-
 /* ══════════════════════════════════════════════════════════════
    GEN 3 — PREDICTIVE  (2029–2031)
    ══════════════════════════════════════════════════════════════ */
-
-
 
 function Gen3PredictiveSection({
   aiTickets,
@@ -1110,7 +1259,11 @@ function Gen3PredictiveSection({
       <div className={styles.gen3Grid}>
         <CognitiveLoadCard cognitiveData={cognitiveData} loading={loading} />
         <FocusWindowCard />
-        <CompletionPredictionCard aiTickets={aiTickets} sprintRisk={sprintRisk} loading={loading} />
+        <CompletionPredictionCard
+          aiTickets={aiTickets}
+          sprintRisk={sprintRisk}
+          loading={loading}
+        />
       </div>
     </div>
   );
@@ -1123,9 +1276,16 @@ function CognitiveLoadCard({
   cognitiveData: CognitiveData;
   loading: boolean;
 }) {
-  const { wipCount, blockedCount, staleCount, loadScore, recommendation } = cognitiveData;
-  const scoreColor = loadScore >= 80 ? "var(--red)" : loadScore >= 50 ? "var(--amber)" : "var(--green)";
-  const scoreLabel = loadScore >= 80 ? "Overloaded" : loadScore >= 50 ? "Elevated" : "Balanced";
+  const { wipCount, blockedCount, staleCount, loadScore, recommendation } =
+    cognitiveData;
+  const scoreColor =
+    loadScore >= 80
+      ? "var(--red)"
+      : loadScore >= 50
+        ? "var(--amber)"
+        : "var(--green)";
+  const scoreLabel =
+    loadScore >= 80 ? "Overloaded" : loadScore >= 50 ? "Elevated" : "Balanced";
   const circumference = 2 * Math.PI * 28;
   const offset = circumference - (loadScore / 100) * circumference;
 
@@ -1142,23 +1302,56 @@ function CognitiveLoadCard({
           <div className={styles.cogLoadBody}>
             <div className={styles.cogGaugeWrap}>
               <svg width="56" height="56" viewBox="0 0 56 56">
-                <circle cx="28" cy="28" r="24" fill="none" stroke="var(--surface-3)" strokeWidth="4" />
                 <circle
-                  cx="28" cy="28" r="24" fill="none" stroke={scoreColor}
-                  strokeWidth="4" strokeLinecap="round"
-                  strokeDasharray={circumference} strokeDashoffset={offset}
+                  cx="28"
+                  cy="28"
+                  r="24"
+                  fill="none"
+                  stroke="var(--surface-3)"
+                  strokeWidth="4"
+                />
+                <circle
+                  cx="28"
+                  cy="28"
+                  r="24"
+                  fill="none"
+                  stroke={scoreColor}
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={offset}
                   transform="rotate(-90 28 28)"
                   style={{ transition: "stroke-dashoffset 1s ease" }}
                 />
               </svg>
-              <span className={styles.cogScore} style={{ color: scoreColor }}>{loadScore}</span>
+              <span className={styles.cogScore} style={{ color: scoreColor }}>
+                {loadScore}
+              </span>
             </div>
             <div className={styles.cogMeta}>
-              <span className={styles.cogLabel} style={{ color: scoreColor }}>{scoreLabel}</span>
+              <span className={styles.cogLabel} style={{ color: scoreColor }}>
+                {scoreLabel}
+              </span>
               <div className={styles.cogBreakdown}>
-                <div className={styles.cogItem}><span className={styles.cogItemLbl}>WIP</span><span className={styles.cogItemVal}>{wipCount}</span></div>
-                <div className={styles.cogItem}><span className={styles.cogItemLbl}>Blocked</span><span className={styles.cogItemVal} style={{ color: blockedCount > 0 ? "var(--red)" : undefined }}>{blockedCount}</span></div>
-                <div className={styles.cogItem}><span className={styles.cogItemLbl}>Stale</span><span className={styles.cogItemVal}>{staleCount}</span></div>
+                <div className={styles.cogItem}>
+                  <span className={styles.cogItemLbl}>WIP</span>
+                  <span className={styles.cogItemVal}>{wipCount}</span>
+                </div>
+                <div className={styles.cogItem}>
+                  <span className={styles.cogItemLbl}>Blocked</span>
+                  <span
+                    className={styles.cogItemVal}
+                    style={{
+                      color: blockedCount > 0 ? "var(--red)" : undefined,
+                    }}
+                  >
+                    {blockedCount}
+                  </span>
+                </div>
+                <div className={styles.cogItem}>
+                  <span className={styles.cogItemLbl}>Stale</span>
+                  <span className={styles.cogItemVal}>{staleCount}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1181,7 +1374,10 @@ function FocusWindowCard() {
       </div>
       <div className={styles.proactiveEmpty}>
         <RiCalendarLine size={24} color="var(--text-3)" />
-        <p>No calendar connected — focus windows need calendar integration to detect your deep work blocks.</p>
+        <p>
+          No calendar connected — focus windows need calendar integration to
+          detect your deep work blocks.
+        </p>
       </div>
     </div>
   );
@@ -1196,7 +1392,15 @@ function CompletionPredictionCard({
   sprintRisk: SprintRisk | null;
   loading: boolean;
 }) {
-  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const days = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
   const topTickets = aiTickets.slice(0, 3);
   const preds = topTickets.map((t) => {
     const est = t.remaining_estimate_hours || t.original_estimate_hours || 4;
@@ -1204,11 +1408,11 @@ function CompletionPredictionCard({
     const future = new Date();
     future.setDate(future.getDate() + daysAway);
     return {
-      key:         t.key,
+      key: t.key,
       predictedBy: days[future.getDay()],
       daysAway,
-      sprintEnd:   sprintRisk ? `${sprintRisk.daysLeft}d left` : "—",
-      onTrack:     daysAway <= (sprintRisk?.daysLeft ?? 5),
+      sprintEnd: sprintRisk ? `${sprintRisk.daysLeft}d left` : "—",
+      onTrack: daysAway <= (sprintRisk?.daysLeft ?? 5),
     };
   });
 
@@ -1231,16 +1435,27 @@ function CompletionPredictionCard({
             <div key={p.key} className={styles.completionItem}>
               <div className={styles.completionTop}>
                 <span className={styles.completionKey}>{p.key}</span>
-                <span className={styles.completionStatus} style={{ color: p.onTrack ? "var(--green)" : "var(--amber)" }}>
+                <span
+                  className={styles.completionStatus}
+                  style={{ color: p.onTrack ? "var(--green)" : "var(--amber)" }}
+                >
                   {p.onTrack ? "On track" : "At risk"}
                 </span>
               </div>
               <div className={styles.completionRow}>
                 <span className={styles.completionBy}>
                   Done by{" "}
-                  <strong style={{ color: p.onTrack ? "var(--green)" : "var(--amber)" }}>{p.predictedBy}</strong>
+                  <strong
+                    style={{
+                      color: p.onTrack ? "var(--green)" : "var(--amber)",
+                    }}
+                  >
+                    {p.predictedBy}
+                  </strong>
                 </span>
-                <span className={styles.completionSprint}>Sprint: {p.sprintEnd}</span>
+                <span className={styles.completionSprint}>
+                  Sprint: {p.sprintEnd}
+                </span>
               </div>
             </div>
           ))}
@@ -1250,17 +1465,19 @@ function CompletionPredictionCard({
   );
 }
 
-
 /* ══════════════════════════════════════════════════════════════
    AMBIENT WORK AWARENESS
    ══════════════════════════════════════════════════════════════ */
 
-
-function AmbientAwarenessWidget({ ambientEvents }: { ambientEvents: AmbientEvent[] }) {
+function AmbientAwarenessWidget({
+  ambientEvents,
+}: {
+  ambientEvents: AmbientEvent[];
+}) {
   const typeColor: Record<AmbientEvent["type"], string> = {
-    status:  "var(--accent)",
+    status: "var(--accent)",
     comment: "var(--amber)",
-    assign:  "var(--green)",
+    assign: "var(--green)",
     blocker: "var(--red)",
   };
 
@@ -1272,26 +1489,36 @@ function AmbientAwarenessWidget({ ambientEvents }: { ambientEvents: AmbientEvent
         <span>Ambient Work Awareness</span>
         <span className={styles.ambientLive}>Live</span>
       </div>
-      <p className={styles.ambientSubtitle}>EOS is watching — no logging needed</p>
+      <p className={styles.ambientSubtitle}>
+        EOS is watching — no logging needed
+      </p>
       <div className={styles.ambientFeed}>
         {ambientEvents.length === 0 ? (
-          <p className={styles.ambientEmpty}>No recent activity — queue is quiet.</p>
-        ) : ambientEvents.map((ev) => (
-          <div key={ev.id} className={styles.ambientItem}>
-            <div className={styles.ambientDot} style={{ background: typeColor[ev.type] }} />
-            <div className={styles.ambientItemBody}>
-              <span className={styles.ambientItemText}>
-                <strong>{ev.key}</strong> {ev.change} — {ev.title.slice(0, 48)}{ev.title.length > 48 ? "…" : ""}
-              </span>
-              <span className={styles.ambientItemTime}>{ev.time}</span>
+          <p className={styles.ambientEmpty}>
+            No recent activity — queue is quiet.
+          </p>
+        ) : (
+          ambientEvents.map((ev) => (
+            <div key={ev.id} className={styles.ambientItem}>
+              <div
+                className={styles.ambientDot}
+                style={{ background: typeColor[ev.type] }}
+              />
+              <div className={styles.ambientItemBody}>
+                <span className={styles.ambientItemText}>
+                  <strong>{ev.key}</strong> {ev.change} —{" "}
+                  {ev.title.slice(0, 48)}
+                  {ev.title.length > 48 ? "…" : ""}
+                </span>
+                <span className={styles.ambientItemTime}>{ev.time}</span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
 }
-
 
 /* ── Quick Log Time Modal ────────────────────────────────── */
 function QuickLogTimeModal({
@@ -1303,9 +1530,9 @@ function QuickLogTimeModal({
   onClose: () => void;
   onSave: (hours: number, comment: string) => Promise<void>;
 }) {
-  const [hours,   setHours]   = useState("1");
+  const [hours, setHours] = useState("1");
   const [comment, setComment] = useState("");
-  const [saving,  setSaving]  = useState(false);
+  const [saving, setSaving] = useState(false);
 
   async function handleSave() {
     const h = parseFloat(hours);
@@ -1321,7 +1548,9 @@ function QuickLogTimeModal({
         <div className={styles.modalHeader}>
           <RiTimeLine size={15} color="var(--accent)" />
           <span>Log Time — {ticket.key}</span>
-          <button className={styles.modalClose} onClick={onClose}><RiCloseLine size={16} /></button>
+          <button className={styles.modalClose} onClick={onClose}>
+            <RiCloseLine size={16} />
+          </button>
         </div>
         <p className={styles.modalSub}>{ticket.summary}</p>
         <div className={styles.modalField}>
@@ -1347,8 +1576,14 @@ function QuickLogTimeModal({
           />
         </div>
         <div className={styles.modalActions}>
-          <button className={styles.modalCancel} onClick={onClose}>Cancel</button>
-          <button className={styles.modalSave} onClick={handleSave} disabled={saving}>
+          <button className={styles.modalCancel} onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className={styles.modalSave}
+            onClick={handleSave}
+            disabled={saving}
+          >
             {saving ? "Saving…" : "Log Time"}
           </button>
         </div>
@@ -1367,7 +1602,7 @@ function QuickCommentModal({
   onClose: () => void;
   onSend: (text: string) => Promise<void>;
 }) {
-  const [text,   setText]   = useState("");
+  const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleSend() {
@@ -1383,7 +1618,9 @@ function QuickCommentModal({
         <div className={styles.modalHeader}>
           <RiMessage2Line size={15} color="var(--accent)" />
           <span>Comment on {ticket.key}</span>
-          <button className={styles.modalClose} onClick={onClose}><RiCloseLine size={16} /></button>
+          <button className={styles.modalClose} onClick={onClose}>
+            <RiCloseLine size={16} />
+          </button>
         </div>
         <p className={styles.modalSub}>{ticket.summary}</p>
         <div className={styles.modalField}>
@@ -1398,8 +1635,14 @@ function QuickCommentModal({
           />
         </div>
         <div className={styles.modalActions}>
-          <button className={styles.modalCancel} onClick={onClose}>Cancel</button>
-          <button className={styles.modalSave} onClick={handleSend} disabled={saving || !text.trim()}>
+          <button className={styles.modalCancel} onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className={styles.modalSave}
+            onClick={handleSend}
+            disabled={saving || !text.trim()}
+          >
             {saving ? "Sending…" : "Post Comment"}
           </button>
         </div>
@@ -1479,11 +1722,24 @@ function SprintRiskWidget({
       <div className={styles.riskBody}>
         <div className={styles.riskRingWrap}>
           <svg width="72" height="72" viewBox="0 0 72 72">
-            <circle cx="36" cy="36" r="32" fill="none" stroke="var(--surface-3)" strokeWidth="5" />
             <circle
-              cx="36" cy="36" r="32" fill="none" stroke={ringColor}
-              strokeWidth="5" strokeLinecap="round"
-              strokeDasharray={circumference} strokeDashoffset={offset}
+              cx="36"
+              cy="36"
+              r="32"
+              fill="none"
+              stroke="var(--surface-3)"
+              strokeWidth="5"
+            />
+            <circle
+              cx="36"
+              cy="36"
+              r="32"
+              fill="none"
+              stroke={ringColor}
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={offset}
               transform="rotate(-90 36 36)"
               style={{ transition: "stroke-dashoffset 1s ease" }}
             />
@@ -1579,16 +1835,23 @@ function TimeEnergyWidget({
       <div className={styles.energyMeta}>
         <div className={styles.energyMetaItem}>
           <span className={styles.energyMetaLbl}>Logged</span>
-          <span className={styles.energyMetaVal}>{energy.totalLogged.toFixed(1)}h</span>
+          <span className={styles.energyMetaVal}>
+            {energy.totalLogged.toFixed(1)}h
+          </span>
         </div>
         <div className={styles.energyMetaItem}>
           <span className={styles.energyMetaLbl}>Estimated</span>
-          <span className={styles.energyMetaVal}>{energy.totalEstimated.toFixed(1)}h</span>
+          <span className={styles.energyMetaVal}>
+            {energy.totalEstimated.toFixed(1)}h
+          </span>
         </div>
         {energy.overrunCount > 0 && (
           <div className={styles.energyMetaItem}>
             <span className={styles.energyMetaLbl}>Overruns</span>
-            <span className={styles.energyMetaVal} style={{ color: "var(--amber)" }}>
+            <span
+              className={styles.energyMetaVal}
+              style={{ color: "var(--amber)" }}
+            >
               {energy.overrunCount}
             </span>
           </div>

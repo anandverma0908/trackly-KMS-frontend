@@ -1,15 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
   fetchWikiSpaces, fetchWikiPages, fetchWikiPage,
   createWikiSpace, createWikiPage, updateWikiPage,
   deleteWikiPage, fetchWikiVersions, restoreWikiVersion,
+  extractMeetingActions,
 } from "@/services/api";
 import { useWikiStore } from "@/store";
 import type { WikiPage as WikiPageType } from "@/types";
 import PageEditor from "./PageEditor";
+import RelatedDocsWidget from "./RelatedDocsWidget";
 import styles from "./WikiPage.module.css";
 
 import { BiFileBlank } from "react-icons/bi";
@@ -95,13 +97,6 @@ function getOnboardingPath(pages: WikiPageType[]): { page: WikiPageType; minutes
   }));
 }
 
-const MOCK_RELATED = [
-  { title: "Token Lifecycle",    score: 94 },
-  { title: "Session Management", score: 81 },
-  { title: "Auth Space Overview",score: 67 },
-  { title: "Deployment Checklist",score: 52 },
-];
-
 type AITab = "health" | "map" | "insights" | "chat";
 
 /* ══════════════════════════════════════════════════════════
@@ -165,12 +160,14 @@ function KnowledgeMapPanel({ pages, activeId }: { pages: WikiPageType[]; activeI
 ══════════════════════════════════════════════════════════ */
 export default function WikiPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { activeSpaceId, activePageId, setActiveSpace, setActivePage } = useWikiStore();
   const urlPageId = searchParams.get("page");
 
   // UI state
   const [showNewSpace,      setShowNewSpace]      = useState(false);
+  const [pageSearch,        setPageSearch]        = useState("");
   const [newSpaceName,      setNewSpaceName]      = useState("");
   const [showVersions,      setShowVersions]      = useState(false);
   const [showTemplates,     setShowTemplates]     = useState(false);
@@ -208,7 +205,7 @@ export default function WikiPage() {
 
   const createSpaceMut = useMutation({ mutationFn: () => createWikiSpace({ name: newSpaceName, description: "" }), onSuccess: (s) => { qc.invalidateQueries({ queryKey: ["wiki-spaces"] }); setActiveSpace(s.id); setShowNewSpace(false); setNewSpaceName(""); }, onError: (e: Error) => toast.error(e.message) });
   const createPageMut  = useMutation({ mutationFn: (p: { title: string; content: string; parent_id?: string }) => createWikiPage({ space_id: activeSpaceId!, ...p }), onSuccess: (p) => { qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] }); setActivePage(p.id); }, onError: (e: Error) => toast.error(e.message) });
-  const updatePageMut  = useMutation({ mutationFn: ({ id, payload }: { id: string; payload: { title?: string; content?: string } }) => updateWikiPage(id, payload), onSuccess: () => { qc.invalidateQueries({ queryKey: ["wiki-page", activePageId] }); qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] }); setAutoSaveStatus("saved"); setTimeout(() => setAutoSaveStatus("idle"), 3000); }, onError: () => setAutoSaveStatus("idle") });
+  const updatePageMut  = useMutation({ mutationFn: ({ id, payload }: { id: string; payload: { title?: string; content?: string } }) => updateWikiPage(id, payload), onSuccess: () => { qc.invalidateQueries({ queryKey: ["wiki-page", activePageId] }); qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] }); setAutoSaveStatus("saved"); setTimeout(() => setAutoSaveStatus("idle"), 3000); }, onError: (e: Error) => { setAutoSaveStatus("idle"); toast.error(e.message || "Failed to save page"); } });
   const deletePageMut  = useMutation({ mutationFn: (id: string) => deleteWikiPage(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] }); setActivePage(null); } });
   const restoreMut     = useMutation({ mutationFn: ({ versionId }: { versionId: number }) => restoreWikiVersion(activePageId!, versionId), onSuccess: () => { qc.invalidateQueries({ queryKey: ["wiki-page", activePageId] }); toast.success("Version restored"); setShowVersions(false); } });
 
@@ -235,13 +232,18 @@ export default function WikiPage() {
     }, 820);
   }
 
-  function handleCapture() {
+  async function handleCapture() {
     if (!captureInput.trim()) return;
     setCaptureProcessing(true);
-    setTimeout(() => {
+    try {
+      const result = await extractMeetingActions(captureInput);
+      const structured = typeof result === "string" ? result : (result?.content ?? result?.structured_md ?? processMeetingNotes(captureInput));
+      setCaptureOutput(structured);
+    } catch {
       setCaptureOutput(processMeetingNotes(captureInput));
+    } finally {
       setCaptureProcessing(false);
-    }, 1200);
+    }
   }
 
   function createFromCapture() {
@@ -254,7 +256,10 @@ export default function WikiPage() {
   }
 
   const activeSpace  = spaces.find(s => s.id === activeSpaceId);
-  const treePages    = buildTree(pages);
+  const filteredPages = pageSearch.trim()
+    ? pages.filter(p => p.title.toLowerCase().includes(pageSearch.toLowerCase()))
+    : pages;
+  const treePages    = buildTree(filteredPages);
   const breadcrumbs  = activePageId ? getBreadcrumbs(pages, activePageId) : [];
   const pageInsights = activePageId ? getPageInsights(activePageId) : null;
   const onboardingPath = getOnboardingPath(pages);
@@ -272,8 +277,14 @@ export default function WikiPage() {
 
         <div className={styles.searchWrap}>
           <RiSearchLine size={13} className={styles.searchIcon} />
-          <input className={styles.searchInput} placeholder="Search pages, ask EOS anything…" />
-          <span className={styles.searchHint}>⌘K</span>
+          <input
+            className={styles.searchInput}
+            placeholder="Search pages…"
+            value={pageSearch}
+            onChange={e => setPageSearch(e.target.value)}
+            onKeyDown={e => e.key === "Escape" && setPageSearch("")}
+          />
+          {pageSearch && <button className={styles.searchClear} onClick={() => setPageSearch("")}>✕</button>}
         </div>
 
         <div className={styles.topbarRight}>
@@ -436,7 +447,16 @@ export default function WikiPage() {
                 </div>
               )}
 
-              <div className={styles.editorWrap}>
+              <div
+                className={styles.editorWrap}
+                onClick={e => {
+                  const target = e.target as HTMLElement;
+                  const pageId = target.closest("[data-page-id]")?.getAttribute("data-page-id");
+                  if (pageId) { setActivePage(pageId); return; }
+                  const ticketKey = target.closest("[data-ticket-key]")?.getAttribute("data-ticket-key");
+                  if (ticketKey) navigate(`/backlog?search=${encodeURIComponent(ticketKey)}`);
+                }}
+              >
                 <PageEditor key={activePage.id} initialTitle={activePage.title} initialContent={activePage.content_md ?? activePage.content_html ?? ""} onSave={handleSave} pages={pages} />
               </div>
             </>
@@ -623,17 +643,13 @@ export default function WikiPage() {
                   </div>
                 </div>
 
-                <div className={styles.relatedSection}>
-                  <div className={styles.relatedSectionLabel}><RiNodeTree size={11} />Related Pages</div>
-                  <div className={styles.relatedList}>
-                    {MOCK_RELATED.slice(0, pageInsights.relatedCount).map(r => (
-                      <div key={r.title} className={styles.relatedItem}>
-                        <span className={styles.relatedTitle}>{r.title}</span>
-                        <span className={styles.relatedScore} style={{ color: r.score >= 80 ? "var(--green)" : r.score >= 60 ? "var(--accent)" : "var(--text-3)" }}>{r.score}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                {activePageId && (
+                  <RelatedDocsWidget
+                    pageId={activePageId}
+                    onSelect={setActivePage}
+                    onTicketSelect={key => navigate(`/backlog?search=${encodeURIComponent(key)}`)}
+                  />
+                )}
               </div>
             )}
 
