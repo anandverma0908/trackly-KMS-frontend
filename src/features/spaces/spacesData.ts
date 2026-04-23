@@ -29,6 +29,7 @@ export interface ProjectTask {
   labels?: string[];
   sprint?: string;
   epicId?: string;
+  pod?: string;
 }
 
 export interface ProjectSprint {

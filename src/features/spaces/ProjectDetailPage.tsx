@@ -10,6 +10,7 @@ import ActiveSprintsTab from "./tabs/ActiveSprintsTab";
 import RoadmapTab from "./tabs/RoadmapTab";
 import SprintsTab from "./tabs/SprintsTab";
 import EOSTab from "./tabs/EOSTab";
+import SettingsTab from "./tabs/SettingsTab";
 import styles from "./ProjectDetailPage.module.css";
 
 import {
@@ -23,6 +24,7 @@ import {
   RiCalendar2Line,
   RiCheckLine,
   RiAlertLine,
+  RiSettings3Line,
 } from "react-icons/ri";
 
 function VelocityRing({ done, total, size = 28 }: { done: number; total: number; size?: number }) {
@@ -40,7 +42,7 @@ function VelocityRing({ done, total, size = 28 }: { done: number; total: number;
   );
 }
 
-type Tab = "summary" | "backlog" | "board" | "sprints" | "roadmap" | "nova";
+type Tab = "summary" | "backlog" | "board" | "sprints" | "roadmap" | "nova" | "settings";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "summary",  label: "Summary",  icon: <RiBarChartBoxLine size={15} /> },
@@ -49,6 +51,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "sprints",  label: "Sprints",  icon: <RiCalendar2Line size={15} /> },
   { id: "roadmap",  label: "Roadmap",  icon: <RiRoadMapLine size={15} /> },
   { id: "nova",     label: "EOS",      icon: <RiSparklingLine size={15} /> },
+  { id: "settings", label: "Settings", icon: <RiSettings3Line size={15} /> },
 ];
 
 export default function ProjectDetailPage() {
@@ -281,6 +284,7 @@ export default function ProjectDetailPage() {
           {activeTab === "nova" && (
             <EOSTab project={project} activeSprint={activeSprint} pod={pod ?? ""} />
           )}
+          {activeTab === "settings" && <SettingsTab project={project} />}
         </div>
       </div>
     </div>

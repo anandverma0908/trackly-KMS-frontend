@@ -22,8 +22,8 @@ import NovaPage from "@/features/nova/NovaPage";
 import DecisionsPage from "@/features/decisions/DecisionsPage";
 import ProcessesPage from "@/features/processes/ProcessesPage";
 import GoalsPage from "@/features/goals/GoalsPage";
-import KanbanBoard from "@/features/kanban/KanbanBoard";
-import SprintPage from "@/features/sprint/SprintPage";
+// import KanbanBoard from "@/features/kanban/KanbanBoard";
+// import SprintPage from "@/features/sprint/SprintPage";
 
 function useRouteDirection() {
   const location = useLocation();

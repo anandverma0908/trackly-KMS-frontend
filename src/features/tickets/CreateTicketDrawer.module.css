@@ -1245,3 +1245,54 @@
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
   font-size: 0.65rem; font-weight: 700; color: var(--accent);
 }
+
+/* ── Intelligent Routing ── */
+.routingCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+.routingBody {
+  flex: 1;
+  min-width: 0;
+}
+.routingText {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.routingText strong {
+  color: var(--text);
+  font-weight: 700;
+}
+.routingAccept {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.routingAccept:hover { opacity: 0.85; }
+.routingDismiss {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 12px;
+  padding: 2px 4px;
+  line-height: 1;
+  transition: color 0.12s;
+}
+.routingDismiss:hover { color: var(--text); }

@@ -14,6 +14,8 @@ import {
   logTime,
   fetchTicket,
   fetchTicketCodeContext,
+  uploadAttachment,
+  fetchTicketAttachments,
   type CodeContextResult,
 } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
@@ -247,6 +249,15 @@ export default function CreateTicketDrawer({
   const [storyAiLoading, setStoryAiLoading] = useState(false);
   const aiDupeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* Intelligent routing */
+  const [routingSuggestion, setRoutingSuggestion] = useState<{
+    assignee: string;
+    reason: string;
+  } | null>(null);
+  const [routingLoading, setRoutingLoading] = useState(false);
+  const [routingDismissed, setRoutingDismissed] = useState(false);
+  const routingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   /* Code-Aware Context */
   const [codeCtxOpen, setCodeCtxOpen] = useState(true);
   const [codeCtx, setCodeCtx] = useState<CodeContextResult | null>(null);
@@ -464,6 +475,47 @@ Valid values: 1, 2, 3, 5, 8, 13. Return JSON only: {"min": number, "max": number
     isEdit,
   ]);
 
+  /* Intelligent routing — suggest best assignee after title is meaningful */
+  useEffect(() => {
+    const availableUsers = members.map((m) => m.name).filter(Boolean);
+    if (isEdit || form.title.length < 8 || availableUsers.length === 0 || routingDismissed) return;
+    if (routingRef.current) clearTimeout(routingRef.current);
+    routingRef.current = setTimeout(async () => {
+      setRoutingLoading(true);
+      try {
+        const memberList = availableUsers.slice(0, 20).join(", ");
+        const res = await novaQuery(
+          `You are an engineering team lead. Based on this ticket, suggest the single best assignee from the list and explain why in one short sentence.
+
+Ticket title: "${form.title}"
+${form.description ? `Description: ${form.description.slice(0, 300)}` : ""}
+Type: ${form.issue_type}, Priority: ${form.priority}
+Available team members: ${memberList}
+
+Return ONLY valid JSON, no prose: {"assignee": "Exact Name", "reason": "one sentence explanation"}`,
+        );
+        const m = res.answer.match(/\{[\s\S]*?\}/);
+        if (m) {
+          const parsed = JSON.parse(m[0]);
+          if (parsed.assignee && availableUsers.includes(parsed.assignee)) {
+            setRoutingSuggestion({ assignee: parsed.assignee, reason: parsed.reason });
+          }
+        }
+      } catch {
+        // silently ignore
+      } finally {
+        setRoutingLoading(false);
+      }
+    }, 1400);
+    return () => { if (routingRef.current) clearTimeout(routingRef.current); };
+  }, [form.title, form.description, form.issue_type, form.priority, isEdit, members, routingDismissed]);
+
+  /* Reset routing suggestion when assignee is manually changed or form resets */
+  useEffect(() => {
+    setRoutingSuggestion(null);
+    setRoutingDismissed(false);
+  }, [open]);
+
   /* Filters */
   const { data: filtersData } = useQuery({
     queryKey: QUERY_KEYS.filters(),
@@ -501,6 +553,13 @@ Valid values: 1, 2, 3, 5, 8, 13. Return JSON only: {"min": number, "max": number
     },
     enabled: isEdit && !!ticketKey,
     staleTime: 5 * 60 * 1000,
+  });
+
+  /* Server-side attachments — only in edit mode */
+  const { data: serverAttachments = [], refetch: refetchAttachments } = useQuery({
+    queryKey: ["ticket-attachments", ticketKey],
+    queryFn: () => fetchTicketAttachments(ticketKey!),
+    enabled: isEdit && !!ticketKey,
   });
 
   /* Comments — only in edit mode */
@@ -598,7 +657,14 @@ Valid values: 1, 2, 3, 5, 8, 13. Return JSON only: {"min": number, "max": number
   /* Create mutation */
   const createMut = useMutation({
     mutationFn: createTicket,
-    onSuccess: () => {
+    onSuccess: async (created) => {
+      // Upload any pending attachments after the ticket is created
+      if (form.attachments.length > 0) {
+        const key = created?.key;
+        if (key) {
+          await Promise.allSettled(form.attachments.map((f) => uploadAttachment(key, f)));
+        }
+      }
       qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
       qc.invalidateQueries({ queryKey: ["tickets"] });
       qc.invalidateQueries({ queryKey: ["new-tickets"] });
@@ -616,7 +682,13 @@ Valid values: 1, 2, 3, 5, 8, 13. Return JSON only: {"min": number, "max": number
   const updateMut = useMutation({
     mutationFn: (payload: Partial<TicketCreate>) =>
       updateTicket(ticketKey!, payload),
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Upload any new attachments added during edit
+      if (form.attachments.length > 0 && ticketKey) {
+        await Promise.allSettled(form.attachments.map((f) => uploadAttachment(ticketKey, f)));
+        refetchAttachments();
+        set("attachments", []);
+      }
       qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
       qc.invalidateQueries({ queryKey: ["tickets"] });
       qc.invalidateQueries({ queryKey: ["new-tickets"] });
@@ -1338,10 +1410,10 @@ Return only the improved description text — no labels, no JSON, just the descr
                           color: "var(--text)",
                         }}
                       >
-                        <span style={{ color: p.color, display: "flex" }}>
-                          {p.icon}
+                        <span style={{ color: p?.color, display: "flex" }}>
+                          {p?.icon}
                         </span>
-                        {p.label}
+                        {p?.label}
                       </span>
                     );
                   }}
@@ -1356,7 +1428,7 @@ Return only the improved description text — no labels, no JSON, just the descr
                           fontSize: 13,
                         }}
                       >
-                        <span style={{ color: p.color, display: "flex" }}>
+                        <span style={{ color: p?.color, display: "flex" }}>
                           {p.icon}
                         </span>
                         {p.label}
@@ -1448,6 +1520,48 @@ Return only the improved description text — no labels, no JSON, just the descr
           {tab === 0 && (
             <div className={styles.tabPanel}>
               <div className={styles.detailsCard}>
+                {/* Intelligent routing suggestion */}
+                {!isEdit && !readOnly && (routingLoading || routingSuggestion) && !form.assignee && (
+                  <div className={styles.routingCard}>
+                    <RiSparklingLine size={13} color="var(--accent)" style={{ flexShrink: 0, marginTop: 1 }} />
+                    {routingLoading ? (
+                      <span className={styles.routingText} style={{ color: "var(--text-3)" }}>
+                        EOS is finding the best assignee…
+                      </span>
+                    ) : routingSuggestion ? (
+                      <>
+                        <div className={styles.routingBody}>
+                          <span className={styles.routingText}>
+                            Assign to <strong>{routingSuggestion.assignee}</strong> — {routingSuggestion.reason}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className={styles.routingAccept}
+                          onClick={() => {
+                            set("assignee", routingSuggestion.assignee);
+                            setRoutingSuggestion(null);
+                            setRoutingDismissed(true);
+                          }}
+                        >
+                          Assign
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.routingDismiss}
+                          onClick={() => {
+                            setRoutingSuggestion(null);
+                            setRoutingDismissed(true);
+                          }}
+                          title="Dismiss"
+                        >
+                          ✕
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+
                 {/* Assignee + Reporter */}
                 <div className={styles.formRow}>
                   <Autocomplete
@@ -1849,15 +1963,32 @@ Return only the improved description text — no labels, no JSON, just the descr
                   />
                 )}
 
+                {/* Server-side attachments (edit mode) */}
+                {serverAttachments.length > 0 && (
+                  <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+                    {serverAttachments.map((a) => (
+                      <div key={a.id} className={styles.fileItem}>
+                        <RiAttachmentLine size={14} color="var(--text-3)" />
+                        <a
+                          href={a.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.fileName}
+                          style={{ textDecoration: "none", color: "var(--accent)" }}
+                        >
+                          {a.filename}
+                        </a>
+                        <span className={styles.fileSize}>
+                          {a.size ? `${(a.size / 1024).toFixed(0)} KB` : ""}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Locally staged (not yet uploaded) */}
                 {form.attachments.length > 0 && (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 4,
-                    }}
-                  >
+                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
                     {form.attachments.map((f, i) => (
                       <div key={i} className={styles.fileItem}>
                         <RiAttachmentLine size={14} color="var(--text-3)" />

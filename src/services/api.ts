@@ -789,9 +789,25 @@ export async function createSpace(payload: {
   description: string;
   category: string;
   color: string;
+  member_ids?: string[];
 }) {
   if (mock()?.createSpace) return mock().createSpace(payload);
   const { data } = await api.post("/spaces", payload);
+  return data;
+}
+
+export async function fetchOrgUsers() {
+  const { data } = await api.get("/users/members");
+  return data as { id: string; name: string; email: string; role: string; initials: string; color: string }[];
+}
+
+export async function addSpaceMember(pod: string, user_id: string, role = "member") {
+  const { data } = await api.post(`/spaces/${pod}/members`, { user_id, role });
+  return data;
+}
+
+export async function removeSpaceMember(pod: string, user_id: string) {
+  const { data } = await api.delete(`/spaces/${pod}/members/${user_id}`);
   return data;
 }
 

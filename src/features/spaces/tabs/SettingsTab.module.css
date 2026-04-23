@@ -1,0 +1,204 @@
+.page {
+  padding: 28px 0;
+}
+
+/* ── Two-panel layout ── */
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: 0;
+  min-height: 500px;
+}
+
+.divider {
+  background: var(--border-2);
+  width: 1px;
+  margin: 0 28px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Panel header ── */
+.panelHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--border-2);
+  border-radius: 20px;
+  padding: 2px 9px;
+}
+
+/* ── Search ── */
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  padding: 0 12px;
+  transition: border-color 0.15s;
+}
+
+.searchBox:focus-within {
+  border-color: var(--accent);
+}
+
+.searchIcon {
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  padding: 9px 0;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+.searchInput::placeholder {
+  color: var(--text-3);
+}
+
+/* ── Member cards ── */
+.memberCards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.empty {
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-3);
+  background: var(--surface);
+  border: 1px dashed var(--border-2);
+  border-radius: 10px;
+}
+
+.memberCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.memberCard:hover {
+  background: var(--surface-2);
+  border-color: var(--border-3);
+}
+
+/* ── Avatar ── */
+.avatar {
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Member info ── */
+.memberCardInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.memberCardName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.memberCardRole {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Action buttons ── */
+.removeBtn,
+.addBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.removeBtn {
+  background: transparent;
+  color: var(--text-3);
+  border-color: var(--border-2);
+}
+
+.removeBtn:hover {
+  color: #F87171;
+  border-color: #F87171;
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.removeBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.addBtn {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+.addBtn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.addBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
