@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { semanticSearch, novaQuery } from "@/services/api";
+import { semanticSearch, novaQuery, triggerReindex } from "@/services/api";
+import toast from "react-hot-toast";
 import type { SearchResult, NovaQueryResponse } from "@/types";
 import styles from "./SearchModal.module.css";
 
@@ -165,6 +166,19 @@ export default function SearchModal({ onClose }: Props) {
           <div className={styles.empty}>
             <span className={styles.emptyIcon}>🔍</span>
             <span>No results for "<strong>{query}</strong>"</span>
+            <button
+              style={{ marginTop: 8, fontSize: 11, padding: "4px 12px", background: "var(--accent-glow)", border: "1px solid var(--accent-border)", color: "var(--accent)", borderRadius: 6, cursor: "pointer" }}
+              onClick={async () => {
+                try {
+                  await triggerReindex();
+                  toast.success("Reindexing started — try your search again in a moment");
+                } catch {
+                  toast.error("Reindex failed");
+                }
+              }}
+            >
+              ✦ Re-index tickets for search
+            </button>
           </div>
         )}
 

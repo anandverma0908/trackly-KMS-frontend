@@ -458,6 +458,10 @@ export async function semanticSearch(query: string, scope?: 'all' | 'tickets' | 
   return (data?.results ?? data ?? []).map(_normalizeSearchResult);
 }
 
+export async function triggerReindex(): Promise<void> {
+  await api.post("/search/reindex");
+}
+
 export async function novaQuery(query: string, scope?: 'all' | 'wiki'): Promise<NovaQueryResponse> {
   const { data } = await api.post("/nova/query", { query, scope });
   return {

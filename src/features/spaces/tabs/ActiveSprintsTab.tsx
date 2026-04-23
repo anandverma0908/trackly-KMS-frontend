@@ -5,7 +5,10 @@ const WIP_LIMIT = 5;
 
 function daysSince(dateStr: string | undefined): number {
   if (!dateStr) return 0;
-  return Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000));
+  return Math.max(
+    0,
+    Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000),
+  );
 }
 import Tooltip from "@mui/material/Tooltip";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -27,10 +30,20 @@ import {
 import { IssueTypeBadge } from "@/components/ui/Badge";
 
 const AI_FILTERS = [
-  { id: "blockers"     as const, label: "Blockers",     color: "var(--red)",    icon: "🚫" },
-  { id: "high-priority"as const, label: "High Priority", color: "var(--amber)",  icon: "⚡" },
-  { id: "overdue"      as const, label: "Overdue",       color: "var(--red)",    icon: "⏰" },
-  { id: "bugs"         as const, label: "Bugs",          color: "var(--purple)", icon: "🐛" },
+  {
+    id: "blockers" as const,
+    label: "Blockers",
+    color: "var(--red)",
+    icon: "🚫",
+  },
+  {
+    id: "high-priority" as const,
+    label: "High Priority",
+    color: "var(--amber)",
+    icon: "⚡",
+  },
+  { id: "overdue" as const, label: "Overdue", color: "var(--red)", icon: "⏰" },
+  { id: "bugs" as const, label: "Bugs", color: "var(--purple)", icon: "🐛" },
 ];
 
 const COLUMNS = [
@@ -56,25 +69,35 @@ type AIFilter =
 
 /* ── Flow Metrics Strip ── */
 function FlowMetricsStrip({ tasks }: { tasks: ProjectTask[] }) {
-  const inProgress = tasks.filter(t => t.status === "In Progress");
-  const blocked    = tasks.filter(t => t.status === "Blocked");
-  const inReview   = tasks.filter(t => t.status === "In Review");
-  const avgAge = inProgress.length > 0
-    ? Math.round(inProgress.reduce((a, t) => a + daysSince(t.updatedAt), 0) / inProgress.length)
-    : 0;
+  const inProgress = tasks.filter((t) => t.status === "In Progress");
+  const blocked = tasks.filter((t) => t.status === "Blocked");
+  const inReview = tasks.filter((t) => t.status === "In Review");
+  const avgAge =
+    inProgress.length > 0
+      ? Math.round(
+          inProgress.reduce((a, t) => a + daysSince(t.updatedAt), 0) /
+            inProgress.length,
+        )
+      : 0;
   const bottleneck = [
     { label: "In Progress", count: inProgress.length },
-    { label: "In Review",   count: inReview.length },
-    { label: "Blocked",     count: blocked.length },
+    { label: "In Review", count: inReview.length },
+    { label: "Blocked", count: blocked.length },
   ].sort((a, b) => b.count - a.count)[0];
 
   return (
     <div className={styles.flowStrip}>
-      <span className={styles.flowStripLabel}><RiSparklingLine size={11} /> EOS Flow</span>
+      <span className={styles.flowStripLabel}>
+        <RiSparklingLine size={11} /> EOS Flow
+      </span>
       <div className={styles.flowMetrics}>
-        <div className={`${styles.flowMetric} ${inProgress.length > WIP_LIMIT ? styles.flowMetricWarn : ""}`}>
+        <div
+          className={`${styles.flowMetric} ${inProgress.length > WIP_LIMIT ? styles.flowMetricWarn : ""}`}
+        >
           <span className={styles.flowMetricVal}>{inProgress.length}</span>
-          <span className={styles.flowMetricLbl}>in progress{inProgress.length > WIP_LIMIT ? " ⚠" : ""}</span>
+          <span className={styles.flowMetricLbl}>
+            in progress{inProgress.length > WIP_LIMIT ? " ⚠" : ""}
+          </span>
         </div>
         <div className={styles.flowDivider} />
         <div className={styles.flowMetric}>
@@ -82,7 +105,9 @@ function FlowMetricsStrip({ tasks }: { tasks: ProjectTask[] }) {
           <span className={styles.flowMetricLbl}>avg WIP age</span>
         </div>
         <div className={styles.flowDivider} />
-        <div className={`${styles.flowMetric} ${blocked.length > 0 ? styles.flowMetricDanger : ""}`}>
+        <div
+          className={`${styles.flowMetric} ${blocked.length > 0 ? styles.flowMetricDanger : ""}`}
+        >
           <span className={styles.flowMetricVal}>{blocked.length}</span>
           <span className={styles.flowMetricLbl}>blocked</span>
         </div>
@@ -92,9 +117,13 @@ function FlowMetricsStrip({ tasks }: { tasks: ProjectTask[] }) {
           <span className={styles.flowMetricLbl}>in review</span>
         </div>
         <div className={styles.flowDivider} />
-        <div className={`${styles.flowMetric} ${bottleneck.count > WIP_LIMIT ? styles.flowMetricWarn : ""}`}>
+        <div
+          className={`${styles.flowMetric} ${bottleneck.count > WIP_LIMIT ? styles.flowMetricWarn : ""}`}
+        >
           <span className={styles.flowMetricVal}>{bottleneck.label}</span>
-          <span className={styles.flowMetricLbl}>bottleneck ({bottleneck.count})</span>
+          <span className={styles.flowMetricLbl}>
+            bottleneck ({bottleneck.count})
+          </span>
         </div>
       </div>
     </div>
@@ -542,21 +571,29 @@ export default function ActiveSprintsTab({
           </Tooltip>
 
           {/* AI filters */}
-          <div className={styles.aiFiltersWrap}>
+          {/* <div className={styles.aiFiltersWrap}>
             <RiSparklingLine size={13} color="var(--accent)" />
             <span className={styles.aiLabel}>EOS:</span>
             {AI_FILTERS.map((f) => (
               <button
                 key={f.id}
                 className={`${styles.aiChip} ${aiFilter === f.id ? styles.aiChipActive : ""}`}
-                style={aiFilter === f.id ? { color: f.color, borderColor: f.color, background: `${f.color}18` } : {}}
+                style={
+                  aiFilter === f.id
+                    ? {
+                        color: f.color,
+                        borderColor: f.color,
+                        background: `${f.color}18`,
+                      }
+                    : {}
+                }
                 onClick={() => setAiFilter(aiFilter === f.id ? null : f.id)}
               >
                 <span>{f.icon}</span>
                 {f.label}
               </button>
             ))}
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -608,18 +645,30 @@ export default function ActiveSprintsTab({
           >
             {/* Column header */}
             <div className={styles.colHeader}>
-              <span className={styles.colDot} style={{ background: col.color }} />
+              <span
+                className={styles.colDot}
+                style={{ background: col.color }}
+              />
               <span className={styles.colLabel}>{col.label}</span>
-              {(col.id === "In Progress" || col.id === "Blocked") && col.tasks.length > WIP_LIMIT && (
-                <span className={styles.wipWarning} title={`WIP limit exceeded (${col.tasks.length}/${WIP_LIMIT})`}>
-                  <RiAlertLine size={11} />
-                </span>
-              )}
+              {(col.id === "In Progress" || col.id === "Blocked") &&
+                col.tasks.length > WIP_LIMIT && (
+                  <span
+                    className={styles.wipWarning}
+                    title={`WIP limit exceeded (${col.tasks.length}/${WIP_LIMIT})`}
+                  >
+                    <RiAlertLine size={11} />
+                  </span>
+                )}
               <span
                 className={styles.colCount}
-                style={col.id === "In Progress" && col.tasks.length > WIP_LIMIT
-                  ? { color: "var(--amber)", background: "rgba(251,191,36,0.12)" }
-                  : {}}
+                style={
+                  col.id === "In Progress" && col.tasks.length > WIP_LIMIT
+                    ? {
+                        color: "var(--amber)",
+                        background: "rgba(251,191,36,0.12)",
+                      }
+                    : {}
+                }
               >
                 {col.tasks.length}
               </span>
@@ -750,21 +799,32 @@ function KanbanCard({
 
   const age = daysSince(task.updatedAt);
   const isDone = task.status === "Done";
-  const agingClass = !isDone && age > 14
-    ? styles.cardAgingRed
-    : !isDone && age > 5
-    ? styles.cardAgingAmber
-    : "";
+  const agingClass =
+    !isDone && age > 14
+      ? styles.cardAgingRed
+      : !isDone && age > 5
+        ? styles.cardAgingAmber
+        : "";
 
   const dueDate = task.dueDate ? new Date(task.dueDate) : null;
-  const daysUntilDue = dueDate ? Math.ceil((dueDate.getTime() - Date.now()) / 86_400_000) : null;
+  const daysUntilDue = dueDate
+    ? Math.ceil((dueDate.getTime() - Date.now()) / 86_400_000)
+    : null;
 
   const eosHint = (() => {
-    if (task.status === "Blocked") return `Blocked · ${age} day${age !== 1 ? "s" : ""} in this status`;
-    if (!isDone && age > 14) return `Stale for ${age} days — no recent activity`;
+    if (task.status === "Blocked")
+      return `Blocked · ${age} day${age !== 1 ? "s" : ""} in this status`;
+    if (!isDone && age > 14)
+      return `Stale for ${age} days — no recent activity`;
     if (daysUntilDue !== null && daysUntilDue <= 3 && !isDone)
-      return daysUntilDue <= 0 ? `Overdue by ${Math.abs(daysUntilDue)} day(s)` : `Due in ${daysUntilDue} day(s) — needs attention`;
-    if ((task.priority === "Critical" || task.priority === "High") && age > 3 && !isDone)
+      return daysUntilDue <= 0
+        ? `Overdue by ${Math.abs(daysUntilDue)} day(s)`
+        : `Due in ${daysUntilDue} day(s) — needs attention`;
+    if (
+      (task.priority === "Critical" || task.priority === "High") &&
+      age > 3 &&
+      !isDone
+    )
       return `${task.priority} priority · ${age} days without update`;
     return `Last updated ${age} day${age !== 1 ? "s" : ""} ago · ${task.status}`;
   })();
@@ -794,7 +854,9 @@ function KanbanCard({
       {task.labels && task.labels.length > 0 && (
         <div className={styles.cardLabels}>
           {task.labels.map((l) => (
-            <span key={l} className={styles.cardLabel}>{l}</span>
+            <span key={l} className={styles.cardLabel}>
+              {l}
+            </span>
           ))}
         </div>
       )}
@@ -810,12 +872,16 @@ function KanbanCard({
           <span
             className={styles.dueBadge}
             style={{
-              color: new Date(task.dueDate) < new Date() && !isDone
-                ? "var(--red)"
-                : "var(--text-3)",
+              color:
+                new Date(task.dueDate) < new Date() && !isDone
+                  ? "var(--red)"
+                  : "var(--text-3)",
             }}
           >
-            {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            {new Date(task.dueDate).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}
           </span>
         )}
         {task.storyPoints > 0 && (
