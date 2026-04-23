@@ -37,6 +37,10 @@
 .tabContainer {
   background: var(--bgrnd);
   border-radius: var(--r-xl);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .backBtn {

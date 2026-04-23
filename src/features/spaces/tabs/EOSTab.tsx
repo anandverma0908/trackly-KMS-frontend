@@ -4,10 +4,11 @@ import {
   RiSparklingLine, RiFileCopyLine, RiCheckLine,
   RiAlertLine, RiFlashlightLine, RiTaskLine, RiBarChartLine,
   RiTeamLine, RiFileTextLine, RiLightbulbLine, RiShieldLine,
-  RiRocketLine, RiEyeLine, RiArrowRightLine, RiCloseLine,
+  RiRocketLine, RiEyeLine, RiArrowRightLine,
   RiUserLine,
 } from "react-icons/ri";
 import { novaQuery } from "@/services/api";
+import SideDrawer from "@/components/ui/SideDrawer";
 import type { SprintForecast, KnowledgeGap } from "@/types";
 import type { UserRole } from "@/features/auth/types";
 import { useAuthStore } from "@/features/auth/useAuthStore";
@@ -331,30 +332,30 @@ function GapsContent({ data }: { data: KnowledgeGap[] }) {
 // ─── Drawer shell ───────────────────────────────────────────────────────────
 
 function Drawer({ drawer, onClose }: { drawer: DrawerState; onClose: () => void }) {
+  const badge = (
+    <span className={styles.eosBadge}><RiSparklingLine size={8} />EOS</span>
+  );
   return (
-    <div className={styles.drawerOverlay} onClick={onClose}>
-      <div className={styles.drawerPanel} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.drawerHeader}>
-          <RiSparklingLine size={14} color="var(--accent)" />
-          <span className={styles.drawerTitle}>{drawer.title}</span>
-          <span className={styles.eosBadge} style={{ marginRight: "auto" }}><RiSparklingLine size={8} />EOS</span>
-          <button className={styles.drawerClose} onClick={onClose}><RiCloseLine size={16} /></button>
-        </div>
-        <div className={styles.drawerBody}>
-          {drawer.loading ? <DrawerSpinner /> :
-           !drawer.data    ? <div className={styles.emptyDrawer}><p>No data returned. Try again.</p></div> :
-           drawer.type === "retro"    ? <RetroContent data={drawer.data} /> :
-           drawer.type === "release"  ? <ReleaseContent data={drawer.data} /> :
-           drawer.type === "risk"     ? <RiskContent data={drawer.data} /> :
-           drawer.type === "debt"     ? <DebtContent data={drawer.data} /> :
-           drawer.type === "teamperf" ? <TeamPerfContent data={drawer.data} /> :
-           drawer.type === "client"   ? <ClientContent data={drawer.data} /> :
-           drawer.type === "forecast" ? <ForecastContent data={drawer.data} /> :
-           drawer.type === "anomaly"  ? <AnomalyContent data={drawer.data.anomalies} summary={drawer.data.summary} /> :
-           drawer.type === "gaps"     ? <GapsContent data={drawer.data} /> : null}
-        </div>
-      </div>
-    </div>
+    <SideDrawer
+      open
+      onClose={onClose}
+      size="md"
+      title={drawer.title}
+      badge={badge}
+      avatar={<RiSparklingLine size={18} color="var(--accent)" />}
+    >
+      {drawer.loading ? <DrawerSpinner /> :
+       !drawer.data    ? <div className={styles.emptyDrawer}><p>No data returned. Try again.</p></div> :
+       drawer.type === "retro"    ? <RetroContent data={drawer.data} /> :
+       drawer.type === "release"  ? <ReleaseContent data={drawer.data} /> :
+       drawer.type === "risk"     ? <RiskContent data={drawer.data} /> :
+       drawer.type === "debt"     ? <DebtContent data={drawer.data} /> :
+       drawer.type === "teamperf" ? <TeamPerfContent data={drawer.data} /> :
+       drawer.type === "client"   ? <ClientContent data={drawer.data} /> :
+       drawer.type === "forecast" ? <ForecastContent data={drawer.data} /> :
+       drawer.type === "anomaly"  ? <AnomalyContent data={drawer.data.anomalies} summary={drawer.data.summary} /> :
+       drawer.type === "gaps"     ? <GapsContent data={drawer.data} /> : null}
+    </SideDrawer>
   );
 }
 

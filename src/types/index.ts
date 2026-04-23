@@ -571,3 +571,70 @@ export interface GoalsResponse {
   goals: Goal[];
   quarters: string[];
 }
+
+/* ── Decisions / ADRs ── */
+export type DecisionStatus = "accepted" | "proposed" | "deprecated" | "superseded";
+
+export interface Decision {
+  id: string;
+  number?: number;
+  title: string;
+  status: DecisionStatus;
+  owner: string;
+  date: string;
+  context: string;
+  decision: string;
+  rationale: string;
+  alternatives: string[];
+  consequences: string;
+  supersedes?: string;
+  linkedTickets: string[];
+  tags: string[];
+  space_id?: string | null;
+  org_level?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DecisionsResponse {
+  decisions: Decision[];
+  total: number;
+}
+
+/* ── Processes / SOPs ── */
+export type ProcessCategory = "runbook" | "sop" | "compliance" | "template" | "workflow";
+export type ProcessStatus = "active" | "draft" | "review" | "deprecated";
+
+export interface ProcessStep {
+  id: string;
+  order: number;
+  title: string;
+  description: string;
+  owner?: string;
+  estimatedTime?: string;
+  required: boolean;
+}
+
+export interface Process {
+  id: string;
+  title: string;
+  category: ProcessCategory;
+  status: ProcessStatus;
+  owner: string;
+  lastUpdated: string;
+  description: string;
+  steps: ProcessStep[];
+  tags: string[];
+  complianceRequired?: boolean;
+  avgCompletionTime?: string;
+  runCount?: number;
+  space_id?: string | null;
+  org_level?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ProcessesResponse {
+  processes: Process[];
+  total: number;
+}

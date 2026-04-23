@@ -17,6 +17,7 @@ import {
 } from "@/services/api";
 import type { SprintDraftResult } from "@/services/api";
 import type { TicketCreate } from "@/types";
+import SideDrawer from "@/components/ui/SideDrawer";
 import styles from "./BacklogTab.module.css";
 
 import {
@@ -752,27 +753,25 @@ export default function BacklogTab({ project }: { project: Project }) {
       />
 
       {/* ── EOS Plan Sprint Drawer ── */}
-      {aiPlanResult && (
-        <>
-          <div className={styles.eosOverlay} onClick={() => setAiPlanResult(null)} />
-          <div className={styles.eosDrawer}>
-            <div className={styles.eosDrawerHeader}>
-              <div className={styles.eosDrawerTitle}>
-                <RiSparklingLine size={14} />
-                EOS Sprint Plan
-                {aiPlanResult.nova_powered
-                  ? <span className={styles.novaPoweredBadge}>AI</span>
-                  : <span className={styles.novaFallbackBadge}>Deterministic</span>}
-              </div>
-              <div className={styles.eosDrawerMeta}>
-                <span>{aiPlanResult.tickets.length} tickets</span>
-                <span>·</span>
-                <span className={styles.eosDrawerPts}>{aiPlanResult.total_points} pts</span>
-              </div>
-              <button className={styles.eosDrawerClose} onClick={() => setAiPlanResult(null)}>
-                <RiCloseLine size={16} />
-              </button>
-            </div>
+      <SideDrawer
+        open={!!aiPlanResult}
+        onClose={() => setAiPlanResult(null)}
+        size="sm"
+        title="EOS Sprint Plan"
+        avatar={<RiSparklingLine size={18} color="var(--accent)" />}
+        badge={aiPlanResult ? (
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            {aiPlanResult.nova_powered
+              ? <span className={styles.novaPoweredBadge}>AI</span>
+              : <span className={styles.novaFallbackBadge}>Deterministic</span>}
+            <span style={{ fontSize: 11, color: "var(--text-3)" }}>
+              {aiPlanResult.tickets.length} tickets · {aiPlanResult.total_points} pts
+            </span>
+          </div>
+        ) : undefined}
+      >
+        {aiPlanResult && (
+          <>
             {aiPlanResult.rationale && (
               <p className={styles.eosDrawerRationale}>{aiPlanResult.rationale}</p>
             )}
@@ -799,9 +798,9 @@ export default function BacklogTab({ project }: { project: Project }) {
                 );
               })}
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </SideDrawer>
     </div>
   );
 }

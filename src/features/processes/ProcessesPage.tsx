@@ -8,164 +8,308 @@ import {
   RiTeamLine,
   RiArrowRightLine,
   RiCheckboxCircleLine,
+  RiDeleteBinLine,
+  RiGlobalLine,
+  RiBuilding2Line,
 } from "react-icons/ri";
 import styles from "./ProcessesPage.module.css";
+import { useProcesses, useCreateProcess, useDeleteProcess } from "./useProcesses";
+import { novaQuery } from "@/services/api";
+import SideDrawer from "@/components/ui/SideDrawer";
+import type { Process, ProcessCategory, ProcessStatus } from "@/types";
 
-/* ── Types ─────────────────────────────────────────────────────────────────── */
-type ProcessCategory = "runbook" | "sop" | "compliance" | "template" | "workflow";
-type ProcessStatus = "active" | "draft" | "review" | "deprecated";
+/* ── Helpers ── */
+const categoryConfig: Record<ProcessCategory, { label: string; color: string }> = {
+  runbook:    { label: "Runbook",    color: styles.catRunbook },
+  sop:        { label: "SOP",        color: styles.catSop },
+  compliance: { label: "Compliance", color: styles.catCompliance },
+  template:   { label: "Template",   color: styles.catTemplate },
+  workflow:   { label: "Workflow",   color: styles.catWorkflow },
+};
 
-interface ProcessStep {
-  id: string;
-  order: number;
+const statusConfig: Record<ProcessStatus, { label: string; className: string }> = {
+  active:     { label: "Active",      className: styles.statusActive },
+  draft:      { label: "Draft",       className: styles.statusDraft },
+  review:     { label: "In Review",   className: styles.statusReview },
+  deprecated: { label: "Deprecated",  className: styles.statusDeprecated },
+};
+
+/* ── Create form ── */
+interface StepDraft {
   title: string;
   description: string;
-  owner?: string;
-  estimatedTime?: string;
+  owner: string;
+  estimatedTime: string;
   required: boolean;
 }
 
-interface Process {
-  id: string;
+interface CreateForm {
   title: string;
   category: ProcessCategory;
   status: ProcessStatus;
   owner: string;
-  lastUpdated: string;
   description: string;
-  steps: ProcessStep[];
-  tags: string[];
-  complianceRequired?: boolean;
-  avgCompletionTime?: string;
-  runCount?: number;
+  tagsText: string;
+  complianceRequired: boolean;
+  avgCompletionTime: string;
+  steps: StepDraft[];
+  org_level: boolean;
 }
 
-/* ── Mock data ─────────────────────────────────────────────────────────────── */
-const PROCESSES: Process[] = [
-  {
-    id: "p1",
-    title: "Database Failover Procedure",
-    category: "runbook",
-    status: "active",
-    owner: "Arjun K.",
-    lastUpdated: "2025-03-12",
-    description:
-      "Step-by-step runbook for handling PostgreSQL primary failover to replica. Execute during DB incidents.",
-    complianceRequired: true,
-    avgCompletionTime: "~25 min",
-    runCount: 3,
-    tags: ["database", "incident", "critical"],
-    steps: [
-      { id: "s1", order: 1, title: "Verify primary is unreachable", description: "Run health check on primary. Check pg_ctl status and replication lag.", owner: "On-call", estimatedTime: "2 min", required: true },
-      { id: "s2", order: 2, title: "Promote replica to primary", description: "SSH to replica. Run: pg_ctl promote -D /var/lib/postgresql/data", owner: "DB Admin", estimatedTime: "5 min", required: true },
-      { id: "s3", order: 3, title: "Update connection strings", description: "Update DATABASE_URL in all services to point to new primary IP. Restart services.", owner: "DevOps", estimatedTime: "10 min", required: true },
-      { id: "s4", order: 4, title: "Verify replication resumes", description: "Spin up new replica from new primary. Confirm streaming replication.", owner: "DB Admin", estimatedTime: "15 min", required: true },
-      { id: "s5", order: 5, title: "Post-incident review", description: "Document timeline, root cause, and prevention measures in incident log.", owner: "Engineering Manager", estimatedTime: "30 min", required: false },
-    ],
-  },
-  {
-    id: "p2",
-    title: "On-call Incident Response",
+function emptyStep(): StepDraft {
+  return { title: "", description: "", owner: "", estimatedTime: "", required: true };
+}
+
+function CreateProcessForm({
+  spaceId,
+  onClose,
+}: {
+  spaceId?: string;
+  onClose: () => void;
+}) {
+  const createMut = useCreateProcess();
+  const [form, setForm] = useState<CreateForm>({
+    title: "",
     category: "sop",
     status: "active",
-    owner: "Priya S.",
-    lastUpdated: "2025-02-28",
-    description:
-      "Standard operating procedure for on-call engineers. Covers alert triage, escalation, and resolution.",
+    owner: "",
+    description: "",
+    tagsText: "",
     complianceRequired: false,
-    avgCompletionTime: "Varies",
-    runCount: 24,
-    tags: ["incident", "on-call", "sre"],
-    steps: [
-      { id: "s1", order: 1, title: "Acknowledge alert within 5 minutes", description: "Acknowledge in PagerDuty. Join #incidents Slack channel.", required: true },
-      { id: "s2", order: 2, title: "Assess severity (P1–P4)", description: "P1: All users affected. P2: Partial outage. P3: Performance degraded. P4: Minor.", required: true },
-      { id: "s3", order: 3, title: "Open incident ticket", description: "Create TRK ticket with template: [INC] <date> <description>. Link to PagerDuty.", required: true },
-      { id: "s4", order: 4, title: "Escalate if P1/P2", description: "Page engineering manager and relevant team lead. Post in #status.", required: false },
-      { id: "s5", order: 5, title: "Resolve and document", description: "Mark incident resolved. Write postmortem within 48 hours for P1/P2.", required: true },
-    ],
-  },
-  {
-    id: "p3",
-    title: "New Engineer Onboarding",
-    category: "workflow",
-    status: "active",
-    owner: "Rahul M.",
-    lastUpdated: "2025-01-15",
-    description:
-      "First 30 days checklist for new engineers. Covers tooling, access, codebase walkthrough, and first ticket.",
-    complianceRequired: false,
-    avgCompletionTime: "30 days",
-    runCount: 5,
-    tags: ["onboarding", "hr", "people"],
-    steps: [
-      { id: "s1", order: 1, title: "Access provisioning (Day 1)", description: "GitHub, Slack, PagerDuty, AWS console, Trackly. IT ticket required.", required: true },
-      { id: "s2", order: 2, title: "Local dev setup (Day 1–2)", description: "Follow README in trackly-backend and trackly-frontend. Run docker-compose up.", required: true },
-      { id: "s3", order: 3, title: "Architecture walkthrough (Day 3)", description: "30 min with tech lead. Review system diagram and key decision records.", required: true },
-      { id: "s4", order: 4, title: "First ticket (Day 3–5)", description: "Pick a Good First Issue labeled ticket. PR must be reviewed by buddy engineer.", required: true },
-      { id: "s5", order: 5, title: "30-day check-in", description: "Meeting with engineering manager. Review onboarding satisfaction and goals.", required: false },
-    ],
-  },
-  {
-    id: "p4",
-    title: "Security Vulnerability Disclosure",
-    category: "compliance",
-    status: "active",
-    owner: "Anand V.",
-    lastUpdated: "2025-04-01",
-    description:
-      "Compliance-required process for handling security vulnerability reports. Must be followed for all P0/P1 security issues.",
-    complianceRequired: true,
-    avgCompletionTime: "72 hours",
-    runCount: 1,
-    tags: ["security", "compliance", "legal"],
-    steps: [
-      { id: "s1", order: 1, title: "Log and classify vulnerability", description: "Create private TRK ticket. Do not disclose publicly. Classify severity with CVSS score.", required: true },
-      { id: "s2", order: 2, title: "Notify legal within 24h", description: "Email security@trackly.io and legal@trackly.io. Include severity and affected systems.", required: true },
-      { id: "s3", order: 3, title: "Develop and test patch", description: "Fix in private branch. Full QA and security review before merge.", required: true },
-      { id: "s4", order: 4, title: "Coordinated disclosure", description: "Agree disclosure timeline with reporter (if external). Minimum 30 day embargo.", required: true },
-    ],
-  },
-  {
-    id: "p5",
-    title: "Sprint Planning Template",
-    category: "template",
-    status: "active",
-    owner: "Rahul M.",
-    lastUpdated: "2025-03-20",
-    description:
-      "Standard template for running a sprint planning meeting. 2-hour timebox. Attendees: full engineering team.",
-    complianceRequired: false,
-    avgCompletionTime: "2 hours",
-    runCount: 18,
-    tags: ["sprint", "planning", "agile"],
-    steps: [
-      { id: "s1", order: 1, title: "Review previous sprint (15 min)", description: "Celebrate wins. Review incomplete tickets — carry forward or close?", required: true },
-      { id: "s2", order: 2, title: "Confirm team capacity (10 min)", description: "Note PTO, on-call, and other commitments. Calculate available points.", required: true },
-      { id: "s3", order: 3, title: "Groom backlog top 20 (45 min)", description: "Discuss, estimate, and prioritize. Use Nova to surface blocking dependencies.", required: true },
-      { id: "s4", order: 4, title: "Commit to sprint scope (15 min)", description: "Move tickets to Sprint. Confirm sprint goal statement.", required: true },
-      { id: "s5", order: 5, title: "Close with sprint goal statement", description: "Document in sprint description: 'By end of sprint, we will...'", required: true },
-    ],
-  },
-];
+    avgCompletionTime: "",
+    steps: [emptyStep()],
+    org_level: !spaceId,
+  });
 
-/* ── Helpers ──────────────────────────────────────────────────────────────── */
-const categoryConfig: Record<ProcessCategory, { label: string; color: string }> = {
-  runbook: { label: "Runbook", color: styles.catRunbook },
-  sop: { label: "SOP", color: styles.catSop },
-  compliance: { label: "Compliance", color: styles.catCompliance },
-  template: { label: "Template", color: styles.catTemplate },
-  workflow: { label: "Workflow", color: styles.catWorkflow },
-};
+  function setField(k: keyof Omit<CreateForm, "steps">, v: string | boolean) {
+    setForm((f) => ({ ...f, [k]: v }));
+  }
 
-const statusConfig: Record<ProcessStatus, { label: string; className: string }> = {
-  active: { label: "Active", className: styles.statusActive },
-  draft: { label: "Draft", className: styles.statusDraft },
-  review: { label: "In Review", className: styles.statusReview },
-  deprecated: { label: "Deprecated", className: styles.statusDeprecated },
-};
+  function setStep(i: number, k: keyof StepDraft, v: string | boolean) {
+    setForm((f) => {
+      const steps = [...f.steps];
+      steps[i] = { ...steps[i], [k]: v };
+      return { ...f, steps };
+    });
+  }
 
-/* ── Process detail ───────────────────────────────────────────────────────── */
-function ProcessDetail({ process, onClose }: { process: Process; onClose: () => void }) {
+  function addStep() {
+    setForm((f) => ({ ...f, steps: [...f.steps, emptyStep()] }));
+  }
+
+  function removeStep(i: number) {
+    setForm((f) => ({ ...f, steps: f.steps.filter((_, idx) => idx !== i) }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.title.trim()) return;
+    const today = new Date().toISOString().split("T")[0];
+    await createMut.mutateAsync({
+      title: form.title.trim(),
+      category: form.category,
+      status: form.status,
+      owner: form.owner.trim(),
+      description: form.description.trim(),
+      lastUpdated: today,
+      tags: form.tagsText.split(",").map((s) => s.trim()).filter(Boolean),
+      complianceRequired: form.complianceRequired,
+      avgCompletionTime: form.avgCompletionTime.trim() || undefined,
+      runCount: 0,
+      steps: form.steps
+        .filter((s) => s.title.trim())
+        .map((s, i) => ({
+          id: `step-${i}`,
+          order: i + 1,
+          title: s.title.trim(),
+          description: s.description.trim(),
+          owner: s.owner.trim() || undefined,
+          estimatedTime: s.estimatedTime.trim() || undefined,
+          required: s.required,
+        })),
+      space_id: form.org_level ? null : (spaceId ?? null),
+      org_level: form.org_level,
+    });
+    onClose();
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className={styles.createForm}>
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Title *</label>
+        <input
+          className={styles.formInput}
+          placeholder="e.g. Database Failover Procedure"
+          value={form.title}
+          onChange={(e) => setField("title", e.target.value)}
+          required
+        />
+      </div>
+
+      <div className={styles.formRow}>
+        <div className={styles.formGroup} style={{ flex: 1 }}>
+          <label className={styles.formLabel}>Category</label>
+          <select
+            className={styles.formSelect}
+            value={form.category}
+            onChange={(e) => setField("category", e.target.value as ProcessCategory)}
+          >
+            <option value="runbook">Runbook</option>
+            <option value="sop">SOP</option>
+            <option value="compliance">Compliance</option>
+            <option value="template">Template</option>
+            <option value="workflow">Workflow</option>
+          </select>
+        </div>
+        <div className={styles.formGroup} style={{ flex: 1 }}>
+          <label className={styles.formLabel}>Status</label>
+          <select
+            className={styles.formSelect}
+            value={form.status}
+            onChange={(e) => setField("status", e.target.value as ProcessStatus)}
+          >
+            <option value="active">Active</option>
+            <option value="draft">Draft</option>
+            <option value="review">In Review</option>
+            <option value="deprecated">Deprecated</option>
+          </select>
+        </div>
+      </div>
+
+      <div className={styles.formRow}>
+        <div className={styles.formGroup} style={{ flex: 1 }}>
+          <label className={styles.formLabel}>Owner</label>
+          <input
+            className={styles.formInput}
+            placeholder="e.g. Arjun K."
+            value={form.owner}
+            onChange={(e) => setField("owner", e.target.value)}
+          />
+        </div>
+        <div className={styles.formGroup} style={{ flex: 1 }}>
+          <label className={styles.formLabel}>Avg. Completion Time</label>
+          <input
+            className={styles.formInput}
+            placeholder="e.g. ~25 min"
+            value={form.avgCompletionTime}
+            onChange={(e) => setField("avgCompletionTime", e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Description</label>
+        <textarea
+          className={styles.formTextarea}
+          placeholder="What does this process cover and when should it be used?"
+          value={form.description}
+          onChange={(e) => setField("description", e.target.value)}
+          rows={3}
+        />
+      </div>
+
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Tags (comma-separated)</label>
+        <input
+          className={styles.formInput}
+          placeholder="database, incident, critical"
+          value={form.tagsText}
+          onChange={(e) => setField("tagsText", e.target.value)}
+        />
+      </div>
+
+      <label className={styles.formCheck}>
+        <input
+          type="checkbox"
+          checked={form.complianceRequired}
+          onChange={(e) => setField("complianceRequired", e.target.checked)}
+        />
+        <span>Compliance required</span>
+      </label>
+
+      {/* Steps */}
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <span className={styles.formLabel}>Steps</span>
+          <button type="button" className={styles.addStepBtn} onClick={addStep}>
+            <RiAddLine size={11} /> Add Step
+          </button>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {form.steps.map((step, i) => (
+            <div key={i} className={styles.stepDraftCard}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
+                <span className={styles.stepDraftNum}>{i + 1}</span>
+                <input
+                  className={styles.formInput}
+                  style={{ flex: 1 }}
+                  placeholder={`Step ${i + 1} title`}
+                  value={step.title}
+                  onChange={(e) => setStep(i, "title", e.target.value)}
+                />
+                {form.steps.length > 1 && (
+                  <button type="button" className={styles.removeStepBtn} onClick={() => removeStep(i)}>✕</button>
+                )}
+              </div>
+              <textarea
+                className={styles.formTextarea}
+                placeholder="Step description..."
+                value={step.description}
+                onChange={(e) => setStep(i, "description", e.target.value)}
+                rows={2}
+              />
+              <div className={styles.formRow} style={{ marginTop: 6 }}>
+                <input
+                  className={styles.formInput}
+                  style={{ flex: 1 }}
+                  placeholder="Owner"
+                  value={step.owner}
+                  onChange={(e) => setStep(i, "owner", e.target.value)}
+                />
+                <input
+                  className={styles.formInput}
+                  style={{ flex: 1 }}
+                  placeholder="Est. time"
+                  value={step.estimatedTime}
+                  onChange={(e) => setStep(i, "estimatedTime", e.target.value)}
+                />
+                <label className={styles.formCheck}>
+                  <input
+                    type="checkbox"
+                    checked={step.required}
+                    onChange={(e) => setStep(i, "required", e.target.checked)}
+                  />
+                  <span>Required</span>
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {spaceId && (
+        <label className={styles.formCheck}>
+          <input
+            type="checkbox"
+            checked={form.org_level}
+            onChange={(e) => setField("org_level", e.target.checked)}
+          />
+          <span>Org-wide process (visible across all spaces)</span>
+        </label>
+      )}
+
+      <div className={styles.formActions}>
+        <button type="button" className={styles.formCancel} onClick={onClose}>Cancel</button>
+        <button type="submit" className={styles.formSubmit} disabled={createMut.isPending}>
+          {createMut.isPending ? "Saving…" : "Save Process"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/* ── Process detail body ── */
+function ProcessDetailBody({ process }: { process: Process }) {
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
 
   function toggleStep(id: string) {
@@ -176,43 +320,27 @@ function ProcessDetail({ process, onClose }: { process: Process; onClose: () => 
     });
   }
 
-  const pct = Math.round((completedSteps.size / process.steps.length) * 100);
+  const pct = process.steps.length > 0
+    ? Math.round((completedSteps.size / process.steps.length) * 100)
+    : 0;
 
   return (
-    <motion.div
-      className={styles.detailPanel}
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      transition={{ duration: 0.2 }}
-    >
-      <div className={styles.detailHeader}>
-        <div className={styles.detailMeta}>
-          <span className={`${styles.catBadge} ${categoryConfig[process.category].color}`}>
-            {categoryConfig[process.category].label}
-          </span>
-          {process.complianceRequired && (
-            <span className={styles.complianceBadge}>
-              <RiShieldCheckLine size={11} /> Compliance Required
-            </span>
-          )}
-        </div>
-        <button className={styles.closeBtn} onClick={onClose}>✕</button>
-      </div>
-
-      <h2 className={styles.detailTitle}>{process.title}</h2>
-
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div className={styles.detailInfo}>
         <span className={styles.infoItem}><RiTeamLine size={12} /> {process.owner}</span>
-        <span className={styles.infoItem}><RiTimeLine size={12} /> {process.avgCompletionTime}</span>
-        {process.runCount && (
+        {process.avgCompletionTime && (
+          <span className={styles.infoItem}><RiTimeLine size={12} /> {process.avgCompletionTime}</span>
+        )}
+        {(process.runCount ?? 0) > 0 && (
           <span className={styles.infoItem}>Run {process.runCount}×</span>
+        )}
+        {process.org_level && (
+          <span className={styles.infoItem}><RiGlobalLine size={12} /> Org-wide</span>
         )}
       </div>
 
       <p className={styles.detailDesc}>{process.description}</p>
 
-      {/* Progress */}
       {completedSteps.size > 0 && (
         <div className={styles.progressSection}>
           <div className={styles.progressLabel}>
@@ -229,15 +357,9 @@ function ProcessDetail({ process, onClose }: { process: Process; onClose: () => 
         </div>
       )}
 
-      {/* Steps */}
       <div className={styles.stepsHeader}>
         <h3 className={styles.stepsTitle}>Steps</h3>
-        <button
-          className={styles.resetBtn}
-          onClick={() => setCompletedSteps(new Set())}
-        >
-          Reset
-        </button>
+        <button className={styles.resetBtn} onClick={() => setCompletedSteps(new Set())}>Reset</button>
       </div>
 
       <div className={styles.stepsList}>
@@ -259,33 +381,47 @@ function ProcessDetail({ process, onClose }: { process: Process; onClose: () => 
               <div className={styles.stepBody}>
                 <div className={styles.stepTitleRow}>
                   <span className={styles.stepTitle}>{step.title}</span>
-                  {!step.required && (
-                    <span className={styles.optionalBadge}>optional</span>
-                  )}
-                  {step.estimatedTime && (
-                    <span className={styles.stepTime}>{step.estimatedTime}</span>
-                  )}
+                  {!step.required && <span className={styles.optionalBadge}>optional</span>}
+                  {step.estimatedTime && <span className={styles.stepTime}>{step.estimatedTime}</span>}
                 </div>
                 <p className={styles.stepDesc}>{step.description}</p>
-                {step.owner && (
-                  <span className={styles.stepOwner}>Owner: {step.owner}</span>
-                )}
+                {step.owner && <span className={styles.stepOwner}>Owner: {step.owner}</span>}
               </div>
             </div>
           );
         })}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-/* ── Page ─────────────────────────────────────────────────────────────────── */
-export default function ProcessesPage() {
+/* ── Page ── */
+export default function ProcessesPage({
+  spaceId,
+  compact,
+}: {
+  spaceId?: string;
+  compact?: boolean;
+} = {}) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Process | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
   const [filterCat, setFilterCat] = useState<string>("all");
+  const [includeOrg, setIncludeOrg] = useState(false);
+  const [novaQ, setNovaQ] = useState("");
+  const [novaAnswer, setNovaAnswer] = useState("");
+  const [novaSources, setNovaSources] = useState<{ title: string; url?: string }[]>([]);
+  const [novaLoading, setNovaLoading] = useState(false);
 
-  const filtered = PROCESSES.filter((p) => {
+  const queryParams = spaceId
+    ? { space_id: spaceId, ...(includeOrg ? { org_level: true } : {}) }
+    : undefined;
+
+  const { data, isLoading } = useProcesses(queryParams);
+  const deleteMut = useDeleteProcess();
+
+  const processes = data?.processes ?? [];
+  const filtered = processes.filter((p) => {
     const matchSearch =
       !search ||
       p.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -294,44 +430,168 @@ export default function ProcessesPage() {
     return matchSearch && matchCat;
   });
 
-  const categories: ("all" | ProcessCategory)[] = ["all", "runbook", "sop", "compliance", "template", "workflow"];
+  const categories: ("all" | ProcessCategory)[] = [
+    "all", "runbook", "sop", "compliance", "template", "workflow",
+  ];
+
+  async function handleNovaQuery() {
+    if (!novaQ.trim()) return;
+    setNovaLoading(true);
+    setNovaAnswer("");
+    setNovaSources([]);
+    try {
+      const res = await novaQuery(novaQ);
+      setNovaAnswer(res.answer);
+      setNovaSources(res.citations ?? []);
+    } catch {
+      setNovaAnswer("EOS couldn't retrieve an answer. Try rephrasing.");
+    }
+    setNovaLoading(false);
+  }
+
+  function handleDelete(id: string) {
+    if (!confirm("Delete this process?")) return;
+    deleteMut.mutate(id, {
+      onSuccess: () => {
+        if (selected?.id === id) setSelected(null);
+      },
+    });
+  }
+
+  const detailBadge = selected ? (
+    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+      <span className={`${styles.catBadge} ${categoryConfig[selected.category].color}`}>
+        {categoryConfig[selected.category].label}
+      </span>
+      <span className={`${styles.statusBadge} ${statusConfig[selected.status].className}`}>
+        {statusConfig[selected.status].label}
+      </span>
+      {selected.complianceRequired && (
+        <span className={styles.complianceBadge}>
+          <RiShieldCheckLine size={11} /> Compliance Required
+        </span>
+      )}
+    </div>
+  ) : undefined;
+
+  const detailFooter = selected ? (
+    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+      <button
+        className={styles.deleteBtn}
+        onClick={() => handleDelete(selected.id)}
+        title="Delete"
+      >
+        <RiDeleteBinLine size={12} /> Delete
+      </button>
+    </div>
+  ) : undefined;
 
   return (
     <div className={styles.page}>
-      <div className={`${styles.listCol} ${selected ? styles.listColNarrow : ""}`}>
+      <div className={styles.listCol}>
         {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.headerLeft}>
-            <RiShieldCheckLine size={20} className={styles.headerIcon} />
-            <div>
-              <h1 className={styles.title}>Processes</h1>
-              <p className={styles.subtitle}>SOPs · Runbooks · Compliance · Templates</p>
+        {!compact ? (
+          <div className={styles.header}>
+            <div className={styles.headerLeft}>
+              <RiShieldCheckLine size={20} className={styles.headerIcon} />
+              <div>
+                <h1 className={styles.title}>Processes</h1>
+                <p className={styles.subtitle}>SOPs · Runbooks · Compliance · Templates</p>
+              </div>
             </div>
+            <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
+              <RiAddLine size={15} /> New Process
+            </button>
           </div>
-          <button className={styles.addBtn}>
-            <RiAddLine size={15} /> New Process
-          </button>
+        ) : (
+          <div className={styles.header}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {spaceId && (
+                <>
+                  <button
+                    className={`${styles.filterChip} ${!includeOrg ? styles.filterChipActive : ""}`}
+                    onClick={() => setIncludeOrg(false)}
+                  >
+                    <RiBuilding2Line size={11} /> This Space
+                  </button>
+                  <button
+                    className={`${styles.filterChip} ${includeOrg ? styles.filterChipActive : ""}`}
+                    onClick={() => setIncludeOrg(true)}
+                  >
+                    <RiGlobalLine size={11} /> Org-Wide
+                  </button>
+                </>
+              )}
+            </div>
+            <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
+              <RiAddLine size={15} /> New Process
+            </button>
+          </div>
+        )}
+
+        {/* Nova bar */}
+        <div className={styles.novaBar}>
+          <div className={styles.novaBarInner}>
+            <RiShieldCheckLine size={14} className={styles.novaIcon} />
+            <input
+              className={styles.novaInput}
+              placeholder='Ask EOS: "What runbooks cover database incidents?"'
+              value={novaQ}
+              onChange={(e) => setNovaQ(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleNovaQuery()}
+            />
+            <button className={styles.novaAsk} onClick={handleNovaQuery} disabled={novaLoading}>
+              {novaLoading ? "…" : "Ask"}
+            </button>
+          </div>
+          <AnimatePresence>
+            {novaAnswer && (
+              <motion.div
+                className={styles.novaAnswer}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <div>
+                  <RiShieldCheckLine size={13} className={styles.novaAnswerIcon} />
+                  <div style={{ flex: 1 }}>
+                    <p>{novaAnswer}</p>
+                    {novaSources.length > 0 && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                        {novaSources.slice(0, 4).map((s, i) => (
+                          <span key={i} className={styles.filterChip} style={{ cursor: s.url ? "pointer" : "default" }}
+                            onClick={() => s.url && window.open(s.url, "_blank")}>
+                            {s.title}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Stats strip */}
         <div className={styles.statsStrip}>
           <div className={styles.statBox}>
-            <span className={styles.statNum}>{PROCESSES.length}</span>
+            <span className={styles.statNum}>{processes.length}</span>
             <span className={styles.statLabel}>total processes</span>
           </div>
           <div className={styles.statBox}>
-            <span className={styles.statNum}>{PROCESSES.filter(p => p.complianceRequired).length}</span>
+            <span className={styles.statNum}>{processes.filter((p) => p.complianceRequired).length}</span>
             <span className={styles.statLabel}>compliance required</span>
           </div>
           <div className={styles.statBox}>
-            <span className={styles.statNum}>{PROCESSES.reduce((a, p) => a + (p.runCount || 0), 0)}</span>
+            <span className={styles.statNum}>{processes.reduce((a, p) => a + (p.runCount ?? 0), 0)}</span>
             <span className={styles.statLabel}>total executions</span>
           </div>
           <div className={styles.statBox}>
             <span className={`${styles.statNum} ${styles.statWarn}`}>
-              {PROCESSES.filter(p => {
-                const d = new Date(p.lastUpdated);
-                return Date.now() - d.getTime() > 90 * 24 * 60 * 60 * 1000;
+              {processes.filter((p) => {
+                if (!p.lastUpdated) return false;
+                return Date.now() - new Date(p.lastUpdated).getTime() > 90 * 24 * 60 * 60 * 1000;
               }).length}
             </span>
             <span className={styles.statLabel}>may be stale (&gt;90d)</span>
@@ -344,7 +604,7 @@ export default function ProcessesPage() {
             <RiSearchLine size={13} className={styles.searchIcon} />
             <input
               className={styles.searchInput}
-              placeholder="Search processes..."
+              placeholder="Search processes…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -364,55 +624,91 @@ export default function ProcessesPage() {
 
         {/* List */}
         <div className={styles.list}>
-          {filtered.map((p, i) => (
-            <motion.div
-              key={p.id}
-              className={`${styles.processRow} ${selected?.id === p.id ? styles.processRowActive : ""}`}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => setSelected(p)}
-            >
-              <div className={styles.rowLeft}>
-                <span className={`${styles.catBadge} ${categoryConfig[p.category].color}`}>
-                  {categoryConfig[p.category].label}
-                </span>
-                {p.complianceRequired && (
-                  <RiShieldCheckLine size={13} className={styles.complianceIcon} title="Compliance required" />
-                )}
-              </div>
-              <div className={styles.rowBody}>
-                <div className={styles.rowTitleRow}>
-                  <span className={styles.rowTitle}>{p.title}</span>
-                  <span className={`${styles.statusBadge} ${statusConfig[p.status].className}`}>
-                    {statusConfig[p.status].label}
+          {isLoading ? (
+            <>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className={styles.loadingRow} />
+              ))}
+            </>
+          ) : filtered.length === 0 ? (
+            <div className={styles.emptyState}>
+              {search || filterCat !== "all"
+                ? "No processes match your filters."
+                : spaceId
+                ? "No processes yet for this space. Add your first runbook or SOP."
+                : "No processes recorded yet. Document your first SOP or runbook."}
+            </div>
+          ) : (
+            filtered.map((p, i) => (
+              <motion.div
+                key={p.id}
+                className={`${styles.processRow} ${selected?.id === p.id ? styles.processRowActive : ""}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                onClick={() => { setSelected(p); setShowCreate(false); }}
+              >
+                <div className={styles.rowLeft}>
+                  <span className={`${styles.catBadge} ${categoryConfig[p.category].color}`}>
+                    {categoryConfig[p.category].label}
                   </span>
-                </div>
-                <div className={styles.rowMeta}>
-                  <span><RiTeamLine size={11} /> {p.owner}</span>
-                  <span>·</span>
-                  <span><RiTimeLine size={11} /> Updated {new Date(p.lastUpdated).toLocaleDateString()}</span>
-                  {p.runCount && (
-                    <>
-                      <span>·</span>
-                      <span>Run {p.runCount}×</span>
-                    </>
+                  {p.complianceRequired && (
+                    <RiShieldCheckLine size={13} className={styles.complianceIcon} title="Compliance required" />
+                  )}
+                  {p.org_level && (
+                    <RiGlobalLine size={12} style={{ color: "var(--text-3)" }} title="Org-wide" />
                   )}
                 </div>
-                <p className={styles.rowDesc}>{p.description}</p>
-              </div>
-              <RiArrowRightLine size={14} className={styles.rowArrow} />
-            </motion.div>
-          ))}
+                <div className={styles.rowBody}>
+                  <div className={styles.rowTitleRow}>
+                    <span className={styles.rowTitle}>{p.title}</span>
+                    <span className={`${styles.statusBadge} ${statusConfig[p.status].className}`}>
+                      {statusConfig[p.status].label}
+                    </span>
+                  </div>
+                  <div className={styles.rowMeta}>
+                    <span><RiTeamLine size={11} /> {p.owner}</span>
+                    {p.lastUpdated && (
+                      <>
+                        <span>·</span>
+                        <span><RiTimeLine size={11} /> Updated {new Date(p.lastUpdated).toLocaleDateString()}</span>
+                      </>
+                    )}
+                    {(p.runCount ?? 0) > 0 && (
+                      <><span>·</span><span>Run {p.runCount}×</span></>
+                    )}
+                  </div>
+                  <p className={styles.rowDesc}>{p.description}</p>
+                </div>
+                <RiArrowRightLine size={14} className={styles.rowArrow} />
+              </motion.div>
+            ))
+          )}
         </div>
       </div>
 
-      {/* Detail panel */}
-      <AnimatePresence>
-        {selected && (
-          <ProcessDetail process={selected} onClose={() => setSelected(null)} />
-        )}
-      </AnimatePresence>
+      {/* Detail drawer */}
+      <SideDrawer
+        open={!!selected && !showCreate}
+        onClose={() => setSelected(null)}
+        size="md"
+        title={selected?.title ?? ""}
+        badge={detailBadge}
+        footer={detailFooter}
+      >
+        {selected && <ProcessDetailBody process={selected} />}
+      </SideDrawer>
+
+      {/* Create drawer */}
+      <SideDrawer
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        size="md"
+        title="New Process"
+        subtitle="Document a runbook, SOP, or workflow"
+      >
+        <CreateProcessForm spaceId={spaceId} onClose={() => setShowCreate(false)} />
+      </SideDrawer>
     </div>
   );
 }

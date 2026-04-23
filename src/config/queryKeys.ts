@@ -7,6 +7,12 @@ export const QUERY_KEYS = {
   filters: () => ["filters"] as const,
   goals: (quarter?: string) => ["goals", quarter] as const,
   goal: (id: string) => ["goal", id] as const,
+  decisions: (params?: { space_id?: string; org_level?: boolean; status?: string }) =>
+    ["decisions", params] as const,
+  decision: (id: string) => ["decision", id] as const,
+  processes: (params?: { space_id?: string; org_level?: boolean; category?: string }) =>
+    ["processes", params] as const,
+  process: (id: string) => ["process", id] as const,
 } as const;
 
 /* ── Date presets ── */

@@ -11,6 +11,8 @@ import RoadmapTab from "./tabs/RoadmapTab";
 import SprintsTab from "./tabs/SprintsTab";
 import EOSTab from "./tabs/EOSTab";
 import SettingsTab from "./tabs/SettingsTab";
+import DecisionsTab from "./tabs/DecisionsTab";
+import ProcessesTab from "./tabs/ProcessesTab";
 import styles from "./ProjectDetailPage.module.css";
 
 import {
@@ -21,10 +23,11 @@ import {
   RiAddLine,
   RiSparklingLine,
   RiRoadMapLine,
-  RiCalendar2Line,
   RiCheckLine,
   RiAlertLine,
   RiSettings3Line,
+  RiFileTextLine,
+  RiShieldCheckLine,
 } from "react-icons/ri";
 
 function VelocityRing({ done, total, size = 28 }: { done: number; total: number; size?: number }) {
@@ -42,16 +45,17 @@ function VelocityRing({ done, total, size = 28 }: { done: number; total: number;
   );
 }
 
-type Tab = "summary" | "backlog" | "board" | "sprints" | "roadmap" | "nova" | "settings";
+type Tab = "summary" | "backlog" | "board" | "sprints" | "roadmap" | "nova" | "decisions" | "processes" | "settings";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: "summary",  label: "Summary",  icon: <RiBarChartBoxLine size={15} /> },
-  { id: "backlog",  label: "Backlog",  icon: <RiTaskLine size={15} /> },
-  { id: "board",    label: "Board",    icon: <RiFlashlightLine size={15} /> },
-  // { id: "sprints",  label: "Sprints",  icon: <RiCalendar2Line size={15} /> },
-  { id: "roadmap",  label: "Roadmap",  icon: <RiRoadMapLine size={15} /> },
-  { id: "nova",     label: "EOS",      icon: <RiSparklingLine size={15} /> },
-  { id: "settings", label: "Settings", icon: <RiSettings3Line size={15} /> },
+  { id: "summary",   label: "Summary",   icon: <RiBarChartBoxLine size={15} /> },
+  { id: "backlog",   label: "Backlog",   icon: <RiTaskLine size={15} /> },
+  { id: "board",     label: "Board",     icon: <RiFlashlightLine size={15} /> },
+  { id: "roadmap",   label: "Roadmap",   icon: <RiRoadMapLine size={15} /> },
+  { id: "nova",      label: "EOS",       icon: <RiSparklingLine size={15} /> },
+  { id: "decisions", label: "Decisions", icon: <RiFileTextLine size={15} /> },
+  { id: "processes", label: "Processes", icon: <RiShieldCheckLine size={15} /> },
+  { id: "settings",  label: "Settings",  icon: <RiSettings3Line size={15} /> },
 ];
 
 export default function ProjectDetailPage() {
@@ -284,6 +288,8 @@ export default function ProjectDetailPage() {
           {activeTab === "nova" && (
             <EOSTab project={project} activeSprint={activeSprint} pod={pod ?? ""} />
           )}
+          {activeTab === "decisions" && <DecisionsTab pod={pod ?? ""} />}
+          {activeTab === "processes" && <ProcessesTab pod={pod ?? ""} />}
           {activeTab === "settings" && <SettingsTab project={project} />}
         </div>
       </div>

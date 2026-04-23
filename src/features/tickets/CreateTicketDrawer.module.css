@@ -6,7 +6,7 @@
 
 .twoColumnLayout {
   display: grid;
-  grid-template-columns: 340px 1fr;
+  grid-template-columns: 280px 1fr;
   min-height: 100%;
 }
 
@@ -14,8 +14,9 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
   border-right: 1px solid var(--border);
+  overflow-y: auto;
 }
 
 .rightColumn {
@@ -24,6 +25,7 @@
   flex-direction: column;
   gap: 14px;
   min-width: 0;
+  overflow-y: auto;
 }
 
 /* Classification grid stacks vertically in the narrow left column */
@@ -1296,3 +1298,80 @@
   transition: color 0.12s;
 }
 .routingDismiss:hover { color: var(--text); }
+
+/* ── Section Cards ── */
+.sectionCard {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionTitle {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 2px;
+}
+
+/* ── EOS Form Button ── */
+.eosFormBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-glow);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+}
+.eosFormBtn:hover {
+  background: var(--accent-border);
+  color: #fff;
+}
+.eosFormBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Compact left-column MUI overrides ── */
+.leftColumn :global(.MuiOutlinedInput-root) {
+  font-size: 12px;
+  background: var(--surface);
+  border-radius: 8px;
+}
+.leftColumn :global(.MuiOutlinedInput-root fieldset) {
+  border-color: var(--border-2);
+  transition: border-color 0.15s;
+}
+.leftColumn :global(.MuiOutlinedInput-root:hover fieldset) {
+  border-color: var(--border-3);
+}
+.leftColumn :global(.MuiOutlinedInput-root.Mui-focused fieldset) {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.leftColumn :global(.MuiInputLabel-root) {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.leftColumn :global(.MuiInputLabel-root.Mui-focused) {
+  color: var(--accent);
+}
+.leftColumn :global(.MuiInputBase-input) {
+  color: var(--text);
+}
+.leftColumn :global(.MuiSelect-icon) {
+  color: var(--text-3);
+}

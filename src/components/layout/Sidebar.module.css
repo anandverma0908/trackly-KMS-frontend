@@ -220,6 +220,119 @@
   white-space: nowrap;
 }
 
+/* ── Spaces expandable group ── */
+.spacesGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.spacesRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.spacesMain {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+  margin: 1px 0;
+  text-align: left;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  min-width: 0;
+}
+.spacesMain:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.spacesMain.itemActive {
+  background: var(--accent-glow);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.spacesChevron {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: background 0.15s;
+  margin-right: 2px;
+}
+.spacesChevron:hover {
+  background: var(--surface-2);
+}
+
+.spacesList {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 0 2px 16px;
+}
+
+.spaceItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: all 0.15s;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  text-align: left;
+  width: 100%;
+}
+.spaceItem:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.spaceItemActive {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+
+.spaceDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.spaceLabel {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sprintDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+}
+
 /* ── Filter section ── */
 .filterSection {
   margin: 2px 0;

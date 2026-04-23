@@ -28,6 +28,10 @@ import type {
   WorkloadEntry,
   Goal,
   GoalsResponse,
+  Decision,
+  DecisionsResponse,
+  Process,
+  ProcessesResponse,
 } from "@/types";
 import type { Project } from "@/features/spaces/spacesData";
 import { getAuthHeader } from "@/features/auth/useAuthStore";
@@ -1068,4 +1072,120 @@ export async function deleteGoal(id: string): Promise<void> {
 export async function fetchGoalNovaInsight(goalId: string): Promise<string> {
   const { data } = await api.post<{ insight: string }>("/nova/goals-insight", { goal_id: goalId });
   return data.insight;
+}
+
+/* ── Decisions / ADRs ── */
+function _mapDecisionOut(d: any): Decision {
+  return {
+    ...d,
+    linkedTickets: d.linkedTickets ?? d.linked_tickets ?? [],
+    tags: d.tags ?? [],
+    alternatives: d.alternatives ?? [],
+    space_id: d.space_id ?? null,
+    org_level: d.org_level ?? false,
+  };
+}
+
+export async function fetchDecisions(params?: {
+  space_id?: string;
+  org_level?: boolean;
+  status?: string;
+}): Promise<DecisionsResponse> {
+  const { data } = await api.get<any>("/decisions", { params });
+  const decisions = (data.decisions ?? data ?? []).map(_mapDecisionOut);
+  return { decisions, total: data.total ?? decisions.length };
+}
+
+export async function fetchDecision(id: string): Promise<Decision> {
+  const { data } = await api.get<any>(`/decisions/${id}`);
+  return _mapDecisionOut(data);
+}
+
+export async function createDecision(
+  payload: Omit<Decision, "id" | "created_at" | "updated_at">,
+): Promise<Decision> {
+  const { data } = await api.post<any>("/decisions", {
+    ...payload,
+    linked_tickets: payload.linkedTickets,
+  });
+  return _mapDecisionOut(data);
+}
+
+export async function updateDecision(
+  id: string,
+  payload: Partial<Omit<Decision, "id">>,
+): Promise<Decision> {
+  const { data } = await api.patch<any>(`/decisions/${id}`, {
+    ...payload,
+    linked_tickets: payload.linkedTickets,
+  });
+  return _mapDecisionOut(data);
+}
+
+export async function deleteDecision(id: string): Promise<void> {
+  await api.delete(`/decisions/${id}`);
+}
+
+/* ── Processes / SOPs ── */
+function _mapProcessOut(p: any): Process {
+  return {
+    ...p,
+    lastUpdated: p.lastUpdated ?? p.last_updated ?? p.updated_at ?? "",
+    complianceRequired: p.complianceRequired ?? p.compliance_required ?? false,
+    avgCompletionTime: p.avgCompletionTime ?? p.avg_completion_time,
+    runCount: p.runCount ?? p.run_count ?? 0,
+    tags: p.tags ?? [],
+    steps: (p.steps ?? []).map((s: any) => ({
+      ...s,
+      estimatedTime: s.estimatedTime ?? s.estimated_time,
+    })),
+    space_id: p.space_id ?? null,
+    org_level: p.org_level ?? false,
+  };
+}
+
+export async function fetchProcesses(params?: {
+  space_id?: string;
+  org_level?: boolean;
+  category?: string;
+}): Promise<ProcessesResponse> {
+  const { data } = await api.get<any>("/processes", { params });
+  const processes = (data.processes ?? data ?? []).map(_mapProcessOut);
+  return { processes, total: data.total ?? processes.length };
+}
+
+export async function fetchProcess(id: string): Promise<Process> {
+  const { data } = await api.get<any>(`/processes/${id}`);
+  return _mapProcessOut(data);
+}
+
+export async function createProcess(
+  payload: Omit<Process, "id" | "created_at" | "updated_at">,
+): Promise<Process> {
+  const { data } = await api.post<any>("/processes", {
+    ...payload,
+    last_updated: payload.lastUpdated,
+    compliance_required: payload.complianceRequired,
+    avg_completion_time: payload.avgCompletionTime,
+    run_count: payload.runCount,
+  });
+  return _mapProcessOut(data);
+}
+
+export async function updateProcess(
+  id: string,
+  payload: Partial<Omit<Process, "id">>,
+): Promise<Process> {
+  const { data } = await api.patch<any>(`/processes/${id}`, {
+    ...payload,
+    last_updated: payload.lastUpdated,
+    compliance_required: payload.complianceRequired,
+    avg_completion_time: payload.avgCompletionTime,
+    run_count: payload.runCount,
+  });
+  return _mapProcessOut(data);
+}
+
+export async function deleteProcess(id: string): Promise<void> {
+  await api.delete(`/processes/${id}`);
 }

@@ -1,6 +1,10 @@
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/useAuthStore";
+import { fetchPodSummary } from "@/services/api";
+import { getPodColor } from "@/config/themes";
 import styles from "./Sidebar.module.css";
 import Tooltip from "@mui/material/Tooltip";
 
@@ -15,8 +19,7 @@ import {
   RiBrainLine,
   RiFocus3Line,
   RiTimeLine,
-  RiFileTextLine,
-  RiShieldCheckLine,
+  RiArrowRightSLine,
 } from "react-icons/ri";
 
 interface SidebarProps {
@@ -33,6 +36,13 @@ export default function Sidebar({
   const navigate = useNavigate();
   const location = useLocation();
   const { can } = useAuthStore();
+  const [spacesOpen, setSpacesOpen] = useState(true);
+
+  const { data: pods = [] } = useQuery({
+    queryKey: ["pod-summary"],
+    queryFn: fetchPodSummary,
+    staleTime: 1000 * 60 * 2,
+  });
 
   function handleNavClick(path: string) {
     navigate(path);
@@ -68,6 +78,9 @@ export default function Sidebar({
       <div className={styles.sectionDividerCollapsed} />
     );
 
+  const isInSpace = location.pathname.startsWith("/spaces/");
+  const activePod = isInSpace ? location.pathname.split("/")[2] : null;
+
   return (
     <motion.aside
       className={`${styles.sidebar} ${open ? styles.sidebarOpen : ""}`}
@@ -98,14 +111,90 @@ export default function Sidebar({
 
           {/* ── WORK ── */}
           {sectionLabel("Work")}
-          {nav(<RiRocketLine size={18} />, "Spaces", "/spaces")}
-          {nav(<RiFocus3Line size={18} />, "Goals", "/goals")}
+
+          {/* Spaces — expandable */}
+          {collapsed ? (
+            <Tooltip title="Spaces" placement="right" arrow>
+              <button
+                className={`${styles.item} ${isActive("/spaces") ? styles.itemActive : ""}`}
+                style={{ width: "auto" }}
+                onClick={() => handleNavClick("/spaces")}
+              >
+                <span className={styles.itemIcon}><RiRocketLine size={18} /></span>
+              </button>
+            </Tooltip>
+          ) : (
+            <div className={styles.spacesGroup}>
+              {/* Spaces header row */}
+              <div className={styles.spacesRow}>
+                <button
+                  className={`${styles.spacesMain} ${isActive("/spaces") && !isInSpace ? styles.itemActive : ""}`}
+                  onClick={() => handleNavClick("/spaces")}
+                >
+                  <span className={styles.itemIcon}><RiRocketLine size={18} /></span>
+                  <span className={styles.label}>Spaces</span>
+                </button>
+                {pods.length > 0 && (
+                  <button
+                    className={styles.spacesChevron}
+                    onClick={() => setSpacesOpen((v) => !v)}
+                    title={spacesOpen ? "Collapse" : "Expand"}
+                  >
+                    <RiArrowRightSLine
+                      size={15}
+                      style={{
+                        transform: spacesOpen ? "rotate(90deg)" : "rotate(0deg)",
+                        transition: "transform 0.18s",
+                        color: "var(--text-3)",
+                      }}
+                    />
+                  </button>
+                )}
+              </div>
+
+              {/* Space sub-items */}
+              <AnimatePresence initial={false}>
+                {spacesOpen && pods.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.18 }}
+                    style={{ overflow: "hidden" }}
+                  >
+                    <div className={styles.spacesList}>
+                      {pods.map((p) => {
+                        const color = getPodColor(p.pod);
+                        const active = activePod === p.pod;
+                        return (
+                          <button
+                            key={p.pod}
+                            className={`${styles.spaceItem} ${active ? styles.spaceItemActive : ""}`}
+                            style={active ? { color } : {}}
+                            onClick={() => handleNavClick(`/spaces/${p.pod}`)}
+                          >
+                            <span
+                              className={styles.spaceDot}
+                              style={{ background: color }}
+                            />
+                            <span className={styles.spaceLabel}>{p.pod}</span>
+                            {p.has_active_sprint && (
+                              <span className={styles.sprintDot} />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* ── KNOWLEDGE ── */}
           {sectionLabel("Knowledge")}
           {nav(<RiBookOpenLine size={18} />, "Wiki", "/wiki")}
-          {nav(<RiFileTextLine size={18} />, "Decisions", "/decisions")}
-          {nav(<RiShieldCheckLine size={18} />, "Processes", "/processes")}
+          {nav(<RiFocus3Line size={18} />, "Goals", "/goals")}
 
           {/* ── INTELLIGENCE ── */}
           {sectionLabel("Intelligence")}

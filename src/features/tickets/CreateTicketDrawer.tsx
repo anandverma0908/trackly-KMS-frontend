@@ -31,8 +31,7 @@ import SideDrawer from "@/components/ui/SideDrawer";
 import { formatDate } from "@/utils/formatters";
 import type {
   TicketCreate,
-  NLAnalysisResult,
-  DuplicateTicket,
+  // (unused types removed)
   TicketActivity,
 } from "@/types";
 import type { ProjectMember } from "@/features/spaces/spacesData";
@@ -51,7 +50,6 @@ import Autocomplete from "@mui/material/Autocomplete";
 import {
   RiSparklingLine,
   RiAttachmentLine,
-  RiTimeLine,
   RiLink,
   RiAddLine,
   RiDeleteBinLine,
@@ -67,7 +65,6 @@ import {
   RiArrowDownSLine,
   RiArrowDownDoubleLine,
   RiCheckboxBlankCircleFill,
-  RiArrowDownWideFill,
   RiAlertLine,
   RiCodeSSlashLine,
   RiGitMergeLine,
@@ -176,13 +173,8 @@ export default function CreateTicketDrawer({
     "Colgate", "Jockey", "SAAS", "BSV", "ReckittBenckiser", "Henkel", "Unilever",
   ];
 
-  /* NOVA */
-  const [novaOpen, setNovaOpen] = useState(true);
-  const [nlText, setNlText] = useState("");
-  const [analyzing, setAnalyzing] = useState(false);
-  const [enhancing, setEnhancing] = useState(false);
-  const [confidence, setConfidence] = useState<number | null>(null);
-  const [duplicates, setDuplicates] = useState<DuplicateTicket[]>([]);
+  /* EOS Form */
+  const [eosFormLoading, setEosFormLoading] = useState(false);
 
   /* Live duplicate detection + story estimation */
   const [liveDupes, setLiveDupes] = useState<{ key: string; summary: string; similarity: number; ai?: boolean }[]>([]);
@@ -286,10 +278,6 @@ export default function CreateTicketDrawer({
         story_points: initialData.story_points,
         due_date: initialData.due_date,
       });
-      setNovaOpen(false);
-      setNlText("");
-      setConfidence(null);
-      setDuplicates([]);
       setTab(0);
       setLabelInput("");
       setNewLinkType(LINK_TYPES[0]);
@@ -321,10 +309,6 @@ export default function CreateTicketDrawer({
         labels: [],
         pod: defaultPod,
       });
-      setNovaOpen(true);
-      setNlText("");
-      setConfidence(null);
-      setDuplicates([]);
       setTab(0);
       setLabelInput("");
       setNewLinkType(LINK_TYPES[0]);
@@ -509,14 +493,14 @@ Return ONLY valid JSON, no prose: {"assignee": "Exact Name", "reason": "one sent
   const { data: comments = [] } = useQuery({
     queryKey: ["ticket-comments", ticketKey],
     queryFn: () => fetchTicketComments(ticketKey!),
-    enabled: isEdit && tab === 3,
+    enabled: isEdit && tab === 0,
   });
 
   /* Activity */
   const { data: serverActivity = [] } = useQuery({
     queryKey: ["ticket-activity", ticketKey],
     queryFn: () => fetchTicketActivity(ticketKey!),
-    enabled: isEdit && tab === 4,
+    enabled: isEdit && tab === 1,
   });
 
   const commentMut = useMutation({
@@ -662,80 +646,35 @@ Return ONLY valid JSON, no prose: {"assignee": "Exact Name", "reason": "one sent
     onError: (e: Error) => toast.error(e.message),
   });
 
-  /* ── NOVA: analyze NL ── */
-  async function handleAnalyze() {
-    if (!nlText.trim()) return;
-    setAnalyzing(true);
-    try {
-      const r: NLAnalysisResult = await analyzeTicketNL(nlText);
-      setForm((p) => ({
-        ...p,
-        title: r.title ?? p.title,
-        description: r.description ?? p.description,
-        pod: r.pod ?? p.pod,
-        client: r.client ?? p.client,
-        issue_type: r.issue_type ?? p.issue_type,
-        priority: r.priority ?? p.priority,
-        story_points: r.story_points ?? p.story_points,
-        assignee: r.assignee ?? p.assignee,
-        labels: r.labels ?? p.labels,
-      }));
-      setConfidence(r.confidence ?? null);
-      if (r.duplicates?.length) setDuplicates(r.duplicates);
-      if (r.story_points) {
-        const basePts = r.story_points;
-        setStoryEstimate({ min: Math.max(1, basePts - 1), max: basePts + 1, confidence: r.confidence ?? 0.82, basedOn: 11 });
-      }
-      setNovaOpen(false);
-      toast.success("EOS filled the form!");
-    } catch {
-      toast.error("EOS analysis failed");
-    } finally {
-      setAnalyzing(false);
+  /* ── EOS Form: improve title + description ── */
+  async function handleEosForm() {
+    if (!form.title.trim() && !form.description.trim()) {
+      toast.error("Add a title or description first");
+      return;
     }
-  }
-
-  /* ── NOVA: enhance description with structured template ── */
-  async function handleEnhanceDesc() {
-    if (!form.title.trim()) { toast.error("Add a title first"); return; }
-    setEnhancing(true);
+    setEosFormLoading(true);
     try {
-      const existing = form.description?.trim();
       const prompt = `You are EOS, an expert at writing clear engineering tickets.
 
-Ticket type: ${form.issue_type}
-Title: "${form.title}"
-${existing ? `Current description (restructure this): "${existing}"` : "No description yet — write one from scratch based on the title."}
+Current title: "${form.title}"
+Current description: "${form.description}"
 
-Write a structured description using EXACTLY this format (no extra prose, no markdown headers other than the ones listed):
+Improve both the title and description. Make the title concise, specific, and descriptive. Make the description structured and professional using standard ticket format.
 
-**Expected Behavior**
-[What should happen / what the user expects]
-
-**Actual Problem**
-[What is currently broken or missing]
-
-**Steps to Reproduce**
-1. [step]
-2. [step]
-3. [step]
-
-**User Credentials / Environment**
-[Relevant accounts, environments, or access needed to test — write "N/A" if not applicable]
-
-**Acceptance Criteria**
-- [ ] [criterion]
-- [ ] [criterion]
-
-Keep it concise and factual. Return only the description text.`;
+Return ONLY valid JSON, no prose: {"title": "improved title", "description": "improved description"}`;
 
       const res = await novaQuery(prompt);
-      if (res.answer) set("description", res.answer.trim());
-      toast.success("Description enhanced by EOS");
+      const m = res.answer.match(/\{[\s\S]*?\}/);
+      if (m) {
+        const parsed = JSON.parse(m[0]);
+        if (parsed.title) set("title", parsed.title);
+        if (parsed.description) set("description", parsed.description);
+        toast.success("EOS improved the form");
+      }
     } catch {
-      toast.error("Enhancement failed");
+      toast.error("EOS form enhancement failed");
     } finally {
-      setEnhancing(false);
+      setEosFormLoading(false);
     }
   }
 
@@ -851,7 +790,7 @@ Keep it concise and factual. Return only the description text.`;
       <SideDrawer
         open={open}
         onClose={onClose}
-        size="lg"
+        size="xl"
         title={readOnly ? `View ${ticketKey}` : isEdit ? `Edit ${ticketKey}` : "Create Issue"}
         subtitle={sprintName ? `Sprint: ${sprintName}` : undefined}
         badge={
@@ -866,60 +805,225 @@ Keep it concise and factual. Return only the description text.`;
         <div className={styles.twoColumnLayout}>
           {/* LEFT COLUMN */}
           <div className={styles.leftColumn}>
-            {!readOnly && (
-              <div className={styles.novaPanel}>
-                <div className={styles.novaHeader} onClick={() => setNovaOpen((v) => !v)}>
-                  <div className={styles.novaIcon}><RiSparklingLine size={14} /></div>
-                  <div className={styles.novaTitle}>Describe in plain English — EOS will fill the form</div>
-                  <RiArrowDownWideFill size={16} className={`${styles.novaChevron} ${novaOpen ? styles.novaChevronOpen : ""}`} />
-                </div>
-                {novaOpen && (
-                  <div className={styles.novaBody}>
-                    <textarea
-                      className={styles.novaInput}
-                      rows={2}
-                      placeholder='e.g. "Fix login timeout in DPAI — high priority bug, affects Colgate users, ~3 story points"'
-                      value={nlText}
-                      onChange={(e) => setNlText(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && e.ctrlKey && handleAnalyze()}
-                    />
-                    <div className={styles.novaActions}>
-                      <button className={styles.btnPrimary} disabled={analyzing || !nlText.trim()} onClick={handleAnalyze} style={{ padding: "6px 12px", fontSize: 11 }}>
-                        {analyzing ? (<><svg className={styles.spinner} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>Analyzing…</>) : (<><RiSparklingLine size={12} />Analyze with EOS</>)}
-                      </button>
-                      <button className={styles.btnGhost} onClick={() => setNovaOpen(false)}>Fill manually</button>
-                      <span className={styles.novaHint}>Ctrl+Enter</span>
-                    </div>
+            {/* Classification */}
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionTitle}>Classification</div>
+              <FormControl size="small" fullWidth disabled={readOnly}>
+                <InputLabel>Type</InputLabel>
+                <Select label="Type" value={form.issue_type} onChange={(e) => set("issue_type", e.target.value)}
+                  renderValue={(v) => { const t = ISSUE_TYPES.find((x) => x.value === v) ?? ISSUE_TYPES[1]; return <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)" }}><span style={{ color: t.color, display: "flex" }}>{t.icon}</span>{t.label}</span>; }}>
+                  {ISSUE_TYPES.map((t) => <MenuItem key={t.value} value={t.value}><span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}><span style={{ color: t.color, display: "flex" }}>{t.icon}</span>{t.label}</span></MenuItem>)}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" fullWidth disabled={readOnly}>
+                <InputLabel>Priority</InputLabel>
+                <Select label="Priority" value={form.priority} onChange={(e) => set("priority", e.target.value)}
+                  renderValue={(v) => { const p = PRIORITIES.find((x) => x.value === v)!; return <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)" }}><span style={{ color: p?.color, display: "flex" }}>{p?.icon}</span>{p?.label}</span>; }}>
+                  {PRIORITIES.map((p) => <MenuItem key={p.value} value={p.value}><span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}><span style={{ color: p?.color, display: "flex" }}>{p.icon}</span>{p.label}</span></MenuItem>)}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" fullWidth disabled={readOnly}>
+                <InputLabel>Status</InputLabel>
+                <Select label="Status" value={form.status} onChange={(e) => set("status", e.target.value)}
+                  renderValue={(v) => { const s = STATUSES.find((x) => x.value === v)!; return <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: s?.color }} />{s?.label}</span>; }}>
+                  {STATUSES.map((s) => <MenuItem key={s.value} value={s.value}><span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color }} />{s.label}</span></MenuItem>)}
+                </Select>
+              </FormControl>
+            </div>
+
+            {/* People */}
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionTitle}>People</div>
+              <Autocomplete
+                options={users}
+                value={form.assignee ?? null}
+                onChange={(_, v) => set("assignee", v ?? undefined)}
+                size="small"
+                fullWidth
+                disabled={readOnly}
+                renderInput={(params) => <TextField {...params} label="Assignee" />}
+                sx={{ "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+              />
+              {/* Reporter: always read-only */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                <label style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, letterSpacing: "0.05em" }}>Reporter</label>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  border: "1px solid var(--border)", borderRadius: 6,
+                  padding: "8px 12px", background: "var(--surface-2)",
+                  fontSize: 13, color: "var(--text-2)", minHeight: 40,
+                }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: "50%",
+                    background: "var(--accent-glow)", border: "1px solid var(--accent-border)",
+                    color: "var(--accent)", fontSize: 10, fontWeight: 700,
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    {(form.reporter || user?.name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                   </div>
+                  {form.reporter || user?.name || "—"}
+                </div>
+              </div>
+
+              {/* Intelligent routing suggestion */}
+              {!isEdit && !readOnly && (routingLoading || routingSuggestion) && !form.assignee && (
+                <div className={styles.routingCard}>
+                  <RiSparklingLine size={13} color="var(--accent)" style={{ flexShrink: 0, marginTop: 1 }} />
+                  {routingLoading ? (
+                    <span className={styles.routingText} style={{ color: "var(--text-3)" }}>EOS is finding the best assignee…</span>
+                  ) : routingSuggestion ? (
+                    <>
+                      <div className={styles.routingBody}>
+                        <span className={styles.routingText}>Assign to <strong>{routingSuggestion.assignee}</strong> — {routingSuggestion.reason}</span>
+                      </div>
+                      <button type="button" className={styles.routingAccept} onClick={() => { set("assignee", routingSuggestion.assignee); setRoutingSuggestion(null); setRoutingDismissed(true); }}>Assign</button>
+                      <button type="button" className={styles.routingDismiss} onClick={() => { setRoutingSuggestion(null); setRoutingDismissed(true); }} title="Dismiss">✕</button>
+                    </>
+                  ) : null}
+                </div>
+              )}
+            </div>
+
+            {/* Planning */}
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionTitle}>Planning</div>
+              <FormControl size="small" fullWidth disabled={readOnly}>
+                <InputLabel>Story Points</InputLabel>
+                <Select label="Story Points" value={form.story_points ?? ""} onChange={(e) => set("story_points", e.target.value ? Number(e.target.value) : undefined)}>
+                  <MenuItem value=""><em>None</em></MenuItem>
+                  {STORY_POINTS.map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}
+                </Select>
+              </FormControl>
+
+              <TextField
+                type="date" label="Due Date" size="small" fullWidth
+                value={form.due_date ?? ""}
+                onChange={(e) => set("due_date", e.target.value || undefined)}
+                InputLabelProps={{ shrink: true }}
+                disabled={readOnly}
+              />
+
+              {/* Story Point AI Callout */}
+              {!readOnly && !form.story_points && (storyAiLoading || storyEstimate) && (
+                <div className={styles.storyEstCard}>
+                  {storyAiLoading ? (
+                    <div className={styles.storyEstLeft}><svg className={styles.spinner} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="3"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg><span className={styles.storyEstMeta}>EOS estimating story points…</span></div>
+                  ) : storyEstimate ? (
+                    <>
+                      <div className={styles.storyEstLeft}>
+                        <RiSparklingLine size={15} className={styles.storyEstIcon} />
+                        <div>
+                          <span className={styles.storyEstTitle}>EOS estimates {storyEstimate.min}–{storyEstimate.max} story points</span>
+                          <span className={styles.storyEstMeta}>{storyEstimate.reasoning ?? `Confidence ${Math.round(storyEstimate.confidence * 100)}%`}</span>
+                        </div>
+                      </div>
+                      <div className={styles.storyEstActions}>
+                        <button className={styles.storyEstAccept} onClick={() => { set("story_points", storyEstimate.max); setStoryEstimate(null); }}>Accept {storyEstimate.max} pts</button>
+                        <button className={styles.storyEstDismiss} onClick={() => setStoryEstimate(null)}>✕</button>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              )}
+            </div>
+
+            {/* Context */}
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionTitle}>Context</div>
+              <FormControl size="small" fullWidth disabled={readOnly}>
+                <InputLabel>Client</InputLabel>
+                <Select label="Client" value={form.client ?? ""} onChange={(e) => set("client", e.target.value || undefined)}>
+                  <MenuItem value=""><em>None</em></MenuItem>
+                  {clients.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+                </Select>
+              </FormControl>
+              {/* POD display — read-only badge */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                <label style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, letterSpacing: "0.05em" }}>POD</label>
+                <div style={{
+                  display: "flex", alignItems: "center",
+                  border: "1px solid var(--accent-border)", borderRadius: 6,
+                  padding: "8px 12px", background: "var(--accent-glow)",
+                  fontSize: 13, fontWeight: 700, color: "var(--accent)", minHeight: 40,
+                }}>
+                  {form.pod ?? defaultPod ?? "—"}
+                </div>
+              </div>
+            </div>
+
+            {/* Time Tracking */}
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionTitle}>Time Tracking</div>
+              <div className={styles.formRow3}>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Original Est.</label>
+                  <input className={styles.textInput} placeholder="e.g. 2h 30m" value={form.originalEst} onChange={(e) => set("originalEst", e.target.value)} readOnly={readOnly} />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Time Spent</label>
+                  <input className={styles.textInput} placeholder="e.g. 1h" value={form.timeSpent} onChange={(e) => set("timeSpent", e.target.value)} readOnly={readOnly} />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Remaining</label>
+                  <input className={styles.textInput} placeholder="e.g. 1h 30m" value={form.remaining} onChange={(e) => set("remaining", e.target.value)} readOnly={readOnly} />
+                </div>
+              </div>
+            </div>
+
+            {/* Labels */}
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionTitle}>Labels</div>
+              <div className={styles.labelsBox}>
+                {(form.labels ?? []).map((l) => (
+                  <span key={l} className={styles.labelTag}>
+                    {l}
+                    {!readOnly && <button className={styles.labelRemove} onClick={() => set("labels", (form.labels ?? []).filter((x) => x !== l))}>✕</button>}
+                  </span>
+                ))}
+                {!readOnly && (
+                  <input
+                    className={styles.labelInput}
+                    placeholder="Type and press Enter…"
+                    value={labelInput}
+                    onChange={(e) => setLabelInput(e.target.value)}
+                    onKeyDown={addLabel}
+                  />
                 )}
               </div>
-            )}
+            </div>
 
-            {/* NOVA Confidence */}
-            {confidence !== null && (
-              <div className={styles.confidenceRow}>
-                <span className={styles.confidenceLabel}>EOS confidence</span>
-                <div className={styles.confidenceBar}>
-                  <div className={styles.confidenceFill} style={{ width: `${confidence * 100}%` }} />
-                </div>
-                <span className={styles.confidenceValue}>{Math.round(confidence * 100)}%</span>
-              </div>
-            )}
+            {/* Summary chips */}
+            <div className={styles.summaryBar}>
+              <span className={styles.summaryChip} style={{ background: `${typeConfig.color}18`, color: typeConfig.color, borderColor: `${typeConfig.color}44` }}>
+                <span style={{ display: "flex" }}>{typeConfig.icon}</span>{typeConfig.label}
+              </span>
+              <span className={styles.summaryChip} style={{ background: `${priorityConfig.color}18`, color: priorityConfig.color, borderColor: `${priorityConfig.color}44` }}>
+                <span style={{ display: "flex" }}>{priorityConfig.icon}</span>{priorityConfig.label}
+              </span>
+              <span className={styles.summaryChip} style={{ background: `${statusConfig.color}18`, color: statusConfig.color, borderColor: `${statusConfig.color}44` }}>
+                <RiCheckboxBlankCircleFill size={8} />{statusConfig.label}
+              </span>
+              {form.assignee && <span className={`${styles.summaryChip} ${styles.summaryChipDefault}`}>@ {form.assignee}</span>}
+              {form.story_points && <span className={`${styles.summaryChip} ${styles.summaryChipDefault}`}>{form.story_points} pts</span>}
+              {(form.pod ?? defaultPod) && (
+                <span className={`${styles.summaryChip} ${styles.summaryChipDefault}`} style={{ color: "var(--accent)", borderColor: "var(--accent-border)" }}>
+                  {form.pod ?? defaultPod}
+                </span>
+              )}
+            </div>
+          </div>
 
-            {/* Duplicate Warning */}
-            {duplicates.length > 0 && (
-              <div className={styles.duplicateAlert}>
-                <div className={styles.duplicateHeader}>
-                  <div className={styles.duplicateTitle}><RiAlertLine size={13} />Similar tickets found</div>
-                  <button className={styles.duplicateClose} onClick={() => setDuplicates([])}>✕</button>
-                </div>
-                {duplicates.map((d) => (
-                  <div key={d.key} className={styles.duplicateItem}>
-                    <span className={styles.duplicateKey}>{d.key}</span>
-                    <span className={styles.duplicateSummary}>{d.summary}</span>
-                    <span className={styles.duplicateScore}>{Math.round(d.similarity * 100)}%</span>
-                  </div>
-                ))}
+          {/* RIGHT COLUMN */}
+          <div className={styles.rightColumn}>
+            {/* EOS Form Button */}
+            {!readOnly && (
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button className={styles.eosFormBtn} disabled={eosFormLoading || (!form.title.trim() && !form.description.trim())} onClick={handleEosForm}>
+                  {eosFormLoading ? <svg className={styles.spinner} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg> : <RiSparklingLine size={14} />}
+                  EOS Form
+                </button>
               </div>
             )}
 
@@ -957,48 +1061,173 @@ Keep it concise and factual. Return only the description text.`;
               </div>
             )}
 
-            {/* Description + AI Enhance */}
+            {/* Description */}
             <div className={styles.field}>
               <label className={styles.fieldLabel}>Description</label>
-              <div className={styles.descWrap}>
-                <textarea
-                  className={`${styles.textInput} ${styles.textArea}`}
-                  value={form.description}
-                  onChange={(e) => set("description", e.target.value)}
-                  placeholder="Acceptance criteria, steps to reproduce, notes…"
-                  readOnly={readOnly}
-                />
-                {!readOnly && (
-                  <button className={styles.enhanceBtn} disabled={enhancing} onClick={handleEnhanceDesc} title="Enhance description with EOS AI">
-                    {enhancing ? (<svg className={styles.spinner} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>) : (<RiSparklingLine size={14} />)}
-                  </button>
-                )}
-              </div>
+              <textarea
+                className={`${styles.textInput} ${styles.textArea}`}
+                value={form.description}
+                onChange={(e) => set("description", e.target.value)}
+                placeholder="Acceptance criteria, steps to reproduce, notes…"
+                readOnly={readOnly}
+              />
             </div>
 
-            {/* Current selections summary */}
-            <div className={styles.summaryBar}>
-              <span className={styles.summaryChip} style={{ background: `${typeConfig.color}18`, color: typeConfig.color, borderColor: `${typeConfig.color}44` }}>
-                <span style={{ display: "flex" }}>{typeConfig.icon}</span>{typeConfig.label}
-              </span>
-              <span className={styles.summaryChip} style={{ background: `${priorityConfig.color}18`, color: priorityConfig.color, borderColor: `${priorityConfig.color}44` }}>
-                <span style={{ display: "flex" }}>{priorityConfig.icon}</span>{priorityConfig.label}
-              </span>
-              <span className={styles.summaryChip} style={{ background: `${statusConfig.color}18`, color: statusConfig.color, borderColor: `${statusConfig.color}44` }}>
-                <RiCheckboxBlankCircleFill size={8} />{statusConfig.label}
-              </span>
-              {form.assignee && <span className={`${styles.summaryChip} ${styles.summaryChipDefault}`}>@ {form.assignee}</span>}
-              {form.story_points && <span className={`${styles.summaryChip} ${styles.summaryChipDefault}`}>{form.story_points} pts</span>}
-              {(form.pod ?? defaultPod) && (
-                <span className={`${styles.summaryChip} ${styles.summaryChipDefault}`} style={{ color: "var(--accent)", borderColor: "var(--accent-border)" }}>
-                  {form.pod ?? defaultPod}
-                </span>
+            {/* Linked Issues */}
+            <div>
+              <div className={styles.sectionTitle}>Linked Issues</div>
+
+              {/* Existing links — edit mode (from API) */}
+              {isEdit && serverLinks.map((lnk) => (
+                <div key={lnk.id} className={styles.linkItem}>
+                  <RiLink size={13} color="var(--text-3)" />
+                  <span className={styles.linkType}>{lnk.link_type}</span>
+                  <button
+                    className={styles.linkKey}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", textDecoration: "underline", padding: 0, fontSize: 12 }}
+                    onClick={() => { onClose(); navigate(`/tickets?key=${lnk.target_key}`); }}
+                  >
+                    {lnk.target_key}
+                  </button>
+                  {lnk.target_summary && <span style={{ fontSize: 12, color: "var(--text-2)", flex: 1 }}>{lnk.target_summary.slice(0, 50)}{lnk.target_summary.length > 50 ? "…" : ""}</span>}
+                  {!readOnly && (
+                    <button className={styles.linkDelete} onClick={() => removeLinkMut.mutate(lnk.id)}>
+                      <RiDeleteBinLine size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              {/* Staged links — create mode (posted after ticket creation) */}
+              {!isEdit && stagedLinks.map((lnk, i) => (
+                <div key={i} className={styles.linkItem}>
+                  <RiLink size={13} color="var(--text-3)" />
+                  <span className={styles.linkType}>{lnk.type}</span>
+                  <span style={{ fontWeight: 700, color: "var(--accent)", fontSize: 12 }}>{lnk.key}</span>
+                  {lnk.summary && <span style={{ fontSize: 12, color: "var(--text-2)", flex: 1 }}>{lnk.summary.slice(0, 50)}{lnk.summary.length > 50 ? "…" : ""}</span>}
+                  <button className={styles.linkDelete} onClick={() => setStagedLinks((prev) => prev.filter((_, idx) => idx !== i))}>
+                    <RiDeleteBinLine size={14} />
+                  </button>
+                </div>
+              ))}
+
+              {/* Add new link — both modes */}
+              {!readOnly && (
+                <div style={{ position: "relative" }}>
+                  <div className={styles.linkAddRow}>
+                    <FormControl size="small" sx={{ minWidth: 140 }}>
+                      <Select value={newLinkType} onChange={(e) => setNewLinkType(e.target.value)}>
+                        {LINK_TYPES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                    <input
+                      className={styles.textInput}
+                      placeholder="Ticket key or search…"
+                      value={newLinkKey}
+                      onChange={(e) => setNewLinkKey(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddLink()}
+                    />
+                    <button className={styles.iconBtn} onClick={handleAddLink} disabled={addLinkMut.isPending}>
+                      <RiAddLine size={16} />
+                    </button>
+                  </div>
+                  {/* Autocomplete suggestions */}
+                  {linkSuggestions.length > 0 && (
+                    <div style={{
+                      position: "absolute", top: "100%", left: 150, right: 40, zIndex: 100,
+                      background: "var(--surface)", border: "1px solid var(--border)",
+                      borderRadius: 6, boxShadow: "0 4px 16px rgba(0,0,0,0.15)", maxHeight: 200, overflowY: "auto",
+                    }}>
+                      {linkSuggestions.map((s) => (
+                        <div
+                          key={s.key}
+                          style={{ padding: "8px 12px", cursor: "pointer", display: "flex", gap: 8, alignItems: "center", fontSize: 12 }}
+                          onMouseDown={() => {
+                            setNewLinkKey(s.key);
+                            setLinkSuggestions([]);
+                          }}
+                          onMouseOver={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
+                          onMouseOut={(e) => (e.currentTarget.style.background = "")}
+                        >
+                          <span style={{ fontWeight: 700, color: "var(--accent)", flexShrink: 0 }}>{s.key}</span>
+                          <span style={{ color: "var(--text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.summary}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!isEdit && stagedLinks.length === 0 && (
+                <p className={styles.emptyHint} style={{ fontSize: 12, margin: "4px 0 8px" }}>Search for a ticket above to link it. Links will be saved when you create the ticket.</p>
               )}
             </div>
-          </div>
 
-          {/* RIGHT COLUMN */}
-          <div className={styles.rightColumn}>
+            {/* Attachments */}
+            <div>
+              <div className={styles.sectionHeader}>
+                <RiAttachmentLine size={14} color="var(--text-3)" />
+                <span className={styles.sectionHeaderText}>Attachments</span>
+              </div>
+
+              {!readOnly && (
+                <div
+                  className={styles.dropZone}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
+                >
+                  <RiAttachmentLine size={24} color="var(--text-3)" />
+                  <div className={styles.dropZoneText}>Drop files here or <span className={styles.dropZoneAccent}>browse</span></div>
+                  <div className={styles.dropZoneHint}>Images, videos, documents · Max 25 MB</div>
+                </div>
+              )}
+              {!readOnly && <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => handleFiles(e.target.files)} />}
+
+              {/* Server-side attachments — card grid */}
+              {serverAttachments.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginTop: 12 }}>
+                  {serverAttachments.map((a) => (
+                    <AttachmentCard
+                      key={a.id}
+                      filename={a.filename}
+                      url={a.url || ""}
+                      size={a.size}
+                      onPreview={(url) => (isImage(a.filename) || isVideo(a.filename)) ? setLightboxUrl(url) : window.open(url, "_blank")}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Locally staged files */}
+              {form.attachments.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginTop: 8 }}>
+                  {form.attachments.map((f, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        border: "1px solid var(--border)", borderRadius: 8,
+                        padding: 10, display: "flex", flexDirection: "column",
+                        gap: 6, background: "var(--surface-2)", position: "relative",
+                      }}
+                    >
+                      <div style={{ fontSize: 24, color: "var(--text-3)" }}>
+                        {isImage(f.name) ? <RiImageLine size={24} color="var(--accent)" /> : isVideo(f.name) ? <RiVideoLine size={24} color="#A78BFA" /> : <RiFileLine size={24} color="var(--text-3)" />}
+                      </div>
+                      <span style={{ fontSize: 11, color: "var(--text)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={f.name}>{f.name}</span>
+                      <span style={{ fontSize: 10, color: "var(--text-3)" }}>{humanSize(f.size)} · uploading after save</span>
+                      {!readOnly && (
+                        <button
+                          onClick={() => removeAttachment(i)}
+                          style={{ position: "absolute", top: 6, right: 6, background: "rgba(248,113,113,0.12)", border: "none", color: "#F87171", cursor: "pointer", borderRadius: 4, padding: "2px 5px", fontSize: 12 }}
+                        >✕</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Code Context */}
             {isEdit && (
               <div className={styles.codeCtxCard}>
@@ -1048,534 +1277,176 @@ Keep it concise and factual. Return only the description text.`;
               </div>
             )}
 
-            {/* Classification */}
-            <div className={styles.classificationCard}>
-              <div className={styles.classificationGrid}>
-                <FormControl size="small" fullWidth disabled={readOnly}>
-                  <InputLabel>Type</InputLabel>
-                  <Select label="Type" value={form.issue_type} onChange={(e) => set("issue_type", e.target.value)}
-                    renderValue={(v) => { const t = ISSUE_TYPES.find((x) => x.value === v) ?? ISSUE_TYPES[1]; return <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)" }}><span style={{ color: t.color, display: "flex" }}>{t.icon}</span>{t.label}</span>; }}>
-                    {ISSUE_TYPES.map((t) => <MenuItem key={t.value} value={t.value}><span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}><span style={{ color: t.color, display: "flex" }}>{t.icon}</span>{t.label}</span></MenuItem>)}
-                  </Select>
-                </FormControl>
-
-                <FormControl size="small" fullWidth disabled={readOnly}>
-                  <InputLabel>Priority</InputLabel>
-                  <Select label="Priority" value={form.priority} onChange={(e) => set("priority", e.target.value)}
-                    renderValue={(v) => { const p = PRIORITIES.find((x) => x.value === v)!; return <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)" }}><span style={{ color: p?.color, display: "flex" }}>{p?.icon}</span>{p?.label}</span>; }}>
-                    {PRIORITIES.map((p) => <MenuItem key={p.value} value={p.value}><span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}><span style={{ color: p?.color, display: "flex" }}>{p.icon}</span>{p.label}</span></MenuItem>)}
-                  </Select>
-                </FormControl>
-
-                <FormControl size="small" fullWidth disabled={readOnly}>
-                  <InputLabel>Status</InputLabel>
-                  <Select label="Status" value={form.status} onChange={(e) => set("status", e.target.value)}
-                    renderValue={(v) => { const s = STATUSES.find((x) => x.value === v)!; return <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: s?.color }} />{s?.label}</span>; }}>
-                    {STATUSES.map((s) => <MenuItem key={s.value} value={s.value}><span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color }} />{s.label}</span></MenuItem>)}
-                  </Select>
-                </FormControl>
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className={styles.tabRoot}>
-              <Tabs value={tab} onChange={(_, v) => setTab(v)}>
-                <Tab label="Details" />
-                <Tab label="Links" />
-                <Tab label="Time & Files" />
-                {isEdit && <Tab label={`Comments${comments.length > 0 ? ` (${comments.length})` : ""}`} />}
-                {isEdit && <Tab label="Activity" />}
-                {isEdit && <Tab label={`Worklogs${serverWorklogs.length > 0 ? ` (${serverWorklogs.length})` : ""}`} />}
-              </Tabs>
-            </div>
-
-            {/* ── Tab: Details ── */}
-            {tab === 0 && (
-              <div className={styles.tabPanel}>
-                <div className={styles.detailsCard}>
-                  {/* Intelligent routing suggestion */}
-                  {!isEdit && !readOnly && (routingLoading || routingSuggestion) && !form.assignee && (
-                    <div className={styles.routingCard}>
-                      <RiSparklingLine size={13} color="var(--accent)" style={{ flexShrink: 0, marginTop: 1 }} />
-                      {routingLoading ? (
-                        <span className={styles.routingText} style={{ color: "var(--text-3)" }}>EOS is finding the best assignee…</span>
-                      ) : routingSuggestion ? (
-                        <>
-                          <div className={styles.routingBody}>
-                            <span className={styles.routingText}>Assign to <strong>{routingSuggestion.assignee}</strong> — {routingSuggestion.reason}</span>
-                          </div>
-                          <button type="button" className={styles.routingAccept} onClick={() => { set("assignee", routingSuggestion.assignee); setRoutingSuggestion(null); setRoutingDismissed(true); }}>Assign</button>
-                          <button type="button" className={styles.routingDismiss} onClick={() => { setRoutingSuggestion(null); setRoutingDismissed(true); }} title="Dismiss">✕</button>
-                        </>
-                      ) : null}
-                    </div>
-                  )}
-
-                  {/* Assignee (editable) + Reporter (read-only) */}
-                  <div className={styles.formRow}>
-                    <Autocomplete
-                      options={users}
-                      value={form.assignee ?? null}
-                      onChange={(_, v) => set("assignee", v ?? undefined)}
-                      size="small"
-                      fullWidth
-                      disabled={readOnly}
-                      renderInput={(params) => <TextField {...params} label="Assignee" />}
-                      sx={{ "& .MuiOutlinedInput-root": { fontSize: 13 } }}
-                    />
-                    {/* Reporter: always read-only */}
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-                      <label style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, letterSpacing: "0.05em" }}>Reporter</label>
-                      <div style={{
-                        display: "flex", alignItems: "center", gap: 8,
-                        border: "1px solid var(--border)", borderRadius: 6,
-                        padding: "8px 12px", background: "var(--surface-2)",
-                        fontSize: 13, color: "var(--text-2)", minHeight: 40,
-                      }}>
-                        <div style={{
-                          width: 22, height: 22, borderRadius: "50%",
-                          background: "var(--accent-glow)", border: "1px solid var(--accent-border)",
-                          color: "var(--accent)", fontSize: 10, fontWeight: 700,
-                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                        }}>
-                          {(form.reporter || user?.name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                        </div>
-                        {form.reporter || user?.name || "—"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Story Points + Due Date */}
-                  <div className={styles.formRow}>
-                    <FormControl size="small" fullWidth disabled={readOnly}>
-                      <InputLabel>Story Points</InputLabel>
-                      <Select label="Story Points" value={form.story_points ?? ""} onChange={(e) => set("story_points", e.target.value ? Number(e.target.value) : undefined)}>
-                        <MenuItem value=""><em>None</em></MenuItem>
-                        {STORY_POINTS.map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                    <TextField
-                      type="date" label="Due Date" size="small" fullWidth
-                      value={form.due_date ?? ""}
-                      onChange={(e) => set("due_date", e.target.value || undefined)}
-                      InputLabelProps={{ shrink: true }}
-                      disabled={readOnly}
-                    />
-                  </div>
-
-                  {/* Story Point AI Callout */}
-                  {!readOnly && !form.story_points && (storyAiLoading || storyEstimate) && (
-                    <div className={styles.storyEstCard}>
-                      {storyAiLoading ? (
-                        <div className={styles.storyEstLeft}><svg className={styles.spinner} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="3"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg><span className={styles.storyEstMeta}>EOS estimating story points…</span></div>
-                      ) : storyEstimate ? (
-                        <>
-                          <div className={styles.storyEstLeft}>
-                            <RiSparklingLine size={15} className={styles.storyEstIcon} />
-                            <div>
-                              <span className={styles.storyEstTitle}>EOS estimates {storyEstimate.min}–{storyEstimate.max} story points</span>
-                              <span className={styles.storyEstMeta}>{storyEstimate.reasoning ?? `Confidence ${Math.round(storyEstimate.confidence * 100)}%`}</span>
-                            </div>
-                          </div>
-                          <div className={styles.storyEstActions}>
-                            <button className={styles.storyEstAccept} onClick={() => { set("story_points", storyEstimate.max); setStoryEstimate(null); }}>Accept {storyEstimate.max} pts</button>
-                            <button className={styles.storyEstDismiss} onClick={() => setStoryEstimate(null)}>✕</button>
-                          </div>
-                        </>
-                      ) : null}
-                    </div>
-                  )}
-
-                  {/* Client only (POD is auto-set from context, never shown) */}
-                  <div className={styles.formRow}>
-                    <FormControl size="small" fullWidth disabled={readOnly}>
-                      <InputLabel>Client</InputLabel>
-                      <Select label="Client" value={form.client ?? ""} onChange={(e) => set("client", e.target.value || undefined)}>
-                        <MenuItem value=""><em>None</em></MenuItem>
-                        {clients.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                    {/* POD display — read-only badge showing which project/pod */}
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-                      <label style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, letterSpacing: "0.05em" }}>POD</label>
-                      <div style={{
-                        display: "flex", alignItems: "center",
-                        border: "1px solid var(--accent-border)", borderRadius: 6,
-                        padding: "8px 12px", background: "var(--accent-glow)",
-                        fontSize: 13, fontWeight: 700, color: "var(--accent)", minHeight: 40,
-                      }}>
-                        {form.pod ?? defaultPod ?? "—"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Labels */}
-                  <div>
-                    <div className={styles.sectionTitle}>Labels</div>
-                    <div className={styles.labelsBox}>
-                      {(form.labels ?? []).map((l) => (
-                        <span key={l} className={styles.labelTag}>
-                          {l}
-                          {!readOnly && <button className={styles.labelRemove} onClick={() => set("labels", (form.labels ?? []).filter((x) => x !== l))}>✕</button>}
-                        </span>
-                      ))}
-                      {!readOnly && (
-                        <input
-                          className={styles.labelInput}
-                          placeholder="Type and press Enter…"
-                          value={labelInput}
-                          onChange={(e) => setLabelInput(e.target.value)}
-                          onKeyDown={addLabel}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── Tab: Links ── */}
-            {tab === 1 && (
-              <div className={styles.tabPanel}>
-                <div>
-                  <div className={styles.sectionTitle}>Linked Issues</div>
-
-                  {/* Existing links — edit mode (from API) */}
-                  {isEdit && serverLinks.map((lnk) => (
-                    <div key={lnk.id} className={styles.linkItem}>
-                      <RiLink size={13} color="var(--text-3)" />
-                      <span className={styles.linkType}>{lnk.link_type}</span>
-                      <button
-                        className={styles.linkKey}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", textDecoration: "underline", padding: 0, fontSize: 12 }}
-                        onClick={() => { onClose(); navigate(`/tickets?key=${lnk.target_key}`); }}
-                      >
-                        {lnk.target_key}
-                      </button>
-                      {lnk.target_summary && <span style={{ fontSize: 12, color: "var(--text-2)", flex: 1 }}>{lnk.target_summary.slice(0, 50)}{lnk.target_summary.length > 50 ? "…" : ""}</span>}
-                      {!readOnly && (
-                        <button className={styles.linkDelete} onClick={() => removeLinkMut.mutate(lnk.id)}>
-                          <RiDeleteBinLine size={14} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-
-                  {/* Staged links — create mode (posted after ticket is created) */}
-                  {!isEdit && stagedLinks.map((lnk, i) => (
-                    <div key={i} className={styles.linkItem}>
-                      <RiLink size={13} color="var(--text-3)" />
-                      <span className={styles.linkType}>{lnk.type}</span>
-                      <span style={{ fontWeight: 700, color: "var(--accent)", fontSize: 12 }}>{lnk.key}</span>
-                      {lnk.summary && <span style={{ fontSize: 12, color: "var(--text-2)", flex: 1 }}>{lnk.summary.slice(0, 50)}{lnk.summary.length > 50 ? "…" : ""}</span>}
-                      <button className={styles.linkDelete} onClick={() => setStagedLinks((prev) => prev.filter((_, idx) => idx !== i))}>
-                        <RiDeleteBinLine size={14} />
-                      </button>
-                    </div>
-                  ))}
-
-                  {/* Add new link — both modes */}
-                  {!readOnly && (
-                    <div style={{ position: "relative" }}>
-                      <div className={styles.linkAddRow}>
-                        <FormControl size="small" sx={{ minWidth: 140 }}>
-                          <Select value={newLinkType} onChange={(e) => setNewLinkType(e.target.value)}>
-                            {LINK_TYPES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
-                          </Select>
-                        </FormControl>
-                        <input
-                          className={styles.textInput}
-                          placeholder="Ticket key or search…"
-                          value={newLinkKey}
-                          onChange={(e) => setNewLinkKey(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleAddLink()}
-                        />
-                        <button className={styles.iconBtn} onClick={handleAddLink} disabled={addLinkMut.isPending}>
-                          <RiAddLine size={16} />
-                        </button>
-                      </div>
-                      {/* Autocomplete suggestions */}
-                      {linkSuggestions.length > 0 && (
-                        <div style={{
-                          position: "absolute", top: "100%", left: 150, right: 40, zIndex: 100,
-                          background: "var(--surface)", border: "1px solid var(--border)",
-                          borderRadius: 6, boxShadow: "0 4px 16px rgba(0,0,0,0.15)", maxHeight: 200, overflowY: "auto",
-                        }}>
-                          {linkSuggestions.map((s) => (
-                            <div
-                              key={s.key}
-                              style={{ padding: "8px 12px", cursor: "pointer", display: "flex", gap: 8, alignItems: "center", fontSize: 12 }}
-                              onMouseDown={() => {
-                                setNewLinkKey(s.key);
-                                setLinkSuggestions([]);
-                              }}
-                              onMouseOver={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
-                              onMouseOut={(e) => (e.currentTarget.style.background = "")}
-                            >
-                              <span style={{ fontWeight: 700, color: "var(--accent)", flexShrink: 0 }}>{s.key}</span>
-                              <span style={{ color: "var(--text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.summary}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {!isEdit && stagedLinks.length === 0 && (
-                    <p className={styles.emptyHint} style={{ fontSize: 12, margin: "4px 0 8px" }}>Search for a ticket above to link it. Links will be saved when you create the ticket.</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ── Tab: Time & Files ── */}
-            {tab === 2 && (
-              <div className={styles.tabPanel}>
-                {/* Time fields */}
-                <div>
-                  <div className={styles.sectionHeader}>
-                    <RiTimeLine size={14} color="var(--text-3)" />
-                    <span className={styles.sectionHeaderText}>Time Tracking</span>
-                  </div>
-                  <div className={styles.formRow3}>
-                    <div className={styles.field}>
-                      <label className={styles.fieldLabel}>Original Est.</label>
-                      <input className={styles.textInput} placeholder="e.g. 2h 30m" value={form.originalEst} onChange={(e) => set("originalEst", e.target.value)} readOnly={readOnly} />
-                    </div>
-                    <div className={styles.field}>
-                      <label className={styles.fieldLabel}>Time Spent</label>
-                      <input className={styles.textInput} placeholder="e.g. 1h" value={form.timeSpent} onChange={(e) => set("timeSpent", e.target.value)} readOnly={readOnly} />
-                    </div>
-                    <div className={styles.field}>
-                      <label className={styles.fieldLabel}>Remaining</label>
-                      <input className={styles.textInput} placeholder="e.g. 1h 30m" value={form.remaining} onChange={(e) => set("remaining", e.target.value)} readOnly={readOnly} />
-                    </div>
-                  </div>
+            {/* Tabs: Comments | Activity | Worklogs */}
+            {isEdit && (
+              <>
+                <div className={styles.tabRoot}>
+                  <Tabs value={tab} onChange={(_, v) => setTab(v)}>
+                    <Tab label={`Comments${comments.length > 0 ? ` (${comments.length})` : ""}`} />
+                    <Tab label="Activity" />
+                    <Tab label={`Worklogs${serverWorklogs.length > 0 ? ` (${serverWorklogs.length})` : ""}`} />
+                  </Tabs>
                 </div>
 
-                {/* Attachments */}
-                <div>
-                  <div className={styles.sectionHeader}>
-                    <RiAttachmentLine size={14} color="var(--text-3)" />
-                    <span className={styles.sectionHeaderText}>Attachments</span>
-                  </div>
-
-                  {!readOnly && (
-                    <div
-                      className={styles.dropZone}
-                      onClick={() => fileInputRef.current?.click()}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
-                    >
-                      <RiAttachmentLine size={24} color="var(--text-3)" />
-                      <div className={styles.dropZoneText}>Drop files here or <span className={styles.dropZoneAccent}>browse</span></div>
-                      <div className={styles.dropZoneHint}>Images, videos, documents · Max 25 MB</div>
-                    </div>
-                  )}
-                  {!readOnly && <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => handleFiles(e.target.files)} />}
-
-                  {/* Server-side attachments — card grid */}
-                  {serverAttachments.length > 0 && (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginTop: 12 }}>
-                      {serverAttachments.map((a) => (
-                        <AttachmentCard
-                          key={a.id}
-                          filename={a.filename}
-                          url={a.url || ""}
-                          size={a.size}
-                          onPreview={(url) => (isImage(a.filename) || isVideo(a.filename)) ? setLightboxUrl(url) : window.open(url, "_blank")}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Locally staged files */}
-                  {form.attachments.length > 0 && (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginTop: 8 }}>
-                      {form.attachments.map((f, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            border: "1px solid var(--border)", borderRadius: 8,
-                            padding: 10, display: "flex", flexDirection: "column",
-                            gap: 6, background: "var(--surface-2)", position: "relative",
-                          }}
-                        >
-                          <div style={{ fontSize: 24, color: "var(--text-3)" }}>
-                            {isImage(f.name) ? <RiImageLine size={24} color="var(--accent)" /> : isVideo(f.name) ? <RiVideoLine size={24} color="#A78BFA" /> : <RiFileLine size={24} color="var(--text-3)" />}
+                {/* ── Tab: Comments ── */}
+                {tab === 0 && (
+                  <div className={styles.tabPanel}>
+                    <div className={styles.commentsList}>
+                      {topLevelComments.length === 0 && <p className={styles.emptyHint}>No comments yet. Be the first!</p>}
+                      {topLevelComments.map((c) => (
+                        <div key={c.id} className={styles.commentItem}>
+                          <div className={styles.commentAvatar}>
+                            {(c.author || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                           </div>
-                          <span style={{ fontSize: 11, color: "var(--text)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={f.name}>{f.name}</span>
-                          <span style={{ fontSize: 10, color: "var(--text-3)" }}>{humanSize(f.size)} · uploading after save</span>
-                          {!readOnly && (
-                            <button
-                              onClick={() => removeAttachment(i)}
-                              style={{ position: "absolute", top: 6, right: 6, background: "rgba(248,113,113,0.12)", border: "none", color: "#F87171", cursor: "pointer", borderRadius: 4, padding: "2px 5px", fontSize: 12 }}
-                            >✕</button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ── Tab: Comments ── */}
-            {tab === 3 && isEdit && (
-              <div className={styles.tabPanel}>
-                <div className={styles.commentsList}>
-                  {topLevelComments.length === 0 && <p className={styles.emptyHint}>No comments yet. Be the first!</p>}
-                  {topLevelComments.map((c) => (
-                    <div key={c.id} className={styles.commentItem}>
-                      <div className={styles.commentAvatar}>
-                        {(c.author || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className={styles.commentBody}>
-                        <div className={styles.commentMeta}>
-                          <span className={styles.commentAuthor}>{c.author}</span>
-                          <span className={styles.commentDate}>{formatDate(c.created_at, "MMM d, yyyy · h:mm a")}</span>
-                          {editingCommentId !== String(c.id) && (
-                            <>
-                              <button className={styles.commentAction} onClick={() => setReplyTo(String(c.id))}>Reply</button>
-                              <button className={styles.commentAction} onClick={() => { setEditingCommentId(String(c.id)); setEditingCommentText(c.content); }}>Edit</button>
-                              <button className={styles.commentAction} style={{ color: "#F87171" }} onClick={() => deleteCmtMut.mutate(String(c.id))}>Delete</button>
-                            </>
-                          )}
-                        </div>
-                        {editingCommentId === String(c.id) ? (
-                          <div style={{ marginTop: 6 }}>
-                            <textarea
-                              className={`${styles.textInput} ${styles.textArea}`}
-                              value={editingCommentText}
-                              onChange={(e) => setEditingCommentText(e.target.value)}
-                              rows={3}
-                              autoFocus
-                            />
-                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 6 }}>
-                              <button className={styles.btnGhost} style={{ fontSize: 12, padding: "5px 12px" }} onClick={() => { setEditingCommentId(null); setEditingCommentText(""); }}>Cancel</button>
-                              <button
-                                className={styles.btnPrimary}
-                                style={{ fontSize: 12, padding: "5px 12px" }}
-                                disabled={!editingCommentText.trim() || editCommentMut.isPending}
-                                onClick={() => editCommentMut.mutate({ id: String(c.id), content: editingCommentText })}
-                              >
-                                {editCommentMut.isPending ? "Saving…" : "Save"}
-                              </button>
+                          <div className={styles.commentBody}>
+                            <div className={styles.commentMeta}>
+                              <span className={styles.commentAuthor}>{c.author}</span>
+                              <span className={styles.commentDate}>{formatDate(c.created_at, "MMM d, yyyy · h:mm a")}</span>
+                              {editingCommentId !== String(c.id) && (
+                                <>
+                                  <button className={styles.commentAction} onClick={() => setReplyTo(String(c.id))}>Reply</button>
+                                  <button className={styles.commentAction} onClick={() => { setEditingCommentId(String(c.id)); setEditingCommentText(c.content); }}>Edit</button>
+                                  <button className={styles.commentAction} style={{ color: "#F87171" }} onClick={() => deleteCmtMut.mutate(String(c.id))}>Delete</button>
+                                </>
+                              )}
                             </div>
-                          </div>
-                        ) : (
-                          <p className={styles.commentText} style={{ whiteSpace: "pre-wrap" }}>{c.content}</p>
-                        )}
-                        {repliesFor(String(c.id)).map((r) => (
-                          <div key={r.id} className={styles.replyItem}>
-                            <div className={styles.commentAvatar} style={{ width: 24, height: 24, fontSize: 10 }}>
-                              {(r.author || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                            </div>
-                            <div className={styles.commentBody}>
-                              <div className={styles.commentMeta}>
-                                <span className={styles.commentAuthor}>{r.author}</span>
-                                <span className={styles.commentDate}>{formatDate(r.created_at, "MMM d, yyyy · h:mm a")}</span>
-                                <button className={styles.commentAction} style={{ color: "#F87171" }} onClick={() => deleteCmtMut.mutate(String(r.id))}>Delete</button>
+                            {editingCommentId === String(c.id) ? (
+                              <div style={{ marginTop: 6 }}>
+                                <textarea
+                                  className={`${styles.textInput} ${styles.textArea}`}
+                                  value={editingCommentText}
+                                  onChange={(e) => setEditingCommentText(e.target.value)}
+                                  rows={3}
+                                  autoFocus
+                                />
+                                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 6 }}>
+                                  <button className={styles.btnGhost} style={{ fontSize: 12, padding: "5px 12px" }} onClick={() => { setEditingCommentId(null); setEditingCommentText(""); }}>Cancel</button>
+                                  <button
+                                    className={styles.btnPrimary}
+                                    style={{ fontSize: 12, padding: "5px 12px" }}
+                                    disabled={!editingCommentText.trim() || editCommentMut.isPending}
+                                    onClick={() => editCommentMut.mutate({ id: String(c.id), content: editingCommentText })}
+                                  >
+                                    {editCommentMut.isPending ? "Saving…" : "Save"}
+                                  </button>
+                                </div>
                               </div>
-                              <p className={styles.commentText} style={{ whiteSpace: "pre-wrap" }}>{r.content}</p>
-                            </div>
+                            ) : (
+                              <p className={styles.commentText} style={{ whiteSpace: "pre-wrap" }}>{c.content}</p>
+                            )}
+                            {repliesFor(String(c.id)).map((r) => (
+                              <div key={r.id} className={styles.replyItem}>
+                                <div className={styles.commentAvatar} style={{ width: 24, height: 24, fontSize: 10 }}>
+                                  {(r.author || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                                </div>
+                                <div className={styles.commentBody}>
+                                  <div className={styles.commentMeta}>
+                                    <span className={styles.commentAuthor}>{r.author}</span>
+                                    <span className={styles.commentDate}>{formatDate(r.created_at, "MMM d, yyyy · h:mm a")}</span>
+                                    <button className={styles.commentAction} style={{ color: "#F87171" }} onClick={() => deleteCmtMut.mutate(String(r.id))}>Delete</button>
+                                  </div>
+                                  <p className={styles.commentText} style={{ whiteSpace: "pre-wrap" }}>{r.content}</p>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
+                      ))}
+                    </div>
+                    <div className={styles.commentCompose}>
+                      {replyTo && (
+                        <div className={styles.replyIndicator}>
+                          Replying to comment
+                          <button className={styles.cancelReply} onClick={() => setReplyTo(null)}>✕</button>
+                        </div>
+                      )}
+                      <textarea
+                        className={`${styles.textInput} ${styles.textArea}`}
+                        placeholder="Write a comment…"
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        rows={3}
+                      />
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                        <button
+                          className={styles.btnPrimary}
+                          disabled={!commentText.trim() || commentMut.isPending}
+                          onClick={() => commentMut.mutate({ content: commentText, parentId: replyTo ?? undefined })}
+                          style={{ padding: "7px 16px", fontSize: 12 }}
+                        >
+                          {commentMut.isPending ? "Posting…" : "Post Comment"}
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-                <div className={styles.commentCompose}>
-                  {replyTo && (
-                    <div className={styles.replyIndicator}>
-                      Replying to comment
-                      <button className={styles.cancelReply} onClick={() => setReplyTo(null)}>✕</button>
-                    </div>
-                  )}
-                  <textarea
-                    className={`${styles.textInput} ${styles.textArea}`}
-                    placeholder="Write a comment…"
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    rows={3}
-                  />
-                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-                    <button
-                      className={styles.btnPrimary}
-                      disabled={!commentText.trim() || commentMut.isPending}
-                      onClick={() => commentMut.mutate({ content: commentText, parentId: replyTo ?? undefined })}
-                      style={{ padding: "7px 16px", fontSize: 12 }}
-                    >
-                      {commentMut.isPending ? "Posting…" : "Post Comment"}
-                    </button>
                   </div>
-                </div>
-              </div>
-            )}
+                )}
 
-            {/* ── Tab: Activity ── */}
-            {tab === 4 && isEdit && (
-              <div className={styles.tabPanel}>
-                {activity.length === 0 && <p className={styles.emptyHint}>No activity recorded yet.</p>}
-                <div className={styles.timeline}>
-                  {activity.map((a) => (
-                    <div key={`${a.id}-${a.created_at}`} className={styles.activityEntry}>
-                      <div className={styles.activityIcon}>{getActivityIcon(a.action)}</div>
-                      <div className={styles.activityContent}>
-                        <span className={styles.activityActor}>{a.actor}</span>{" "}
-                        {getActivityText(a)}
-                        <span className={styles.activityTime}> · {formatDate(a.created_at, "MMM d, yyyy · h:mm a")}</span>
+                {/* ── Tab: Activity ── */}
+                {tab === 1 && (
+                  <div className={styles.tabPanel}>
+                    {activity.length === 0 && <p className={styles.emptyHint}>No activity recorded yet.</p>}
+                    <div className={styles.timeline}>
+                      {activity.map((a) => (
+                        <div key={`${a.id}-${a.created_at}`} className={styles.activityEntry}>
+                          <div className={styles.activityIcon}>{getActivityIcon(a.action)}</div>
+                          <div className={styles.activityContent}>
+                            <span className={styles.activityActor}>{a.actor}</span>{" "}
+                            {getActivityText(a)}
+                            <span className={styles.activityTime}> · {formatDate(a.created_at, "MMM d, yyyy · h:mm a")}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Tab: Worklogs ── */}
+                {tab === 2 && (
+                  <div className={styles.tabPanel}>
+                    <div className={styles.worklogForm}>
+                      <div className={styles.formRow3}>
+                        <div className={styles.field}>
+                          <label className={styles.fieldLabel}>Hours *</label>
+                          <input className={styles.textInput} type="number" step="0.1" min="0.1" placeholder="e.g. 2.5" value={wlHours} onChange={(e) => setWlHours(e.target.value)} />
+                        </div>
+                        <div className={styles.field}>
+                          <label className={styles.fieldLabel}>Date</label>
+                          <input className={styles.textInput} type="date" value={wlDate} onChange={(e) => setWlDate(e.target.value)} />
+                        </div>
+                      </div>
+                      <div className={styles.field}>
+                        <label className={styles.fieldLabel}>Comment (optional)</label>
+                        <input className={styles.textInput} placeholder="What did you work on?" value={wlComment} onChange={(e) => setWlComment(e.target.value)} />
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <button className={styles.btnPrimary} onClick={handleLogTime} disabled={logTimeMut.isPending} style={{ padding: "7px 16px", fontSize: 12 }}>
+                          {logTimeMut.isPending ? "Logging…" : "+ Log Time"}
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* ── Tab: Worklogs ── */}
-            {tab === 5 && isEdit && (
-              <div className={styles.tabPanel}>
-                <div className={styles.worklogForm}>
-                  <div className={styles.formRow3}>
-                    <div className={styles.field}>
-                      <label className={styles.fieldLabel}>Hours *</label>
-                      <input className={styles.textInput} type="number" step="0.1" min="0.1" placeholder="e.g. 2.5" value={wlHours} onChange={(e) => setWlHours(e.target.value)} />
-                    </div>
-                    <div className={styles.field}>
-                      <label className={styles.fieldLabel}>Date</label>
-                      <input className={styles.textInput} type="date" value={wlDate} onChange={(e) => setWlDate(e.target.value)} />
+                    <div className={styles.worklogList}>
+                      {serverWorklogs.length === 0 && <p className={styles.emptyHint}>No time logged yet.</p>}
+                      {serverWorklogs.map((wl) => (
+                        <div key={wl.id} className={styles.worklogItem}>
+                          <div className={styles.worklogHeader}>
+                            <span className={styles.worklogAuthor}>{wl.author}</span>
+                            <span className={styles.worklogDate}>{formatDate(wl.log_date, "MMM d, yyyy")}</span>
+                            <span className={styles.worklogHours}>{wl.hours}h</span>
+                          </div>
+                          {wl.comment && <div className={styles.worklogComment}>{wl.comment}</div>}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className={styles.field}>
-                    <label className={styles.fieldLabel}>Comment (optional)</label>
-                    <input className={styles.textInput} placeholder="What did you work on?" value={wlComment} onChange={(e) => setWlComment(e.target.value)} />
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <button className={styles.btnPrimary} onClick={handleLogTime} disabled={logTimeMut.isPending} style={{ padding: "7px 16px", fontSize: 12 }}>
-                      {logTimeMut.isPending ? "Logging…" : "+ Log Time"}
-                    </button>
-                  </div>
-                </div>
-
-                <div className={styles.worklogList}>
-                  {serverWorklogs.length === 0 && <p className={styles.emptyHint}>No time logged yet.</p>}
-                  {serverWorklogs.map((wl) => (
-                    <div key={wl.id} className={styles.worklogItem}>
-                      <div className={styles.worklogHeader}>
-                        <span className={styles.worklogAuthor}>{wl.author}</span>
-                        <span className={styles.worklogDate}>{formatDate(wl.log_date, "MMM d, yyyy")}</span>
-                        <span className={styles.worklogHours}>{wl.hours}h</span>
-                      </div>
-                      {wl.comment && <div className={styles.worklogComment}>{wl.comment}</div>}
-                    </div>
-                  ))}
-                </div>
-              </div>
+                )}
+              </>
             )}
           </div>
           {/* end rightColumn */}
         </div>
         {/* end twoColumnLayout */}
+
       </SideDrawer>
     </>
   );

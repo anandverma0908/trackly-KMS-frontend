@@ -11,218 +11,276 @@ import {
   RiArrowRightLine,
   RiUser3Line,
   RiLinksLine,
+  RiDeleteBinLine,
+  RiGlobalLine,
+  RiBuilding2Line,
 } from "react-icons/ri";
 import styles from "./DecisionsPage.module.css";
+import { useDecisions, useCreateDecision, useDeleteDecision } from "./useDecisions";
+import { novaQuery } from "@/services/api";
+import SideDrawer from "@/components/ui/SideDrawer";
+import type { Decision, DecisionStatus } from "@/types";
 
-/* ── Types ─────────────────────────────────────────────────────────────────── */
-type DecisionStatus = "accepted" | "proposed" | "deprecated" | "superseded";
-
-interface Decision {
-  id: string;
-  number: number;
-  title: string;
-  status: DecisionStatus;
-  owner: string;
-  date: string;
-  context: string;
-  decision: string;
-  rationale: string;
-  alternatives: string[];
-  consequences: string;
-  supersedes?: string;
-  linkedTickets: string[];
-  tags: string[];
-}
-
-/* ── Mock data ─────────────────────────────────────────────────────────────── */
-const DECISIONS: Decision[] = [
-  {
-    id: "dec-1",
-    number: 12,
-    title: "Use JWT with short expiry + refresh token rotation",
-    status: "accepted",
-    owner: "Priya S.",
-    date: "2024-11-14",
-    context:
-      "We needed a stateless auth mechanism that scales horizontally. Session-based auth was causing issues with our multi-region deployment.",
-    decision:
-      "Use JWT access tokens (15 min expiry) paired with refresh tokens stored in httpOnly cookies. Refresh tokens rotate on each use.",
-    rationale:
-      "Stateless auth enables horizontal scaling without shared session store. Short-lived access tokens limit blast radius of token leakage. Rotation prevents refresh token reuse attacks.",
-    alternatives: [
-      "Session-based auth with Redis — rejected due to single point of failure",
-      "Long-lived JWTs — rejected due to inability to invalidate on logout",
-      "OAuth2 with external IdP — considered for future, overkill for now",
-    ],
-    consequences:
-      "Frontend must handle silent refresh. Added complexity vs simple sessions. Requires careful token storage.",
-    linkedTickets: ["TRK-89", "TRK-142"],
-    tags: ["auth", "security", "backend"],
-  },
-  {
-    id: "dec-2",
-    number: 11,
-    title: "PostgreSQL as primary datastore (not MongoDB)",
-    status: "accepted",
-    owner: "Arjun K.",
-    date: "2024-09-03",
-    context:
-      "Initial spike evaluated NoSQL (MongoDB) for flexibility. As the domain model clarified, relational constraints became important.",
-    decision:
-      "Use PostgreSQL 15 as the primary datastore with pgvector extension for AI embeddings.",
-    rationale:
-      "Domain model has clear relational structure (tickets, sprints, users, projects). ACID compliance critical for ticket state transitions. pgvector enables AI similarity search without a separate vector DB.",
-    alternatives: [
-      "MongoDB — rejected due to lack of joins and transaction complexity",
-      "Supabase — considered, too much vendor lock-in",
-      "PostgreSQL + separate Pinecone for vectors — rejected to reduce infra complexity",
-    ],
-    consequences:
-      "Schema migrations required for changes. Less flexibility for unstructured data. pgvector performance at scale needs monitoring.",
-    linkedTickets: ["TRK-44"],
-    tags: ["database", "infrastructure", "ai"],
-  },
-  {
-    id: "dec-3",
-    number: 9,
-    title: "Feature-first folder structure in React frontend",
-    status: "accepted",
-    owner: "Rahul M.",
-    date: "2024-08-21",
-    context:
-      "The original flat component structure caused increasing coupling and made it hard to find related code. Team voted to refactor.",
-    decision:
-      "Adopt feature-first folder structure: each feature is a self-contained module in /src/features/{name}/. Shared code goes in /src/shared/.",
-    rationale:
-      "Colocating related files reduces cognitive load. Clear ownership per feature. Easy to delete a feature without orphaning files.",
-    alternatives: [
-      "Layer-based structure (components/, hooks/, utils/) — rejected due to file scatter",
-      "Monorepo with feature packages — too much overhead for current team size",
-    ],
-    consequences:
-      "Some shared logic may be duplicated initially. Import paths are longer. Cross-feature dependencies need explicit exports.",
-    linkedTickets: ["TRK-67"],
-    tags: ["frontend", "architecture"],
-  },
-  {
-    id: "dec-4",
-    number: 7,
-    title: "Nova AI uses RAG with team knowledge base",
-    status: "accepted",
-    owner: "Anand V.",
-    date: "2024-07-30",
-    context:
-      "Fine-tuning a model on team data was cost-prohibitive and required retraining on each update. RAG offers dynamic knowledge updates.",
-    decision:
-      "Nova uses Retrieval-Augmented Generation: embed all tickets, wiki pages, decisions, and standup notes into pgvector. At query time, retrieve top-k relevant chunks and pass to Claude as context.",
-    rationale:
-      "No retraining needed. Knowledge updates instantly (embed on create/update). Claude handles reasoning; pgvector handles retrieval. Citations link back to source documents.",
-    alternatives: [
-      "Fine-tuned GPT model — rejected: expensive, stale after each update",
-      "Pure prompt engineering with no retrieval — rejected: context window limits",
-      "Separate vector DB (Pinecone) — rejected in favor of pgvector (see DEC-11)",
-    ],
-    consequences:
-      "Quality depends on embedding quality. Retrieval can fail for ambiguous queries. Context window limits max retrieved chunks to ~10.",
-    linkedTickets: ["TRK-103"],
-    tags: ["ai", "nova", "architecture"],
-  },
-  {
-    id: "dec-5",
-    number: 5,
-    title: "Use CSS Modules over Tailwind for component styling",
-    status: "accepted",
-    owner: "Rahul M.",
-    date: "2024-07-10",
-    context:
-      "Team evaluated Tailwind CSS vs CSS Modules for styling approach. Both had strong advocates.",
-    decision:
-      "Use CSS Modules with CSS custom properties (design tokens) for all component styling.",
-    rationale:
-      "CSS Modules provide true scoping without class name conflicts. Design tokens via CSS variables enable theming without Tailwind's JIT complexity. Better IDE support for non-standard properties.",
-    alternatives: [
-      "Tailwind — rejected: verbose JSX, purge complexity, theming requires more config",
-      "styled-components — rejected: runtime CSS-in-JS performance overhead",
-      "Vanilla CSS — rejected: no scoping, global namespace pollution",
-    ],
-    consequences:
-      "More CSS files to manage. No utility classes for rapid prototyping. Consistent design requires discipline with token usage.",
-    linkedTickets: [],
-    tags: ["frontend", "styling"],
-  },
-];
-
-/* ── Helpers ───────────────────────────────────────────────────────────────── */
+/* ── Helpers ── */
 const statusConfig: Record<DecisionStatus, { label: string; className: string; icon: React.ReactNode }> = {
-  accepted: { label: "Accepted", className: styles.statusAccepted, icon: <RiCheckLine size={11} /> },
-  proposed: { label: "Proposed", className: styles.statusProposed, icon: <RiQuestionLine size={11} /> },
+  accepted:   { label: "Accepted",   className: styles.statusAccepted,   icon: <RiCheckLine size={11} /> },
+  proposed:   { label: "Proposed",   className: styles.statusProposed,   icon: <RiQuestionLine size={11} /> },
   deprecated: { label: "Deprecated", className: styles.statusDeprecated, icon: <RiTimeLine size={11} /> },
   superseded: { label: "Superseded", className: styles.statusSuperseded, icon: <RiArrowRightLine size={11} /> },
 };
 
-/* ── Decision detail panel ─────────────────────────────────────────────────── */
-function DecisionDetail({ decision, onClose }: { decision: Decision; onClose: () => void }) {
+/* ── Create form ── */
+interface CreateForm {
+  title: string;
+  status: DecisionStatus;
+  owner: string;
+  context: string;
+  decision: string;
+  rationale: string;
+  alternativesText: string;
+  consequences: string;
+  linkedTicketsText: string;
+  tagsText: string;
+  org_level: boolean;
+}
+
+function CreateDecisionForm({
+  spaceId,
+  onClose,
+}: {
+  spaceId?: string;
+  onClose: () => void;
+}) {
+  const createMut = useCreateDecision();
+  const [form, setForm] = useState<CreateForm>({
+    title: "",
+    status: "proposed",
+    owner: "",
+    context: "",
+    decision: "",
+    rationale: "",
+    alternativesText: "",
+    consequences: "",
+    linkedTicketsText: "",
+    tagsText: "",
+    org_level: !spaceId,
+  });
+
+  function set(k: keyof CreateForm, v: string | boolean) {
+    setForm((f) => ({ ...f, [k]: v }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.title.trim() || !form.decision.trim()) return;
+    await createMut.mutateAsync({
+      title: form.title.trim(),
+      status: form.status,
+      owner: form.owner.trim(),
+      date: new Date().toISOString().split("T")[0],
+      context: form.context.trim(),
+      decision: form.decision.trim(),
+      rationale: form.rationale.trim(),
+      alternatives: form.alternativesText.split("\n").map((s) => s.trim()).filter(Boolean),
+      consequences: form.consequences.trim(),
+      linkedTickets: form.linkedTicketsText.split(",").map((s) => s.trim()).filter(Boolean),
+      tags: form.tagsText.split(",").map((s) => s.trim()).filter(Boolean),
+      space_id: form.org_level ? null : (spaceId ?? null),
+      org_level: form.org_level,
+    });
+    onClose();
+  }
+
   return (
-    <motion.div
-      className={styles.detailPanel}
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      transition={{ duration: 0.2 }}
-    >
-      <div className={styles.detailHeader}>
-        <div className={styles.detailNum}>ADR-{String(decision.number).padStart(3, "0")}</div>
-        <button className={styles.closeDetail} onClick={onClose}>✕</button>
-      </div>
-      <h2 className={styles.detailTitle}>{decision.title}</h2>
-
-      <div className={styles.detailMeta}>
-        <span className={`${styles.statusBadge} ${statusConfig[decision.status].className}`}>
-          {statusConfig[decision.status].icon}
-          {statusConfig[decision.status].label}
-        </span>
-        <span className={styles.metaItem}>
-          <RiUser3Line size={12} /> {decision.owner}
-        </span>
-        <span className={styles.metaItem}>
-          <RiTimeLine size={12} /> {new Date(decision.date).toLocaleDateString()}
-        </span>
+    <form onSubmit={handleSubmit} className={styles.createForm}>
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Title *</label>
+        <input
+          className={styles.formInput}
+          placeholder="e.g. Use PostgreSQL as primary datastore"
+          value={form.title}
+          onChange={(e) => set("title", e.target.value)}
+          required
+        />
       </div>
 
-      <div className={styles.tags}>
-        {decision.tags.map((t) => (
-          <span key={t} className={styles.tag}>{t}</span>
-        ))}
+      <div className={styles.formRow}>
+        <div className={styles.formGroup} style={{ flex: 1 }}>
+          <label className={styles.formLabel}>Status</label>
+          <select
+            className={styles.formSelect}
+            value={form.status}
+            onChange={(e) => set("status", e.target.value as DecisionStatus)}
+          >
+            <option value="proposed">Proposed</option>
+            <option value="accepted">Accepted</option>
+            <option value="deprecated">Deprecated</option>
+            <option value="superseded">Superseded</option>
+          </select>
+        </div>
+        <div className={styles.formGroup} style={{ flex: 1 }}>
+          <label className={styles.formLabel}>Owner</label>
+          <input
+            className={styles.formInput}
+            placeholder="e.g. Priya S."
+            value={form.owner}
+            onChange={(e) => set("owner", e.target.value)}
+          />
+        </div>
       </div>
 
-      <section className={styles.detailSection}>
-        <h3 className={styles.sectionHeading}>Context</h3>
-        <p className={styles.sectionBody}>{decision.context}</p>
-      </section>
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Context</label>
+        <textarea
+          className={styles.formTextarea}
+          placeholder="What problem or situation led to this decision?"
+          value={form.context}
+          onChange={(e) => set("context", e.target.value)}
+          rows={3}
+        />
+      </div>
+
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Decision *</label>
+        <textarea
+          className={styles.formTextarea}
+          placeholder="What was decided?"
+          value={form.decision}
+          onChange={(e) => set("decision", e.target.value)}
+          rows={3}
+          required
+        />
+      </div>
+
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Rationale</label>
+        <textarea
+          className={styles.formTextarea}
+          placeholder="Why was this the right choice?"
+          value={form.rationale}
+          onChange={(e) => set("rationale", e.target.value)}
+          rows={2}
+        />
+      </div>
+
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Alternatives Considered (one per line)</label>
+        <textarea
+          className={styles.formTextarea}
+          placeholder={"Option A — rejected because...\nOption B — rejected because..."}
+          value={form.alternativesText}
+          onChange={(e) => set("alternativesText", e.target.value)}
+          rows={3}
+        />
+      </div>
+
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Consequences</label>
+        <textarea
+          className={styles.formTextarea}
+          placeholder="What are the trade-offs or follow-up actions?"
+          value={form.consequences}
+          onChange={(e) => set("consequences", e.target.value)}
+          rows={2}
+        />
+      </div>
+
+      <div className={styles.formRow}>
+        <div className={styles.formGroup} style={{ flex: 1 }}>
+          <label className={styles.formLabel}>Tags (comma-separated)</label>
+          <input
+            className={styles.formInput}
+            placeholder="auth, security, backend"
+            value={form.tagsText}
+            onChange={(e) => set("tagsText", e.target.value)}
+          />
+        </div>
+        <div className={styles.formGroup} style={{ flex: 1 }}>
+          <label className={styles.formLabel}>Linked Tickets (comma-separated)</label>
+          <input
+            className={styles.formInput}
+            placeholder="TRK-89, TRK-142"
+            value={form.linkedTicketsText}
+            onChange={(e) => set("linkedTicketsText", e.target.value)}
+          />
+        </div>
+      </div>
+
+      {spaceId && (
+        <label className={styles.formCheck}>
+          <input
+            type="checkbox"
+            checked={form.org_level}
+            onChange={(e) => set("org_level", e.target.checked)}
+          />
+          <span>Org-wide decision (visible across all spaces)</span>
+        </label>
+      )}
+
+      <div className={styles.formActions}>
+        <button type="button" className={styles.formCancel} onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className={styles.formSubmit}
+          disabled={createMut.isPending}
+        >
+          {createMut.isPending ? "Saving…" : "Save Decision"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/* ── Detail body ── */
+function DecisionDetailBody({ decision }: { decision: Decision }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {decision.tags.length > 0 && (
+        <div className={styles.tags}>
+          {decision.tags.map((t) => (
+            <span key={t} className={styles.tag}>{t}</span>
+          ))}
+        </div>
+      )}
+
+      {decision.context && (
+        <section className={styles.detailSection}>
+          <h3 className={styles.sectionHeading}>Context</h3>
+          <p className={styles.sectionBody}>{decision.context}</p>
+        </section>
+      )}
 
       <section className={styles.detailSection}>
         <h3 className={styles.sectionHeading}>Decision</h3>
         <p className={`${styles.sectionBody} ${styles.decisionHighlight}`}>{decision.decision}</p>
       </section>
 
-      <section className={styles.detailSection}>
-        <h3 className={styles.sectionHeading}>Rationale</h3>
-        <p className={styles.sectionBody}>{decision.rationale}</p>
-      </section>
+      {decision.rationale && (
+        <section className={styles.detailSection}>
+          <h3 className={styles.sectionHeading}>Rationale</h3>
+          <p className={styles.sectionBody}>{decision.rationale}</p>
+        </section>
+      )}
 
-      <section className={styles.detailSection}>
-        <h3 className={styles.sectionHeading}>Alternatives Considered</h3>
-        <ul className={styles.altList}>
-          {decision.alternatives.map((a, i) => (
-            <li key={i} className={styles.altItem}>{a}</li>
-          ))}
-        </ul>
-      </section>
+      {decision.alternatives.length > 0 && (
+        <section className={styles.detailSection}>
+          <h3 className={styles.sectionHeading}>Alternatives Considered</h3>
+          <ul className={styles.altList}>
+            {decision.alternatives.map((a, i) => (
+              <li key={i} className={styles.altItem}>{a}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-      <section className={styles.detailSection}>
-        <h3 className={styles.sectionHeading}>Consequences</h3>
-        <p className={styles.sectionBody}>{decision.consequences}</p>
-      </section>
+      {decision.consequences && (
+        <section className={styles.detailSection}>
+          <h3 className={styles.sectionHeading}>Consequences</h3>
+          <p className={styles.sectionBody}>{decision.consequences}</p>
+        </section>
+      )}
 
       {decision.linkedTickets.length > 0 && (
         <section className={styles.detailSection}>
@@ -236,20 +294,37 @@ function DecisionDetail({ decision, onClose }: { decision: Decision; onClose: ()
           </div>
         </section>
       )}
-    </motion.div>
+    </div>
   );
 }
 
-/* ── Page ───────────────────────────────────────────────────────────────────── */
-export default function DecisionsPage() {
+/* ── Page ── */
+export default function DecisionsPage({
+  spaceId,
+  compact,
+}: {
+  spaceId?: string;
+  compact?: boolean;
+} = {}) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Decision | null>(null);
-  const [novaQuery, setNovaQuery] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [novaQ, setNovaQ] = useState("");
   const [novaAnswer, setNovaAnswer] = useState("");
+  const [novaSources, setNovaSources] = useState<{ title: string; url?: string }[]>([]);
   const [novaLoading, setNovaLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [includeOrg, setIncludeOrg] = useState(false);
 
-  const filtered = DECISIONS.filter((d) => {
+  const queryParams = spaceId
+    ? { space_id: spaceId, ...(includeOrg ? { org_level: true } : {}) }
+    : undefined;
+
+  const { data, isLoading } = useDecisions(queryParams);
+  const deleteMut = useDeleteDecision();
+
+  const decisions = data?.decisions ?? [];
+  const filtered = decisions.filter((d) => {
     const matchSearch =
       !search ||
       d.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -259,35 +334,101 @@ export default function DecisionsPage() {
   });
 
   async function handleNovaQuery() {
-    if (!novaQuery.trim()) return;
+    if (!novaQ.trim()) return;
     setNovaLoading(true);
     setNovaAnswer("");
-    await new Promise((r) => setTimeout(r, 1000));
-    setNovaAnswer(
-      `Based on ADR-012, the team decided to use JWT with refresh token rotation for authentication. The key rationale was stateless scaling and token invalidation on logout. See also ADR-007 for how Nova's AI architecture integrates with this auth system.`
-    );
+    setNovaSources([]);
+    try {
+      const res = await novaQuery(novaQ);
+      setNovaAnswer(res.answer);
+      setNovaSources(res.citations ?? []);
+    } catch {
+      setNovaAnswer("EOS couldn't retrieve an answer. Try rephrasing.");
+    }
     setNovaLoading(false);
   }
 
+  function handleDelete(id: string) {
+    if (!confirm("Delete this decision record?")) return;
+    deleteMut.mutate(id, {
+      onSuccess: () => {
+        if (selected?.id === id) setSelected(null);
+      },
+    });
+  }
+
+  const detailBadge = selected ? (
+    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+      <span className={`${styles.statusBadge} ${statusConfig[selected.status].className}`}>
+        {statusConfig[selected.status].icon}
+        {statusConfig[selected.status].label}
+      </span>
+      {selected.org_level && (
+        <span className={styles.orgBadge}><RiGlobalLine size={10} /> Org-wide</span>
+      )}
+      {!selected.org_level && selected.space_id && (
+        <span className={styles.orgBadge}><RiBuilding2Line size={10} /> {selected.space_id}</span>
+      )}
+      <span className={styles.metaItem}><RiUser3Line size={12} /> {selected.owner}</span>
+      <span className={styles.metaItem}><RiTimeLine size={12} /> {new Date(selected.date).toLocaleDateString()}</span>
+    </div>
+  ) : undefined;
+
+  const detailFooter = selected ? (
+    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+      <button
+        className={styles.deleteBtn}
+        onClick={() => handleDelete(selected.id)}
+        title="Delete decision"
+      >
+        <RiDeleteBinLine size={12} /> Delete
+      </button>
+    </div>
+  ) : undefined;
+
   return (
     <div className={styles.page}>
-      {/* ── Left column ── */}
-      <div className={`${styles.listCol} ${selected ? styles.listColNarrow : ""}`}>
-        {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.headerLeft}>
-            <RiFileTextLine size={20} className={styles.headerIcon} />
-            <div>
-              <h1 className={styles.title}>Decisions</h1>
-              <p className={styles.subtitle}>
-                Architecture decision records · Institutional memory
-              </p>
+      <div className={styles.listCol}>
+        {!compact && (
+          <div className={styles.header}>
+            <div className={styles.headerLeft}>
+              <RiFileTextLine size={20} className={styles.headerIcon} />
+              <div>
+                <h1 className={styles.title}>Decisions</h1>
+                <p className={styles.subtitle}>Architecture decision records · Institutional memory</p>
+              </div>
             </div>
+            <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
+              <RiAddLine size={15} /> New Decision
+            </button>
           </div>
-          <button className={styles.addBtn}>
-            <RiAddLine size={15} /> New Decision
-          </button>
-        </div>
+        )}
+
+        {compact && (
+          <div className={styles.header}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {spaceId && (
+                <>
+                  <button
+                    className={`${styles.filterChip} ${!includeOrg ? styles.filterChipActive : ""}`}
+                    onClick={() => setIncludeOrg(false)}
+                  >
+                    <RiBuilding2Line size={11} /> This Space
+                  </button>
+                  <button
+                    className={`${styles.filterChip} ${includeOrg ? styles.filterChipActive : ""}`}
+                    onClick={() => setIncludeOrg(true)}
+                  >
+                    <RiGlobalLine size={11} /> Org-Wide
+                  </button>
+                </>
+              )}
+            </div>
+            <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
+              <RiAddLine size={15} /> New Decision
+            </button>
+          </div>
+        )}
 
         {/* Nova search */}
         <div className={styles.novaBar}>
@@ -295,9 +436,9 @@ export default function DecisionsPage() {
             <RiBrainLine size={14} className={styles.novaIcon} />
             <input
               className={styles.novaInput}
-              placeholder='Ask Nova: "What was decided about authentication?"'
-              value={novaQuery}
-              onChange={(e) => setNovaQuery(e.target.value)}
+              placeholder='Ask EOS: "What was decided about authentication?"'
+              value={novaQ}
+              onChange={(e) => setNovaQ(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleNovaQuery()}
             />
             <button
@@ -305,7 +446,7 @@ export default function DecisionsPage() {
               onClick={handleNovaQuery}
               disabled={novaLoading}
             >
-              {novaLoading ? "..." : "Ask"}
+              {novaLoading ? "…" : "Ask"}
             </button>
           </div>
           <AnimatePresence>
@@ -316,8 +457,22 @@ export default function DecisionsPage() {
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
               >
-                <RiBrainLine size={13} className={styles.novaAnswerIcon} />
-                <p>{novaAnswer}</p>
+                <div>
+                  <RiBrainLine size={13} className={styles.novaAnswerIcon} />
+                  <div style={{ flex: 1 }}>
+                    <p>{novaAnswer}</p>
+                    {novaSources.length > 0 && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                        {novaSources.slice(0, 4).map((s, i) => (
+                          <span key={i} className={styles.tag} style={{ cursor: s.url ? "pointer" : "default" }}
+                            onClick={() => s.url && window.open(s.url, "_blank")}>
+                            {s.title}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -329,7 +484,7 @@ export default function DecisionsPage() {
             <RiSearchLine size={13} className={styles.searchIcon} />
             <input
               className={styles.searchInput}
-              placeholder="Search decisions..."
+              placeholder="Search decisions…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -349,52 +504,92 @@ export default function DecisionsPage() {
 
         {/* List */}
         <div className={styles.list}>
-          {filtered.map((d, i) => (
-            <motion.div
-              key={d.id}
-              className={`${styles.decisionRow} ${selected?.id === d.id ? styles.decisionRowActive : ""}`}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => setSelected(d)}
-            >
-              <div className={styles.rowNum}>
-                ADR-{String(d.number).padStart(3, "0")}
-              </div>
-              <div className={styles.rowBody}>
-                <div className={styles.rowTitleRow}>
-                  <span className={styles.rowTitle}>{d.title}</span>
-                  <span className={`${styles.statusBadge} ${statusConfig[d.status].className}`}>
-                    {statusConfig[d.status].icon}
-                    {statusConfig[d.status].label}
-                  </span>
+          {isLoading ? (
+            <>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className={styles.loadingRow} />
+              ))}
+            </>
+          ) : filtered.length === 0 ? (
+            <div className={styles.emptyState}>
+              {search || filterStatus !== "all"
+                ? "No decisions match your filters."
+                : spaceId
+                ? "No decisions yet for this space. Record your first ADR."
+                : "No decisions recorded yet. Start documenting your architecture choices."}
+            </div>
+          ) : (
+            filtered.map((d, i) => (
+              <motion.div
+                key={d.id}
+                className={`${styles.decisionRow} ${selected?.id === d.id ? styles.decisionRowActive : ""}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                onClick={() => { setSelected(d); setShowCreate(false); }}
+              >
+                <div className={styles.rowNum}>
+                  {d.number != null ? `ADR-${String(d.number).padStart(3, "0")}` : "ADR"}
                 </div>
-                <div className={styles.rowMeta}>
-                  <span>{d.owner}</span>
-                  <span>·</span>
-                  <span>{new Date(d.date).toLocaleDateString()}</span>
-                  <div className={styles.tags}>
-                    {d.tags.slice(0, 3).map((t) => (
-                      <span key={t} className={styles.tag}>{t}</span>
-                    ))}
+                <div className={styles.rowBody}>
+                  <div className={styles.rowTitleRow}>
+                    <span className={styles.rowTitle}>{d.title}</span>
+                    <span className={`${styles.statusBadge} ${statusConfig[d.status].className}`}>
+                      {statusConfig[d.status].icon}
+                      {statusConfig[d.status].label}
+                    </span>
+                  </div>
+                  <div className={styles.rowMeta}>
+                    <span>{d.owner}</span>
+                    {d.date && <><span>·</span><span>{new Date(d.date).toLocaleDateString()}</span></>}
+                    {d.org_level && (
+                      <span className={styles.orgBadge} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                        <RiGlobalLine size={9} /> Org
+                      </span>
+                    )}
+                    <div className={styles.tags}>
+                      {d.tags.slice(0, 3).map((t) => (
+                        <span key={t} className={styles.tag}>{t}</span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <RiArrowRightLine size={14} className={styles.rowArrow} />
-            </motion.div>
-          ))}
+                <RiArrowRightLine size={14} className={styles.rowArrow} />
+              </motion.div>
+            ))
+          )}
         </div>
       </div>
 
-      {/* ── Detail panel ── */}
-      <AnimatePresence>
-        {selected && (
-          <DecisionDetail
-            decision={selected}
-            onClose={() => setSelected(null)}
-          />
-        )}
-      </AnimatePresence>
+      {/* Detail drawer */}
+      <SideDrawer
+        open={!!selected && !showCreate}
+        onClose={() => setSelected(null)}
+        size="md"
+        title={selected?.title ?? ""}
+        avatar={
+          <div className={styles.adrAvatar}>
+            {selected?.number != null
+              ? `ADR-${String(selected.number).padStart(3, "0")}`
+              : "ADR"}
+          </div>
+        }
+        badge={detailBadge}
+        footer={detailFooter}
+      >
+        {selected && <DecisionDetailBody decision={selected} />}
+      </SideDrawer>
+
+      {/* Create drawer */}
+      <SideDrawer
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        size="md"
+        title="New Decision"
+        subtitle="Record an architecture decision (ADR)"
+      >
+        <CreateDecisionForm spaceId={spaceId} onClose={() => setShowCreate(false)} />
+      </SideDrawer>
     </div>
   );
 }
