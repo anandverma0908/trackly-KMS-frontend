@@ -6,10 +6,11 @@ import {
   fetchWikiSpaces, fetchWikiPages, fetchWikiPage,
   createWikiSpace, createWikiPage, updateWikiPage,
   deleteWikiPage, fetchWikiVersions, restoreWikiVersion,
-  extractMeetingActions,
+  extractMeetingActions, fetchWikiIntelligence, askWikiAssistant,
 } from "@/services/api";
 import { useWikiStore } from "@/store";
 import type { WikiPage as WikiPageType } from "@/types";
+import SideDrawer from "@/components/ui/SideDrawer";
 import PageEditor from "./PageEditor";
 import RelatedDocsWidget from "./RelatedDocsWidget";
 import styles from "./WikiPage.module.css";
@@ -22,7 +23,7 @@ import {
   RiSparklingLine, RiTimeLine, RiAlertLine, RiCheckLine,
   RiLinkM, RiBarChartBoxLine, RiBrainLine, RiSendPlaneLine,
   RiSearchLine, RiLayoutRightLine, RiNodeTree,
-  RiShieldCheckLine, RiFileTextLine, RiMicLine, RiMapLine,
+  RiShieldCheckLine, RiFileTextLine, RiMapLine,
   RiLightbulbLine, RiTeamLine, RiGitMergeLine,
 } from "react-icons/ri";
 
@@ -41,43 +42,18 @@ const PAGE_TEMPLATES = [
 /* ══════════════════════════════════════════════════════════
    AI HELPERS  (deterministic from id)
 ══════════════════════════════════════════════════════════ */
-function hashId(id: string) {
-  return id.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-}
-
 type Freshness = "fresh" | "aging" | "stale";
-
-function getPageInsights(pageId: string) {
-  const h = hashId(pageId);
-  const daysOld   = 12 + (h % 130);
-  const linked    = h % 6;
-  const score     = Math.max(15, Math.round(100 - daysOld * 0.38 - (linked > 3 ? 8 : 0)));
-  const freshness: Freshness = daysOld > 90 ? "stale" : daysOld > 60 ? "aging" : "fresh";
-  return { daysOld, linked, score, freshness, hasConflict: h % 9 === 0, relatedCount: 2 + (h % 4) };
-}
-
-function getSpaceHealth(spaceId: string) {
-  const h = hashId(spaceId);
-  return Math.max(25, Math.round(48 + (h % 50)));
-}
 
 const FRESH_COLOR: Record<Freshness, string> = {
   fresh: "var(--green)", aging: "var(--amber)", stale: "var(--red)",
 };
 
-function wikiChat(input: string, pageTitle?: string): string {
-  const k = input.toLowerCase();
-  if (k.includes("stale") || k.includes("scan"))
-    return "3 pages need attention:\n• OAuth Runbook (127d) — 4 tickets reference it\n• Redis Cache Strategy (94d) — linked to Sprint 14\n• Deployment Checklist (112d) — used in 3 open PRs";
-  if (k.includes("conflict"))
-    return "1 conflict detected:\nRedis Strategy says TTL = 5 min, Auth Runbook says TTL = 15 min. Recommend aligning to the Auth Runbook.";
-  if (k.includes("onboard"))
-    return "Suggested reading order for new AUTH pod members:\n1. Engineering Handbook (20 min)\n2. Auth Space Overview (15 min)\n3. Token Lifecycle (12 min)\n4. OAuth Runbook (25 min)\n5. Session Management (10 min)";
-  if (k.includes("summar") || k.includes("tldr"))
-    return "This page covers the OAuth 2.0 token lifecycle — setup, rotation every 60 min, and fallback handling for 401s. Last updated 94 days ago; may need refresh post-infra migration.";
-  if (k.includes("gap") || k.includes("coverage"))
-    return "Coverage gaps found:\n• No runbook for incident escalation\n• Deployment guide missing rollback steps\n• Auth space has no architecture diagram";
-  return `Analysed "${pageTitle ?? "your wiki"}" — found ${2 + (input.length % 6)} related pages and ${3 + (input.length % 4)} cross-link opportunities.`;
+function freshnessFromDate(dateStr?: string): Freshness {
+  if (!dateStr) return "stale";
+  const days = Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24)));
+  if (days <= 30) return "fresh";
+  if (days <= 75) return "aging";
+  return "stale";
 }
 
 function processMeetingNotes(text: string): string {
@@ -86,15 +62,6 @@ function processMeetingNotes(text: string): string {
   const actions = lines.filter(l => /will|todo|action item|follow.?up/i.test(l)).slice(0, 4);
   const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   return `# Meeting Notes\n\n> Structured by EOS · ${date}\n\n## Summary\n\n${lines.slice(0, 3).join(" ").slice(0, 220)}…\n\n## Key Decisions\n\n${decisions.length ? decisions.map(d => `- ${d.trim()}`).join("\n") : "- No explicit decisions detected"}\n\n## Action Items\n\n${actions.length ? actions.map(a => `- [ ] ${a.trim()}`).join("\n") : "- [ ] Review and distribute notes\n- [ ] Schedule follow-up"}\n\n## Follow-ups\n\n- [ ] Update related documentation\n- [ ] Share with stakeholders`;
-}
-
-function getOnboardingPath(pages: WikiPageType[]): { page: WikiPageType; minutes: number; tag: string }[] {
-  const tags = ["Start here", "Core concepts", "Architecture", "Reference", "Advanced"];
-  return pages.slice(0, 5).map((p, i) => ({
-    page: p,
-    minutes: 10 + (hashId(p.id) % 20),
-    tag: tags[i] ?? "Reference",
-  }));
 }
 
 type AITab = "health" | "map" | "insights" | "chat";
@@ -111,8 +78,8 @@ function KnowledgeMapPanel({ pages, activeId }: { pages: WikiPageType[]; activeI
     const isActive = p.id === activeId;
     if (isActive) return { ...p, x: cx, y: cy, isActive: true, color: "var(--accent)" };
     const angle = (i / shown.length) * 2 * Math.PI - Math.PI / 2;
-    const r = 60 + (hashId(p.id) % 18);
-    const { freshness } = getPageInsights(p.id);
+    const r = 60 + ((p.title.length + i * 7) % 18);
+    const freshness = freshnessFromDate(p.updated_at);
     return { ...p, x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r, isActive: false, color: FRESH_COLOR[freshness] };
   });
 
@@ -195,6 +162,11 @@ export default function WikiPage() {
   const { data: activePage   } = useQuery({ queryKey: ["wiki-page", activePageId],  queryFn: () => fetchWikiPage(activePageId!), enabled: activePageId !== null });
   const { data: urlPage      } = useQuery({ queryKey: ["wiki-page-from-url",urlPageId], queryFn: () => fetchWikiPage(urlPageId!), enabled: !!urlPageId });
   const { data: versions = [] } = useQuery({ queryKey: ["wiki-versions", activePageId], queryFn: () => fetchWikiVersions(activePageId!), enabled: activePageId !== null && showVersions });
+  const { data: intelligence } = useQuery({
+    queryKey: ["wiki-intelligence", activeSpaceId, activePageId],
+    queryFn: () => fetchWikiIntelligence(activeSpaceId, activePageId),
+    enabled: activeSpaceId !== null,
+  });
 
   useEffect(() => { if (spaces.length > 0 && activeSpaceId === null) setActiveSpace(spaces[0].id); }, [spaces, activeSpaceId, setActiveSpace]);
   useEffect(() => {
@@ -220,16 +192,20 @@ export default function WikiPage() {
     setShowTemplates(false);
   }
 
-  function submitAiChat(cmd: string) {
+  async function submitAiChat(cmd: string) {
     if (!cmd.trim() || aiThinking) return;
     setAiThinking(true);
     setAiInput("");
     setAiTab("chat");
-    setTimeout(() => {
-      const reply = wikiChat(cmd, activePage?.title);
-      setAiHistory(h => [{ cmd, reply }, ...h].slice(0, 6));
+    try {
+      const result = await askWikiAssistant(cmd, activePageId, activeSpaceId);
+      setAiHistory(h => [{ cmd, reply: result.answer }, ...h].slice(0, 6));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "EOS is unavailable right now.";
+      toast.error(msg);
+    } finally {
       setAiThinking(false);
-    }, 820);
+    }
   }
 
   async function handleCapture() {
@@ -237,7 +213,7 @@ export default function WikiPage() {
     setCaptureProcessing(true);
     try {
       const result = await extractMeetingActions(captureInput);
-      const structured = typeof result === "string" ? result : (result?.content ?? result?.structured_md ?? processMeetingNotes(captureInput));
+      const structured = typeof result === "string" ? result : (result?.structured_md ?? result?.content ?? processMeetingNotes(captureInput));
       setCaptureOutput(structured);
     } catch {
       setCaptureOutput(processMeetingNotes(captureInput));
@@ -261,8 +237,9 @@ export default function WikiPage() {
     : pages;
   const treePages    = buildTree(filteredPages);
   const breadcrumbs  = activePageId ? getBreadcrumbs(pages, activePageId) : [];
-  const pageInsights = activePageId ? getPageInsights(activePageId) : null;
-  const onboardingPath = getOnboardingPath(pages);
+  const pageInsights = intelligence?.page_health ?? null;
+  const onboardingPath = intelligence?.onboarding_path ?? [];
+  const spaceHealthById = new Map((intelligence?.spaces ?? []).map((s) => [s.space_id, s]));
 
   return (
     <div className={styles.page}>
@@ -288,8 +265,8 @@ export default function WikiPage() {
         </div>
 
         <div className={styles.topbarRight}>
-          <button className={styles.captureBtn} onClick={() => setShowCapture(true)} title="Capture meeting notes into a doc">
-            <RiMicLine size={13} />Capture
+          <button className={styles.captureBtn} onClick={() => setShowCapture(true)} title="Structure meeting notes into a doc">
+            <RiFileTextLine size={13} />Notes
           </button>
           {activePage && (
             <button className={`${styles.iconBtn} ${showAIPanel ? styles.iconBtnActive : ""}`} onClick={() => setShowAIPanel(v => !v)} title="Toggle AI panel">
@@ -305,7 +282,7 @@ export default function WikiPage() {
       </header>
 
       {/* ── Body: sidebar | main | ai panel ── */}
-      <div className={`${styles.body} ${showAIPanel && activePage ? styles.bodyWithPanel : ""}`}>
+      <div className={styles.body}>
 
         {/* ── Left Sidebar ── */}
         <aside className={styles.sidebar}>
@@ -328,7 +305,7 @@ export default function WikiPage() {
               )}
               <div className={styles.spaceList}>
                 {spaces.map(s => {
-                  const h = getSpaceHealth(s.id);
+                  const h = spaceHealthById.get(s.id)?.health ?? 25;
                   const c = h >= 75 ? "var(--green)" : h >= 50 ? "var(--amber)" : "var(--red)";
                   const circ = 2 * Math.PI * 8;
                   return (
@@ -368,15 +345,15 @@ export default function WikiPage() {
             <div className={styles.eosActions}>
               <div className={styles.eosActionsLabel}><RiSparklingLine size={10} />EOS</div>
               {[
-                { icon: <RiTimeLine size={11} />,    label: "Scan stale pages",        cmd: "stale" },
-                { icon: <RiAlertLine size={11} />,   label: "Detect conflicts",         cmd: "conflict" },
+                { icon: <RiTimeLine size={11} />,    label: "Scan stale pages",        cmd: "Find stale pages in this wiki space" },
+                { icon: <RiAlertLine size={11} />,   label: "Detect conflicts",         cmd: "Detect documentation conflicts for the active page" },
                 { icon: <RiTeamLine size={11} />,    label: "Generate onboarding path", onboard: true },
-                { icon: <RiLightbulbLine size={11} />,label: "Find coverage gaps",       cmd: "gaps" },
+                { icon: <RiLightbulbLine size={11} />,label: "Find coverage gaps",       cmd: "Find documentation coverage gaps in this wiki space" },
               ].map((a, i) => (
                 <button key={i} className={styles.eosActionItem} onClick={() => {
                   if ("onboard" in a) { setShowOnboarding(true); return; }
                   setShowAIPanel(true);
-                  setTimeout(() => submitAiChat(a.cmd!), 80);
+                  void submitAiChat(a.cmd!);
                 }}>
                   {a.icon}<span>{a.label}</span>
                 </button>
@@ -418,10 +395,10 @@ export default function WikiPage() {
                   <RiSparklingLine size={11} className={styles.eosBannerIcon} />
                   <span className={styles.eosBannerText}>
                     {pageInsights.freshness === "stale"
-                      ? `${pageInsights.daysOld} days since last update · ${pageInsights.linked} active tickets reference this page`
-                      : pageInsights.hasConflict
+                      ? `${pageInsights.days_old} days since last update · ${pageInsights.linked_tickets} ticket references found`
+                      : pageInsights.has_conflict
                       ? "EOS detected a potential conflict with another page — review before editing"
-                      : `EOS · ${pageInsights.score}% health · ${pageInsights.linked} linked tickets · auto-scanned 2m ago`}
+                      : `EOS · ${pageInsights.score}% health · ${pageInsights.linked_tickets} linked tickets · backend analysis`}
                   </span>
                   <span className={styles.eosBannerBadge} style={{ color: FRESH_COLOR[pageInsights.freshness], borderColor: FRESH_COLOR[pageInsights.freshness] }}>
                     {pageInsights.freshness === "fresh" ? "Fresh" : pageInsights.freshness === "aging" ? "Aging" : "Needs update"}
@@ -481,7 +458,7 @@ export default function WikiPage() {
                       <RiFileTextLine size={13} />Use template
                     </button>
                     <button className={styles.emptySecondary} onClick={() => setShowCapture(true)}>
-                      <RiMicLine size={13} />Capture meeting
+                      <RiFileTextLine size={13} />Structure notes
                     </button>
                     <button className={styles.emptySecondary} onClick={() => setShowOnboarding(true)}>
                       <RiTeamLine size={13} />Onboarding path
@@ -492,7 +469,7 @@ export default function WikiPage() {
                     <div className={styles.emptyFeatureItem}><RiSparklingLine size={12} /><span>EOS auto-scans every page for freshness and conflicts</span></div>
                     <div className={styles.emptyFeatureItem}><RiNodeTree size={12} /><span>Knowledge map shows how your pages connect</span></div>
                     <div className={styles.emptyFeatureItem}><RiGitMergeLine size={12} /><span>Smart history with semantic diff across versions</span></div>
-                    <div className={styles.emptyFeatureItem}><RiMicLine size={12} /><span>Capture meeting notes and structure them instantly</span></div>
+                    <div className={styles.emptyFeatureItem}><RiFileTextLine size={12} /><span>Structure meeting notes into clean wiki pages</span></div>
                   </div>
                 </>
               )}
@@ -545,9 +522,9 @@ export default function WikiPage() {
                   <div className={styles.healthMeta}>
                     <div className={styles.healthScoreLabel}>Doc Health</div>
                     {[
-                      { label: "Freshness",   val: pageInsights.freshness === "fresh" ? 88 : pageInsights.freshness === "aging" ? 52 : 18 },
-                      { label: "Coverage",    val: 58 + (pageInsights.score % 32) },
-                      { label: "Cross-links", val: 35 + (pageInsights.linked * 10) },
+                      { label: "Freshness",   val: pageInsights.freshness === "fresh" ? 92 : pageInsights.freshness === "aging" ? 58 : 24 },
+                      { label: "Coverage",    val: Math.round((pageInsights.coverage.headings + pageInsights.coverage.examples + pageInsights.coverage.links + pageInsights.coverage.diagrams) / 4) },
+                      { label: "Cross-links", val: Math.min(100, 20 + pageInsights.related_count * 16) },
                     ].map(m => (
                       <div key={m.label} className={styles.healthMetaRow}>
                         <span className={styles.healthMetaLabel}>{m.label}</span>
@@ -563,7 +540,12 @@ export default function WikiPage() {
                 <div className={styles.coverageSection}>
                   <div className={styles.coverageSectionLabel}>Content Coverage</div>
                   <div className={styles.coverageRow}>
-                    {([["Headings", 100], ["Examples", 72], ["Links", 48], ["Diagrams", 20]] as [string, number][]).map(([l, v]) => (
+                    {([
+                      ["Headings", pageInsights.coverage.headings],
+                      ["Examples", pageInsights.coverage.examples],
+                      ["Links", pageInsights.coverage.links],
+                      ["Diagrams", pageInsights.coverage.diagrams],
+                    ] as [string, number][]).map(([l, v]) => (
                       <div key={l} className={styles.coverageItem}>
                         <div className={styles.coverageRing} style={{ background: `conic-gradient(${v >= 75 ? "var(--green)" : v >= 50 ? "var(--amber)" : "var(--red)"} ${v}%, var(--surface-3) 0)` }} />
                         <span className={styles.coverageLabel}>{l}</span>
@@ -574,8 +556,12 @@ export default function WikiPage() {
 
                 {/* Compliance */}
                 <div className={styles.complianceRow}>
-                  <RiShieldCheckLine size={11} color="var(--green)" />
-                  <span className={styles.complianceText}>Compliance check passed · no sensitive data detected</span>
+                  <RiShieldCheckLine size={11} color={pageInsights.compliance.passed ? "var(--green)" : "var(--amber)"} />
+                  <span className={styles.complianceText}>
+                    {pageInsights.compliance.passed
+                      ? "Compliance check passed · no sensitive data detected"
+                      : `Potential sensitive strings detected: ${pageInsights.compliance.matches.join(", ")}`}
+                  </span>
                 </div>
               </div>
             )}
@@ -590,15 +576,15 @@ export default function WikiPage() {
                 <KnowledgeMapPanel pages={pages} activeId={activePageId} />
                 <div className={styles.mapStats}>
                   <div className={styles.mapStatItem}>
-                    <span className={styles.mapStatVal}>{pages.filter(p => getPageInsights(p.id).freshness === "fresh").length}</span>
+                    <span className={styles.mapStatVal}>{intelligence?.map_stats.fresh ?? 0}</span>
                     <span className={styles.mapStatLbl}>fresh</span>
                   </div>
                   <div className={styles.mapStatItem}>
-                    <span className={styles.mapStatVal} style={{ color: "var(--amber)" }}>{pages.filter(p => getPageInsights(p.id).freshness === "aging").length}</span>
+                    <span className={styles.mapStatVal} style={{ color: "var(--amber)" }}>{intelligence?.map_stats.aging ?? 0}</span>
                     <span className={styles.mapStatLbl}>aging</span>
                   </div>
                   <div className={styles.mapStatItem}>
-                    <span className={styles.mapStatVal} style={{ color: "var(--red)" }}>{pages.filter(p => getPageInsights(p.id).freshness === "stale").length}</span>
+                    <span className={styles.mapStatVal} style={{ color: "var(--red)" }}>{intelligence?.map_stats.stale ?? 0}</span>
                     <span className={styles.mapStatLbl}>stale</span>
                   </div>
                 </div>
@@ -614,11 +600,11 @@ export default function WikiPage() {
                       <RiTimeLine size={11} color="var(--red)" />
                       <div>
                         <div className={styles.insightTitle}>Page needs update</div>
-                        <div className={styles.insightDesc}>{pageInsights.daysOld}d old · {pageInsights.linked} active tickets still reference it</div>
+                        <div className={styles.insightDesc}>{pageInsights.days_old}d old · {pageInsights.linked_tickets} linked tickets found</div>
                       </div>
                     </div>
                   )}
-                  {pageInsights.hasConflict && (
+                  {pageInsights.has_conflict && (
                     <div className={styles.insightItem} style={{ borderLeftColor: "var(--amber)" }}>
                       <RiAlertLine size={11} color="var(--amber)" />
                       <div>
@@ -630,15 +616,17 @@ export default function WikiPage() {
                   <div className={styles.insightItem} style={{ borderLeftColor: "var(--accent)" }}>
                     <RiLinkM size={11} color="var(--accent)" />
                     <div>
-                      <div className={styles.insightTitle}>{pageInsights.relatedCount} cross-link opportunities</div>
+                      <div className={styles.insightTitle}>{pageInsights.related_count} related pages discovered</div>
                       <div className={styles.insightDesc}>Related pages can be linked to improve discoverability</div>
                     </div>
                   </div>
                   <div className={styles.insightItem} style={{ borderLeftColor: "var(--green)" }}>
                     <RiCheckLine size={11} color="var(--green)" />
                     <div>
-                      <div className={styles.insightTitle}>Grammar check passed</div>
-                      <div className={styles.insightDesc}>No readability issues · language is clear</div>
+                      <div className={styles.insightTitle}>{pageInsights.compliance.passed ? "Compliance check passed" : "Review sensitive strings"}</div>
+                      <div className={styles.insightDesc}>
+                        {pageInsights.compliance.passed ? "No sensitive data patterns detected" : "Potential secrets or tokens may be present in this page"}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -660,7 +648,7 @@ export default function WikiPage() {
                   <div className={styles.chatSuggestions}>
                     <div className={styles.chatSuggestionsLabel}>Quick actions</div>
                     {["Summarize this page", "Find stale pages", "Detect conflicts", "Show coverage gaps", "Generate onboarding path"].map(s => (
-                      <button key={s} className={styles.chatSuggestion} onClick={() => submitAiChat(s)}>{s}</button>
+                      <button key={s} className={styles.chatSuggestion} onClick={() => void submitAiChat(s)}>{s}</button>
                     ))}
                   </div>
                 )}
@@ -688,8 +676,8 @@ export default function WikiPage() {
                 <div className={styles.chatInputRow}>
                   <input className={styles.chatInput} placeholder="Ask anything about your wiki…" value={aiInput}
                     onChange={e => setAiInput(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && submitAiChat(aiInput)} />
-                  <button className={styles.chatSendBtn} onClick={() => submitAiChat(aiInput)} disabled={!aiInput.trim() || aiThinking}>
+                    onKeyDown={e => e.key === "Enter" && void submitAiChat(aiInput)} />
+                  <button className={styles.chatSendBtn} onClick={() => void submitAiChat(aiInput)} disabled={!aiInput.trim() || aiThinking}>
                     <RiSendPlaneLine size={13} />
                   </button>
                 </div>
@@ -730,8 +718,8 @@ export default function WikiPage() {
           <div className={`${styles.modal} ${styles.captureModal}`}>
             <div className={styles.modalHeader}>
               <div>
-                <h3>Capture Meeting Notes</h3>
-                <p className={styles.modalSub}>Paste raw notes or a transcript — EOS will structure it into a clean doc</p>
+                <h3>Structure Meeting Notes</h3>
+                <p className={styles.modalSub}>Paste raw notes or a transcript — EOS will turn them into a clean wiki draft</p>
               </div>
               <button className={styles.modalClose} onClick={() => { setShowCapture(false); setCaptureOutput(null); setCaptureInput(""); }}><MdClose /></button>
             </div>
@@ -782,20 +770,19 @@ export default function WikiPage() {
             ) : (
               <div className={styles.onboardingList}>
                 {onboardingPath.map((item, i) => {
-                  const { freshness, score } = getPageInsights(item.page.id);
-                  const fc = FRESH_COLOR[freshness];
+                  const fc = FRESH_COLOR[item.freshness];
                   return (
-                    <div key={item.page.id} className={styles.onboardingItem}>
+                    <div key={item.page_id} className={styles.onboardingItem}>
                       <div className={styles.onboardingStep}>{i + 1}</div>
                       <div className={styles.onboardingContent}>
-                        <div className={styles.onboardingItemTitle}>{item.page.title}</div>
+                        <div className={styles.onboardingItemTitle}>{item.title}</div>
                         <div className={styles.onboardingItemMeta}>
                           <span className={styles.onboardingTag}>{item.tag}</span>
                           <span>~{item.minutes} min</span>
-                          <span style={{ color: fc }}>● {freshness}</span>
+                          <span style={{ color: fc }}>● {item.freshness}</span>
                         </div>
                       </div>
-                      <div className={styles.onboardingScore} style={{ color: score >= 70 ? "var(--green)" : score >= 45 ? "var(--amber)" : "var(--red)" }}>{score}</div>
+                      <div className={styles.onboardingScore} style={{ color: item.score >= 70 ? "var(--green)" : item.score >= 45 ? "var(--amber)" : "var(--red)" }}>{item.score}</div>
                     </div>
                   );
                 })}
@@ -824,7 +811,7 @@ function PageTreeItem({ page, activeId, onSelect, depth }: {
 }) {
   const [expanded, setExpanded] = useState(true);
   const hasChildren = (page.children?.length ?? 0) > 0;
-  const { freshness } = getPageInsights(page.id);
+  const freshness = freshnessFromDate(page.updated_at);
 
   return (
     <div>

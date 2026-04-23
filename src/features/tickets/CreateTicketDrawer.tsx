@@ -74,6 +74,35 @@ import {
   RiExternalLinkLine,
 } from "react-icons/ri";
 
+/* ── Layer inference ── */
+type CodeLayer = "frontend" | "backend" | "unknown";
+
+function inferLayer(repo: string | undefined, path: string): CodeLayer {
+  const r = (repo ?? "").toLowerCase();
+  if (/front|^fe[-_]|\bweb\b|client|ui/.test(r)) return "frontend";
+  if (/back|^be[-_]|\bapi\b|\bserver\b|service/.test(r)) return "backend";
+  if (/\.(tsx|jsx)$/.test(path)) return "frontend";
+  if (/\/(components|features|pages|hooks|views)\//.test(path)) return "frontend";
+  if (/\.(py|go|java|rb|php|rs)$/.test(path)) return "backend";
+  if (/\/(routes|models|controllers|migrations|db)\//.test(path)) return "backend";
+  if (/\/services\/api\.ts/.test(path)) return "backend";
+  if (/\.(ts)$/.test(path)) return "frontend";
+  return "unknown";
+}
+
+const LAYER_META: Record<CodeLayer, { label: string; short: string; bg: string; color: string }> = {
+  frontend: { label: "Frontend",  short: "FE", bg: "rgba(79,126,255,0.10)", color: "var(--accent)" },
+  backend:  { label: "Backend",   short: "BE", bg: "rgba(52,211,153,0.10)", color: "var(--green, #34D399)" },
+  unknown:  { label: "Unknown",   short: "?",  bg: "var(--surface-2)",      color: "var(--text-3)" },
+};
+
+function layerFromDiagnosis(likely_layer?: string): CodeLayer {
+  const l = (likely_layer ?? "").toLowerCase();
+  if (l.includes("front") || l === "fe") return "frontend";
+  if (l.includes("back") || l === "be") return "backend";
+  return "unknown";
+}
+
 /* ── Config ── */
 const ISSUE_TYPES = [
   { value: "Story",       label: "Story",       color: "#4F7EFF", icon: <RiBookmarkLine size={14} /> },
@@ -247,11 +276,16 @@ export default function CreateTicketDrawer({
   });
 
   const isEdit = Boolean(ticketKey);
+  const codeCtxTitle = form.title.trim();
+  const codeCtxDescription = form.description.trim();
+  const canFetchCodeCtx = isEdit && !!ticketKey && (!!codeCtxTitle || !!codeCtxDescription);
 
   // Populate form exactly once per open-session
   useEffect(() => {
     if (!open) {
       hasInitialized.current = false;
+      setCodeCtx(null);
+      setCodeCtxLoading(false);
       return;
     }
     if (hasInitialized.current) return;
@@ -291,6 +325,8 @@ export default function CreateTicketDrawer({
       setWlHours("");
       setWlComment("");
       setWlDate(new Date().toISOString().split("T")[0]);
+      setCodeCtx(null);
+      setCodeCtxLoading(false);
     } else if (!isEdit) {
       hasInitialized.current = true;
       setForm({
@@ -322,6 +358,8 @@ export default function CreateTicketDrawer({
       setWlHours("");
       setWlComment("");
       setWlDate(new Date().toISOString().split("T")[0]);
+      setCodeCtx(null);
+      setCodeCtxLoading(false);
     }
   }, [open, defaultStatus, isEdit, initialData]);
 
@@ -467,18 +505,18 @@ Return ONLY valid JSON, no prose: {"assignee": "Exact Name", "reason": "one sent
 
   /* Code context */
   useQuery({
-    queryKey: ["ticket-code-ctx", ticketKey],
+    queryKey: ["ticket-code-ctx", ticketKey, codeCtxTitle, codeCtxDescription],
     queryFn: async () => {
       setCodeCtxLoading(true);
       try {
-        const result = await fetchTicketCodeContext(ticketKey!, form.title, form.description);
+        const result = await fetchTicketCodeContext(ticketKey!, codeCtxTitle, codeCtxDescription);
         setCodeCtx(result);
         return result;
       } finally {
         setCodeCtxLoading(false);
       }
     },
-    enabled: isEdit && !!ticketKey,
+    enabled: canFetchCodeCtx,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -867,23 +905,6 @@ Return ONLY valid JSON, no prose: {"title": "improved title", "description": "im
                 </div>
               </div>
 
-              {/* Intelligent routing suggestion */}
-              {!isEdit && !readOnly && (routingLoading || routingSuggestion) && !form.assignee && (
-                <div className={styles.routingCard}>
-                  <RiSparklingLine size={13} color="var(--accent)" style={{ flexShrink: 0, marginTop: 1 }} />
-                  {routingLoading ? (
-                    <span className={styles.routingText} style={{ color: "var(--text-3)" }}>EOS is finding the best assignee…</span>
-                  ) : routingSuggestion ? (
-                    <>
-                      <div className={styles.routingBody}>
-                        <span className={styles.routingText}>Assign to <strong>{routingSuggestion.assignee}</strong> — {routingSuggestion.reason}</span>
-                      </div>
-                      <button type="button" className={styles.routingAccept} onClick={() => { set("assignee", routingSuggestion.assignee); setRoutingSuggestion(null); setRoutingDismissed(true); }}>Assign</button>
-                      <button type="button" className={styles.routingDismiss} onClick={() => { setRoutingSuggestion(null); setRoutingDismissed(true); }} title="Dismiss">✕</button>
-                    </>
-                  ) : null}
-                </div>
-              )}
             </div>
 
             {/* Planning */}
@@ -905,28 +926,6 @@ Return ONLY valid JSON, no prose: {"title": "improved title", "description": "im
                 disabled={readOnly}
               />
 
-              {/* Story Point AI Callout */}
-              {!readOnly && !form.story_points && (storyAiLoading || storyEstimate) && (
-                <div className={styles.storyEstCard}>
-                  {storyAiLoading ? (
-                    <div className={styles.storyEstLeft}><svg className={styles.spinner} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="3"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg><span className={styles.storyEstMeta}>EOS estimating story points…</span></div>
-                  ) : storyEstimate ? (
-                    <>
-                      <div className={styles.storyEstLeft}>
-                        <RiSparklingLine size={15} className={styles.storyEstIcon} />
-                        <div>
-                          <span className={styles.storyEstTitle}>EOS estimates {storyEstimate.min}–{storyEstimate.max} story points</span>
-                          <span className={styles.storyEstMeta}>{storyEstimate.reasoning ?? `Confidence ${Math.round(storyEstimate.confidence * 100)}%`}</span>
-                        </div>
-                      </div>
-                      <div className={styles.storyEstActions}>
-                        <button className={styles.storyEstAccept} onClick={() => { set("story_points", storyEstimate.max); setStoryEstimate(null); }}>Accept {storyEstimate.max} pts</button>
-                        <button className={styles.storyEstDismiss} onClick={() => setStoryEstimate(null)}>✕</button>
-                      </div>
-                    </>
-                  ) : null}
-                </div>
-              )}
             </div>
 
             {/* Context */}
@@ -956,7 +955,7 @@ Return ONLY valid JSON, no prose: {"title": "improved title", "description": "im
             {/* Time Tracking */}
             <div className={styles.sectionCard}>
               <div className={styles.sectionTitle}>Time Tracking</div>
-              <div className={styles.formRow3}>
+              <div className={styles.timeTrackingStack}>
                 <div className={styles.field}>
                   <label className={styles.fieldLabel}>Original Est.</label>
                   <input className={styles.textInput} placeholder="e.g. 2h 30m" value={form.originalEst} onChange={(e) => set("originalEst", e.target.value)} readOnly={readOnly} />
@@ -1027,11 +1026,57 @@ Return ONLY valid JSON, no prose: {"title": "improved title", "description": "im
               </div>
             )}
 
+            {/* AI Suggestions row */}
+            {!readOnly && !isEdit && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {/* Intelligent routing suggestion */}
+                {(routingLoading || routingSuggestion) && !form.assignee && (
+                  <div className={styles.routingCard}>
+                    <RiSparklingLine size={13} color="var(--accent)" style={{ flexShrink: 0, marginTop: 1 }} />
+                    {routingLoading ? (
+                      <span className={styles.routingText} style={{ color: "var(--text-3)" }}>EOS is finding the best assignee…</span>
+                    ) : routingSuggestion ? (
+                      <>
+                        <div className={styles.routingBody}>
+                          <span className={styles.routingText}>Assign to <strong>{routingSuggestion.assignee}</strong> — {routingSuggestion.reason}</span>
+                        </div>
+                        <button type="button" className={styles.routingAccept} onClick={() => { set("assignee", routingSuggestion.assignee); setRoutingSuggestion(null); setRoutingDismissed(true); }}>Assign</button>
+                        <button type="button" className={styles.routingDismiss} onClick={() => { setRoutingSuggestion(null); setRoutingDismissed(true); }} title="Dismiss">✕</button>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+
+                {/* Story Point AI Callout */}
+                {!form.story_points && (storyAiLoading || storyEstimate) && (
+                  <div className={styles.storyEstCard}>
+                    {storyAiLoading ? (
+                      <div className={styles.storyEstLeft}><svg className={styles.spinner} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="3"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg><span className={styles.storyEstMeta}>EOS estimating story points…</span></div>
+                    ) : storyEstimate ? (
+                      <>
+                        <div className={styles.storyEstLeft}>
+                          <RiSparklingLine size={15} className={styles.storyEstIcon} />
+                          <div>
+                            <span className={styles.storyEstTitle}>EOS estimates {storyEstimate.min}–{storyEstimate.max} story points</span>
+                            <span className={styles.storyEstMeta}>{storyEstimate.reasoning ?? `Confidence ${Math.round(storyEstimate.confidence * 100)}%`}</span>
+                          </div>
+                        </div>
+                        <div className={styles.storyEstActions}>
+                          <button className={styles.storyEstAccept} onClick={() => { set("story_points", storyEstimate.max); setStoryEstimate(null); }}>Accept {storyEstimate.max} pts</button>
+                          <button className={styles.storyEstDismiss} onClick={() => setStoryEstimate(null)}>✕</button>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Summary */}
             <div className={styles.field}>
               <label className={styles.fieldLabel}>Summary *</label>
               <input
-                className={styles.textInput}
+                className={`${styles.textInput} ${styles.summaryInput}`}
                 value={form.title}
                 onChange={(e) => set("title", e.target.value)}
                 placeholder="Short, descriptive summary"
@@ -1074,7 +1119,7 @@ Return ONLY valid JSON, no prose: {"title": "improved title", "description": "im
             </div>
 
             {/* Linked Issues */}
-            <div>
+            <div className={styles.contentSection}>
               <div className={styles.sectionTitle}>Linked Issues</div>
 
               {/* Existing links — edit mode (from API) */}
@@ -1164,7 +1209,7 @@ Return ONLY valid JSON, no prose: {"title": "improved title", "description": "im
             </div>
 
             {/* Attachments */}
-            <div>
+            <div className={styles.contentSection}>
               <div className={styles.sectionHeader}>
                 <RiAttachmentLine size={14} color="var(--text-3)" />
                 <span className={styles.sectionHeaderText}>Attachments</span>
@@ -1230,7 +1275,7 @@ Return ONLY valid JSON, no prose: {"title": "improved title", "description": "im
 
             {/* Code Context */}
             {isEdit && (
-              <div className={styles.codeCtxCard}>
+              <div className={`${styles.codeCtxCard} ${styles.contentSection}`}>
                 <div className={styles.codeCtxHeader} onClick={() => setCodeCtxOpen((v) => !v)}>
                   <RiCodeSSlashLine size={13} color="var(--accent)" />
                   <span className={styles.codeCtxTitle}>Code Context</span>
@@ -1245,31 +1290,119 @@ Return ONLY valid JSON, no prose: {"title": "improved title", "description": "im
                     )}
                     {!codeCtxLoading && codeCtx?.connected && (
                       <>
-                        {codeCtx.search_terms && codeCtx.search_terms.length > 0 && <div className={styles.codeCtxNote}><RiSparklingLine size={9} color="var(--accent)" />AI searched: {codeCtx.search_terms.join(", ")}</div>}
-                        {codeCtx.files.length > 0 && (
-                          <div className={styles.codeCtxSection}>
-                            <div className={styles.codeCtxSectionTitle}><RiCodeSSlashLine size={11} /> Related files</div>
-                            {codeCtx.files.map((f) => (
-                              <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className={styles.codeFile} style={{ textDecoration: "none" }}>
-                                <span className={styles.codeFilePath}>{f.path}</span>
-                                <span className={styles.codeFileReason}>{f.repo ?? "↗"}</span>
-                              </a>
-                            ))}
+                        {/* Diagnosis row — AI layer verdict + summary */}
+                        {codeCtx.diagnosis && (
+                          <div className={styles.codeCtxDiagRow}>
+                            {codeCtx.diagnosis.likely_layer && (() => {
+                              const layer = layerFromDiagnosis(codeCtx.diagnosis!.likely_layer);
+                              const isFullStack = (codeCtx.diagnosis!.likely_layer ?? "").toLowerCase().includes("full");
+                              if (isFullStack) {
+                                return (
+                                  <span className={styles.layerBadge} style={{ background: "rgba(251,191,36,0.12)", color: "var(--amber, #FBBF24)" }}>
+                                    Full-stack
+                                  </span>
+                                );
+                              }
+                              const m = LAYER_META[layer];
+                              return (
+                                <span className={styles.layerBadge} style={{ background: m.bg, color: m.color }}>
+                                  {m.label}
+                                </span>
+                              );
+                            })()}
+                            <RiSparklingLine size={9} color="var(--accent)" style={{ flexShrink: 0 }} />
+                            <span className={styles.codeCtxDiagText}>
+                              {codeCtx.diagnosis.feature_area && <span>{codeCtx.diagnosis.feature_area}</span>}
+                              {codeCtx.diagnosis.summary && <span>{codeCtx.diagnosis.feature_area ? " — " : ""}{codeCtx.diagnosis.summary}</span>}
+                            </span>
                           </div>
                         )}
+
+                        {codeCtx.search_terms && codeCtx.search_terms.length > 0 && (
+                          <div className={styles.codeCtxNote}><RiSparklingLine size={9} color="var(--accent)" />AI searched: {codeCtx.search_terms.join(", ")}</div>
+                        )}
+
+                        {/* Files grouped by FE / BE */}
+                        {codeCtx.files.length > 0 && (() => {
+                          const grouped: Record<CodeLayer, typeof codeCtx.files> = { frontend: [], backend: [], unknown: [] };
+                          codeCtx.files.forEach(f => grouped[inferLayer(f.repo, f.path)].push(f));
+                          const hasMultipleGroups = (grouped.frontend.length > 0 && grouped.backend.length > 0);
+
+                          const renderFile = (f: typeof codeCtx.files[0]) => (
+                            <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className={styles.codeFile} style={{ textDecoration: "none" }}>
+                              <span style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+                                <span className={styles.codeFilePath}>{f.path}</span>
+                                {(f.reason || f.symbol || f.matched_terms?.length) && (
+                                  <span className={styles.codeFileReason}>
+                                    {f.symbol ? `${f.symbol} · ` : ""}
+                                    {f.reason ?? ""}
+                                    {f.matched_terms?.length ? ` (${f.matched_terms.slice(0, 2).join(", ")})` : ""}
+                                  </span>
+                                )}
+                              </span>
+                              <span className={styles.codeFileReason}>
+                                {typeof f.confidence === "number" ? `${Math.round(f.confidence * 100)}%` : "↗"}
+                              </span>
+                            </a>
+                          );
+
+                          return (
+                            <div className={styles.codeCtxSection}>
+                              <div className={styles.codeCtxSectionTitle}><RiCodeSSlashLine size={11} /> Likely files to inspect</div>
+                              {hasMultipleGroups ? (
+                                (["frontend", "backend", "unknown"] as CodeLayer[]).map(layer => {
+                                  const files = grouped[layer];
+                                  if (!files.length) return null;
+                                  const m = LAYER_META[layer];
+                                  return (
+                                    <div key={layer} className={styles.layerGroup}>
+                                      <div className={styles.layerGroupHeader} style={{ color: m.color }}>
+                                        <span className={styles.layerGroupBadge} style={{ background: m.bg, color: m.color }}>{m.short}</span>
+                                        {m.label}
+                                      </div>
+                                      {files.map(renderFile)}
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                codeCtx.files.map(renderFile)
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* PRs with FE/BE badge */}
                         {codeCtx.prs.length > 0 && (
                           <div className={styles.codeCtxSection}>
                             <div className={styles.codeCtxSectionTitle}><RiGitMergeLine size={11} /> Related PRs</div>
-                            {codeCtx.prs.map((pr) => (
-                              <a key={pr.url} href={pr.url} target="_blank" rel="noreferrer" className={styles.codePr} style={{ textDecoration: "none" }}>
-                                <span className={styles.codePrKey}>{pr.number}</span>
-                                <span className={styles.codePrTitle}>{pr.title}</span>
-                                <span className={`${styles.codePrStatus} ${pr.status === "merged" ? styles.codePrMerged : styles.codePrOpen}`}>{pr.status}</span>
-                              </a>
-                            ))}
+                            {codeCtx.prs.map((pr) => {
+                              const layer = inferLayer(pr.repo, pr.touched_files?.[0] ?? "");
+                              const m = LAYER_META[layer];
+                              return (
+                                <a key={pr.url} href={pr.url} target="_blank" rel="noreferrer" className={styles.codePr} style={{ textDecoration: "none" }}>
+                                  <span className={styles.layerBadgeSm} style={{ background: m.bg, color: m.color }}>{m.short}</span>
+                                  <span className={styles.codePrKey}>{pr.number}</span>
+                                  <span style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+                                    <span className={styles.codePrTitle}>{pr.title}</span>
+                                    {(pr.reason || pr.touched_files?.length) && (
+                                      <span className={styles.codeFileReason}>
+                                        {pr.reason}
+                                        {pr.touched_files?.length ? ` (${pr.touched_files.slice(0, 2).join(", ")})` : ""}
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className={`${styles.codePrStatus} ${pr.status === "merged" ? styles.codePrMerged : styles.codePrOpen}`}>
+                                    {typeof pr.confidence === "number" ? `${pr.status} · ${Math.round(pr.confidence * 100)}%` : pr.status}
+                                  </span>
+                                </a>
+                              );
+                            })}
                           </div>
                         )}
-                        {codeCtx.files.length === 0 && codeCtx.prs.length === 0 && <div className={styles.codeCtxNote}>No related files or PRs found across configured repositories.</div>}
+
+                        {codeCtx.files.length === 0 && codeCtx.prs.length === 0 && (
+                          <div className={styles.codeCtxNote}>No related files or PRs found across configured repositories.</div>
+                        )}
                       </>
                     )}
                   </div>

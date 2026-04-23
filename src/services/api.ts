@@ -382,9 +382,31 @@ export async function fetchTicketActivity(key: string): Promise<TicketActivity[]
 
 export interface CodeContextResult {
   connected: boolean;
-  files: { path: string; url: string; repo?: string }[];
-  prs: { number: string; title: string; status: "open" | "merged" | "closed"; url: string; repo?: string }[];
+  files: {
+    path: string;
+    url: string;
+    repo?: string;
+    reason?: string;
+    confidence?: number;
+    symbol?: string | null;
+    matched_terms?: string[];
+  }[];
+  prs: {
+    number: string;
+    title: string;
+    status: "open" | "merged" | "closed";
+    url: string;
+    repo?: string;
+    reason?: string;
+    confidence?: number;
+    touched_files?: string[];
+  }[];
   search_terms?: string[];
+  diagnosis?: {
+    summary?: string;
+    likely_layer?: string;
+    feature_area?: string;
+  };
 }
 
 export async function fetchTicketCodeContext(key: string, title: string, description?: string): Promise<CodeContextResult> {
@@ -445,6 +467,60 @@ export async function restoreWikiVersion(id: string, version: number): Promise<W
   return data;
 }
 
+export interface WikiIntelligenceResponse {
+  spaces: {
+    space_id: string;
+    health: number;
+    page_count: number;
+    fresh_count: number;
+    aging_count: number;
+    stale_count: number;
+  }[];
+  page_health?: {
+    page_id: string;
+    title: string;
+    days_old: number;
+    freshness: "fresh" | "aging" | "stale";
+    score: number;
+    linked_tickets: number;
+    related_count: number;
+    has_conflict: boolean;
+    coverage: {
+      headings: number;
+      examples: number;
+      links: number;
+      diagrams: number;
+    };
+    compliance: {
+      passed: boolean;
+      matches: string[];
+    };
+    related_pages: { id: string; title: string; space_id: string; similarity: number }[];
+  };
+  stale_pages: { id: string; title: string; days_old: number; linked_tickets: number; score: number }[];
+  onboarding_path: { page_id: string; title: string; minutes: number; tag: string; freshness: "fresh" | "aging" | "stale"; score: number }[];
+  map_stats: { fresh: number; aging: number; stale: number };
+}
+
+export async function fetchWikiIntelligence(spaceId?: string | null, pageId?: string | null): Promise<WikiIntelligenceResponse> {
+  const { data } = await api.get("/wiki/intelligence", {
+    params: {
+      ...(spaceId ? { space_id: spaceId } : {}),
+      ...(pageId ? { page_id: pageId } : {}),
+    },
+  });
+  return data;
+}
+
+export async function askWikiAssistant(message: string, pageId?: string | null, spaceId?: string | null): Promise<{ answer: string }> {
+  const { data } = await api.post("/wiki/ai/assist", {
+    message,
+    ...(pageId ? { page_id: pageId } : {}),
+    ...(spaceId ? { space_id: spaceId } : {}),
+  });
+  return data;
+}
+
 export async function fetchRelatedDocs(type: 'ticket' | 'wiki', id: string | number): Promise<RelatedDoc[]> {
   const path = type === 'ticket' ? `/tickets/${id}/related` : `/wiki/pages/${id}/related`;
   const { data } = await api.get(path);
@@ -452,7 +528,7 @@ export async function fetchRelatedDocs(type: 'ticket' | 'wiki', id: string | num
 }
 
 export async function extractMeetingActions(content: string) {
-  const { data } = await api.post("/wiki/ai/meeting-notes", { content });
+  const { data } = await api.post("/wiki/ai/meeting-notes", { notes: content });
   return data;
 }
 

@@ -6,7 +6,7 @@
 
 .twoColumnLayout {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 340px 1fr;
   min-height: 100%;
 }
 
@@ -17,6 +17,7 @@
   gap: 14px;
   border-right: 1px solid var(--border);
   overflow-y: auto;
+  background: var(--bg-2);
 }
 
 .rightColumn {
@@ -293,8 +294,14 @@
 }
 
 .textArea {
-  min-height: 90px;
+  min-height: 260px;
   resize: vertical;
+}
+
+.summaryInput {
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .descWrap {
@@ -1209,6 +1216,42 @@
 .codePrMerged { background: rgba(52,211,153,0.12); color: var(--green, #34D399); }
 .codePrOpen   { background: rgba(79,126,255,0.1);  color: var(--accent); }
 
+/* Diagnosis row */
+.codeCtxDiagRow {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px;
+  background: var(--surface-2); border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+}
+.codeCtxDiagText {
+  font-size: 0.68rem; color: var(--text-2); flex: 1;
+}
+
+/* Layer badge — large (diagnosis + group headers) */
+.layerBadge {
+  display: inline-flex; align-items: center;
+  font-size: 0.62rem; font-weight: 800; letter-spacing: 0.04em;
+  padding: 2px 7px; border-radius: 4px; flex-shrink: 0;
+}
+
+/* Layer badge — small (PR rows) */
+.layerBadgeSm {
+  display: inline-flex; align-items: center;
+  font-size: 0.58rem; font-weight: 800; letter-spacing: 0.04em;
+  padding: 1px 5px; border-radius: 3px; flex-shrink: 0;
+}
+
+/* Layer group divider inside file list */
+.layerGroup { display: flex; flex-direction: column; gap: 4px; }
+.layerGroupHeader {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.64rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  margin-top: 4px; margin-bottom: 1px;
+}
+.layerGroupBadge {
+  font-size: 0.58rem; font-weight: 800; padding: 1px 5px; border-radius: 3px;
+}
+
 .codeCtxNote {
   display: flex; align-items: center; gap: 5px;
   font-size: 0.68rem; color: var(--text-3);
@@ -1304,10 +1347,10 @@
   background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: var(--r-sm);
-  padding: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .sectionTitle {
@@ -1315,8 +1358,15 @@
   font-weight: 700;
   color: var(--text-3);
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   margin-bottom: 2px;
+}
+
+/* ── Time Tracking (stacked vertically) ── */
+.timeTrackingStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* ── EOS Form Button ── */
@@ -1343,6 +1393,17 @@
 .eosFormBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* ── Content sections (right column) ── */
+.contentSection {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 /* ── Compact left-column MUI overrides ── */
