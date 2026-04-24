@@ -67,6 +67,19 @@
 .statLbl        { font-size: 10px; color: var(--text-3); white-space: nowrap; }
 .statDivider    { width: 1px; height: 24px; background: var(--border); }
 
+.reindexBtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.72rem; font-weight: 600; color: var(--text-2);
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 4px 10px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.reindexBtn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.reindexBtn:disabled { opacity: 0.6; cursor: default; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning { animation: spin 0.9s linear infinite; }
+
 /* ── Body: 3 columns ── */
 .body {
   flex: 1;

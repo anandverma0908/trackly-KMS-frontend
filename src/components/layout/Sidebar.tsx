@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/useAuthStore";
-import { fetchPodSummary } from "@/services/api";
+import { fetchPodSummary, fetchOrgMembers } from "@/services/api";
 import { getPodColor } from "@/config/themes";
 import styles from "./Sidebar.module.css";
 import Tooltip from "@mui/material/Tooltip";
@@ -35,7 +35,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { can } = useAuthStore();
+  const { user } = useAuthStore();
   const [spacesOpen, setSpacesOpen] = useState(true);
 
   const { data: pods = [] } = useQuery({
@@ -43,6 +43,28 @@ export default function Sidebar({
     queryFn: fetchPodSummary,
     staleTime: 1000 * 60 * 2,
   });
+
+  const isManagerRole = user?.role === "admin" || user?.role === "engineering_manager" || user?.role === "tech_lead";
+
+  // Only fetch org members for non-managers to check if they have direct reports
+  const { data: orgMembersRaw } = useQuery({
+    queryKey: ["org-members"],
+    queryFn: fetchOrgMembers,
+    staleTime: 5 * 60 * 1000,
+    enabled: !isManagerRole && !!user,
+  });
+
+  const orgMembers = Array.isArray(orgMembersRaw) ? orgMembersRaw : [];
+  const myProfile = orgMembers.find((m: { email: string }) => m.email === user?.email);
+
+  // reporting_to could be emp_no, id, email, or name depending on backend
+  const myIds = myProfile
+    ? [myProfile.emp_no, myProfile.id, myProfile.email, myProfile.name].filter(Boolean)
+    : [];
+  const hasDirectReports = myIds.length > 0
+    ? orgMembers.some((m: { reporting_to: string | null }) => m.reporting_to && myIds.includes(m.reporting_to))
+    : false;
+  const showTeamNav = isManagerRole || hasDirectReports;
 
   function handleNavClick(path: string) {
     navigate(path);
@@ -207,7 +229,7 @@ export default function Sidebar({
 
           {/* ── PEOPLE ── */}
           {sectionLabel("People")}
-          {nav(<RiTeamLine size={18} />, "Team", "/team", can("view:teams"))}
+          {nav(<RiTeamLine size={18} />, "My Team", "/team", showTeamNav)}
           {nav(<RiSunLine size={18} />, "Standup", "/standup")}
 
         </div>

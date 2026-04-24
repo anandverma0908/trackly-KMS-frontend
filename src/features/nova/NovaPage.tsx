@@ -1,11 +1,27 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
 import {
   RiBrainLine, RiSendPlaneLine, RiMicLine, RiCloseLine,
   RiSparklingLine, RiAlertLine, RiBarChartLine,
   RiFileTextLine, RiArrowRightLine, RiLightbulbLine,
-  RiRobot2Line, RiHistoryLine, RiImageLine,
+  RiRobot2Line, RiHistoryLine, RiImageLine, RiRefreshLine,
 } from "react-icons/ri";
+import {
+  novaQuery,
+  novaGenerate,
+  fetchAnomalies,
+  fetchKnowledgeGaps,
+  fetchNovaStatus,
+  fetchDecisions,
+  fetchTeamStandups,
+  extractMeetingActions,
+  createTicket,
+  triggerReindex,
+  type SpaceAnomaly,
+} from "@/services/api";
+import type { KnowledgeGap, Decision, Standup } from "@/types";
 import styles from "./NovaPage.module.css";
 
 /* ══════════════════════════════════════════════════════════
@@ -51,177 +67,133 @@ interface MemoryClip {
 }
 
 /* ══════════════════════════════════════════════════════════
-   MOCK DATA
+   HELPERS
 ══════════════════════════════════════════════════════════ */
-const PULSE: PulseItem[] = [
-  {
-    id: "p1", type: "risk",
-    title: "Sprint 9 at risk — 73% completion",
-    detail: "3 unplanned tickets reduced capacity 18%. TRK-142 is blocking 2 critical path items and has been stalled for 48h.",
-    confidence: 91, source: "Sprint velocity + ticket dependencies",
-    actions: ["View sprint", "Move tickets"], age: "2m",
-  },
-  {
-    id: "p2", type: "pattern",
-    title: "Velocity dropped 38% sprint-over-sprint",
-    detail: "Same pattern detected in Sprint 4 and Sprint 7 — each coincided with mid-sprint scope additions. Consider a scope freeze policy.",
-    confidence: 87, source: "12 sprints of historical data",
-    actions: ["View analytics"], age: "8m",
-  },
-  {
-    id: "p3", type: "suggestion",
-    title: "TRK-142 blocked 48+ hours",
-    detail: "Blocking TRK-145 and TRK-147. Priya resolved a similar auth issue in Sprint 7 (TRK-89). Consider pairing or reassigning.",
-    confidence: 95, source: "Ticket history + expertise graph",
-    actions: ["View ticket", "Ping Priya"], age: "15m",
-  },
-  {
-    id: "p4", type: "signal",
-    title: "3 wiki gaps detected from sprint tickets",
-    detail: "Auth token refresh, rate limiting, and DB failover referenced in 7 tickets this sprint — no wiki pages exist for any of them.",
-    confidence: 83, source: "Wiki coverage analysis",
-    actions: ["Generate articles"], age: "1h",
-  },
-  {
-    id: "p5", type: "pattern",
-    title: "Priya resolves auth tickets 2.8× faster",
-    detail: "8 auth tickets over 6 months — avg resolution 1.2d vs team avg 3.4d. Route similar tickets her way for higher throughput.",
-    confidence: 88, source: "Team performance analytics",
-    actions: ["View insights"], age: "2h",
-  },
-];
+function formatAge(dateStr?: string): string {
+  if (!dateStr) return "—";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60_000);
+  if (m < 60) return m <= 1 ? "1m" : `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d`;
+  const mo = Math.floor(d / 30);
+  return `${mo}mo`;
+}
 
-const AGENTS: Agent[] = [
-  { id: "a1", name: "Sprint health monitor",  status: "running", progress: 100, task: "Watching 47 tickets across 2 active sprints" },
-  { id: "a2", name: "Wiki gap scanner",        status: "running", progress: 62,  task: "Scanning for undocumented knowledge patterns" },
-  { id: "a3", name: "Dependency resolver",     status: "waiting", progress: 0,   task: "Queued — waiting for TRK-142 to unblock" },
-];
+const SEVERITY_TO_TYPE: Record<string, PulseType> = {
+  high: "risk", medium: "pattern", low: "signal",
+};
 
-const MEMORY: MemoryClip[] = [
-  { id: "m1", type: "decision", title: "DEC-12 · JWT short-lived tokens",  snippet: "All tokens expire in 15 min, silent refresh is mandatory.", age: "3mo" },
-  { id: "m2", type: "standup",  title: "Yesterday's standup",               snippet: "Auth team blocked on DB migration. Will unblock Thursday.", age: "1d"  },
-  { id: "m3", type: "ticket",   title: "TRK-89 · Auth expiry fix",          snippet: "Refresh 60s before expiry, not on failure.",               age: "2mo" },
-  { id: "m4", type: "wiki",     title: "OAuth Runbook",                     snippet: "Step-by-step token rotation — last updated 94 days ago.",  age: "94d" },
-];
+function anomalyToPulse(a: SpaceAnomaly, idx: number): PulseItem {
+  return {
+    id: `anomaly-${idx}`,
+    type: SEVERITY_TO_TYPE[a.severity] ?? "signal",
+    title: a.description.length > 80 ? a.description.slice(0, 80) + "…" : a.description,
+    detail: `Detected in ${a.pod} — ${a.description}`,
+    confidence: a.severity === "high" ? 90 : a.severity === "medium" ? 75 : 60,
+    source: `Pod health monitor · ${a.pod}`,
+    actions: ["View space"],
+    age: formatAge(a.detected_at),
+  };
+}
 
-const CREATED_INIT: (CreatedItem & { age: string })[] = [
-  { type: "ticket", id: "TRK-198", title: "Fix token refresh race condition",   meta: "Sprint 9 · High",      age: "3h" },
-  { type: "doc",    id: "DOC-042", title: "Sprint 8 Retrospective",             meta: "4 sections · Wiki",    age: "1d" },
-  { type: "bug",    id: "BUG-091", title: "Mobile nav collapses on scroll",     meta: "Severity: Medium",     age: "2d" },
-];
+function gapToPulse(g: KnowledgeGap, idx: number): PulseItem {
+  return {
+    id: `gap-${idx}`,
+    type: "signal",
+    title: `Wiki gap: "${g.topic}" — ${g.ticket_count} ticket${g.ticket_count !== 1 ? "s" : ""} reference it`,
+    detail: g.suggestion ?? `${g.ticket_count} tickets reference "${g.topic}" but no wiki coverage exists (${g.wiki_coverage}% covered).`,
+    confidence: 83,
+    source: "Wiki coverage analysis",
+    actions: ["Generate article"],
+    age: "live",
+  };
+}
 
-const EMPTY_SUGGESTIONS = [
-  "What's blocking Sprint 9?",
-  "Who should own TRK-142?",
-  "Summarise last sprint velocity",
-  "What did we decide about auth tokens?",
-  "Show wiki coverage gaps",
-];
+function decisionToMemory(d: Decision): MemoryClip {
+  return {
+    id: d.id,
+    type: "decision",
+    title: `DEC-${d.number ?? "?"} · ${d.title}`,
+    snippet: d.decision.slice(0, 100),
+    age: formatAge(d.created_at ?? d.date),
+  };
+}
 
-/* ══════════════════════════════════════════════════════════
-   MOCK RESPONSE ENGINE
-══════════════════════════════════════════════════════════ */
-function mockResponse(intent: Intent, input: string): Omit<Message, "id" | "role" | "ts"> {
-  switch (intent) {
-    case "thought":
-    case "voice":
-      return {
-        text: "I've structured this as a ticket. Does this look right?",
-        created: {
-          type: "ticket",
-          id: `TRK-${201 + (input.length % 48)}`,
-          title: (input.slice(0, 72) + (input.length > 72 ? "…" : "")).trim(),
-          meta: "Priority: Medium · Unassigned · Sprint 9",
-        },
-      };
-    case "meeting":
-      return {
-        text: "Detected a meeting transcript. I've structured it into a doc — here's the preview:",
-        created: {
-          type: "doc",
-          id: `DOC-${Math.floor(Math.random() * 90) + 10}`,
-          title: `Meeting Notes — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
-          meta: "Summary · Key Decisions · Action Items · Follow-ups",
-        },
-      };
-    case "screenshot":
-      return {
-        text: "Screenshot analysed. I've filed a bug report — here's the preview:",
-        created: {
-          type: "bug",
-          id: `BUG-${Math.floor(Math.random() * 50) + 100}`,
-          title: "Visual regression detected from screenshot",
-          meta: "Severity: High · Steps to reproduce attached",
-        },
-      };
-    default:
-      return {
-        text: "Based on your team's ticket history and decision records, here's what I found.\n\nPriya S. resolved a nearly identical auth token expiry issue in Sprint 7 — her fix involved refreshing tokens 60 seconds before expiry rather than on failure. The architecture decision DEC-12 mandates short-lived JWTs with silent refresh, which is the root cause of recurring TRK-89 class issues.",
-        citations: [
-          {
-            key: "TRK-89", title: "Fix auth token expiry", type: "ticket",
-            quote: "Priya S. resolved a nearly identical auth token expiry issue in Sprint 7 — her fix involved refreshing tokens 60 seconds before expiry rather than on failure.",
-          },
-          {
-            key: "DEC-12", title: "Auth Architecture Decision", type: "decision",
-            quote: "The architecture decision DEC-12 mandates short-lived JWTs with silent refresh, which is the root cause of recurring TRK-89 class issues.",
-          },
-        ],
-      };
-  }
+function standupToMemory(s: Standup): MemoryClip {
+  const snippet = s.blockers?.trim()
+    ? `Blocked: ${s.blockers.slice(0, 80)}`
+    : s.yesterday.slice(0, 80);
+  return {
+    id: String(s.id),
+    type: "standup",
+    title: `${s.engineer}'s standup · ${s.date}`,
+    snippet,
+    age: formatAge(s.created_at),
+  };
 }
 
 /* ══════════════════════════════════════════════════════════
-   UTILS
+   INTENT DETECTION
 ══════════════════════════════════════════════════════════ */
 function detectIntent(text: string, hasImage: boolean): Intent {
   if (hasImage) return "screenshot";
   const t = text.trim();
   if (!t) return "ask";
+
+  // Long multi-line → meeting transcript
   const lines = t.split("\n").filter(Boolean);
   if (lines.length > 6 && t.length > 400) return "meeting";
-  const lower = t.toLowerCase();
-  if (/^(what|who|how|when|why|show|find|where|which|can you|tell me|explain|summarise|summarize|list|give me)/.test(lower) || t.endsWith("?")) return "ask";
-  if (t.split(/\s+/).length <= 20) return "thought";
+
+  // Only explicit prefixes trigger ticket creation
+  if (/^(create ticket:|log bug:|new ticket:|capture:|ticket:)/i.test(t)) return "thought";
+
+  // Everything else is a question — Nova answers it
   return "ask";
 }
 
 function intentLabel(intent: Intent, wordCount: number): string {
   switch (intent) {
-    case "thought":    return "→ creating ticket";
-    case "meeting":    return `→ structuring doc · ${wordCount} words`;
-    case "screenshot": return "→ filing bug report";
+    case "thought":    return "→ will create ticket";
+    case "meeting":    return `→ structuring meeting doc · ${wordCount} words`;
+    case "screenshot": return "→ analyze screenshot";
     case "voice":      return "◉ voice captured";
-    case "ask":        return "→ asking Nova";
+    case "ask":        return "";   // no label — just ask naturally
   }
 }
 
+/* ══════════════════════════════════════════════════════════
+   CONSTANTS
+══════════════════════════════════════════════════════════ */
 const CREATED_COLOR: Record<CreatedType, string> = {
-  ticket: "var(--accent)",
-  doc:    "var(--green)",
-  bug:    "var(--red)",
+  ticket: "var(--accent)", doc: "var(--green)", bug: "var(--red)",
 };
-
 const CREATED_LABEL: Record<CreatedType, string> = {
-  ticket: "Ticket created",
-  doc:    "Doc created",
-  bug:    "Bug filed",
+  ticket: "Ticket created", doc: "Doc created", bug: "Bug filed",
 };
-
 const CITATION_COLOR: Record<string, string> = {
   ticket: "var(--accent)", decision: "#a78bfa", wiki: "var(--green)", standup: "var(--amber)",
 };
-
 const PULSE_ICON: Record<PulseType, React.ReactNode> = {
   risk:       <RiAlertLine size={11} />,
   pattern:    <RiBarChartLine size={11} />,
   suggestion: <RiLightbulbLine size={11} />,
   signal:     <RiSparklingLine size={11} />,
 };
-
 const PULSE_LABEL: Record<PulseType, string> = {
   risk: "Risk", pattern: "Pattern", suggestion: "Suggestion", signal: "Signal",
 };
+
+const EMPTY_SUGGESTIONS = [
+  "What bugs are open right now?",
+  "Is there any login bug in TRKLY?",
+  "What's blocking the current sprint?",
+  "Which tickets are high priority?",
+  "What did we decide about auth?",
+  "Summarise what's been done this week",
+];
 
 /* ══════════════════════════════════════════════════════════
    STREAMING TEXT HOOK
@@ -250,7 +222,6 @@ function useStreamingText(text: string, active: boolean, speed = 11) {
 ══════════════════════════════════════════════════════════ */
 function PulseCard({ item, onDismiss }: { item: PulseItem; onDismiss: () => void }) {
   const [expanded, setExpanded] = useState(false);
-
   return (
     <motion.div
       className={`${styles.pulseCard} ${styles[`pulse_${item.type}`]}`}
@@ -268,11 +239,9 @@ function PulseCard({ item, onDismiss }: { item: PulseItem; onDismiss: () => void
           <RiCloseLine size={11} />
         </button>
       </div>
-
       <button className={styles.pulseTitle} onClick={() => setExpanded(e => !e)}>
         {item.title}
       </button>
-
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -289,9 +258,7 @@ function PulseCard({ item, onDismiss }: { item: PulseItem; onDismiss: () => void
             </div>
             <div className={styles.pulseActions}>
               {item.actions.map(a => (
-                <button key={a} className={styles.pulseAction}>
-                  {a}<RiArrowRightLine size={9} />
-                </button>
+                <button key={a} className={styles.pulseAction}>{a}<RiArrowRightLine size={9} /></button>
               ))}
             </div>
           </motion.div>
@@ -302,7 +269,7 @@ function PulseCard({ item, onDismiss }: { item: PulseItem; onDismiss: () => void
 }
 
 /* ══════════════════════════════════════════════════════════
-   CREATED ITEM CARD  (inline in thread)
+   CREATED ITEM CARD
 ══════════════════════════════════════════════════════════ */
 function CreatedItemCard({ item }: { item: CreatedItem }) {
   return (
@@ -318,7 +285,6 @@ function CreatedItemCard({ item }: { item: CreatedItem }) {
       <div className={styles.createdCardActions}>
         <button className={styles.createdCardOpen}>Open <RiArrowRightLine size={10} /></button>
         <button className={styles.createdCardGhost}>Edit</button>
-        <button className={styles.createdCardGhost}>Undo</button>
       </div>
     </div>
   );
@@ -333,12 +299,9 @@ function HighlightedText({ text, citations, hoveredKey, streaming, done }: {
 }) {
   const quote = hoveredKey ? citations?.find(c => c.key === hoveredKey)?.quote : undefined;
   const cursor = streaming && !done ? <span className={styles.streamCursor}>▋</span> : null;
-
   if (!quote) return <>{text}{cursor}</>;
-
   const idx = text.indexOf(quote);
   if (idx === -1) return <>{text}{cursor}</>;
-
   return (
     <>
       {text.slice(0, idx)}
@@ -381,17 +344,13 @@ function MessageBubble({ msg, isLatestNova }: { msg: Message; isLatestNova: bool
             hoveredKey={hoveredCitation} streaming={streaming} done={done}
           />
         </p>
-
-        {msg.citations && (streaming ? done : true) && (
+        {msg.citations && msg.citations.length > 0 && (streaming ? done : true) && (
           <div className={styles.citations}>
             {msg.citations.map(c => (
               <button
                 key={c.key}
                 className={`${styles.citation} ${hoveredCitation === c.key ? styles.citationActive : ""}`}
-                style={{
-                  borderColor: CITATION_COLOR[c.type] ?? "var(--border-2)",
-                  color: CITATION_COLOR[c.type] ?? "var(--text-3)",
-                }}
+                style={{ borderColor: CITATION_COLOR[c.type] ?? "var(--border-2)", color: CITATION_COLOR[c.type] ?? "var(--text-3)" }}
                 onMouseEnter={() => setHoveredCitation(c.key)}
                 onMouseLeave={() => setHoveredCitation(null)}
               >
@@ -401,10 +360,7 @@ function MessageBubble({ msg, isLatestNova }: { msg: Message; isLatestNova: bool
             ))}
           </div>
         )}
-
-        {msg.created && (streaming ? done : true) && (
-          <CreatedItemCard item={msg.created} />
-        )}
+        {msg.created && (streaming ? done : true) && <CreatedItemCard item={msg.created} />}
       </div>
     </motion.div>
   );
@@ -414,28 +370,100 @@ function MessageBubble({ msg, isLatestNova }: { msg: Message; isLatestNova: bool
    NOVA PAGE
 ══════════════════════════════════════════════════════════ */
 export default function NovaPage() {
-  const [messages,     setMessages]     = useState<Message[]>([]);
-  const [loading,      setLoading]      = useState(false);
-  const [pulse,        setPulse]        = useState<PulseItem[]>(PULSE);
-  const [input,        setInput]        = useState("");
-  const [recording,    setRecording]    = useState(false);
-  const [dragOver,     setDragOver]     = useState(false);
-  const [attachedImg,  setAttachedImg]  = useState<string | null>(null);
-  const [recentItems,  setRecentItems]  = useState<(CreatedItem & { age: string })[]>(CREATED_INIT);
+  const qc = useQueryClient();
+  const [messages,    setMessages]    = useState<Message[]>([]);
+  const [loading,     setLoading]     = useState(false);
+  const [indexing,    setIndexing]    = useState(false);
+  const [pulse,       setPulse]       = useState<PulseItem[]>([]);
+  const [input,       setInput]       = useState("");
+  const [recording,   setRecording]   = useState(false);
+  const [dragOver,    setDragOver]    = useState(false);
+  const [attachedImg, setAttachedImg] = useState<string | null>(null);
+  const [recentItems, setRecentItems] = useState<(CreatedItem & { age: string })[]>([]);
 
-  const textareaRef  = useRef<HTMLTextAreaElement>(null);
-  const threadRef    = useRef<HTMLDivElement>(null);
-  const voiceTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const textareaRef    = useRef<HTMLTextAreaElement>(null);
+  const threadRef      = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   const intent    = detectIntent(input, !!attachedImg);
   const wordCount = input.trim().split(/\s+/).filter(Boolean).length;
 
-  // Scroll thread to bottom on new messages
+  /* ── Data queries ── */
+  const { data: anomalies = [] } = useQuery({
+    queryKey: ["nova-anomalies"],
+    queryFn: fetchAnomalies,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: gaps = [] } = useQuery({
+    queryKey: ["knowledge-gaps"],
+    queryFn: fetchKnowledgeGaps,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: novaStatus } = useQuery({
+    queryKey: ["nova-status"],
+    queryFn: fetchNovaStatus,
+    staleTime: 60 * 1000,
+  });
+
+  const { data: decisionsResp } = useQuery({
+    queryKey: ["decisions"],
+    queryFn: () => fetchDecisions(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: standups = [] } = useQuery({
+    queryKey: ["team-standups"],
+    queryFn: () => fetchTeamStandups(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  /* Auto-trigger reindex in background on first load so tickets/wiki get embedded */
+  useEffect(() => {
+    triggerReindex().catch(() => {/* silent — indexing is best-effort */});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Build pulse from real data */
+  useEffect(() => {
+    const items: PulseItem[] = [
+      ...anomalies.map(anomalyToPulse),
+      ...gaps.slice(0, 3).map(gapToPulse),
+    ];
+    setPulse(items);
+  }, [anomalies, gaps]);
+
+  /* Build memory clips from real data */
+  const decisions: Decision[] = decisionsResp?.decisions ?? [];
+  const memoryClips: MemoryClip[] = [
+    ...decisions.slice(0, 2).map(decisionToMemory),
+    ...standups.slice(0, 2).map(standupToMemory),
+  ];
+
+  /* Agents — derived from real backend results only */
+  const agents: Agent[] = [
+    ...(anomalies.length > 0 || (novaStatus as any)?.available ? [{
+      id: "a1", name: "Anomaly detector",
+      status: (anomalies.length > 0 ? "done" : "running") as AgentStatus,
+      progress: anomalies.length > 0 ? 100 : 50,
+      task: anomalies.length > 0
+        ? `${anomalies.length} anomal${anomalies.length !== 1 ? "ies" : "y"} found across pods`
+        : "Scanning pod health signals…",
+    }] : []),
+    ...(gaps.length > 0 ? [{
+      id: "a2", name: "Wiki gap scanner",
+      status: "done" as AgentStatus,
+      progress: 100,
+      task: `${gaps.length} knowledge gap${gaps.length !== 1 ? "s" : ""} detected`,
+    }] : []),
+  ];
+
+  /* Scroll to bottom */
   useEffect(() => {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
   }, [messages, loading]);
 
-  // Auto-resize textarea
+  /* Auto-resize textarea */
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -443,9 +471,24 @@ export default function NovaPage() {
     el.style.height = Math.min(el.scrollHeight, 140) + "px";
   }, [input]);
 
+  /* ── Send ── */
+  async function handleReindex() {
+    setIndexing(true);
+    try {
+      await triggerReindex();
+      toast.success("Project data indexed — Nova now has full context.");
+      qc.invalidateQueries({ queryKey: ["nova-anomalies"] });
+      qc.invalidateQueries({ queryKey: ["knowledge-gaps"] });
+    } catch {
+      toast.error("Indexing failed. Check that Nova is online.");
+    } finally {
+      setIndexing(false);
+    }
+  }
+
   const send = useCallback(async (overrideText?: string, overrideIntent?: Intent) => {
-    const text         = (overrideText ?? input).trim();
-    const finalIntent  = overrideIntent ?? (attachedImg ? "screenshot" : detectIntent(text, false));
+    const text        = (overrideText ?? input).trim();
+    const finalIntent = overrideIntent ?? (attachedImg ? "screenshot" : detectIntent(text, false));
     if ((!text && !attachedImg) || loading) return;
 
     setInput("");
@@ -459,29 +502,192 @@ export default function NovaPage() {
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
 
-    await new Promise(r => setTimeout(r, 860));
+    try {
+      let novaMsg: Message;
 
-    const resp = mockResponse(finalIntent, text);
-    const novaMsg: Message = { id: crypto.randomUUID(), role: "nova", ...resp, ts: new Date() };
-    setMessages(prev => [...prev, novaMsg]);
-    setLoading(false);
+      if (finalIntent === "meeting") {
+        /* ── Meeting transcript → structured doc ── */
+        const result = await extractMeetingActions(text);
+        const structured = typeof result === "string"
+          ? result
+          : (result?.structured_md ?? result?.content ?? "");
+        const title = `Meeting Notes — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+        novaMsg = {
+          id: crypto.randomUUID(), role: "nova",
+          text: "Detected a meeting transcript. I've structured it into a doc — here's the preview:",
+          created: {
+            type: "doc",
+            id: `DOC-${Date.now().toString().slice(-4)}`,
+            title,
+            meta: (structured as string).slice(0, 120) + "…",
+          },
+          ts: new Date(),
+        };
 
-    if (resp.created) {
-      setRecentItems(prev => [{ ...resp.created!, age: "just now" }, ...prev].slice(0, 6));
+      } else if (finalIntent === "thought" || finalIntent === "voice") {
+        /* ── Thought / voice → structure as ticket, then ASK before creating ── */
+        const raw = await novaGenerate(
+          `Structure this engineering thought as a ticket. Return ONLY valid JSON, no prose or markdown:
+{"title": "concise action-oriented title", "description": "full description with context", "priority": "Medium", "issue_type": "Task"}
+Input: "${text}"`,
+          "You are EOS, an engineering assistant. Return ONLY a valid JSON object with keys: title, description, priority (High/Medium/Low), issue_type (Bug/Task/Story). No prose, no markdown fences.",
+          0.2,
+        );
+        let title       = text.slice(0, 72);
+        let description = text;
+        let priority    = "Medium";
+        let issue_type  = "Task";
+        try {
+          const m = raw.match(/\{[\s\S]*?\}/);
+          if (m) {
+            const parsed = JSON.parse(m[0]);
+            if (parsed.title)       title       = parsed.title;
+            if (parsed.description) description = parsed.description;
+            if (parsed.priority)    priority    = parsed.priority;
+            if (parsed.issue_type)  issue_type  = parsed.issue_type;
+          }
+        } catch { /* use defaults */ }
+
+        // Show preview — do NOT create yet. User confirms with "yes" / "create it".
+        novaMsg = {
+          id: crypto.randomUUID(), role: "nova",
+          text: `I'd structure this as a ticket:\n\n**${title}**\n${description.slice(0, 200)}${description.length > 200 ? "…" : ""}\n\n_Priority: ${priority} · ${issue_type}_\n\nShall I create it? Reply "yes" or "create it" to confirm.`,
+          ts: new Date(),
+          _pendingTicket: { title, description, priority, issue_type } as any,
+        } as any;
+
+      } else if (finalIntent === "screenshot") {
+        /* ── Screenshot → analyze bug, let user confirm before filing ── */
+        const bugDesc = text || "No additional description provided.";
+        const raw = await novaGenerate(
+          `A screenshot was shared showing a potential bug. Description: "${bugDesc}". Describe the likely issue, probable cause, and suggest reproduction steps. Be concise.`,
+          "You are NOVA, a bug triage assistant. Give a clear, factual analysis. Do not invent specific details not mentioned in the description.",
+          0.3,
+        );
+        novaMsg = {
+          id: crypto.randomUUID(), role: "nova",
+          text: `${raw || "Screenshot received. Here's my analysis:"}\n\nWant me to file this as a bug? Just reply "file it" or describe more details.`,
+          ts: new Date(),
+        };
+      } else {
+        /* ── Ask anything → novaQuery (RAG) ── */
+        // Check if user is confirming a pending ticket
+        const lastNovaMsg = [...messages].reverse().find(m => m.role === "nova");
+        const pendingTicket = (lastNovaMsg as any)?._pendingTicket;
+        const isConfirm = /^(yes|create it|go ahead|confirm|do it|create|ok|sure|yep|yeah)/i.test(text.trim());
+        if (isConfirm && pendingTicket) {
+          const { title, description, priority, issue_type } = pendingTicket;
+          const created = await createTicket({ title, description, priority, issue_type });
+          qc.invalidateQueries({ queryKey: ["tickets"] });
+          qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+          novaMsg = {
+            id: crypto.randomUUID(), role: "nova",
+            text: "Ticket created.",
+            created: { type: "ticket", id: created?.key ?? "TRK-???", title, meta: `Priority: ${priority} · ${issue_type} · Unassigned` },
+            ts: new Date(),
+          };
+          setRecentItems(prev => [{
+            type: "ticket" as CreatedType, id: created?.key ?? "TRK-???", title,
+            meta: `Priority: ${priority}`, age: "just now",
+          }, ...prev].slice(0, 6));
+          setMessages(prev => [...prev, novaMsg!]);
+          setLoading(false);
+          return;
+        }
+
+        // Check if user is confirming a bug filing
+        const lastNovaBugAnalysis = [...messages].reverse().find(
+          m => m.role === "nova" && m.text.includes("Want me to file this as a bug?")
+        );
+        const filingConfirm = /^(file it|yes|create it|go ahead|file|create bug)/i.test(text.trim());
+        if (filingConfirm && lastNovaBugAnalysis) {
+          const bugTitle = "Bug from screenshot analysis";
+          const created = await createTicket({
+            title: bugTitle,
+            description: lastNovaBugAnalysis.text.split("\n\nWant me")[0],
+            priority: "High",
+            issue_type: "Bug",
+          });
+          qc.invalidateQueries({ queryKey: ["tickets"] });
+          novaMsg = {
+            id: crypto.randomUUID(), role: "nova",
+            text: "Bug filed.",
+            created: { type: "bug", id: created?.key ?? "BUG-???", title: bugTitle, meta: "Priority: High · Bug · Unassigned" },
+            ts: new Date(),
+          };
+          setRecentItems(prev => [{
+            type: "bug" as CreatedType, id: created?.key ?? "BUG-???", title: bugTitle,
+            meta: "Priority: High", age: "just now",
+          }, ...prev].slice(0, 6));
+          setMessages(prev => [...prev, novaMsg!]);
+          setLoading(false);
+          return;
+        }
+        const res = await novaQuery(text);
+        novaMsg = {
+          id: crypto.randomUUID(), role: "nova",
+          text: res.answer || "I couldn't find a relevant answer. Try rephrasing your question.",
+          citations: res.citations
+            .filter(c => c.title)
+            .map(c => ({
+              key: String(c.key ?? c.id),
+              title: c.title,
+              type: (["ticket", "decision", "wiki", "standup"].includes(c.type)
+                ? c.type
+                : "ticket") as Citation["type"],
+              quote: c.snippet || undefined,
+            })),
+          ts: new Date(),
+        };
+      }
+
+      setMessages(prev => [...prev, novaMsg]);
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : "Nova is unavailable right now.";
+      toast.error(errMsg);
+      setMessages(prev => [...prev, {
+        id: crypto.randomUUID(), role: "nova",
+        text: "I'm having trouble connecting right now. Please try again in a moment.",
+        ts: new Date(),
+      }]);
+    } finally {
+      setLoading(false);
     }
-  }, [input, attachedImg, loading]);
+  }, [input, attachedImg, loading, qc]);
 
+  /* ── Voice input (Web Speech API) ── */
   function toggleRecording() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      toast.error("Voice input is not supported in this browser. Try Chrome.");
+      return;
+    }
+
     if (recording) {
-      if (voiceTimer.current) clearTimeout(voiceTimer.current);
+      recognitionRef.current?.stop();
       setRecording(false);
       return;
     }
-    setRecording(true);
-    voiceTimer.current = setTimeout(() => {
+
+    const recognition = new SR();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (e: any) => {
+      const transcript = e.results[0][0].transcript;
       setRecording(false);
-      send("Need to fix the token refresh — it's failing when the session expires after an idle timeout", "voice");
-    }, 2600);
+      if (transcript.trim()) send(transcript, "voice");
+    };
+    recognition.onerror = (e: any) => {
+      setRecording(false);
+      toast.error(`Voice input failed: ${e.error ?? "unknown error"}`);
+    };
+    recognition.onend = () => setRecording(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setRecording(true);
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -492,6 +698,10 @@ export default function NovaPage() {
   }
 
   const latestNovaId = [...messages].reverse().find(m => m.role === "nova")?.id;
+
+  /* ── Header stats — from real novaStatus only ── */
+  const novaOnline   = (novaStatus as any)?.available ?? false;
+  const novaProvider = (novaStatus as any)?.provider ?? null;
 
   return (
     <div className={styles.page}>
@@ -510,19 +720,34 @@ export default function NovaPage() {
         </div>
         <div className={styles.headerStats}>
           <div className={styles.stat}>
-            <span className={styles.statVal}>{pulse.length}</span>
+            <span className={styles.statVal}>{pulse.length > 0 ? pulse.length : "0"}</span>
             <span className={styles.statLbl}>active signals</span>
           </div>
           <div className={styles.statDivider} />
           <div className={styles.stat}>
-            <span className={styles.statVal}>1.2k</span>
-            <span className={styles.statLbl}>items indexed</span>
+            <span className={styles.statVal}>{novaProvider ?? "—"}</span>
+            <span className={styles.statLbl}>provider</span>
           </div>
           <div className={styles.statDivider} />
           <div className={styles.stat}>
-            <span className={styles.statVal} style={{ color: "var(--green)" }}>94%</span>
-            <span className={styles.statLbl}>accuracy</span>
+            <span
+              className={styles.statVal}
+              style={{ color: novaOnline ? "var(--green)" : "var(--red, #f87171)" }}
+            >
+              {novaStatus ? (novaOnline ? "online" : "offline") : "—"}
+            </span>
+            <span className={styles.statLbl}>Nova status</span>
           </div>
+          <div className={styles.statDivider} />
+          <button
+            className={styles.reindexBtn}
+            onClick={handleReindex}
+            disabled={indexing}
+            title="Index all tickets and wiki pages so Nova can answer from real project data"
+          >
+            <RiRefreshLine size={13} className={indexing ? styles.spinning : undefined} />
+            {indexing ? "Indexing…" : "Index data"}
+          </button>
         </div>
       </header>
 
@@ -549,7 +774,7 @@ export default function NovaPage() {
             {pulse.length === 0 && (
               <div className={styles.pulseEmpty}>
                 <RiSparklingLine size={24} />
-                <span>All clear — nothing unusual detected</span>
+                <span>All clear — no anomalies or gaps detected</span>
               </div>
             )}
           </div>
@@ -562,7 +787,6 @@ export default function NovaPage() {
           onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false); }}
           onDrop={handleDrop}
         >
-          {/* Drop overlay */}
           <AnimatePresence>
             {dragOver && (
               <motion.div className={styles.dropOverlay} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -581,9 +805,9 @@ export default function NovaPage() {
                   <span className={styles.emptyRing2} />
                   <RiBrainLine size={28} className={styles.emptyOrbIcon} />
                 </div>
-                <h2 className={styles.emptyTitle}>Ask, create, or drop anything</h2>
+                <h2 className={styles.emptyTitle}>Your project brain</h2>
                 <p className={styles.emptyDesc}>
-                  Type a question, describe a thought, paste a meeting transcript, or drop a screenshot — Nova figures out the rest.
+                  Ask anything about your tickets, team, decisions, or sprint — Nova knows your project.
                 </p>
                 <div className={styles.emptySuggestions}>
                   {EMPTY_SUGGESTIONS.map(s => (
@@ -591,10 +815,10 @@ export default function NovaPage() {
                   ))}
                 </div>
                 <div className={styles.emptyModes}>
-                  <div className={styles.emptyMode}><RiBrainLine size={12} /><span>Ask anything</span></div>
-                  <div className={styles.emptyMode}><RiFileTextLine size={12} /><span>Paste transcript → doc</span></div>
-                  <div className={styles.emptyMode}><RiImageLine size={12} /><span>Drop screenshot → bug</span></div>
-                  <div className={styles.emptyMode}><RiMicLine size={12} /><span>Speak → ticket</span></div>
+                  <div className={styles.emptyMode}><RiBrainLine size={12} /><span>Tickets &amp; bugs</span></div>
+                  <div className={styles.emptyMode}><RiFileTextLine size={12} /><span>Decisions &amp; wiki</span></div>
+                  <div className={styles.emptyMode}><RiBarChartLine size={12} /><span>Sprint &amp; blockers</span></div>
+                  <div className={styles.emptyMode}><RiMicLine size={12} /><span>Voice input</span></div>
                 </div>
               </div>
             ) : (
@@ -605,9 +829,7 @@ export default function NovaPage() {
                 {loading && (
                   <div className={styles.novaMsg}>
                     <div className={styles.novaAvatar}><RiBrainLine size={13} /></div>
-                    <div className={styles.thinkingDots}>
-                      <span /><span /><span />
-                    </div>
+                    <div className={styles.thinkingDots}><span /><span /><span /></div>
                   </div>
                 )}
               </div>
@@ -641,13 +863,13 @@ export default function NovaPage() {
                   {Array.from({ length: 22 }).map((_, i) => (
                     <span key={i} className={styles.waveBar} style={{ animationDelay: `${i * 0.065}s` }} />
                   ))}
-                  <span className={styles.recordingLabel}>Recording…</span>
+                  <span className={styles.recordingLabel}>Listening…</span>
                 </div>
               ) : (
                 <textarea
                   ref={textareaRef}
                   className={styles.inputTextarea}
-                  placeholder="Ask anything, describe a thought, paste a meeting transcript, or drop a screenshot…"
+                  placeholder="Ask Nova anything about your project… (prefix 'create ticket:' to log a task)"
                   value={input}
                   rows={1}
                   onChange={e => setInput(e.target.value)}
@@ -668,7 +890,7 @@ export default function NovaPage() {
             </div>
 
             <AnimatePresence>
-              {(input.trim() || attachedImg) && (
+              {intentLabel(intent, wordCount) && (input.trim() || attachedImg) && (
                 <motion.div
                   className={styles.intentHint}
                   initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
@@ -684,29 +906,31 @@ export default function NovaPage() {
         {/* ══ RIGHT — Nova's Desk ══ */}
         <aside className={styles.desk}>
 
-          {/* Running agents */}
-          <div className={styles.deskSection}>
-            <div className={styles.deskSectionHead}>
-              <RiRobot2Line size={12} /><span>Running</span>
-              <span className={styles.deskSectionCount}>{AGENTS.filter(a => a.status === "running").length}</span>
-            </div>
-            <div className={styles.agentList}>
-              {AGENTS.map(a => (
-                <div key={a.id} className={styles.agentItem}>
-                  <div className={styles.agentRow}>
-                    <span className={`${styles.agentDot} ${styles[`agentDot_${a.status}`]}`} />
-                    <span className={styles.agentName}>{a.name}</span>
-                  </div>
-                  <div className={styles.agentTask}>{a.task}</div>
-                  {a.status === "running" && a.progress < 100 && (
-                    <div className={styles.agentTrack}>
-                      <div className={styles.agentFill} style={{ width: `${a.progress}%` }} />
+          {/* Background agents — only shown when real data backs them */}
+          {agents.length > 0 && (
+            <div className={styles.deskSection}>
+              <div className={styles.deskSectionHead}>
+                <RiRobot2Line size={12} /><span>Monitors</span>
+                <span className={styles.deskSectionCount}>{agents.filter(a => a.status === "running").length} active</span>
+              </div>
+              <div className={styles.agentList}>
+                {agents.map(a => (
+                  <div key={a.id} className={styles.agentItem}>
+                    <div className={styles.agentRow}>
+                      <span className={`${styles.agentDot} ${styles[`agentDot_${a.status}`]}`} />
+                      <span className={styles.agentName}>{a.name}</span>
                     </div>
-                  )}
-                </div>
-              ))}
+                    <div className={styles.agentTask}>{a.task}</div>
+                    {a.status === "running" && a.progress < 100 && (
+                      <div className={styles.agentTrack}>
+                        <div className={styles.agentFill} style={{ width: `${a.progress}%` }} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Memory */}
           <div className={styles.deskSection}>
@@ -715,11 +939,16 @@ export default function NovaPage() {
               <span className={styles.deskSectionSub}>click to surface</span>
             </div>
             <div className={styles.memoryList}>
-              {MEMORY.map(m => (
+              {memoryClips.length === 0 && (
+                <div style={{ fontSize: "0.72rem", color: "var(--text-3)", padding: "8px 4px" }}>
+                  No decisions or standups found.
+                </div>
+              )}
+              {memoryClips.map(m => (
                 <button
                   key={m.id}
                   className={styles.memoryClip}
-                  onClick={() => send(`Tell me more about ${m.title}`, "ask")}
+                  onClick={() => send(`Tell me more about: ${m.title}`, "ask")}
                 >
                   <div className={styles.memoryClipHead}>
                     <span className={`${styles.memoryType} ${styles[`memType_${m.type}`]}`}>{m.type}</span>
@@ -732,12 +961,17 @@ export default function NovaPage() {
             </div>
           </div>
 
-          {/* Created */}
+          {/* Created by Nova */}
           <div className={styles.deskSection}>
             <div className={styles.deskSectionHead}>
               <RiSparklingLine size={12} /><span>Created by Nova</span>
             </div>
             <div className={styles.createdList}>
+              {recentItems.length === 0 && (
+                <div style={{ fontSize: "0.72rem", color: "var(--text-3)", padding: "8px 4px" }}>
+                  Nothing created yet — describe a thought or paste a transcript.
+                </div>
+              )}
               {recentItems.map((item, i) => (
                 <div key={i} className={styles.createdListItem} style={{ borderLeftColor: CREATED_COLOR[item.type] }}>
                   <div className={styles.createdListHead}>

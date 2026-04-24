@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { novaQuery } from "@/services/api";
+import { novaQuery, fetchNovaStatus } from "@/services/api";
 import type { SearchResult } from "@/types";
 import { GoNorthStar } from "react-icons/go";
 import {
@@ -36,6 +37,14 @@ export default function EosPanel({ onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { data: novaStatus } = useQuery({
+    queryKey: ["nova-status"],
+    queryFn: fetchNovaStatus,
+    staleTime: 60 * 1000,
+  });
+  const provider = (novaStatus as any)?.provider ?? "AI";
+  const model    = (novaStatus as any)?.model ?? "";
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -97,7 +106,7 @@ export default function EosPanel({ onClose }: Props) {
           </span>
           <div>
             <div className={styles.headerTitle}>EOS</div>
-            <div className={styles.headerSub}>Llama 3.1 · 100% Local</div>
+            <div className={styles.headerSub}>{model || provider}</div>
           </div>
         </div>
         <div className={styles.headerActions}>
@@ -245,7 +254,7 @@ export default function EosPanel({ onClose }: Props) {
             <RiSendPlaneLine size={16} />
           </button>
         </div>
-        <div className={styles.inputHint}>Powered by Llama 3.1 · 100% Local</div>
+        <div className={styles.inputHint}>Powered by {model || provider}</div>
       </div>
     </div>
   );

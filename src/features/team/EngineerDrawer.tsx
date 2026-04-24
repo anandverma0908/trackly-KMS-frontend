@@ -237,8 +237,13 @@ export default function EngineerDrawer({
     engineerProfile?.role === "tech_lead" ||
     engineerProfile?.role === "engineering_manager" ||
     engineerProfile?.role === "admin";
-  const directReports = isManager && engineerProfile?.emp_no
-    ? orgMembers.filter((m) => m.reporting_to === engineerProfile.emp_no)
+
+  // reporting_to could be emp_no, id, email, or name depending on backend
+  const engineerIds = engineerProfile
+    ? [engineerProfile.emp_no, engineerProfile.id, engineerProfile.email, engineerProfile.name].filter(Boolean)
+    : [];
+  const directReports = isManager && engineerIds.length > 0
+    ? orgMembers.filter((m) => m.reporting_to && engineerIds.includes(m.reporting_to))
     : [];
 
   const color = engineer ? getColor(engineer.user) : "#4F7EFF";

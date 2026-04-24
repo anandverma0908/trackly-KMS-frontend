@@ -1,8 +1,8 @@
-import type { TicketsResponse, SummaryResponse, FiltersResponse, Sprint } from '@/types'
+import type { TicketsResponse, SummaryResponse, FiltersResponse, Sprint, OrgMember } from '@/types'
 
 export const DUMMY_FILTERS: FiltersResponse = {
   users: [
-    'Anand Verma','Aastha Rai','Rahul Sharma','ishu rana',
+    'Admin','Anoop Rai','Aastha Rai','Anand Verma','Rahul Sharma','ishu rana',
     'Vishnuvardhan Goud','Piyush Soni','Prakash Kumar',
     'Niral','Shivam','Deepak Kumar','Akash Kumar',
   ],
@@ -10,6 +10,22 @@ export const DUMMY_FILTERS: FiltersResponse = {
   pods:    ['DPAI','SNOP','EDM','PLAT','SNOE','PA'],
   projects:['DPAI','SNOP','EDM','PLAT','SNOE','PA'],
 }
+
+export const DUMMY_ORG_MEMBERS: OrgMember[] = [
+  { id: 'u1', name: 'Admin', email: 'admin@3scsolution.com', role: 'admin', pod: 'DPAI', emp_no: 'E001', reporting_to: null, title: 'Platform Admin' },
+  { id: 'u2', name: 'Anoop Rai', email: 'anoop.rai@3scsolution.com', role: 'engineering_manager', pod: 'DPAI', emp_no: 'E002', reporting_to: 'E001', title: 'Engineering Manager' },
+  { id: 'u3', name: 'Anand Verma', email: 'anand.verma@3scsolution.com', role: 'tech_lead', pod: 'DPAI', emp_no: 'E003', reporting_to: 'E002', title: 'Tech Lead — DPAI' },
+  { id: 'u4', name: 'Vishnuvardhan Goud', email: 'vishnu.goud@3scsolution.com', role: 'tech_lead', pod: 'EDM', emp_no: 'E004', reporting_to: 'E002', title: 'Tech Lead — EDM' },
+  { id: 'u5', name: 'Aastha Rai', email: 'aastha.rai@3scsolution.com', role: 'team_member', pod: 'DPAI', emp_no: 'E005', reporting_to: 'E003', title: 'Frontend Engineer' },
+  { id: 'u6', name: 'Rahul Sharma', email: 'rahul.sharma@3scsolution.com', role: 'team_member', pod: 'DPAI', emp_no: 'E006', reporting_to: 'E003', title: 'Backend Engineer' },
+  { id: 'u7', name: 'ishu rana', email: 'ishu.rana@3scsolution.com', role: 'team_member', pod: 'DPAI', emp_no: 'E007', reporting_to: 'E003', title: 'ML Engineer' },
+  { id: 'u8', name: 'Shivam', email: 'shivam@3scsolution.com', role: 'team_member', pod: 'DPAI', emp_no: 'E008', reporting_to: 'E003', title: 'DevOps Engineer' },
+  { id: 'u9', name: 'Akash Kumar', email: 'akash.kumar@3scsolution.com', role: 'team_member', pod: 'DPAI', emp_no: 'E009', reporting_to: 'E003', title: 'QA Engineer' },
+  { id: 'u10', name: 'Piyush Soni', email: 'piyush.soni@3scsolution.com', role: 'team_member', pod: 'EDM', emp_no: 'E010', reporting_to: 'E004', title: 'Data Engineer' },
+  { id: 'u11', name: 'Prakash Kumar', email: 'prakash.kumar@3scsolution.com', role: 'team_member', pod: 'EDM', emp_no: 'E011', reporting_to: 'E004', title: 'Backend Engineer' },
+  { id: 'u12', name: 'Niral', email: 'niral@3scsolution.com', role: 'team_member', pod: 'EDM', emp_no: 'E012', reporting_to: 'E004', title: 'Full Stack Engineer' },
+  { id: 'u13', name: 'Deepak Kumar', email: 'deepak.kumar@3scsolution.com', role: 'team_member', pod: 'EDM', emp_no: 'E013', reporting_to: 'E004', title: 'Data Analyst' },
+]
 
 export const DUMMY_SUMMARY: SummaryResponse = {
   total_hours:   8420,
@@ -49,6 +65,8 @@ export const DUMMY_SUMMARY: SummaryResponse = {
     { user: 'Prakash Kumar',     hours: 17, tickets:  6, clients: ['SAAS','BSV']       },
     { user: 'Deepak Kumar',      hours: 15, tickets:  5, clients: ['ReckittBenckiser'] },
     { user: 'Akash Kumar',       hours: 14, tickets:  4, clients: ['Henkel']           },
+    { user: 'Anoop Rai',         hours: 12, tickets:  3, clients: ['DPAI']             },
+    { user: 'Admin',             hours:  8, tickets:  2, clients: ['Internal']         },
   ],
 }
 

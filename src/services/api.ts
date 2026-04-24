@@ -54,7 +54,15 @@ api.interceptors.response.use(
   (err) => {
     const msg = err.response?.data?.detail ?? err.message ?? "Unknown error";
     console.error("[API Error]", msg);
-    return Promise.reject(new Error(msg));
+    const normalized = new Error(msg) as Error & {
+      status?: number;
+      code?: string;
+      data?: unknown;
+    };
+    normalized.status = err.response?.status;
+    normalized.code = err.code;
+    normalized.data = err.response?.data;
+    return Promise.reject(normalized);
   },
 );
 
@@ -65,7 +73,11 @@ function mock() {
 function _normalizeSearchResult(raw: any): SearchResult {
   const type = raw.type ?? raw.source_type ?? "wiki";
   const id = raw.id ?? raw.key ?? "";
-  const key = raw.key ?? undefined;
+  // For wiki pages the backend emits the UUID as key — use a readable label instead
+  const rawKey = raw.key ?? undefined;
+  const key = (type === "wiki" && rawKey && /^[0-9a-f-]{32,}$/i.test(String(rawKey)))
+    ? `WIKI · ${(raw.title ?? "page").slice(0, 24)}`
+    : rawKey;
   const score = typeof raw.score === "number"
     ? raw.score
     : typeof raw.similarity === "number"
@@ -551,6 +563,20 @@ export async function novaQuery(query: string, scope?: 'all' | 'wiki'): Promise<
   };
 }
 
+export async function novaGenerate(
+  prompt: string,
+  systemPrompt?: string,
+  temperature = 0.3,
+): Promise<string> {
+  const { data } = await api.post("/nova/generate", {
+    prompt,
+    system_prompt: systemPrompt,
+    temperature,
+    max_tokens: 800,
+  });
+  return data?.answer ?? "";
+}
+
 /* ── Sprints ── */
 export async function fetchSprints(): Promise<Sprint[]> {
   const { data } = await api.get("/sprints");
@@ -1018,8 +1044,11 @@ export async function fetchWorkload(): Promise<WorkloadEntry[]> {
 }
 
 export async function fetchOrgMembers() {
+  if (mock()?.fetchOrgMembers) return mock().fetchOrgMembers();
   const { data } = await api.get("/users/members");
-  return data as import("@/types").OrgMember[];
+  // Backend may return { members: [...] } or plain [...]
+  const members = Array.isArray(data) ? data : data?.members ?? [];
+  return members as import("@/types").OrgMember[];
 }
 
 export async function fetchNovaStatus() {
@@ -1150,6 +1179,190 @@ export async function fetchGoalNovaInsight(goalId: string): Promise<string> {
   return data.insight;
 }
 
+type ApiErrorLike = Error & {
+  status?: number;
+  code?: string;
+};
+
+const LOCAL_DECISIONS_KEY = "trackly-local-decisions";
+const LOCAL_PROCESSES_KEY = "trackly-local-processes";
+
+const SEEDED_DECISIONS: Decision[] = [
+  {
+    id: "dec-local-1",
+    number: 1,
+    title: "Adopt React Query for server state",
+    status: "accepted",
+    owner: "Platform Team",
+    date: "2026-04-10",
+    context: "The app needed a consistent pattern for fetching, caching, and invalidating remote data.",
+    decision: "Use React Query for frontend server-state management across product surfaces.",
+    rationale: "It reduces ad hoc loading state code and gives the team predictable cache invalidation.",
+    alternatives: ["Hand-rolled hooks per page", "Redux-managed async state"],
+    consequences: "All new API-backed screens should use shared query keys and mutation invalidation.",
+    linkedTickets: ["TRK-161"],
+    tags: ["frontend", "data"],
+    space_id: null,
+    org_level: true,
+    created_at: "2026-04-10T09:00:00.000Z",
+    updated_at: "2026-04-10T09:00:00.000Z",
+  },
+  {
+    id: "dec-local-2",
+    number: 2,
+    title: "Store project-specific knowledge by space",
+    status: "proposed",
+    owner: "Anand V.",
+    date: "2026-04-18",
+    context: "Teams need decisions and SOPs to be discoverable both inside a space and globally.",
+    decision: "Support both org-wide and space-scoped knowledge records in the frontend model.",
+    rationale: "This keeps shared standards reusable while allowing project-specific documentation.",
+    alternatives: ["Org-wide records only", "Separate products for each project"],
+    consequences: "APIs and local fallback both need to filter by `space_id` and `org_level`.",
+    linkedTickets: ["TRK-163"],
+    tags: ["knowledge", "spaces"],
+    space_id: "DPAI",
+    org_level: false,
+    created_at: "2026-04-18T10:30:00.000Z",
+    updated_at: "2026-04-18T10:30:00.000Z",
+  },
+];
+
+const SEEDED_PROCESSES: Process[] = [
+  {
+    id: "proc-local-1",
+    title: "Incident Triage Runbook",
+    category: "runbook",
+    status: "active",
+    owner: "SRE Team",
+    lastUpdated: "2026-04-12",
+    description: "Use this runbook when a production incident is reported and the owning pod needs a shared triage flow.",
+    steps: [
+      {
+        id: "proc-local-1-step-1",
+        order: 1,
+        title: "Acknowledge the incident",
+        description: "Confirm the issue, severity, and channel for updates.",
+        owner: "Incident Commander",
+        estimatedTime: "5 min",
+        required: true,
+      },
+      {
+        id: "proc-local-1-step-2",
+        order: 2,
+        title: "Assign an owner",
+        description: "Choose the on-call engineer or most relevant pod owner to lead mitigation.",
+        owner: "Incident Commander",
+        estimatedTime: "5 min",
+        required: true,
+      },
+      {
+        id: "proc-local-1-step-3",
+        order: 3,
+        title: "Document current status",
+        description: "Record impact, workaround, and next update time in the incident thread.",
+        owner: "Responder",
+        estimatedTime: "10 min",
+        required: true,
+      },
+    ],
+    tags: ["incident", "ops"],
+    complianceRequired: false,
+    avgCompletionTime: "20 min",
+    runCount: 14,
+    space_id: null,
+    org_level: true,
+    created_at: "2026-04-12T08:00:00.000Z",
+    updated_at: "2026-04-12T08:00:00.000Z",
+  },
+  {
+    id: "proc-local-2",
+    title: "Release Readiness Checklist",
+    category: "workflow",
+    status: "review",
+    owner: "Product Engineering",
+    lastUpdated: "2026-04-20",
+    description: "Checklist for validating a sprint release before rollout to production.",
+    steps: [
+      {
+        id: "proc-local-2-step-1",
+        order: 1,
+        title: "Confirm QA sign-off",
+        description: "Verify that all release tickets are QA-approved or explicitly waived.",
+        owner: "QA Lead",
+        estimatedTime: "10 min",
+        required: true,
+      },
+      {
+        id: "proc-local-2-step-2",
+        order: 2,
+        title: "Review release notes",
+        description: "Summarize customer-facing changes and operational concerns.",
+        owner: "Release Manager",
+        estimatedTime: "15 min",
+        required: true,
+      },
+    ],
+    tags: ["release", "qa"],
+    complianceRequired: true,
+    avgCompletionTime: "30 min",
+    runCount: 6,
+    space_id: "DPAI",
+    org_level: false,
+    created_at: "2026-04-20T11:15:00.000Z",
+    updated_at: "2026-04-20T11:15:00.000Z",
+  },
+];
+
+function _canUseBrowserStorage() {
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
+function _readLocalCollection<T>(key: string, seed: T[]): T[] {
+  if (!_canUseBrowserStorage()) return [...seed];
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) {
+      window.localStorage.setItem(key, JSON.stringify(seed));
+      return [...seed];
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [...seed];
+  } catch {
+    return [...seed];
+  }
+}
+
+function _writeLocalCollection<T>(key: string, items: T[]) {
+  if (!_canUseBrowserStorage()) return;
+  window.localStorage.setItem(key, JSON.stringify(items));
+}
+
+function _shouldUseKnowledgeFallback(error: unknown): boolean {
+  const e = error as ApiErrorLike | undefined;
+  return e?.status === 404 || e?.status === 405 || e?.status === 501 || e?.code === "ERR_NETWORK";
+}
+
+function _getLocalDecisions(): Decision[] {
+  return _readLocalCollection(LOCAL_DECISIONS_KEY, SEEDED_DECISIONS).map(_mapDecisionOut);
+}
+
+function _saveLocalDecisions(items: Decision[]) {
+  _writeLocalCollection(LOCAL_DECISIONS_KEY, items);
+}
+
+function _getLocalProcesses(): Process[] {
+  return _readLocalCollection(LOCAL_PROCESSES_KEY, SEEDED_PROCESSES).map(_mapProcessOut);
+}
+
+function _saveLocalProcesses(items: Process[]) {
+  _writeLocalCollection(LOCAL_PROCESSES_KEY, items);
+}
+
+function _makeLocalId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 /* ── Decisions / ADRs ── */
 function _mapDecisionOut(d: any): Decision {
   return {
@@ -1167,39 +1380,99 @@ export async function fetchDecisions(params?: {
   org_level?: boolean;
   status?: string;
 }): Promise<DecisionsResponse> {
-  const { data } = await api.get<any>("/decisions", { params });
-  const decisions = (data.decisions ?? data ?? []).map(_mapDecisionOut);
-  return { decisions, total: data.total ?? decisions.length };
+  if (mock()?.fetchDecisions) return mock().fetchDecisions(params);
+  try {
+    const { data } = await api.get<any>("/decisions", { params });
+    const decisions = (data.decisions ?? data ?? []).map(_mapDecisionOut);
+    return { decisions, total: data.total ?? decisions.length };
+  } catch (error) {
+    if (!_shouldUseKnowledgeFallback(error)) throw error;
+    const decisions = _getLocalDecisions().filter((decision) => {
+      if (params?.space_id && decision.space_id !== params.space_id && !decision.org_level) return false;
+      if (params?.org_level !== undefined && decision.org_level !== params.org_level) return false;
+      if (params?.status && decision.status !== params.status) return false;
+      return true;
+    });
+    return { decisions, total: decisions.length };
+  }
 }
 
 export async function fetchDecision(id: string): Promise<Decision> {
-  const { data } = await api.get<any>(`/decisions/${id}`);
-  return _mapDecisionOut(data);
+  if (mock()?.fetchDecision) return mock().fetchDecision(id);
+  try {
+    const { data } = await api.get<any>(`/decisions/${id}`);
+    return _mapDecisionOut(data);
+  } catch (error) {
+    if (!_shouldUseKnowledgeFallback(error)) throw error;
+    const decision = _getLocalDecisions().find((item) => item.id === id);
+    if (!decision) throw new Error("Decision not found");
+    return decision;
+  }
 }
 
 export async function createDecision(
   payload: Omit<Decision, "id" | "created_at" | "updated_at">,
 ): Promise<Decision> {
-  const { data } = await api.post<any>("/decisions", {
-    ...payload,
-    linked_tickets: payload.linkedTickets,
-  });
-  return _mapDecisionOut(data);
+  if (mock()?.createDecision) return mock().createDecision(payload);
+  try {
+    const { data } = await api.post<any>("/decisions", {
+      ...payload,
+      linked_tickets: payload.linkedTickets,
+    });
+    return _mapDecisionOut(data);
+  } catch (error) {
+    if (!_shouldUseKnowledgeFallback(error)) throw error;
+    const items = _getLocalDecisions();
+    const now = new Date().toISOString();
+    const created = _mapDecisionOut({
+      ...payload,
+      id: _makeLocalId("decision"),
+      number: items.length + 1,
+      created_at: now,
+      updated_at: now,
+    });
+    items.unshift(created);
+    _saveLocalDecisions(items);
+    return created;
+  }
 }
 
 export async function updateDecision(
   id: string,
   payload: Partial<Omit<Decision, "id">>,
 ): Promise<Decision> {
-  const { data } = await api.patch<any>(`/decisions/${id}`, {
-    ...payload,
-    linked_tickets: payload.linkedTickets,
-  });
-  return _mapDecisionOut(data);
+  if (mock()?.updateDecision) return mock().updateDecision(id, payload);
+  try {
+    const { data } = await api.patch<any>(`/decisions/${id}`, {
+      ...payload,
+      linked_tickets: payload.linkedTickets,
+    });
+    return _mapDecisionOut(data);
+  } catch (error) {
+    if (!_shouldUseKnowledgeFallback(error)) throw error;
+    const items = _getLocalDecisions();
+    const index = items.findIndex((item) => item.id === id);
+    if (index === -1) throw new Error("Decision not found");
+    const updated = _mapDecisionOut({
+      ...items[index],
+      ...payload,
+      id,
+      updated_at: new Date().toISOString(),
+    });
+    items[index] = updated;
+    _saveLocalDecisions(items);
+    return updated;
+  }
 }
 
 export async function deleteDecision(id: string): Promise<void> {
-  await api.delete(`/decisions/${id}`);
+  if (mock()?.deleteDecision) return mock().deleteDecision(id);
+  try {
+    await api.delete(`/decisions/${id}`);
+  } catch (error) {
+    if (!_shouldUseKnowledgeFallback(error)) throw error;
+    _saveLocalDecisions(_getLocalDecisions().filter((item) => item.id !== id));
+  }
 }
 
 /* ── Processes / SOPs ── */
@@ -1225,43 +1498,102 @@ export async function fetchProcesses(params?: {
   org_level?: boolean;
   category?: string;
 }): Promise<ProcessesResponse> {
-  const { data } = await api.get<any>("/processes", { params });
-  const processes = (data.processes ?? data ?? []).map(_mapProcessOut);
-  return { processes, total: data.total ?? processes.length };
+  if (mock()?.fetchProcesses) return mock().fetchProcesses(params);
+  try {
+    const { data } = await api.get<any>("/processes", { params });
+    const processes = (data.processes ?? data ?? []).map(_mapProcessOut);
+    return { processes, total: data.total ?? processes.length };
+  } catch (error) {
+    if (!_shouldUseKnowledgeFallback(error)) throw error;
+    const processes = _getLocalProcesses().filter((process) => {
+      if (params?.space_id && process.space_id !== params.space_id && !process.org_level) return false;
+      if (params?.org_level !== undefined && process.org_level !== params.org_level) return false;
+      if (params?.category && process.category !== params.category) return false;
+      return true;
+    });
+    return { processes, total: processes.length };
+  }
 }
 
 export async function fetchProcess(id: string): Promise<Process> {
-  const { data } = await api.get<any>(`/processes/${id}`);
-  return _mapProcessOut(data);
+  if (mock()?.fetchProcess) return mock().fetchProcess(id);
+  try {
+    const { data } = await api.get<any>(`/processes/${id}`);
+    return _mapProcessOut(data);
+  } catch (error) {
+    if (!_shouldUseKnowledgeFallback(error)) throw error;
+    const process = _getLocalProcesses().find((item) => item.id === id);
+    if (!process) throw new Error("Process not found");
+    return process;
+  }
 }
 
 export async function createProcess(
   payload: Omit<Process, "id" | "created_at" | "updated_at">,
 ): Promise<Process> {
-  const { data } = await api.post<any>("/processes", {
-    ...payload,
-    last_updated: payload.lastUpdated,
-    compliance_required: payload.complianceRequired,
-    avg_completion_time: payload.avgCompletionTime,
-    run_count: payload.runCount,
-  });
-  return _mapProcessOut(data);
+  if (mock()?.createProcess) return mock().createProcess(payload);
+  try {
+    const { data } = await api.post<any>("/processes", {
+      ...payload,
+      last_updated: payload.lastUpdated,
+      compliance_required: payload.complianceRequired,
+      avg_completion_time: payload.avgCompletionTime,
+      run_count: payload.runCount,
+    });
+    return _mapProcessOut(data);
+  } catch (error) {
+    if (!_shouldUseKnowledgeFallback(error)) throw error;
+    const items = _getLocalProcesses();
+    const now = new Date().toISOString();
+    const created = _mapProcessOut({
+      ...payload,
+      id: _makeLocalId("process"),
+      created_at: now,
+      updated_at: now,
+    });
+    items.unshift(created);
+    _saveLocalProcesses(items);
+    return created;
+  }
 }
 
 export async function updateProcess(
   id: string,
   payload: Partial<Omit<Process, "id">>,
 ): Promise<Process> {
-  const { data } = await api.patch<any>(`/processes/${id}`, {
-    ...payload,
-    last_updated: payload.lastUpdated,
-    compliance_required: payload.complianceRequired,
-    avg_completion_time: payload.avgCompletionTime,
-    run_count: payload.runCount,
-  });
-  return _mapProcessOut(data);
+  if (mock()?.updateProcess) return mock().updateProcess(id, payload);
+  try {
+    const { data } = await api.patch<any>(`/processes/${id}`, {
+      ...payload,
+      last_updated: payload.lastUpdated,
+      compliance_required: payload.complianceRequired,
+      avg_completion_time: payload.avgCompletionTime,
+      run_count: payload.runCount,
+    });
+    return _mapProcessOut(data);
+  } catch (error) {
+    if (!_shouldUseKnowledgeFallback(error)) throw error;
+    const items = _getLocalProcesses();
+    const index = items.findIndex((item) => item.id === id);
+    if (index === -1) throw new Error("Process not found");
+    const updated = _mapProcessOut({
+      ...items[index],
+      ...payload,
+      id,
+      updated_at: new Date().toISOString(),
+    });
+    items[index] = updated;
+    _saveLocalProcesses(items);
+    return updated;
+  }
 }
 
 export async function deleteProcess(id: string): Promise<void> {
-  await api.delete(`/processes/${id}`);
+  if (mock()?.deleteProcess) return mock().deleteProcess(id);
+  try {
+    await api.delete(`/processes/${id}`);
+  } catch (error) {
+    if (!_shouldUseKnowledgeFallback(error)) throw error;
+    _saveLocalProcesses(_getLocalProcesses().filter((item) => item.id !== id));
+  }
 }

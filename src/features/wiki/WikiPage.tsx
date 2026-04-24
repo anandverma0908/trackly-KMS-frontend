@@ -138,7 +138,7 @@ export default function WikiPage() {
   const [newSpaceName,      setNewSpaceName]      = useState("");
   const [showVersions,      setShowVersions]      = useState(false);
   const [showTemplates,     setShowTemplates]     = useState(false);
-  const [showAIPanel,       setShowAIPanel]       = useState(true);
+  const [showAIPanel,       setShowAIPanel]       = useState(false);
   const [autoSaveStatus,    setAutoSaveStatus]    = useState<"idle"|"saving"|"saved">("idle");
   const [aiTab,             setAiTab]             = useState<AITab>("health");
 
@@ -169,6 +169,11 @@ export default function WikiPage() {
   });
 
   useEffect(() => { if (spaces.length > 0 && activeSpaceId === null) setActiveSpace(spaces[0].id); }, [spaces, activeSpaceId, setActiveSpace]);
+  useEffect(() => {
+    if (!urlPageId && activePageId !== null) {
+      setActivePage(null);
+    }
+  }, [urlPageId, activePageId, setActivePage]);
   useEffect(() => {
     if (!urlPageId || !urlPage) return;
     if (activePageId !== urlPageId) setActivePage(urlPageId);
@@ -483,210 +488,215 @@ export default function WikiPage() {
           )}
         </main>
 
-        {/* ── AI Panel ── */}
-        {showAIPanel && activePage && pageInsights && (
-          <aside className={styles.aiPanel}>
-
-            {/* Tab bar */}
-            <div className={styles.aiTabs}>
-              {([
-                { id: "health",   icon: <RiBarChartBoxLine size={12} />, label: "Health" },
-                { id: "map",      icon: <RiMapLine size={12} />,         label: "Map" },
-                { id: "insights", icon: <RiLightbulbLine size={12} />,   label: "Insights" },
-                { id: "chat",     icon: <RiBrainLine size={12} />,       label: "Ask EOS" },
-              ] as { id: AITab; icon: React.ReactNode; label: string }[]).map(t => (
-                <button key={t.id} className={`${styles.aiTab} ${aiTab === t.id ? styles.aiTabActive : ""}`} onClick={() => setAiTab(t.id)}>
-                  {t.icon}{t.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Health tab */}
-            {aiTab === "health" && (
-              <div className={styles.aiTabContent}>
-                <div className={styles.healthGaugeRow}>
-                  {(() => {
-                    const s = pageInsights.score;
-                    const c = s >= 75 ? "var(--green)" : s >= 50 ? "var(--amber)" : "var(--red)";
-                    const circ = 2 * Math.PI * 24;
-                    return (
-                      <svg width="58" height="58" viewBox="0 0 58 58">
-                        <circle cx="29" cy="29" r="24" fill="none" stroke="var(--surface-3)" strokeWidth="4.5" />
-                        <circle cx="29" cy="29" r="24" fill="none" stroke={c} strokeWidth="4.5" strokeLinecap="round"
-                          strokeDasharray={`${(s / 100) * circ} ${circ}`} transform="rotate(-90 29 29)"
-                          style={{ transition: "stroke-dasharray 0.8s ease" }} />
-                        <text x="29" y="34" textAnchor="middle" fontSize="14" fontWeight="800" fill={c} fontFamily="inherit">{s}</text>
-                      </svg>
-                    );
-                  })()}
-                  <div className={styles.healthMeta}>
-                    <div className={styles.healthScoreLabel}>Doc Health</div>
-                    {[
-                      { label: "Freshness",   val: pageInsights.freshness === "fresh" ? 92 : pageInsights.freshness === "aging" ? 58 : 24 },
-                      { label: "Coverage",    val: Math.round((pageInsights.coverage.headings + pageInsights.coverage.examples + pageInsights.coverage.links + pageInsights.coverage.diagrams) / 4) },
-                      { label: "Cross-links", val: Math.min(100, 20 + pageInsights.related_count * 16) },
-                    ].map(m => (
-                      <div key={m.label} className={styles.healthMetaRow}>
-                        <span className={styles.healthMetaLabel}>{m.label}</span>
-                        <div className={styles.healthMetaTrack}>
-                          <div className={styles.healthMetaFill} style={{ width: `${m.val}%`, background: m.val >= 70 ? "var(--green)" : m.val >= 45 ? "var(--amber)" : "var(--red)" }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Coverage rings */}
-                <div className={styles.coverageSection}>
-                  <div className={styles.coverageSectionLabel}>Content Coverage</div>
-                  <div className={styles.coverageRow}>
-                    {([
-                      ["Headings", pageInsights.coverage.headings],
-                      ["Examples", pageInsights.coverage.examples],
-                      ["Links", pageInsights.coverage.links],
-                      ["Diagrams", pageInsights.coverage.diagrams],
-                    ] as [string, number][]).map(([l, v]) => (
-                      <div key={l} className={styles.coverageItem}>
-                        <div className={styles.coverageRing} style={{ background: `conic-gradient(${v >= 75 ? "var(--green)" : v >= 50 ? "var(--amber)" : "var(--red)"} ${v}%, var(--surface-3) 0)` }} />
-                        <span className={styles.coverageLabel}>{l}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Compliance */}
-                <div className={styles.complianceRow}>
-                  <RiShieldCheckLine size={11} color={pageInsights.compliance.passed ? "var(--green)" : "var(--amber)"} />
-                  <span className={styles.complianceText}>
-                    {pageInsights.compliance.passed
-                      ? "Compliance check passed · no sensitive data detected"
-                      : `Potential sensitive strings detected: ${pageInsights.compliance.matches.join(", ")}`}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Map tab */}
-            {aiTab === "map" && (
-              <div className={styles.aiTabContent}>
-                <div className={styles.mapHeader}>
-                  <span className={styles.mapHeaderLabel}>Knowledge Map</span>
-                  <span className={styles.mapHeaderSub}>{pages.length} pages · {spaces.length} spaces</span>
-                </div>
-                <KnowledgeMapPanel pages={pages} activeId={activePageId} />
-                <div className={styles.mapStats}>
-                  <div className={styles.mapStatItem}>
-                    <span className={styles.mapStatVal}>{intelligence?.map_stats.fresh ?? 0}</span>
-                    <span className={styles.mapStatLbl}>fresh</span>
-                  </div>
-                  <div className={styles.mapStatItem}>
-                    <span className={styles.mapStatVal} style={{ color: "var(--amber)" }}>{intelligence?.map_stats.aging ?? 0}</span>
-                    <span className={styles.mapStatLbl}>aging</span>
-                  </div>
-                  <div className={styles.mapStatItem}>
-                    <span className={styles.mapStatVal} style={{ color: "var(--red)" }}>{intelligence?.map_stats.stale ?? 0}</span>
-                    <span className={styles.mapStatLbl}>stale</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Insights tab */}
-            {aiTab === "insights" && (
-              <div className={styles.aiTabContent}>
-                <div className={styles.insightsList}>
-                  {pageInsights.freshness === "stale" && (
-                    <div className={styles.insightItem} style={{ borderLeftColor: "var(--red)" }}>
-                      <RiTimeLine size={11} color="var(--red)" />
-                      <div>
-                        <div className={styles.insightTitle}>Page needs update</div>
-                        <div className={styles.insightDesc}>{pageInsights.days_old}d old · {pageInsights.linked_tickets} linked tickets found</div>
-                      </div>
-                    </div>
-                  )}
-                  {pageInsights.has_conflict && (
-                    <div className={styles.insightItem} style={{ borderLeftColor: "var(--amber)" }}>
-                      <RiAlertLine size={11} color="var(--amber)" />
-                      <div>
-                        <div className={styles.insightTitle}>Potential conflict</div>
-                        <div className={styles.insightDesc}>Another page has conflicting information — review recommended</div>
-                      </div>
-                    </div>
-                  )}
-                  <div className={styles.insightItem} style={{ borderLeftColor: "var(--accent)" }}>
-                    <RiLinkM size={11} color="var(--accent)" />
-                    <div>
-                      <div className={styles.insightTitle}>{pageInsights.related_count} related pages discovered</div>
-                      <div className={styles.insightDesc}>Related pages can be linked to improve discoverability</div>
-                    </div>
-                  </div>
-                  <div className={styles.insightItem} style={{ borderLeftColor: "var(--green)" }}>
-                    <RiCheckLine size={11} color="var(--green)" />
-                    <div>
-                      <div className={styles.insightTitle}>{pageInsights.compliance.passed ? "Compliance check passed" : "Review sensitive strings"}</div>
-                      <div className={styles.insightDesc}>
-                        {pageInsights.compliance.passed ? "No sensitive data patterns detected" : "Potential secrets or tokens may be present in this page"}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {activePageId && (
-                  <RelatedDocsWidget
-                    pageId={activePageId}
-                    onSelect={setActivePage}
-                    onTicketSelect={key => navigate(`/backlog?search=${encodeURIComponent(key)}`)}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Chat tab */}
-            {aiTab === "chat" && (
-              <div className={`${styles.aiTabContent} ${styles.chatTabContent}`}>
-                {aiHistory.length === 0 && !aiThinking && (
-                  <div className={styles.chatSuggestions}>
-                    <div className={styles.chatSuggestionsLabel}>Quick actions</div>
-                    {["Summarize this page", "Find stale pages", "Detect conflicts", "Show coverage gaps", "Generate onboarding path"].map(s => (
-                      <button key={s} className={styles.chatSuggestion} onClick={() => void submitAiChat(s)}>{s}</button>
-                    ))}
-                  </div>
-                )}
-
-                {aiHistory.length > 0 && (
-                  <div className={styles.chatHistory}>
-                    {[...aiHistory].reverse().map((h, i) => (
-                      <div key={i} className={styles.chatExchange}>
-                        <div className={styles.chatUser}>{h.cmd}</div>
-                        <div className={styles.chatEOS}>
-                          <RiSparklingLine size={9} style={{ flexShrink: 0, marginTop: 2, color: "var(--accent)" }} />
-                          <span className={styles.chatEOSText}>{h.reply}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {aiThinking && (
-                  <div className={styles.chatThinking}>
-                    <span className={styles.thinkDot} /><span className={styles.thinkDot} /><span className={styles.thinkDot} />
-                  </div>
-                )}
-
-                <div className={styles.chatInputRow}>
-                  <input className={styles.chatInput} placeholder="Ask anything about your wiki…" value={aiInput}
-                    onChange={e => setAiInput(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && void submitAiChat(aiInput)} />
-                  <button className={styles.chatSendBtn} onClick={() => void submitAiChat(aiInput)} disabled={!aiInput.trim() || aiThinking}>
-                    <RiSendPlaneLine size={13} />
-                  </button>
-                </div>
-              </div>
-            )}
-
-          </aside>
-        )}
       </div>
+
+      {/* ── AI Drawer ── */}
+      {activePage && pageInsights && (
+        <SideDrawer
+          open={showAIPanel}
+          onClose={() => setShowAIPanel(false)}
+          size="lg"
+          title="EOS Assistant"
+          subtitle={activePage.title}
+          avatar={<RiSparklingLine size={18} color="var(--accent)" />}
+          badge={<span style={{ color: "var(--accent)", fontSize: 12, fontWeight: 600 }}>Wiki</span>}
+          stats={[
+            { label: "Health", value: `${pageInsights.score}%`, color: pageInsights.score >= 75 ? "var(--green)" : pageInsights.score >= 50 ? "var(--amber)" : "var(--red)" },
+            { label: "Freshness", value: pageInsights.freshness },
+            { label: "Links", value: String(pageInsights.related_count) },
+          ]}
+        >
+          <div className={styles.aiTabs}>
+            {([
+              { id: "health",   icon: <RiBarChartBoxLine size={12} />, label: "Health" },
+              { id: "map",      icon: <RiMapLine size={12} />,         label: "Map" },
+              { id: "insights", icon: <RiLightbulbLine size={12} />,   label: "Insights" },
+              { id: "chat",     icon: <RiBrainLine size={12} />,       label: "Ask EOS" },
+            ] as { id: AITab; icon: React.ReactNode; label: string }[]).map(t => (
+              <button key={t.id} className={`${styles.aiTab} ${aiTab === t.id ? styles.aiTabActive : ""}`} onClick={() => setAiTab(t.id)}>
+                {t.icon}{t.label}
+              </button>
+            ))}
+          </div>
+
+          {aiTab === "health" && (
+            <div className={styles.aiTabContent}>
+              <div className={styles.healthGaugeRow}>
+                {(() => {
+                  const s = pageInsights.score;
+                  const c = s >= 75 ? "var(--green)" : s >= 50 ? "var(--amber)" : "var(--red)";
+                  const circ = 2 * Math.PI * 24;
+                  return (
+                    <svg width="58" height="58" viewBox="0 0 58 58">
+                      <circle cx="29" cy="29" r="24" fill="none" stroke="var(--surface-3)" strokeWidth="4.5" />
+                      <circle cx="29" cy="29" r="24" fill="none" stroke={c} strokeWidth="4.5" strokeLinecap="round"
+                        strokeDasharray={`${(s / 100) * circ} ${circ}`} transform="rotate(-90 29 29)"
+                        style={{ transition: "stroke-dasharray 0.8s ease" }} />
+                      <text x="29" y="34" textAnchor="middle" fontSize="14" fontWeight="800" fill={c} fontFamily="inherit">{s}</text>
+                    </svg>
+                  );
+                })()}
+                <div className={styles.healthMeta}>
+                  <div className={styles.healthScoreLabel}>Doc Health</div>
+                  {[
+                    { label: "Freshness",   val: pageInsights.freshness === "fresh" ? 92 : pageInsights.freshness === "aging" ? 58 : 24 },
+                    { label: "Coverage",    val: Math.round((pageInsights.coverage.headings + pageInsights.coverage.examples + pageInsights.coverage.links + pageInsights.coverage.diagrams) / 4) },
+                    { label: "Cross-links", val: Math.min(100, 20 + pageInsights.related_count * 16) },
+                  ].map(m => (
+                    <div key={m.label} className={styles.healthMetaRow}>
+                      <span className={styles.healthMetaLabel}>{m.label}</span>
+                      <div className={styles.healthMetaTrack}>
+                        <div className={styles.healthMetaFill} style={{ width: `${m.val}%`, background: m.val >= 70 ? "var(--green)" : m.val >= 45 ? "var(--amber)" : "var(--red)" }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.coverageSection}>
+                <div className={styles.coverageSectionLabel}>Content Coverage</div>
+                <div className={styles.coverageRow}>
+                  {([
+                    ["Headings", pageInsights.coverage.headings],
+                    ["Examples", pageInsights.coverage.examples],
+                    ["Links", pageInsights.coverage.links],
+                    ["Diagrams", pageInsights.coverage.diagrams],
+                  ] as [string, number][]).map(([l, v]) => (
+                    <div key={l} className={styles.coverageItem}>
+                      <div className={styles.coverageRing} style={{ background: `conic-gradient(${v >= 75 ? "var(--green)" : v >= 50 ? "var(--amber)" : "var(--red)"} ${v}%, var(--surface-3) 0)` }} />
+                      <span className={styles.coverageLabel}>{l}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.complianceRow}>
+                <RiShieldCheckLine size={11} color={pageInsights.compliance.passed ? "var(--green)" : "var(--amber)"} />
+                <span className={styles.complianceText}>
+                  {pageInsights.compliance.passed
+                    ? "Compliance check passed · no sensitive data detected"
+                    : `Potential sensitive strings detected: ${pageInsights.compliance.matches.join(", ")}`}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {aiTab === "map" && (
+            <div className={styles.aiTabContent}>
+              <div className={styles.mapHeader}>
+                <span className={styles.mapHeaderLabel}>Knowledge Map</span>
+                <span className={styles.mapHeaderSub}>{pages.length} pages · {spaces.length} spaces</span>
+              </div>
+              <KnowledgeMapPanel pages={pages} activeId={activePageId} />
+              <div className={styles.mapStats}>
+                <div className={styles.mapStatItem}>
+                  <span className={styles.mapStatVal}>{intelligence?.map_stats.fresh ?? 0}</span>
+                  <span className={styles.mapStatLbl}>fresh</span>
+                </div>
+                <div className={styles.mapStatItem}>
+                  <span className={styles.mapStatVal} style={{ color: "var(--amber)" }}>{intelligence?.map_stats.aging ?? 0}</span>
+                  <span className={styles.mapStatLbl}>aging</span>
+                </div>
+                <div className={styles.mapStatItem}>
+                  <span className={styles.mapStatVal} style={{ color: "var(--red)" }}>{intelligence?.map_stats.stale ?? 0}</span>
+                  <span className={styles.mapStatLbl}>stale</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {aiTab === "insights" && (
+            <div className={styles.aiTabContent}>
+              <div className={styles.insightsList}>
+                {pageInsights.freshness === "stale" && (
+                  <div className={styles.insightItem} style={{ borderLeftColor: "var(--red)" }}>
+                    <RiTimeLine size={11} color="var(--red)" />
+                    <div>
+                      <div className={styles.insightTitle}>Page needs update</div>
+                      <div className={styles.insightDesc}>{pageInsights.days_old}d old · {pageInsights.linked_tickets} linked tickets found</div>
+                    </div>
+                  </div>
+                )}
+                {pageInsights.has_conflict && (
+                  <div className={styles.insightItem} style={{ borderLeftColor: "var(--amber)" }}>
+                    <RiAlertLine size={11} color="var(--amber)" />
+                    <div>
+                      <div className={styles.insightTitle}>Potential conflict</div>
+                      <div className={styles.insightDesc}>Another page has conflicting information — review recommended</div>
+                    </div>
+                  </div>
+                )}
+                <div className={styles.insightItem} style={{ borderLeftColor: "var(--accent)" }}>
+                  <RiLinkM size={11} color="var(--accent)" />
+                  <div>
+                    <div className={styles.insightTitle}>{pageInsights.related_count} related pages discovered</div>
+                    <div className={styles.insightDesc}>Related pages can be linked to improve discoverability</div>
+                  </div>
+                </div>
+                <div className={styles.insightItem} style={{ borderLeftColor: "var(--green)" }}>
+                  <RiCheckLine size={11} color="var(--green)" />
+                  <div>
+                    <div className={styles.insightTitle}>{pageInsights.compliance.passed ? "Compliance check passed" : "Review sensitive strings"}</div>
+                    <div className={styles.insightDesc}>
+                      {pageInsights.compliance.passed ? "No sensitive data patterns detected" : "Potential secrets or tokens may be present in this page"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {activePageId && (
+                <RelatedDocsWidget
+                  pageId={activePageId}
+                  onSelect={setActivePage}
+                  onTicketSelect={key => navigate(`/backlog?search=${encodeURIComponent(key)}`)}
+                />
+              )}
+            </div>
+          )}
+
+          {aiTab === "chat" && (
+            <div className={`${styles.aiTabContent} ${styles.chatTabContent}`}>
+              {aiHistory.length === 0 && !aiThinking && (
+                <div className={styles.chatSuggestions}>
+                  <div className={styles.chatSuggestionsLabel}>Quick actions</div>
+                  {["Summarize this page", "Find stale pages", "Detect conflicts", "Show coverage gaps", "Generate onboarding path"].map(s => (
+                    <button key={s} className={styles.chatSuggestion} onClick={() => void submitAiChat(s)}>{s}</button>
+                  ))}
+                </div>
+              )}
+
+              {aiHistory.length > 0 && (
+                <div className={styles.chatHistory}>
+                  {[...aiHistory].reverse().map((h, i) => (
+                    <div key={i} className={styles.chatExchange}>
+                      <div className={styles.chatUser}>{h.cmd}</div>
+                      <div className={styles.chatEOS}>
+                        <RiSparklingLine size={9} style={{ flexShrink: 0, marginTop: 2, color: "var(--accent)" }} />
+                        <span className={styles.chatEOSText}>{h.reply}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {aiThinking && (
+                <div className={styles.chatThinking}>
+                  <span className={styles.thinkDot} /><span className={styles.thinkDot} /><span className={styles.thinkDot} />
+                </div>
+              )}
+
+              <div className={styles.chatInputRow}>
+                <input className={styles.chatInput} placeholder="Ask anything about your wiki…" value={aiInput}
+                  onChange={e => setAiInput(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && void submitAiChat(aiInput)} />
+                <button className={styles.chatSendBtn} onClick={() => void submitAiChat(aiInput)} disabled={!aiInput.trim() || aiThinking}>
+                  <RiSendPlaneLine size={13} />
+                </button>
+              </div>
+            </div>
+          )}
+        </SideDrawer>
+      )}
 
       {/* ── Template Modal ── */}
       {showTemplates && (

@@ -1,4 +1,4 @@
-import { DUMMY_SUMMARY, DUMMY_TICKETS, DUMMY_FILTERS, DUMMY_SPRINTS } from '@/utils/dummyData'
+import { DUMMY_SUMMARY, DUMMY_TICKETS, DUMMY_FILTERS, DUMMY_SPRINTS, DUMMY_ORG_MEMBERS } from '@/utils/dummyData'
 import { MOCK_PROJECTS } from '@/features/spaces/spacesData'
 import type { FilterState, TicketCreate, Goal, GoalsResponse } from '@/types'
 import type { Project } from '@/features/spaces/spacesData'
@@ -406,6 +406,11 @@ export function enableMocks() {
         "Key result #2 is blocked by an external dependency. Escalate to stakeholder by EOD to stay on track.",
       ]
       return insights[Math.floor(Math.random() * insights.length)]
+    },
+
+    fetchOrgMembers: async () => {
+      await delay(300)
+      return DUMMY_ORG_MEMBERS
     },
   }
   console.info('[EAP] Mock API enabled — using dummy data')
