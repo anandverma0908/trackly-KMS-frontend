@@ -1,6 +1,6 @@
 /* ── Root ──────────────────────────────────────────────────────────────────── */
 .root {
-  padding: 20px 24px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 18px;

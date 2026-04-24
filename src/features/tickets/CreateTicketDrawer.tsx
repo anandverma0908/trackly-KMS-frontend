@@ -154,6 +154,18 @@ interface RoutingSuggestion {
   reason: string;
 }
 
+function extractJSON(raw: string): Record<string, string> | null {
+  if (!raw) return null;
+  // Strip markdown code fences
+  const clean = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  // Try direct parse first
+  try { return JSON.parse(clean); } catch {}
+  // Extract outermost JSON object
+  const m = clean.match(/\{[\s\S]*\}/);
+  if (m) { try { return JSON.parse(m[0]); } catch {} }
+  return null;
+}
+
 function uniqueValues(values: Array<string | undefined | null>): string[] {
   return Array.from(new Set(values.map((value) => value?.trim()).filter(Boolean) as string[]));
 }
@@ -807,22 +819,24 @@ export default function CreateTicketDrawer({
     }
     setEosFormLoading(true);
     try {
-      const prompt = `You are EOS, an expert at writing clear engineering tickets.
-
+      const prompt = `Improve this engineering ticket.
 Current title: "${form.title}"
 Current description: "${form.description}"
+Return ONLY valid JSON: {"title": "improved title", "description": "improved description"}`;
 
-Improve both the title and description. Make the title concise, specific, and descriptive. Make the description structured and professional using standard ticket format.
-
-Return ONLY valid JSON, no prose: {"title": "improved title", "description": "improved description"}`;
-
-      const raw = await novaGenerate(prompt, undefined, 0.3);
-      const m = raw.match(/\{[\s\S]*\}/);
-      if (m) {
-        const parsed = JSON.parse(m[0]);
+      const raw = await novaGenerate(
+        prompt,
+        "You are EOS, an expert at writing clear engineering tickets. Return ONLY a valid JSON object with keys: title, description. No prose, no markdown fences, no explanation.",
+        0.2,
+      );
+      console.log("[EOS Form] raw response:", JSON.stringify(raw));
+      const parsed = extractJSON(raw);
+      if (parsed?.title || parsed?.description) {
         if (parsed.title) set("title", parsed.title);
         if (parsed.description) set("description", parsed.description);
         toast.success("EOS improved the form");
+      } else {
+        toast.error("EOS couldn't parse the response — try again");
       }
     } catch {
       toast.error("EOS form enhancement failed");

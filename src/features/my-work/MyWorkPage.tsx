@@ -169,13 +169,6 @@ export default function MyWorkPage() {
         <AmbientAwarenessWidget ambientEvents={ambientEvents} />
       </div>
 
-      {/* ── Delivery Forecast ── */}
-      <div className={`${styles.deliveryRow} fade-up-3`}>
-        <TimeEnergyWidget energy={timeEnergy} loading={loading} />
-        <NovaDeliveryForecast risk={sprintRisk} />
-        <NovaKnowledgeGaps gaps={knowledgeGaps} loading={loadingGaps} />
-      </div>
-
       {/* ── Gen 2: Proactive Intelligence ── */}
       <Gen2ProactiveSection
         aiTickets={aiTickets}
@@ -195,6 +188,12 @@ export default function MyWorkPage() {
       />
 
       {/* ── Knowledge Gaps ── */}
+      {/* ── Delivery Forecast ── */}
+      <div className={`${styles.deliveryRow} fade-up-3`}>
+        <TimeEnergyWidget energy={timeEnergy} loading={loading} />
+        <NovaDeliveryForecast risk={sprintRisk} />
+        <NovaKnowledgeGaps gaps={knowledgeGaps} loading={loadingGaps} />
+      </div>
 
       {/* ── Quick Log Time Modal ── */}
       {logTimeTicket && (

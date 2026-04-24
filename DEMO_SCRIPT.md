@@ -87,15 +87,35 @@
 
 ---
 
-### 📋 BACKLOG TAB (30 seconds)
+### 📋 BACKLOG TAB (1 minute)
 
 *[Click the **Backlog** tab. Point to a sprint's health ring.]*
 
-> "The Backlog — sprints with health rings, stale ticket detection so nothing rots in the dark, quick-create for instant capture. But here's the button that changes everything..."
+> "The Backlog — sprints with health rings, stale ticket detection so nothing rots in the dark, quick-create for instant capture. But before I show you the big magic button, let me show you what happens when you actually create a ticket in Trackly. Because this is where EOS gets really smart."
 
-*[Click the **EOS Plan Sprint** button. Let the drawer load.]*
+*[Click **Create Issue** in a sprint. The Create Ticket Drawer opens.]*
 
-> "Watch this. I click 'EOS Plan Sprint' — and EOS drafts an entire sprint for me. From the backlog. Respecting capacity. Respecting dependencies. Respecting priority. Look — it picked 8 tickets, 34 points total. And it tells me *why* each one: 'TRKLY-301 included because it unblocks auth flow.' 'TRKLY-284 included because assignee has capacity and matching skillset.' You don't plan sprints anymore. You *approve* what EOS designed."
+> "I click Create Issue. I type: 'Fix login redirect on mobile Safari after OAuth callback.' And before I even finish typing... watch what EOS does."
+
+*[Type the title. Pause as the AI analysis runs. Point to each suggestion as it appears.]*
+
+> "First — **Duplicacy Detection**. EOS searched every existing ticket and found TRKLY-284: 'OAuth callback redirect broken on iOS.' It asks me: 'Is this a duplicate?' Because how many times has your team discovered a bug, spent two days on it, only to realize someone already fixed it in sprint 3? EOS stops that before it starts."
+
+*[Point to the story point estimate.]*
+
+> "Next — **Story Point Suggestion**. EOS estimates 3 points. Confidence: 72%. And it tells me why: 'Based on ticket type Bug, complexity keywords — OAuth, mobile, redirect — and similar historical tickets.' It's not pulling a number out of thin air. It's looking at how long OAuth bugs actually took your team in the past."
+
+*[Point to the AI Assignee suggestion.]*
+
+> "And here's my favorite — **AI Assignee**. EOS suggests... **Anoop Rai**. Why? Because Anoop's role is frontend engineer. Because he's handled OAuth tickets before. Because his current workload shows he has capacity this sprint. Not round-robin. Not whoever's name comes first alphabetically. The *right* human for the job."
+
+*[Close the drawer without saving.]*
+
+> "I didn't even hit save yet. And EOS already told me: is this a duplicate, how complex is it, and who should own it. That used to take a senior engineer 15 minutes of digging. Now? Three seconds."
+
+*[Now click the **EOS Plan Sprint** button. Let the drawer load.]*
+
+> "And here's the big magic. I click 'EOS Plan Sprint' — and EOS drafts an entire sprint for me. From the backlog. Respecting capacity, dependencies, and priority. Look — it picked 8 tickets, 34 points total. And it tells me *why* each one: 'TRKLY-301 included because it unblocks auth flow.' 'TRKLY-284 included because assignee has capacity and matching skillset.' You don't plan sprints anymore. You *approve* what EOS designed."
 
 *[Close the drawer. Move on.]*
 
@@ -238,7 +258,7 @@
 *[Count on fingers.]*
 
 > "Engineers waste 47 minutes every morning figuring out what to do. MyWork gives it back — with an AI briefing that knows your priorities better than you do.  
-> Teams burn sprints because blockers hide in silos. Spaces surfaces them — with health scores, stale detection, and EOS intelligence that plans your sprints for you.  
+> Teams burn sprints because blockers hide in silos. Spaces surfaces them — with health scores, stale detection, AI assignee like Anoop Rai, and EOS intelligence that plans your sprints for you.  
 > Knowledge rots in docs nobody updates. Wiki keeps it alive — with freshness monitoring, conflict detection, and automatic structuring of meeting notes.  
 > Goals are set in week one and forgotten by week four. Trackly Goals stay alive — with real-time progress from linked tickets, key results that breathe, and Nova insights that warn you before you miss.  
 > Standups steal 30 minutes from 15 people every day. Trackly makes it 2 minutes — with auto-population and AI generation.  
@@ -277,13 +297,13 @@
 | Hook | 0:30 | 0:30 |
 | My Work | 2:00 | 2:30 |
 | Spaces — Summary | 0:15 | 2:45 |
-| Spaces — Backlog + EOS Plan Sprint | 0:30 | 3:15 |
-| Spaces — EOS Tab | 1:00 | 4:15 |
-| Spaces — Decisions + Processes | 0:30 | 4:45 |
-| Wiki | 1:15 | 6:00 |
-| Goals | 1:15 | 7:15 |
-| Standup | 1:00 | 8:15 |
-| Closing | 1:00 | **9:15** |
+| Spaces — Backlog + Ticket AI + EOS Plan Sprint | 1:00 | 3:45 |
+| Spaces — EOS Tab | 1:00 | 4:45 |
+| Spaces — Decisions + Processes | 0:30 | 5:15 |
+| Wiki | 1:15 | 6:30 |
+| Goals | 1:15 | 7:45 |
+| Standup | 1:00 | 8:45 |
+| Closing | 1:00 | **9:45** |
 
 > Buffer built in for transitions and pauses. Target: **~10 minutes**.
 
@@ -304,7 +324,7 @@
 | My Work | My Work page | Let EOS brief type. Scroll through insights, expand a ticket in queue, show focus block, scroll to forecast, show knowledge gaps. |
 | Spaces grid | Spaces page | Let grid load, click a space with active sprint. |
 | Summary | Space detail → Summary tab | Brief sweep across: brief banner, health score, signal cards, charts, member list. 15 seconds. |
-| Backlog | Space detail → Backlog tab | Point to sprint ring, click EOS Plan Sprint, let drawer load, close it. |
+| Backlog | Space detail → Backlog tab | Click **Create Issue**, type ticket title, show **Duplicacy** + **Points** + **Assignee (Anoop Rai)** suggestions, close. Then click **EOS Plan Sprint**, let drawer load, close it. |
 | EOS | Space detail → EOS tab | Show 9 cards grid. Click Retro or Risk Assessment. Let drawer load. Close it. |
 | Decisions | Space detail → Decisions tab | Show list, point to statuses. 10 seconds. |
 | Processes | Space detail → Processes tab | Show list, point to categories. 10 seconds. |

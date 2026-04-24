@@ -189,32 +189,10 @@ export default function SummaryTab({ project }: { project: Project }) {
         </div>
       )}
 
-      {/* ── Health Score + 3 Insight Cards ── */}
-      <div className={styles.aiRow}>
-        {/* Health score */}
-        <div className={styles.healthCard}>
-          <div className={styles.healthCardHeader}>
-            <span className={styles.cardLabel}>Project Health</span>
-            <EOSBadge />
-          </div>
-          <div className={styles.healthScoreBig} style={{ color: healthColor }}>{healthScore}</div>
-          <div className={styles.healthScoreSub}>/100</div>
-          <div className={styles.healthProbBar}>
-            <div className={styles.healthProbFill} style={{ width: `${healthScore}%`, background: healthColor }} />
-          </div>
-          <div className={styles.healthDims}>
-            {radarData.map((d) => (
-              <div key={d.metric} className={styles.healthDimRow}>
-                <span className={styles.healthDimLabel}>{d.metric}</span>
-                <div className={styles.healthDimBar}>
-                  <div className={styles.healthDimFill} style={{ width: `${d.score}%`, background: d.score >= 70 ? "var(--green)" : d.score >= 50 ? "var(--amber)" : "var(--red)" }} />
-                </div>
-                <span className={styles.healthDimVal}>{d.score}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* ── Insight Panel: 3+3 cards left, Health spanning both rows on right ── */}
+      <div className={styles.insightPanel}>
 
+        {/* Row 1 — EOS signals */}
         {/* Velocity signal */}
         <div className={styles.insightCard}>
           <div className={styles.insightCardHeader}>
@@ -282,12 +260,33 @@ export default function SummaryTab({ project }: { project: Project }) {
             <RiRefreshLine size={12} /> Refresh
           </button>
         </div>
-      </div>
 
-      {/* ── Metrics Row: trend + delivery forecast + cross-project comparison ── */}
-      <div className={styles.metricsRow}>
+        {/* Health card — spans both rows on the right */}
+        <div className={styles.healthCard}>
+          <div className={styles.healthCardHeader}>
+            <span className={styles.cardLabel}>Project Health</span>
+            <EOSBadge />
+          </div>
+          <div className={styles.healthScoreBig} style={{ color: healthColor }}>{healthScore}</div>
+          <div className={styles.healthScoreSub}>/100</div>
+          <div className={styles.healthProbBar}>
+            <div className={styles.healthProbFill} style={{ width: `${healthScore}%`, background: healthColor }} />
+          </div>
+          <div className={styles.healthDims}>
+            {radarData.map((d) => (
+              <div key={d.metric} className={styles.healthDimRow}>
+                <span className={styles.healthDimLabel}>{d.metric}</span>
+                <div className={styles.healthDimBar}>
+                  <div className={styles.healthDimFill} style={{ width: `${d.score}%`, background: d.score >= 70 ? "var(--green)" : d.score >= 50 ? "var(--amber)" : "var(--red)" }} />
+                </div>
+                <span className={styles.healthDimVal}>{d.score}</span>
+              </div>
+            ))}
+          </div>
+        </div>
 
-        {/* Health trend */}
+        {/* Row 2 — Delivery metrics */}
+        {/* Delivery trend */}
         <div className={styles.metricCard}>
           <div className={styles.metricCardHeader}>
             <span className={styles.cardLabel}>Delivery Trend</span>
@@ -366,7 +365,9 @@ export default function SummaryTab({ project }: { project: Project }) {
       </div>
 
       {/* ── KPI Pills ── */}
-      <SummaryKPIStrip kpis={kpis} allTasksCount={allTasks.length} sprintsCount={project.sprints.length} />
+      <div className={styles.kpiRow}>
+        <SummaryKPIStrip kpis={kpis} allTasksCount={allTasks.length} sprintsCount={project.sprints.length} />
+      </div>
 
       {/* ── Charts row: Activity + Workload ── */}
       <div className={styles.chartsRow}>
