@@ -298,7 +298,7 @@ type BriefChip = {
 
 function EosAgentBrief({
   text,
-  chips,
+  chips: _chips,
   loading,
 }: {
   text: string;
@@ -319,13 +319,6 @@ function EosAgentBrief({
     }, 16);
     return () => clearInterval(interval);
   }, [text, loading]);
-
-  const chipColor: Record<BriefChip["type"], string> = {
-    critical: "var(--red)",
-    warning: "var(--amber)",
-    info: "var(--accent)",
-    action: "var(--green)",
-  };
 
   if (loading) {
     return (

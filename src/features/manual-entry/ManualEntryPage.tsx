@@ -8,14 +8,13 @@ import StepParsing from "./StepParsing";
 import StepPreview from "./StepPreview";
 import StepConfirmed from "./StepConfirmed";
 import MyTimesheets from "./MyTimesheets";
+import { WeeklyTab, ManualTab } from "@/features/timetrack/WeeklyTimeGrid";
 import styles from "./ManualEntryPage.module.css";
 import { BsFillCalendar2EventFill } from "react-icons/bs";
 import { PiStarFourFill } from "react-icons/pi";
+import { RiTableLine } from "react-icons/ri";
 
-const STEP_LABELS = ["Input", "Parsing", "Preview", "Confirmed"];
-const STEP_IDS = ["input", "parsing", "preview", "confirmed"] as const;
-
-type Tab = "entry" | "timesheets";
+type Tab = "entry" | "timesheets" | "weekly";
 
 export default function ManualEntryPage() {
   const [activeTab, setActiveTab] = useState<Tab>("entry");
@@ -49,8 +48,6 @@ export default function ManualEntryPage() {
     reset,
   } = useManualEntry(pods, clients);
 
-  const stepIndex = STEP_IDS.indexOf(step);
-
   return (
     <div className={styles.page}>
       {/* ── Page header ── */}
@@ -74,7 +71,14 @@ export default function ManualEntryPage() {
             onClick={() => setActiveTab("timesheets")}
           >
             <BsFillCalendar2EventFill />
-            {"Timesheets"}
+            Timesheets
+          </button>
+          <button
+            className={`${styles.tab} ${activeTab === "weekly" ? styles.tabActive : ""}`}
+            onClick={() => setActiveTab("weekly")}
+          >
+            <RiTableLine />
+            Ticket Time
           </button>
         </div>
       </div>
@@ -84,40 +88,7 @@ export default function ManualEntryPage() {
       {/* ── Tab: AI Entry ── */}
       {activeTab === "entry" && (
         <>
-          {/* Progress stepper */}
-          <div className={`${styles.stepper} fade-up-1`}>
-            {STEP_LABELS.map((label, i) => {
-              const isDone = i < stepIndex;
-              const isActive = i === stepIndex;
-              return (
-                <div key={label} className={styles.stepperItem}>
-                  <div
-                    className={`${styles.stepperDot}
-                    ${isDone ? styles.stepperDotDone : ""}
-                    ${isActive ? styles.stepperDotActive : ""}
-                  `}
-                  >
-                    {isDone ? "✓" : i + 1}
-                  </div>
-                  <div
-                    className={`${styles.stepperLabel}
-                    ${isActive ? styles.stepperLabelActive : ""}
-                    ${isDone ? styles.stepperLabelDone : ""}
-                  `}
-                  >
-                    {label}
-                  </div>
-                  {i < STEP_LABELS.length - 1 && (
-                    <div
-                      className={`${styles.stepperLine} ${isDone ? styles.stepperLineDone : ""}`}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="fade-up-2">
+          <div className="fade-up-1">
             {step === "input" && (
               <StepInput
                 inputText={inputText}
@@ -164,6 +135,18 @@ export default function ManualEntryPage() {
       {activeTab === "timesheets" && (
         <div className="fade-up-1">
           <MyTimesheets />
+        </div>
+      )}
+
+      {/* ── Tab: Ticket Time ── */}
+      {activeTab === "weekly" && (
+        <div className={`${styles.ticketTimeLayout} fade-up-1`}>
+          <div className={styles.ticketGridPanel}>
+            <WeeklyTab />
+          </div>
+          <div className={styles.ticketFormPanel}>
+            <ManualTab />
+          </div>
         </div>
       )}
     </div>

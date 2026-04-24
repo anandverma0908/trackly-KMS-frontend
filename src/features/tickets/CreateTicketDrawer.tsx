@@ -31,6 +31,7 @@ import SideDrawer from "@/components/ui/SideDrawer";
 import { formatDate } from "@/utils/formatters";
 import type {
   TicketCreate,
+  NLAnalysisResult,
   // (unused types removed)
   TicketActivity,
 } from "@/types";
@@ -139,6 +140,110 @@ const LINK_TYPES = [
 ];
 const STORY_POINTS = [1, 2, 3, 5, 8, 13, 21];
 
+interface StoryEstimate {
+  min: number;
+  max: number;
+  confidence: number;
+  basedOn: number;
+  reasoning?: string;
+}
+
+interface RoutingSuggestion {
+  assignee: string;
+  reason: string;
+}
+
+function uniqueValues(values: Array<string | undefined | null>): string[] {
+  return Array.from(new Set(values.map((value) => value?.trim()).filter(Boolean) as string[]));
+}
+
+function nearestStoryPoint(value: number): number {
+  return STORY_POINTS.reduce((closest, point) =>
+    Math.abs(point - value) < Math.abs(closest - value) ? point : closest,
+  STORY_POINTS[0]);
+}
+
+function buildStoryEstimateFromAnalysis(result: NLAnalysisResult): StoryEstimate | null {
+  if (!result.story_points) return null;
+  const suggested = nearestStoryPoint(result.story_points);
+  const index = STORY_POINTS.indexOf(suggested);
+  return {
+    min: STORY_POINTS[Math.max(0, index - 1)],
+    max: suggested,
+    confidence: Math.max(0.55, result.confidence ?? 0.72),
+    basedOn: result.duplicates?.length ?? 0,
+    reasoning: "Based on EOS ticket analysis of the title, description, and similar tickets.",
+  };
+}
+
+function buildHeuristicStoryEstimate(form: Pick<FormState, "title" | "description" | "issue_type" | "priority">): StoryEstimate | null {
+  const text = `${form.title} ${form.description}`.toLowerCase();
+  if (text.trim().length < 12) return null;
+
+  let index = Math.max(0, STORY_POINTS.indexOf(
+    form.issue_type === "Epic" ? 13 :
+    form.issue_type === "Story" ? 3 :
+    form.issue_type === "Bug" ? 2 :
+    form.issue_type === "Subtask" ? 1 : 2,
+  ));
+
+  const complexitySignals = [
+    "migration", "refactor", "multi-step", "multi step", "integration", "permissions",
+    "authentication", "authorization", "dashboard", "workflow", "analytics", "backend",
+    "frontend", "schema", "incident", "performance", "regression", "api",
+  ];
+  const signalHits = complexitySignals.filter((signal) => text.includes(signal)).length;
+  index = Math.min(STORY_POINTS.length - 1, index + Math.min(2, Math.floor(signalHits / 2)));
+
+  if (form.priority === "Highest") index = Math.min(STORY_POINTS.length - 1, index + 1);
+  if (text.length < 60) index = Math.max(0, index - 1);
+
+  const point = STORY_POINTS[index];
+  return {
+    min: STORY_POINTS[Math.max(0, index - 1)],
+    max: point,
+    confidence: 0.58,
+    basedOn: signalHits,
+    reasoning: "Estimated from ticket type, complexity keywords, and the amount of implementation detail provided.",
+  };
+}
+
+function buildRoutingSuggestionFromAnalysis(result: NLAnalysisResult, candidates: string[]): RoutingSuggestion | null {
+  if (!result.assignee) return null;
+  const matched = candidates.find((candidate) => candidate === result.assignee);
+  if (!matched) return null;
+  return {
+    assignee: matched,
+    reason: "EOS matched this ticket to the available team list from the ticket analysis.",
+  };
+}
+
+function buildRoleAwareRoutingSuggestion(
+  form: Pick<FormState, "title" | "description" | "issue_type">,
+  members: ProjectMember[],
+): RoutingSuggestion | null {
+  if (members.length === 0) return null;
+  const text = `${form.title} ${form.description}`.toLowerCase();
+  if (text.trim().length < 16) return null;
+
+  const ROLE_KEYWORDS: Array<{ match: RegExp; role: RegExp; reason: string }> = [
+    { match: /(ui|ux|screen|page|drawer|modal|react|frontend|layout|component|dropdown|form)/i, role: /(frontend|ui|ux)/i, reason: "The ticket reads like frontend/UI work." },
+    { match: /(api|backend|service|database|sql|query|auth|permission|endpoint|server)/i, role: /(backend|api|server|platform)/i, reason: "The ticket points to backend or service-layer work." },
+    { match: /(deploy|pipeline|infra|incident|production|sre|devops|monitor|ops)/i, role: /(devops|sre|platform)/i, reason: "The issue looks operational and best suited for platform/DevOps ownership." },
+    { match: /(test|qa|regression|repro|verification)/i, role: /(qa|quality)/i, reason: "The issue centers on validation and regression coverage." },
+  ];
+
+  for (const rule of ROLE_KEYWORDS) {
+    if (!rule.match.test(text)) continue;
+    const member = members.find((candidate) => rule.role.test(candidate.role));
+    if (member) {
+      return { assignee: member.name, reason: rule.reason };
+    }
+  }
+
+  return null;
+}
+
 /* ── Types ── */
 interface FormState extends TicketCreate {
   status: string;
@@ -208,21 +313,19 @@ export default function CreateTicketDrawer({
   /* Live duplicate detection + story estimation */
   const [liveDupes, setLiveDupes] = useState<{ key: string; summary: string; similarity: number; ai?: boolean }[]>([]);
   const [aiDupeScanning, setAiDupeScanning] = useState(false);
-  const [storyEstimate, setStoryEstimate] = useState<{ min: number; max: number; confidence: number; basedOn: number; reasoning?: string } | null>(null);
+  const [storyEstimate, setStoryEstimate] = useState<StoryEstimate | null>(null);
   const [storyAiLoading, setStoryAiLoading] = useState(false);
   const aiDupeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* Intelligent routing */
-  const [routingSuggestion, setRoutingSuggestion] = useState<{ assignee: string; reason: string } | null>(null);
+  const [routingSuggestion, setRoutingSuggestion] = useState<RoutingSuggestion | null>(null);
   const [routingLoading, setRoutingLoading] = useState(false);
   const [routingDismissed, setRoutingDismissed] = useState(false);
-  const routingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* Code-Aware Context */
   const [codeCtxOpen, setCodeCtxOpen] = useState(true);
   const [codeCtx, setCodeCtx] = useState<CodeContextResult | null>(null);
   const [codeCtxLoading, setCodeCtxLoading] = useState(false);
-  const storyAiRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* Tabs */
   const [tab, setTab] = useState(0);
@@ -279,6 +382,11 @@ export default function CreateTicketDrawer({
   const codeCtxTitle = form.title.trim();
   const codeCtxDescription = form.description.trim();
   const canFetchCodeCtx = isEdit && !!ticketKey && (!!codeCtxTitle || !!codeCtxDescription);
+  const { data: detailedTicket } = useQuery({
+    queryKey: ["ticket", ticketKey],
+    queryFn: () => fetchTicket(ticketKey!),
+    enabled: isEdit,
+  });
 
   // Populate form exactly once per open-session
   useEffect(() => {
@@ -290,27 +398,29 @@ export default function CreateTicketDrawer({
     }
     if (hasInitialized.current) return;
 
-    if (isEdit && initialData) {
+    const hydratedReporter = initialData?.reporter || detailedTicket?.reporter || (isEdit ? "" : user?.name || "");
+
+    if (isEdit && (initialData || detailedTicket)) {
       hasInitialized.current = true;
       setForm({
-        title: initialData.title || initialData.description?.slice(0, 80) || "",
-        description: initialData.description || "",
-        issue_type: initialData.issue_type || "Task",
-        priority: initialData.priority || "Medium",
-        status: initialData.status || defaultStatus,
-        reporter: initialData.reporter || user?.name || "",
-        epic: initialData.epic || "",
-        parent: initialData.parent || "",
-        originalEst: initialData.originalEst || "",
-        timeSpent: initialData.timeSpent || "",
-        remaining: initialData.remaining || "",
+        title: initialData?.title || detailedTicket?.summary || initialData?.description?.slice(0, 80) || "",
+        description: initialData?.description || detailedTicket?.description || "",
+        issue_type: initialData?.issue_type || detailedTicket?.issue_type || "Task",
+        priority: initialData?.priority || detailedTicket?.priority || "Medium",
+        status: initialData?.status || detailedTicket?.status || defaultStatus,
+        reporter: hydratedReporter,
+        epic: initialData?.epic || "",
+        parent: initialData?.parent || "",
+        originalEst: initialData?.originalEst || ((detailedTicket as any)?.original_estimate_hours ? String((detailedTicket as any).original_estimate_hours) : ""),
+        timeSpent: initialData?.timeSpent || (detailedTicket?.hours_spent ? String(detailedTicket.hours_spent) : ""),
+        remaining: initialData?.remaining || ((detailedTicket as any)?.remaining_estimate_hours ? String((detailedTicket as any).remaining_estimate_hours) : ""),
         attachments: [],
-        labels: initialData.labels || [],
-        assignee: initialData.assignee,
-        pod: initialData.pod ?? defaultPod,
-        client: initialData.client,
-        story_points: initialData.story_points,
-        due_date: initialData.due_date,
+        labels: initialData?.labels || detailedTicket?.labels || [],
+        assignee: initialData?.assignee ?? detailedTicket?.assignee,
+        pod: initialData?.pod ?? detailedTicket?.pod ?? defaultPod,
+        client: initialData?.client ?? detailedTicket?.client,
+        story_points: initialData?.story_points ?? detailedTicket?.story_points,
+        due_date: initialData?.due_date ?? detailedTicket?.due_date,
       });
       setTab(0);
       setLabelInput("");
@@ -361,94 +471,86 @@ export default function CreateTicketDrawer({
       setCodeCtx(null);
       setCodeCtxLoading(false);
     }
-  }, [open, defaultStatus, isEdit, initialData]);
+  }, [open, defaultStatus, isEdit, initialData, detailedTicket, defaultPod, user?.name]);
 
   const set = (k: keyof FormState, v: unknown) =>
     setForm((p) => ({ ...p, [k]: v }));
 
-  /* AI-only duplicate detection */
+  /* Reset AI suggestion state when the drawer session changes */
   useEffect(() => {
-    if (isEdit || form.title.length < 4) {
+    if (!open) {
       setLiveDupes([]);
       setAiDupeScanning(false);
+      setStoryEstimate(null);
+      setStoryAiLoading(false);
+      setRoutingSuggestion(null);
+      setRoutingLoading(false);
+      return;
+    }
+    setLiveDupes([]);
+    setAiDupeScanning(false);
+    setStoryEstimate(null);
+    setStoryAiLoading(false);
+    setRoutingSuggestion(null);
+    setRoutingLoading(false);
+  }, [open, ticketKey]);
+
+  /* EOS analysis for duplicates, story points, and assignee suggestions */
+  useEffect(() => {
+    const availableUsers = uniqueValues([
+      ...members.map((member) => member.name),
+      form.assignee,
+      detailedTicket?.assignee,
+    ]);
+
+    if (isEdit || form.title.length < 4) {
+      setLiveDupes([]);
+      setStoryEstimate(null);
+      setRoutingSuggestion(null);
+      setAiDupeScanning(false);
+      setStoryAiLoading(false);
+      setRoutingLoading(false);
       if (aiDupeRef.current) clearTimeout(aiDupeRef.current);
       return;
     }
     setAiDupeScanning(true);
+    setStoryAiLoading(true);
+    setRoutingLoading(availableUsers.length > 0 && !routingDismissed);
     if (aiDupeRef.current) clearTimeout(aiDupeRef.current);
     aiDupeRef.current = setTimeout(async () => {
       try {
-        const query = [form.title, form.description].filter(Boolean).join("\n");
+        const query = [
+          `Title: ${form.title}`,
+          form.description ? `Description: ${form.description}` : "",
+          `Type: ${form.issue_type}`,
+          `Priority: ${form.priority}`,
+          availableUsers.length > 0 ? `Available assignees: ${availableUsers.join(", ")}` : "",
+        ].filter(Boolean).join("\n");
         const r = await analyzeTicketNL(query);
         setLiveDupes(r.duplicates?.length ? r.duplicates.map((d) => ({ ...d, ai: true })) : []);
+        if (!form.story_points) {
+          setStoryEstimate(buildStoryEstimateFromAnalysis(r) ?? buildHeuristicStoryEstimate(form));
+        }
+        if (!form.assignee && !routingDismissed) {
+          setRoutingSuggestion(
+            buildRoutingSuggestionFromAnalysis(r, availableUsers)
+              ?? buildRoleAwareRoutingSuggestion(form, members),
+          );
+        }
       } catch {
         setLiveDupes([]);
+        if (!form.story_points) setStoryEstimate(buildHeuristicStoryEstimate(form));
+        if (!form.assignee && !routingDismissed) {
+          setRoutingSuggestion(buildRoleAwareRoutingSuggestion(form, members));
+        }
       } finally {
         setAiDupeScanning(false);
+        setStoryAiLoading(false);
+        setRoutingLoading(false);
       }
     }, 600);
     return () => { if (aiDupeRef.current) clearTimeout(aiDupeRef.current); };
-  }, [form.title, form.description, isEdit]);
-
-  /* AI story point estimation */
-  useEffect(() => {
-    if (isEdit || form.story_points || form.title.length < 8) {
-      if (storyAiRef.current) clearTimeout(storyAiRef.current);
-      return;
-    }
-    if (storyAiRef.current) clearTimeout(storyAiRef.current);
-    storyAiRef.current = setTimeout(async () => {
-      setStoryAiLoading(true);
-      try {
-        const res = await novaQuery(
-          `Estimate Fibonacci story points for this ${form.issue_type} ticket: "${form.title}".${form.description ? ` Description: ${form.description.slice(0, 200)}` : ""}
-Valid values: 1, 2, 3, 5, 8, 13. Return JSON only: {"min": number, "max": number, "confidence": 0.0-1.0, "reasoning": string}`,
-        );
-        const m = res.answer.match(/\{[\s\S]*?\}/);
-        if (m) {
-          const p = JSON.parse(m[0]);
-          if (p.min && p.max)
-            setStoryEstimate({ min: p.min, max: p.max, confidence: p.confidence ?? 0.8, basedOn: 0, reasoning: p.reasoning });
-        }
-      } catch { /* silently fail */ } finally {
-        setStoryAiLoading(false);
-      }
-    }, 1200);
-    return () => { if (storyAiRef.current) clearTimeout(storyAiRef.current); };
-  }, [form.title, form.description, form.issue_type, form.story_points, isEdit]);
-
-  /* Intelligent routing */
-  useEffect(() => {
-    const availableUsers = members.map((m) => m.name).filter(Boolean);
-    if (isEdit || form.title.length < 8 || availableUsers.length === 0 || routingDismissed) return;
-    if (routingRef.current) clearTimeout(routingRef.current);
-    routingRef.current = setTimeout(async () => {
-      setRoutingLoading(true);
-      try {
-        const memberList = availableUsers.slice(0, 20).join(", ");
-        const res = await novaQuery(
-          `You are an engineering team lead. Based on this ticket, suggest the single best assignee from the list and explain why in one short sentence.
-
-Ticket title: "${form.title}"
-${form.description ? `Description: ${form.description.slice(0, 300)}` : ""}
-Type: ${form.issue_type}, Priority: ${form.priority}
-Available team members: ${memberList}
-
-Return ONLY valid JSON, no prose: {"assignee": "Exact Name", "reason": "one sentence explanation"}`,
-        );
-        const m = res.answer.match(/\{[\s\S]*?\}/);
-        if (m) {
-          const parsed = JSON.parse(m[0]);
-          if (parsed.assignee && availableUsers.includes(parsed.assignee)) {
-            setRoutingSuggestion({ assignee: parsed.assignee, reason: parsed.reason });
-          }
-        }
-      } catch { /* silently ignore */ } finally {
-        setRoutingLoading(false);
-      }
-    }, 1400);
-    return () => { if (routingRef.current) clearTimeout(routingRef.current); };
-  }, [form.title, form.description, form.issue_type, form.priority, isEdit, members, routingDismissed]);
+  }, [form.title, form.description, form.issue_type, form.priority, form.story_points, form.assignee, isEdit, members, routingDismissed, detailedTicket?.assignee]);
 
   /* Reset routing when drawer opens/closes */
   useEffect(() => {
@@ -479,15 +581,17 @@ Return ONLY valid JSON, no prose: {"assignee": "Exact Name", "reason": "one sent
     queryKey: QUERY_KEYS.filters(),
     queryFn: fetchFilters,
   });
-  const users = filtersData?.users ?? members.map((m) => m.name);
-  const clients = filtersData?.clients?.length ? filtersData.clients : DEFAULT_CLIENTS;
-
-  /* Ticket detail (kept for potential future use — data fetched to warm cache) */
-  useQuery({
-    queryKey: ["ticket", ticketKey],
-    queryFn: () => fetchTicket(ticketKey!),
-    enabled: isEdit,
-  });
+  const users = uniqueValues([
+    ...(filtersData?.users ?? []),
+    ...members.map((m) => m.name),
+    form.assignee,
+    detailedTicket?.assignee,
+  ]);
+  const clients = uniqueValues([
+    ...(filtersData?.clients?.length ? filtersData.clients : DEFAULT_CLIENTS),
+    form.client,
+    detailedTicket?.client,
+  ]);
 
   /* Worklogs from API */
   const { data: serverWorklogs = [], refetch: refetchWorklogs } = useQuery({
@@ -741,6 +845,7 @@ Return ONLY valid JSON, no prose: {"title": "improved title", "description": "im
     const payload: TicketCreate = {
       title: form.title,
       description: form.description,
+      reporter: form.reporter || (!isEdit ? user?.name || undefined : undefined),
       issue_type: form.issue_type,
       priority: form.priority,
       status: form.status,
@@ -762,6 +867,7 @@ Return ONLY valid JSON, no prose: {"title": "improved title", "description": "im
   const typeConfig = ISSUE_TYPES.find((t) => t.value === form.issue_type) ?? ISSUE_TYPES[2];
   const priorityConfig = PRIORITIES.find((p) => p.value === form.priority) ?? PRIORITIES[2];
   const statusConfig = STATUSES.find((s) => s.value === form.status) ?? STATUSES[0];
+  const reporterDisplay = form.reporter || (!isEdit ? user?.name || "" : "");
 
   /* ── Footer ── */
   const footer = readOnly ? (
@@ -899,9 +1005,9 @@ Return ONLY valid JSON, no prose: {"title": "improved title", "description": "im
                     color: "var(--accent)", fontSize: 10, fontWeight: 700,
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                   }}>
-                    {(form.reporter || user?.name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                    {(reporterDisplay || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                   </div>
-                  {form.reporter || user?.name || "—"}
+                  {reporterDisplay || "—"}
                 </div>
               </div>
 

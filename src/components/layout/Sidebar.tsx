@@ -20,6 +20,7 @@ import {
   RiFocus3Line,
   RiTimeLine,
   RiArrowRightSLine,
+  RiBugLine,
 } from "react-icons/ri";
 
 interface SidebarProps {
@@ -221,6 +222,7 @@ export default function Sidebar({
           {/* ── INTELLIGENCE ── */}
           {sectionLabel("Intelligence")}
           {nav(<RiBrainLine size={18} />, "Nova", "/nova")}
+          {nav(<RiBugLine size={18} />, "Code Review", "/code-review")}
           {nav(<RiBarChartLine size={18} />, "Analytics", "/analytics")}
 
           {/* ── TIME ── */}

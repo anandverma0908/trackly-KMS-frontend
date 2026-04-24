@@ -611,7 +611,9 @@ export default function ActiveSprintsTab({
             <span className={styles.activeFilterChip}>My Tasks</span>
           )}
           {aiFilter && (
-            <span className={styles.activeFilterChip}>{aiFilter}</span>
+            <span className={styles.activeFilterChip}>
+              {AI_FILTERS.find((filter) => filter.id === aiFilter)?.label ?? aiFilter}
+            </span>
           )}
           {search && (
             <span className={styles.activeFilterChip}>"{search}"</span>

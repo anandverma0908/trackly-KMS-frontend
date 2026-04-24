@@ -39,7 +39,7 @@ type GridCell = string;
 type Grid = Record<string, Record<string, GridCell>>;
 
 /* ── Weekly tab ─────────────────────────────────────────────────────────── */
-function WeeklyTab() {
+export function WeeklyTab() {
   const qc = useQueryClient();
   const { user } = useAuthStore();
 
@@ -243,7 +243,7 @@ type ManualEntry = {
   note: string;
 };
 
-function ManualTab() {
+export function ManualTab() {
   const qc = useQueryClient();
   const { user } = useAuthStore();
 

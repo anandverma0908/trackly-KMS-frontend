@@ -13,12 +13,13 @@ import WikiPage from "@/features/wiki/WikiPage";
 import StandupPage from "@/features/standup/StandupPage";
 import AnalyticsPage from "@/features/analytics/AnalyticsPage";
 
-import WeeklyTimeGrid from "@/features/timetrack/WeeklyTimeGrid";
+import ManualEntryPage from "@/features/manual-entry/ManualEntryPage";
 import SpacesPage from "@/features/spaces/SpacesPage";
 import ProjectDetailPage from "@/features/spaces/ProjectDetailPage";
 
 import MyWorkPage from "@/features/my-work/MyWorkPage";
 import NovaPage from "@/features/nova/NovaPage";
+import CodeReviewPage from "@/features/code-review/CodeReviewPage";
 import DecisionsPage from "@/features/decisions/DecisionsPage";
 import ProcessesPage from "@/features/processes/ProcessesPage";
 import GoalsPage from "@/features/goals/GoalsPage";
@@ -125,12 +126,13 @@ function AnimatedRoutes() {
               <Route path="/export" element={<Navigate to="/settings" replace />} />
               <Route path="/manual-entry" element={<Navigate to="/timesheets/weekly" replace />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/timesheets/weekly" element={<WeeklyTimeGrid />} />
+              <Route path="/timesheets/weekly" element={<ManualEntryPage />} />
               <Route path="/admin/users" element={<Navigate to="/settings" replace />} />
               <Route path="/spaces" element={<SpacesPage />} />
               <Route path="/spaces/:projectId" element={<ProjectDetailPage />} />
               <Route path="/my-work" element={<MyWorkPage />} />
               <Route path="/nova" element={<NovaPage />} />
+              <Route path="/code-review" element={<CodeReviewPage />} />
               <Route path="/decisions" element={<DecisionsPage />} />
               <Route path="/processes" element={<ProcessesPage />} />
               <Route path="/goals" element={<GoalsPage />} />

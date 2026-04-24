@@ -2,16 +2,17 @@ import { useRef } from "react";
 import type { PersonRole } from "./types";
 import styles from "./ManualEntryPage.module.css";
 import { PiStarFourFill } from "react-icons/pi";
-import { RiArrowRightFill } from "react-icons/ri";
-import { TbKeyFilled } from "react-icons/tb";
-import { BsFillCalendar2EventFill } from "react-icons/bs";
-import { RiPriceTag3Fill } from "react-icons/ri";
+import { RiTimeLine, RiCalendarLine, RiPriceTag3Line } from "react-icons/ri";
 
 const SUGGESTIONS = [
   "Sprint planning 2h DPAI Colgate, then 4x 30min 1:1s with engineers",
   "Monday: stakeholder call Jockey 1.5h, PR reviews DevOps 1h, standup 15min",
-  "This week: 8h sprint ceremonies, 6h 1:1s DPAI, 3h interviews, 2h roadmap planning SAAS",
+  "This week: 8h sprint ceremonies, 6h 1:1s DPAI, 3h interviews, 2h roadmap",
 ];
+
+const PLACEHOLDER = `Describe your day or week naturally…
+
+"Monday had sprint planning 2h for DPAI Colgate, then 1:1s with 4 engineers 30min each, standup 15min. Tuesday stakeholder call Jockey 1.5h and reviewed PRs 1h DevOps."`;
 
 interface StepInputProps {
   inputText: string;
@@ -37,91 +38,85 @@ export default function StepInput({
   }
 
   return (
-    <div className={styles.inputStep}>
-      {/* Role selector */}
-      {/* <div className={styles.roleBar}>
-        <span className={styles.roleLabel}>Logging as:</span>
-        {ROLES.map((r) => (
-          <button
-            key={r}
-            className={`${styles.rolePill} ${selectedRole === r ? styles.rolePillActive : ""}`}
-            onClick={() => setRole(r)}
-          >
-            {r}
-          </button>
-        ))}
-        <div className={styles.whoPill}>
-          <div className={styles.whoAvatar}>
-            {personName
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .slice(0, 2)}
-          </div>
-          <span className={styles.whoName}>{personName}</span>
+    <div className={styles.aiEntry}>
+      {/* ── Header ── */}
+      <div className={styles.aiEntryHeader}>
+        <div className={styles.aiEntryIcon}>
+          <PiStarFourFill size={16} />
         </div>
-      </div> */}
+        <div className={styles.aiEntryHeaderText}>
+          <span className={styles.aiEntryTitle}>AI Time Parser</span>
+          <span className={styles.aiEntrySub}>
+            Describe your work — I'll extract every time entry
+          </span>
+        </div>
+        <div className={styles.aiEntryStatusRow}>
+          <span className={styles.aiEntryLiveDot} />
+          <span className={styles.aiEntryLiveLabel}>Ready</span>
+        </div>
+      </div>
 
-      {/* AI input box */}
-      <div className={styles.aiBox}>
-        <div className={styles.aiBoxTop}>
-          <div className={styles.aiBadge}>
-            <div className={styles.aiDot} />
-            AI Parse
-          </div>
+      {/* ── Textarea ── */}
+      <div className={styles.aiEntryBody}>
+        <div className={styles.aiEntryTextareaWrap}>
           <textarea
             ref={taRef}
-            className={styles.aiTextarea}
+            className={styles.aiEntryTextarea}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Describe your day or week naturally…\n\nE.g. "Monday had sprint planning 2h for DPAI Colgate, then 1:1s with 4 engineers 30min each, standup 15min. Tuesday stakeholder call Jockey 1.5h and reviewed PRs 1h DevOps."`}
-            rows={5}
+            placeholder={PLACEHOLDER}
+            rows={7}
+            spellCheck={false}
           />
         </div>
 
-        <div className={styles.aiBoxBottom}>
-          <span className={styles.aiEg}>Try:</span>
+        {/* ── Suggestions ── */}
+        <div className={styles.aiEntrySugs}>
+          <span className={styles.aiEntrySugsLabel}>Try:</span>
           {SUGGESTIONS.map((s) => (
             <button
               key={s}
-              className={styles.aiSug}
+              className={styles.aiEntrySug}
               onClick={() => {
                 setInputText(s);
                 taRef.current?.focus();
               }}
             >
-              {s.length > 50 ? s.slice(0, 50) + "…" : s}
+              {s}
             </button>
           ))}
-          <div className={styles.aiBottomRight}>
-            <span className={styles.aiHint}>⌘↵ to parse</span>
-            <button
-              className={styles.parseBtn}
-              onClick={onParse}
-              disabled={!inputText.trim()}
-            >
-              <PiStarFourFill />
-              Parse with AI
-              <RiArrowRightFill />
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Tips */}
-      <div className={styles.tips}>
-        <div className={styles.tip}>
-          <TbKeyFilled fontSize={14} />
-          Mention hours like "2h", "30min", "1.5 hours"
+      {/* ── Footer ── */}
+      <div className={styles.aiEntryFooter}>
+        <div className={styles.aiEntryTips}>
+          <span className={styles.aiEntryTip}>
+            <RiTimeLine size={12} />
+            "2h", "30min", "1.5 hours"
+          </span>
+          <span className={styles.aiEntryTipDot} />
+          <span className={styles.aiEntryTip}>
+            <RiCalendarLine size={12} />
+            "Monday", "yesterday"
+          </span>
+          <span className={styles.aiEntryTipDot} />
+          <span className={styles.aiEntryTip}>
+            <RiPriceTag3Line size={12} />
+            Mention PODs &amp; clients naturally
+          </span>
         </div>
-        <div className={styles.tip}>
-          <BsFillCalendar2EventFill fontSize={14} />
-          Include dates like "Monday", "Mar 14", "yesterday"
-        </div>
-        <div className={styles.tip}>
-          <RiPriceTag3Fill fontSize={14} />
-          Name PODs and clients as you normally would, AI will match them
+        <div className={styles.aiEntryActions}>
+          <kbd className={styles.aiEntryKbd}>⌘ ↵</kbd>
+          <button
+            className={styles.aiEntryParseBtn}
+            onClick={onParse}
+            disabled={!inputText.trim()}
+          >
+            <PiStarFourFill size={13} />
+            Parse with AI
+          </button>
         </div>
       </div>
     </div>

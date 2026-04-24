@@ -12,8 +12,10 @@ export interface Ticket {
   project_key:              string
   project_name:             string
   summary:                  string
+  description?:             string
   assignee:                 string
   assignee_email:           string
+  reporter?:                string
   status:                   string
   client:                   string
   pod:                      string
@@ -132,6 +134,7 @@ export interface ExportConfig {
 export interface TicketCreate {
   title:        string
   description:  string
+  reporter?:    string
   assignee?:    string
   pod?:         string
   client?:      string

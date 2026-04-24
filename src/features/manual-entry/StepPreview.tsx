@@ -2,13 +2,35 @@ import { useState } from "react";
 import type { ParsedEntry, ManualEntryType } from "./types";
 import { formatNumber } from "@/utils/formatters";
 import styles from "./ManualEntryPage.module.css";
+import { RiTimeLine, RiDeleteBin6Line, RiAddLine } from "react-icons/ri";
+import { PiStarFourFill } from "react-icons/pi";
 
 const ENTRY_TYPES: ManualEntryType[] = [
-  "Meeting",
-  "Bugs",
-  "Feature",
-  "Program Management",
+  "Meeting", "Bugs", "Feature", "Program Management",
+  "1:1", "Planning", "Review", "Interview", "Reporting", "Training",
 ];
+
+const TYPE_COLOR: Record<string, string> = {
+  Meeting: "var(--accent)",
+  Bugs: "var(--red)",
+  Feature: "var(--green)",
+  "1:1": "#a78bfa",
+  Planning: "var(--amber)",
+  Review: "#34d399",
+  Interview: "#f97316",
+  Reporting: "#06b6d4",
+  Training: "#ec4899",
+  "Program Management": "var(--accent)",
+};
+
+function fmtDate(d: string): string {
+  if (!d) return "";
+  try {
+    return new Date(d + "T12:00:00").toLocaleDateString("en-US", {
+      weekday: "long", month: "short", day: "numeric",
+    });
+  } catch { return d; }
+}
 
 interface StepPreviewProps {
   rows: ParsedEntry[];
@@ -16,11 +38,7 @@ interface StepPreviewProps {
   warnings: string[];
   pods: string[];
   clients: string[];
-  onUpdate: (
-    i: number,
-    field: keyof ParsedEntry,
-    val: string | number | null,
-  ) => void;
+  onUpdate: (i: number, field: keyof ParsedEntry, val: string | number | null) => void;
   onDelete: (i: number) => void;
   onAddRow: () => void;
   onConfirm: () => void;
@@ -28,50 +46,33 @@ interface StepPreviewProps {
 }
 
 export default function StepPreview({
-  rows,
-  totalHours,
-  warnings,
-  pods,
-  clients,
-  onUpdate,
-  onDelete,
-  onAddRow,
-  onConfirm,
-  onBack,
+  rows, totalHours, warnings, pods, clients,
+  onUpdate, onDelete, onAddRow, onConfirm, onBack,
 }: StepPreviewProps) {
-  const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [editCell, setEditCell] = useState<string | null>(null);
 
-  function cellKey(row: number, field: string) {
-    return `${row}-${field}`;
-  }
+  const ck = (i: number, f: string) => `${i}-${f}`;
 
-  function EditableText({
-    rowIdx,
-    field,
-    value,
-    className,
-  }: {
-    rowIdx: number;
-    field: keyof ParsedEntry;
-    value: string;
-    className?: string;
-  }) {
-    const key = cellKey(rowIdx, field as string);
-    const isEditing = editingCell === key;
-    if (isEditing) {
+  /* Group rows by date */
+  const dates = [...new Set(rows.map(r => r.date))].sort();
+  const byDate = dates.reduce<Record<string, { row: ParsedEntry; idx: number }[]>>((acc, d) => {
+    acc[d] = rows.map((r, i) => ({ row: r, idx: i })).filter(({ row }) => row.date === d);
+    return acc;
+  }, {});
+
+  function EditText({ i, field, value, mono }: { i: number; field: keyof ParsedEntry; value: string; mono?: boolean }) {
+    const key = ck(i, field as string);
+    if (editCell === key) {
       return (
         <input
-          className={styles.cellInput}
+          className={`${styles.pvInlineInput} ${mono ? styles.pvMono : ""}`}
           defaultValue={value}
           autoFocus
-          onBlur={(e) => {
-            onUpdate(rowIdx, field, e.target.value);
-            setEditingCell(null);
-          }}
-          onKeyDown={(e) => {
+          onBlur={e => { onUpdate(i, field, e.target.value); setEditCell(null); }}
+          onKeyDown={e => {
             if (e.key === "Enter" || e.key === "Escape") {
-              onUpdate(rowIdx, field, (e.target as HTMLInputElement).value);
-              setEditingCell(null);
+              onUpdate(i, field, (e.target as HTMLInputElement).value);
+              setEditCell(null);
             }
           }}
         />
@@ -79,250 +80,176 @@ export default function StepPreview({
     }
     return (
       <span
-        className={className}
-        onClick={() => setEditingCell(key)}
-        style={{ cursor: "text" }}
+        className={`${styles.pvEditableText} ${mono ? styles.pvMono : ""}`}
+        onClick={() => setEditCell(key)}
       >
-        {value || <span className={styles.cellEmpty}>click to edit</span>}
+        {value || <span className={styles.pvPlaceholder}>click to edit</span>}
       </span>
     );
   }
 
-  function EditableHours({ rowIdx, value }: { rowIdx: number; value: number }) {
-    const key = cellKey(rowIdx, "hours");
-    const isEditing = editingCell === key;
-    if (isEditing) {
+  function EditHours({ i, value }: { i: number; value: number }) {
+    const key = ck(i, "hours");
+    if (editCell === key) {
       return (
         <input
-          className={`${styles.cellInput} ${styles.cellInputMono}`}
+          className={`${styles.pvHoursInput}`}
           defaultValue={String(value)}
           autoFocus
-          style={{ width: 60 }}
-          onBlur={(e) => {
-            onUpdate(rowIdx, "hours", parseFloat(e.target.value) || 0);
-            setEditingCell(null);
-          }}
-          onKeyDown={(e) => {
+          style={{ width: 48 }}
+          onBlur={e => { onUpdate(i, "hours", parseFloat(e.target.value) || 0); setEditCell(null); }}
+          onKeyDown={e => {
             if (e.key === "Enter" || e.key === "Escape") {
-              onUpdate(
-                rowIdx,
-                "hours",
-                parseFloat((e.target as HTMLInputElement).value) || 0,
-              );
-              setEditingCell(null);
+              onUpdate(i, "hours", parseFloat((e.target as HTMLInputElement).value) || 0);
+              setEditCell(null);
             }
           }}
         />
       );
     }
     return (
-      <span
-        className={styles.hoursCell}
-        onClick={() => setEditingCell(key)}
-        style={{ cursor: "text" }}
-      >
+      <button className={styles.pvHoursPill} onClick={() => setEditCell(key)}>
+        <RiTimeLine size={11} />
         {value}h
-      </span>
+      </button>
     );
   }
 
   return (
-    <div className={styles.previewStep}>
-      {/* Warnings */}
+    <div className={styles.previewV2}>
+      {/* ── Stats header ── */}
+      <div className={styles.pvHeader}>
+        <div className={styles.pvHeaderLeft}>
+          <div className={styles.pvHeaderIcon}>
+            <PiStarFourFill size={14} />
+          </div>
+          <div>
+            <div className={styles.pvHeaderTitle}>
+              {rows.length} entries extracted
+            </div>
+            <div className={styles.pvHeaderSub}>
+              Review and edit before logging
+            </div>
+          </div>
+        </div>
+        <div className={styles.pvStats}>
+          <div className={styles.pvStat}>
+            <span className={styles.pvStatVal}>{formatNumber(Math.round(totalHours * 4) / 4)}h</span>
+            <span className={styles.pvStatLbl}>Total</span>
+          </div>
+          <div className={styles.pvStatDiv} />
+          <div className={styles.pvStat}>
+            <span className={styles.pvStatVal}>{dates.length}</span>
+            <span className={styles.pvStatLbl}>Days</span>
+          </div>
+          <div className={styles.pvStatDiv} />
+          <div className={styles.pvStat}>
+            <span className={styles.pvStatVal}>{rows.length}</span>
+            <span className={styles.pvStatLbl}>Activities</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Warning ── */}
       {warnings.length > 0 && (
-        <div className={styles.warningBar}>
-          <span className={styles.warnIcon}>⚠</span>
+        <div className={styles.pvWarning}>
+          <span>⚠</span>
           {warnings.join(" · ")}
         </div>
       )}
 
-      {/* Table card */}
-      <div className={styles.tableCard}>
-        <div className={styles.tableHeader}>
-          <div className={styles.tableHeaderLeft}>
-            <span className={styles.tableTitle}>Parsed entries</span>
-            <span className={styles.entryCount}>{rows.length} rows</span>
-            {rows.every((r) => r.confidence === "high") && (
-              <span className={styles.confBadge}>
-                <span className={styles.confDot} />
-                High confidence
-              </span>
-            )}
-          </div>
-          <div className={styles.tableHeaderRight}>
-            <span className={styles.totalHours}>
-              {formatNumber(Math.round(totalHours * 4) / 4)}h total
-            </span>
-            <button className="btn btn-ghost btn-sm" onClick={onAddRow}>
-              + Add row
-            </button>
-            <button className="btn btn-ghost btn-sm" onClick={onBack}>
-              ← Re-enter
-            </button>
-          </div>
-        </div>
-
-        <div className={styles.tableScroll}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Activity</th>
-                <th>Hours</th>
-                <th>POD</th>
-                <th>Client</th>
-                <th>Type</th>
-                <th>Notes</th>
-                <th style={{ width: 60 }} />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr
-                  key={i}
-                  className={row.confidence === "low" ? styles.rowLowConf : ""}
+      {/* ── Date-grouped entries ── */}
+      <div className={styles.pvEntries}>
+        {dates.map(date => (
+          <div key={date} className={styles.pvDateGroup}>
+            <div className={styles.pvDateLabel}>{fmtDate(date)}</div>
+            <div className={styles.pvDateRows}>
+              {byDate[date].map(({ row, idx }) => (
+                <div
+                  key={idx}
+                  className={`${styles.pvRow} ${row.confidence === "low" ? styles.pvRowLow : ""}`}
                 >
-                  {/* Date */}
-                  <td>
-                    <input
-                      className={`${styles.cellInput} ${styles.cellInputMono}`}
-                      style={{ width: 100 }}
-                      type="date"
-                      value={row.date}
-                      onChange={(e) => onUpdate(i, "date", e.target.value)}
-                    />
-                  </td>
-
                   {/* Activity */}
-                  <td style={{ maxWidth: 220 }}>
-                    <EditableText
-                      rowIdx={i}
-                      field="activity"
-                      value={row.activity}
-                      className={styles.activityCell}
+                  <div className={styles.pvRowMain}>
+                    <div
+                      className={styles.pvTypeStripe}
+                      style={{ background: TYPE_COLOR[row.type] ?? "var(--accent)" }}
                     />
-                  </td>
+                    <div className={styles.pvRowContent}>
+                      <EditText i={idx} field="activity" value={row.activity} />
+                      {row.notes && (
+                        <EditText i={idx} field="notes" value={row.notes} />
+                      )}
+                    </div>
+                  </div>
 
-                  {/* Hours */}
-                  <td>
-                    <EditableHours rowIdx={i} value={row.hours} />
-                  </td>
+                  {/* Meta */}
+                  <div className={styles.pvRowMeta}>
+                    <EditHours i={idx} value={row.hours} />
 
-                  {/* POD */}
-                  <td>
+                    {/* POD */}
                     <select
-                      className={styles.cellSelect}
+                      className={styles.pvSelect}
                       value={row.pod ?? ""}
-                      onChange={(e) =>
-                        onUpdate(i, "pod", e.target.value || null)
-                      }
+                      onChange={e => onUpdate(idx, "pod", e.target.value || null)}
                     >
-                      <option value="">—</option>
-                      {pods.map((p) => (
-                        <option key={p}>{p}</option>
-                      ))}
+                      <option value="">POD —</option>
+                      {pods.map(p => <option key={p}>{p}</option>)}
                     </select>
-                  </td>
 
-                  {/* Client */}
-                  <td>
+                    {/* Client */}
                     <select
-                      className={styles.cellSelect}
+                      className={styles.pvSelect}
                       value={row.client ?? ""}
-                      onChange={(e) =>
-                        onUpdate(i, "client", e.target.value || null)
-                      }
+                      onChange={e => onUpdate(idx, "client", e.target.value || null)}
                     >
-                      <option value="">—</option>
-                      {clients.map((c) => (
-                        <option key={c}>{c}</option>
-                      ))}
+                      <option value="">Client —</option>
+                      {clients.map(c => <option key={c}>{c}</option>)}
                     </select>
-                  </td>
 
-                  {/* Type */}
-                  <td>
+                    {/* Type */}
                     <select
-                      className={styles.cellSelect}
+                      className={styles.pvSelect}
                       value={row.type}
-                      onChange={(e) => onUpdate(i, "type", e.target.value)}
+                      onChange={e => onUpdate(idx, "type", e.target.value)}
+                      style={{ color: TYPE_COLOR[row.type] ?? "var(--accent)" }}
                     >
-                      {ENTRY_TYPES.map((t) => (
-                        <option key={t}>{t}</option>
-                      ))}
+                      {ENTRY_TYPES.map(t => <option key={t}>{t}</option>)}
                     </select>
-                  </td>
 
-                  {/* Notes */}
-                  <td>
-                    <EditableText
-                      rowIdx={i}
-                      field="notes"
-                      value={row.notes}
-                      className={styles.notesCell}
-                    />
-                  </td>
-
-                  {/* Actions */}
-                  <td>
                     <button
-                      className={styles.deleteBtn}
-                      onClick={() => onDelete(i)}
-                      title="Delete row"
+                      className={styles.pvDeleteBtn}
+                      onClick={() => onDelete(idx)}
                     >
-                      ✕
+                      <RiDeleteBin6Line size={13} />
                     </button>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Add row */}
+        <button className={styles.pvAddRow} onClick={onAddRow}>
+          <RiAddLine size={14} />
+          Add entry
+        </button>
       </div>
 
-      {/* Footer action bar */}
-      <div className={styles.actionBar}>
-        <div className={styles.actionStats}>
-          <div className={styles.actionStat}>
-            <div className={styles.actionStatVal}>
-              {formatNumber(Math.round(totalHours * 4) / 4)}h
-            </div>
-            <div className={styles.actionStatLbl}>Total Hours</div>
-          </div>
-          <div className={styles.actionStatDiv} />
-          <div className={styles.actionStat}>
-            <div className={styles.actionStatVal}>
-              {new Set(rows.map((r) => r.date)).size}
-            </div>
-            <div className={styles.actionStatLbl}>Days</div>
-          </div>
-          <div className={styles.actionStatDiv} />
-          <div className={styles.actionStat}>
-            <div className={styles.actionStatVal}>{rows.length}</div>
-            <div className={styles.actionStatLbl}>Activities</div>
-          </div>
-        </div>
-        <div className={styles.actionNote}>
-          Review and edit any row. Click any cell to edit inline.
-        </div>
-        <div className={styles.actionBtns}>
-          <button className="btn btn-ghost" onClick={onBack}>
-            Discard
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={onConfirm}
-            disabled={
-              rows.filter((r) => r.activity.trim() && r.hours > 0).length === 0
-            }
-            style={{
-              background: "linear-gradient(135deg,#059669,#34D399)",
-              boxShadow: "0 4px 16px rgba(52,211,153,0.25)",
-            }}
-          >
-            ✓ Confirm &amp; Log {rows.length} entries
-          </button>
-        </div>
+      {/* ── Footer ── */}
+      <div className={styles.pvFooter}>
+        <button className={styles.pvDiscardBtn} onClick={onBack}>
+          Discard
+        </button>
+        <button
+          className={styles.pvConfirmBtn}
+          onClick={onConfirm}
+          disabled={rows.filter(r => r.activity.trim() && r.hours > 0).length === 0}
+        >
+          <PiStarFourFill size={13} />
+          Log {rows.length} entries · {formatNumber(Math.round(totalHours * 4) / 4)}h
+        </button>
       </div>
     </div>
   );

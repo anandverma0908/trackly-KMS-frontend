@@ -1,4 +1,5 @@
-import { DUMMY_SUMMARY, DUMMY_TICKETS, DUMMY_FILTERS, DUMMY_SPRINTS, DUMMY_ORG_MEMBERS } from '@/utils/dummyData'
+import { DUMMY_SUMMARY, DUMMY_TICKETS, DUMMY_FILTERS, DUMMY_SPRINTS, DUMMY_ORG_MEMBERS, DUMMY_STANDUPS } from '@/utils/dummyData'
+import { useAuthStore } from '@/features/auth/useAuthStore'
 import { MOCK_PROJECTS } from '@/features/spaces/spacesData'
 import type { FilterState, TicketCreate, Goal, GoalsResponse } from '@/types'
 import type { Project } from '@/features/spaces/spacesData'
@@ -219,6 +220,8 @@ export function enableMocks() {
         project_key: payload.pod || 'DPAI',
         project_name: payload.pod || 'DPAI',
         summary: payload.title,
+        description: payload.description ?? '',
+        reporter: payload.reporter ?? 'Unknown',
         assignee: payload.assignee ?? '',
         assignee_email: payload.assignee ? `${payload.assignee.toLowerCase().replace(/\s+/g, '.')}@3sc.com` : '',
         status: (payload as any).status ?? 'To Do',
@@ -233,6 +236,7 @@ export function enableMocks() {
         priority: payload.priority,
         story_points: payload.story_points ?? null,
         labels: payload.labels ?? [],
+        due_date: payload.due_date ?? null,
         sprint_id: (payload as any).sprint_id ?? null,
         url: '#',
         worklogs: [],
@@ -256,17 +260,23 @@ export function enableMocks() {
       await delay(300)
       const t = DUMMY_TICKETS.tickets.find((x) => x.key === key)
       if (t) {
-        if (payload.title) t.summary = payload.title
-        if (payload.issue_type) t.issue_type = payload.issue_type
-        if (payload.priority) t.priority = payload.priority
-        if (payload.assignee) {
+        if (payload.title !== undefined) t.summary = payload.title
+        if (payload.description !== undefined) (t as any).description = payload.description
+        if ((payload as any).reporter !== undefined) (t as any).reporter = (payload as any).reporter
+        if (payload.issue_type !== undefined) t.issue_type = payload.issue_type
+        if (payload.priority !== undefined) t.priority = payload.priority
+        if ((payload as any).status !== undefined) t.status = (payload as any).status
+        if (payload.assignee !== undefined) {
           t.assignee = payload.assignee
-          t.assignee_email = `${payload.assignee.toLowerCase().replace(/\s+/g, '.')}@3sc.com`
+          t.assignee_email = payload.assignee
+            ? `${payload.assignee.toLowerCase().replace(/\s+/g, '.')}@3sc.com`
+            : ''
         }
-        if (payload.client) t.client = payload.client
-        if (payload.pod) t.pod = payload.pod
+        if (payload.client !== undefined) t.client = payload.client
+        if (payload.pod !== undefined) t.pod = payload.pod
         if (payload.story_points !== undefined) (t as any).story_points = payload.story_points
         if (payload.labels !== undefined) (t as any).labels = payload.labels
+        if (payload.due_date !== undefined) (t as any).due_date = payload.due_date
         if ((payload as any).sprint_id !== undefined) (t as any).sprint_id = (payload as any).sprint_id
         t.updated = new Date().toISOString().split('T')[0]
       }
@@ -411,6 +421,83 @@ export function enableMocks() {
     fetchOrgMembers: async () => {
       await delay(300)
       return DUMMY_ORG_MEMBERS
+    },
+
+    /* ── Standups ── */
+    fetchTodayStandup: async () => {
+      await delay(300)
+      const user = useAuthStore.getState().user
+      const today = new Date().toISOString().slice(0, 10)
+      const mine = DUMMY_STANDUPS.find(
+        (s) => s.date === today && (s.engineer === user?.name || s.engineer_email === user?.email)
+      )
+      return mine ?? DUMMY_STANDUPS.find((s) => s.date === today) ?? DUMMY_STANDUPS[0] ?? null
+    },
+
+    fetchTeamStandups: async (date?: string, pod?: string) => {
+      await delay(350)
+      const targetDate = date || new Date().toISOString().slice(0, 10)
+      let results = DUMMY_STANDUPS.filter((s) => s.date === targetDate)
+      if (pod) results = results.filter((s) => s.pod === pod)
+      return results
+    },
+
+    updateStandup: async (id: number, payload: any) => {
+      await delay(300)
+      const s = DUMMY_STANDUPS.find((x) => x.id === id)
+      if (!s) throw new Error('Standup not found')
+      if (payload.yesterday !== undefined) s.yesterday = payload.yesterday
+      if (payload.today !== undefined) s.today = payload.today
+      if (payload.blockers !== undefined) s.blockers = payload.blockers
+      s.shared = true
+      return s
+    },
+
+    createStandup: async (payload: any) => {
+      await delay(400)
+      const user = useAuthStore.getState().user
+      const today = new Date().toISOString().slice(0, 10)
+      const standup: import('@/types').Standup = {
+        id: Date.now(),
+        engineer: user?.name || 'Current User',
+        engineer_email: user?.email || 'user@3scsolution.com',
+        date: today,
+        yesterday: payload.yesterday || '',
+        today: payload.today || '',
+        blockers: payload.blockers || '',
+        pod: user?.pod || 'DPAI',
+        shared: true,
+        created_at: new Date().toISOString(),
+      }
+      DUMMY_STANDUPS.unshift(standup)
+      return standup
+    },
+
+    generateStandup: async () => {
+      await delay(1200)
+      const user = useAuthStore.getState().user
+      const today = new Date().toISOString().slice(0, 10)
+      const existingIdx = DUMMY_STANDUPS.findIndex(
+        (s) => s.date === today && (s.engineer === user?.name || s.engineer_email === user?.email)
+      )
+      const generated: import('@/types').Standup = {
+        id: existingIdx >= 0 ? DUMMY_STANDUPS[existingIdx].id : Date.now(),
+        engineer: user?.name || 'Current User',
+        engineer_email: user?.email || 'user@3scsolution.com',
+        date: today,
+        yesterday: 'Worked on ticket TRK-142 — resolved the authentication token refresh bug. Reviewed 3 pull requests from team members. Attended the Colgate stakeholder alignment call.',
+        today: 'Planning to complete the API documentation updates. Will start work on the caching layer for the BSV client integration. Pair programming with Rahul on the microservices CI/CD setup.',
+        blockers: 'Waiting for the DevOps team to bring the staging environment back online after the AKS migration.',
+        pod: user?.pod || 'DPAI',
+        shared: true,
+        created_at: new Date().toISOString(),
+      }
+      if (existingIdx >= 0) {
+        DUMMY_STANDUPS[existingIdx] = generated
+      } else {
+        DUMMY_STANDUPS.unshift(generated)
+      }
+      return generated
     },
   }
   console.info('[EAP] Mock API enabled — using dummy data')

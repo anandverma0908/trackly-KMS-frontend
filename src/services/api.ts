@@ -213,6 +213,9 @@ function _mapTicketIn(payload: Partial<TicketCreate>): any {
     mapped.summary = mapped.title;
     delete mapped.title;
   }
+  if ("reporter" in mapped) {
+    mapped.reporter_name = mapped.reporter;
+  }
   if ("key" in mapped) {
     mapped.jira_key = mapped.key;
     delete mapped.key;
@@ -225,8 +228,13 @@ function _mapTicketOut(t: any): Ticket {
     ...t,
     key: t.key ?? t.jira_key,
     summary: t.summary ?? t.title ?? "",
+    description: t.description ?? t.body ?? t.content ?? "",
+    reporter: t.reporter ?? t.reporter_name ?? t.created_by ?? t.creator_name ?? t.author_name ?? "",
     created: t.created ?? t.created_at ?? t.jira_created ?? "",
     updated: t.updated ?? t.updated_at ?? t.jira_updated ?? "",
+    client: t.client ?? "",
+    pod: t.pod ?? t.project_key ?? "",
+    assignee: t.assignee ?? "",
     hours_spent: t.hours_spent ?? 0,
     worklogs: t.worklogs ?? [],
   };
@@ -756,28 +764,120 @@ export async function sendSprintChat(sprintId: string, message: string, history:
 }
 
 /* ── Standup ── */
+
+function _normalizeStandup(raw: unknown): Standup | null {
+  if (!raw || typeof raw !== "object") return null;
+  const s = raw as Record<string, unknown>;
+  // Handle backend wrapping: { standup: { ... } }
+  if (s.standup && typeof s.standup === "object") {
+    return _normalizeStandup(s.standup);
+  }
+  // Must have an id and engineer to be considered a valid standup
+  if (typeof s.id !== "number" && typeof s.id !== "string") return null;
+  if (!s.engineer || typeof s.engineer !== "string") return null;
+  return {
+    id: Number(s.id),
+    engineer: s.engineer,
+    engineer_email: typeof s.engineer_email === "string" ? s.engineer_email : "",
+    date: typeof s.date === "string" ? s.date : "",
+    yesterday: typeof s.yesterday === "string" ? s.yesterday : "",
+    today: typeof s.today === "string" ? s.today : "",
+    blockers: typeof s.blockers === "string" ? s.blockers : "",
+    pod: typeof s.pod === "string" ? s.pod : "",
+    shared: !!s.shared,
+    created_at: typeof s.created_at === "string" ? s.created_at : "",
+  };
+}
+
+function _normalizeStandups(raw: unknown): Standup[] {
+  if (!raw || typeof raw !== "object") return [];
+  const d = raw as Record<string, unknown>;
+  const arr = Array.isArray(d.standups) ? d.standups : Array.isArray(d) ? d : [];
+  return arr.map(_normalizeStandup).filter(Boolean) as Standup[];
+}
+
 export async function fetchTodayStandup(): Promise<Standup | null> {
+  if (mock()?.fetchTodayStandup) {
+    const raw = await mock().fetchTodayStandup();
+    return _normalizeStandup(raw);
+  }
   try {
     const { data } = await api.get("/nova/standup/today");
-    return data;
+    return _normalizeStandup(data);
   } catch {
     return null;
   }
 }
 
 export async function fetchTeamStandups(date?: string, pod?: string): Promise<Standup[]> {
-  const { data } = await api.get("/nova/standup/team", { params: { date, pod } });
-  return data?.standups ?? data ?? [];
+  if (mock()?.fetchTeamStandups) {
+    const raw = await mock().fetchTeamStandups(date, pod);
+    return _normalizeStandups(raw);
+  }
+  try {
+    const { data } = await api.get("/nova/standup/team", { params: { date, pod } });
+    return _normalizeStandups(data);
+  } catch {
+    return [];
+  }
 }
 
 export async function updateStandup(id: number, payload: Partial<Standup>): Promise<Standup> {
+  if (mock()?.updateStandup) {
+    const raw = await mock().updateStandup(id, payload);
+    const s = _normalizeStandup(raw);
+    if (!s) throw new Error("Invalid standup response from server");
+    return s;
+  }
   const { data } = await api.put(`/nova/standup/${id}`, payload);
-  return data;
+  const s = _normalizeStandup(data);
+  if (!s) throw new Error("Invalid standup response from server");
+  return s;
+}
+
+export async function createStandup(payload: Partial<Standup>): Promise<Standup> {
+  if (mock()?.createStandup) {
+    const raw = await mock().createStandup(payload);
+    const s = _normalizeStandup(raw);
+    if (!s) throw new Error("Invalid standup response from server");
+    return s;
+  }
+  const { data } = await api.post("/nova/standup", payload);
+  const s = _normalizeStandup(data);
+  if (!s) throw new Error("Invalid standup response from server");
+  return s;
 }
 
 export async function generateStandup(): Promise<Standup> {
-  const { data } = await api.post("/nova/standup/generate");
-  return data;
+  if (mock()?.generateStandup) {
+    const raw = await mock().generateStandup();
+    const s = _normalizeStandup(raw);
+    if (!s) throw new Error("Invalid standup response from server");
+    return s;
+  }
+  try {
+    // Backend may require a body (even empty {}) for POST endpoints
+    const { data } = await api.post("/nova/standup/generate", {
+      date: new Date().toISOString().slice(0, 10),
+    });
+    const s = _normalizeStandup(data);
+    if (!s) throw new Error("Invalid standup response from server");
+    return s;
+  } catch (err: any) {
+    const status = err?.status ?? err?.response?.status;
+    const detail = err?.data?.detail ?? err?.response?.data?.detail ?? "";
+    const msg = err?.message || "";
+
+    if (status === 404 || msg.includes("404") || msg.includes("Not Found")) {
+      throw new Error("AI generation is not available on the backend yet. Please use 'Write Standup' instead.");
+    }
+    if (status === 422) {
+      throw new Error(
+        detail || "The backend rejected the request. Make sure the POST body matches what the endpoint expects."
+      );
+    }
+    throw err;
+  }
 }
 
 /* ── Knowledge Gaps ── */

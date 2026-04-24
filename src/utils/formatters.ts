@@ -30,9 +30,11 @@ export function truncate(str: string, max = 40): string {
 }
 
 /* ── Initials from name ── */
-export function initials(name: string): string {
+export function initials(name: string | undefined | null): string {
+  if (!name) return '?';
   return name
     .split(' ')
+    .filter(Boolean)
     .slice(0, 2)
     .map((n) => n[0])
     .join('')
