@@ -79,8 +79,8 @@
 .healthDimFill { height: 100%; border-radius: 99px; }
 .healthDimVal { font-size: 0.68rem; font-family: var(--font-mono); color: var(--text-3); min-width: 24px; text-align: right; }
 
-/* Insight cards — compact, no stretching */
-.insightCard {
+/* ── Unified panel card — all 6 left cards use this ── */
+.panelCard {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r);
@@ -89,25 +89,25 @@
   flex-direction: column;
   gap: 8px;
 }
-.insightCardHeader { display: flex; align-items: flex-start; gap: 10px; }
-.insightIcon {
-  width: 30px; height: 30px; border-radius: var(--r-sm);
+.panelCardHeader { display: flex; align-items: center; gap: 9px; }
+.panelIcon {
+  width: 28px; height: 28px; border-radius: var(--r-sm);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.insightCardTitle { font-size: 0.79rem; font-weight: 700; margin-bottom: 2px; }
-.insightCardBody { font-size: 0.79rem; color: var(--text-2); line-height: 1.5; margin: 0; }
-.insightLoading { color: var(--text-3); font-style: italic; }
-.insightStat { display: flex; align-items: baseline; gap: 5px; }
-.insightStatVal { font-size: 1.3rem; font-weight: 800; font-family: var(--font-mono); line-height: 1; }
-.insightStatLbl { font-size: 0.71rem; color: var(--text-3); }
-.insightRefresh {
-  display: inline-flex; align-items: center; gap: 4px;
+.panelCardTitle { font-size: 0.79rem; font-weight: 700; color: var(--text); }
+.panelCardBody { font-size: 0.79rem; color: var(--text-2); line-height: 1.5; margin: 0; flex: 1; }
+.panelLoading { color: var(--text-3); font-style: italic; }
+.panelStat { display: flex; align-items: baseline; gap: 5px; }
+.panelStatVal { font-size: 1.3rem; font-weight: 800; font-family: var(--font-mono); line-height: 1; }
+.panelStatLbl { font-size: 0.7rem; color: var(--text-3); }
+.panelMiniChart { margin-top: 2px; }
+.panelRefresh {
+  display: inline-flex; align-items: center; gap: 4px; width: fit-content;
   background: none; border: 1px solid var(--border); color: var(--text-3);
-  font-size: 0.72rem; padding: 4px 10px; border-radius: var(--r-xs);
+  font-size: 0.72rem; padding: 3px 9px; border-radius: var(--r-xs);
   cursor: pointer; font-family: var(--font-sans); transition: all 0.12s;
-  margin-top: 2px;
 }
-.insightRefresh:hover { border-color: var(--accent-border); color: var(--accent); }
+.panelRefresh:hover { border-color: var(--accent-border); color: var(--accent); }
 
 /* ── Charts row ── */
 .chartsRow {
@@ -176,103 +176,6 @@
 .sprintPct  { font-size: 0.78rem; font-weight: 700; font-family: var(--font-mono); min-width: 38px; text-align: right; }
 .sprintPts  { font-size: 0.72rem; color: var(--text-3); min-width: 72px; text-align: right; }
 
-/* ── Metric cards (row 2 inside insightPanel) ── */
-.metricCard {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.metricCardHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 2px;
-}
-
-.metricSub {
-  font-size: 0.7rem;
-  color: var(--text-3);
-}
-
-/* Delivery forecast */
-.forecastNumber {
-  font-size: 2.4rem;
-  font-weight: 900;
-  font-family: var(--font-mono);
-  letter-spacing: -0.04em;
-  line-height: 1;
-}
-
-.forecastLabel {
-  font-size: 0.75rem;
-  color: var(--text-2);
-}
-
-.forecastSub {
-  font-size: 0.7rem;
-  color: var(--text-3);
-}
-
-/* Cross-project comparison */
-.comparisonScore {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.comparisonVal {
-  font-size: 1.5rem;
-  font-weight: 800;
-  font-family: var(--font-mono);
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  line-height: 1;
-}
-
-.comparisonLbl {
-  font-size: 0.75rem;
-  color: var(--text-3);
-}
-
-.comparisonBar {
-  position: relative;
-  height: 6px;
-  background: var(--surface-2);
-  border-radius: 99px;
-  overflow: hidden;
-  margin-top: 6px;
-}
-
-.comparisonBarFill {
-  position: absolute;
-  top: 0; left: 0;
-  height: 100%;
-  border-radius: 99px;
-  opacity: 0.4;
-}
-
-.comparisonBarThis {
-  position: absolute;
-  top: 0; left: 0;
-  height: 100%;
-  border-radius: 99px;
-  opacity: 0.85;
-}
-
-.comparisonBarLabels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.68rem;
-  color: var(--text-3);
-  margin-top: 3px;
-}
 
 /* Bottleneck badge */
 .bottleneckBadge {
