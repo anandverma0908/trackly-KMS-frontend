@@ -259,7 +259,7 @@ export default function SummaryTab({ project }: { project: Project }) {
           sprintsCount={project.sprints.length}
         />
       </div>
-      
+
       {/* ── EOS Project Brief ── */}
       {!briefDismissed && (
         <div className={styles.briefBar}>
@@ -296,59 +296,113 @@ export default function SummaryTab({ project }: { project: Project }) {
 
       {/* ── Insight Panel: 3×2 left cards + Health spanning both rows right ── */}
       <div className={styles.insightPanel}>
-
         {/* ── Row 1: EOS signals ── */}
         <div className={styles.panelCard}>
           <div className={styles.panelCardHeader}>
-            <div className={styles.panelIcon} style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>
+            <div
+              className={styles.panelIcon}
+              style={{
+                background:
+                  "color-mix(in srgb, var(--accent) 12%, transparent)",
+              }}
+            >
               <RiBarChartBoxLine size={15} color="var(--accent)" />
             </div>
             <span className={styles.panelCardTitle}>Velocity Signal</span>
           </div>
           <p className={styles.panelCardBody}>
-            {spacesBrief.isPending
-              ? <span className={styles.panelLoading}>EOS analysing…</span>
-              : (parsedInsights?.velocity ?? `${project.progress}% complete across ${project.sprints.length} sprints.`)}
+            {spacesBrief.isPending ? (
+              <span className={styles.panelLoading}>EOS analysing…</span>
+            ) : (
+              (parsedInsights?.velocity ??
+              `${project.progress}% complete across ${project.sprints.length} sprints.`)
+            )}
           </p>
           <div className={styles.panelStat}>
-            <span className={styles.panelStatVal} style={{ color: project.color }}>
+            <span
+              className={styles.panelStatVal}
+              style={{ color: project.color }}
+            >
               {project.sprints.filter((s) => s.status === "completed").length}
             </span>
             <span className={styles.panelStatLbl}>sprints completed</span>
           </div>
         </div>
 
-        <div className={styles.panelCard} style={{ borderLeft: `3px solid ${kpis.blocked > 0 || kpis.overdue > 0 ? "var(--red)" : "var(--green)"}` }}>
+        <div
+          className={styles.panelCard}
+          // style={{
+          //   borderLeft: `3px solid ${kpis.blocked > 0 || kpis.overdue > 0 ? "var(--red)" : "var(--green)"}`,
+          // }}
+        >
           <div className={styles.panelCardHeader}>
-            <div className={styles.panelIcon} style={{ background: kpis.blocked > 0 ? "rgba(248,113,113,0.12)" : "rgba(52,211,153,0.12)" }}>
-              {kpis.blocked > 0 ? <RiAlertLine size={15} color="var(--red)" /> : <RiCheckLine size={15} color="var(--green)" />}
+            <div
+              className={styles.panelIcon}
+              style={{
+                background:
+                  kpis.blocked > 0
+                    ? "rgba(248,113,113,0.12)"
+                    : "rgba(52,211,153,0.12)",
+              }}
+            >
+              {kpis.blocked > 0 ? (
+                <RiAlertLine size={15} color="var(--red)" />
+              ) : (
+                <RiCheckLine size={15} color="var(--green)" />
+              )}
             </div>
             <span className={styles.panelCardTitle}>Risk Signal</span>
           </div>
           <p className={styles.panelCardBody}>
-            {spacesBrief.isPending
-              ? <span className={styles.panelLoading}>EOS analysing…</span>
-              : (parsedInsights?.risk ?? (kpis.blocked > 0 ? `${kpis.blocked} tickets blocked, ${kpis.overdue} overdue.` : "No critical blockers detected."))}
+            {spacesBrief.isPending ? (
+              <span className={styles.panelLoading}>EOS analysing…</span>
+            ) : (
+              (parsedInsights?.risk ??
+              (kpis.blocked > 0
+                ? `${kpis.blocked} tickets blocked, ${kpis.overdue} overdue.`
+                : "No critical blockers detected."))
+            )}
           </p>
           <div className={styles.panelStat}>
-            <span className={styles.panelStatVal} style={{ color: kpis.blocked > 0 ? "var(--red)" : "var(--green)" }}>{kpis.blocked}</span>
+            <span
+              className={styles.panelStatVal}
+              style={{
+                color: kpis.blocked > 0 ? "var(--red)" : "var(--green)",
+              }}
+            >
+              {kpis.blocked}
+            </span>
             <span className={styles.panelStatLbl}>blocked now</span>
           </div>
         </div>
 
-        <div className={styles.panelCard} style={{ borderLeft: "3px solid var(--accent)" }}>
+        <div
+          className={styles.panelCard}
+          // style={{ borderLeft: "3px solid var(--accent)" }}
+        >
           <div className={styles.panelCardHeader}>
-            <div className={styles.panelIcon} style={{ background: "var(--accent-glow)" }}>
+            <div
+              className={styles.panelIcon}
+              style={{ background: "var(--accent-glow)" }}
+            >
               <RiLightbulbLine size={15} color="var(--accent)" />
             </div>
             <span className={styles.panelCardTitle}>Recommendation</span>
           </div>
           <p className={styles.panelCardBody}>
-            {spacesBrief.isPending
-              ? <span className={styles.panelLoading}>EOS analysing…</span>
-              : (parsedInsights?.rec ?? "Keep momentum — protect team focus and avoid mid-sprint scope changes.")}
+            {spacesBrief.isPending ? (
+              <span className={styles.panelLoading}>EOS analysing…</span>
+            ) : (
+              (parsedInsights?.rec ??
+              "Keep momentum — protect team focus and avoid mid-sprint scope changes.")
+            )}
           </p>
-          <button className={styles.panelRefresh} onClick={() => qc.invalidateQueries({ queryKey: ["spaces-brief", project.key] })}>
+          <button
+            className={styles.panelRefresh}
+            onClick={() =>
+              qc.invalidateQueries({ queryKey: ["spaces-brief", project.key] })
+            }
+          >
             <RiRefreshLine size={12} /> Refresh
           </button>
         </div>
@@ -359,17 +413,33 @@ export default function SummaryTab({ project }: { project: Project }) {
             <span className={styles.cardLabel}>Project Health</span>
             <EOSBadge />
           </div>
-          <div className={styles.healthScoreBig} style={{ color: healthColor }}>{healthScore}</div>
+          <div className={styles.healthScoreBig} style={{ color: healthColor }}>
+            {healthScore}
+          </div>
           <div className={styles.healthScoreSub}>/100</div>
           <div className={styles.healthProbBar}>
-            <div className={styles.healthProbFill} style={{ width: `${healthScore}%`, background: healthColor }} />
+            <div
+              className={styles.healthProbFill}
+              style={{ width: `${healthScore}%`, background: healthColor }}
+            />
           </div>
           <div className={styles.healthDims}>
             {radarData.map((d) => (
               <div key={d.metric} className={styles.healthDimRow}>
                 <span className={styles.healthDimLabel}>{d.metric}</span>
                 <div className={styles.healthDimBar}>
-                  <div className={styles.healthDimFill} style={{ width: `${d.score}%`, background: d.score >= 70 ? "var(--green)" : d.score >= 50 ? "var(--amber)" : "var(--red)" }} />
+                  <div
+                    className={styles.healthDimFill}
+                    style={{
+                      width: `${d.score}%`,
+                      background:
+                        d.score >= 70
+                          ? "var(--green)"
+                          : d.score >= 50
+                            ? "var(--amber)"
+                            : "var(--red)",
+                    }}
+                  />
                 </div>
                 <span className={styles.healthDimVal}>{d.score}</span>
               </div>
@@ -380,7 +450,10 @@ export default function SummaryTab({ project }: { project: Project }) {
         {/* ── Row 2: Delivery metrics ── */}
         <div className={styles.panelCard}>
           <div className={styles.panelCardHeader}>
-            <div className={styles.panelIcon} style={{ background: `${project.color}18` }}>
+            <div
+              className={styles.panelIcon}
+              style={{ background: `${project.color}18` }}
+            >
               <RiBarChartBoxLine size={15} color={project.color} />
             </div>
             <span className={styles.panelCardTitle}>Delivery Trend</span>
@@ -390,12 +463,39 @@ export default function SummaryTab({ project }: { project: Project }) {
           </p>
           <div className={styles.panelMiniChart}>
             <ResponsiveContainer width="100%" height={52}>
-              <LineChart data={trendData} margin={{ top: 2, right: 4, left: -30, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 8, fill: "var(--text-3)" }} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 8, fill: "var(--text-3)" }} />
-                <ReTooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 6, fontSize: 11 }} formatter={(v: number) => [`${v}%`, "Delivery"]} />
-                <Line type="monotone" dataKey="score" stroke={project.color} strokeWidth={2} dot={{ r: 2, fill: project.color }} />
+              <LineChart
+                data={trendData}
+                margin={{ top: 2, right: 4, left: -30, bottom: 0 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--border)"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 8, fill: "var(--text-3)" }}
+                />
+                <YAxis
+                  domain={[0, 100]}
+                  tick={{ fontSize: 8, fill: "var(--text-3)" }}
+                />
+                <ReTooltip
+                  contentStyle={{
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border-2)",
+                    borderRadius: 6,
+                    fontSize: 11,
+                  }}
+                  formatter={(v: number) => [`${v}%`, "Delivery"]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="score"
+                  stroke={project.color}
+                  strokeWidth={2}
+                  dot={{ r: 2, fill: project.color }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -403,33 +503,65 @@ export default function SummaryTab({ project }: { project: Project }) {
 
         <div className={styles.panelCard}>
           <div className={styles.panelCardHeader}>
-            <div className={styles.panelIcon} style={{ background: "rgba(52,211,153,0.12)" }}>
+            <div
+              className={styles.panelIcon}
+              style={{ background: "rgba(52,211,153,0.12)" }}
+            >
               <RiCalendarLine size={15} color="var(--green)" />
             </div>
             <span className={styles.panelCardTitle}>Delivery Forecast</span>
           </div>
           <p className={styles.panelCardBody}>
-            {deliveryWeeks != null ? "Estimated completion at current sprint pace." : "Not enough sprint data to forecast."}
+            {deliveryWeeks != null
+              ? "Estimated completion at current sprint pace."
+              : "Not enough sprint data to forecast."}
           </p>
           <div className={styles.panelStat}>
             {deliveryWeeks != null ? (
               <>
-                <span className={styles.panelStatVal} style={{ color: deliveryWeeks <= 4 ? "var(--green)" : deliveryWeeks <= 8 ? "var(--amber)" : "var(--red)" }}>
+                <span
+                  className={styles.panelStatVal}
+                  style={{
+                    color:
+                      deliveryWeeks <= 4
+                        ? "var(--green)"
+                        : deliveryWeeks <= 8
+                          ? "var(--amber)"
+                          : "var(--red)",
+                  }}
+                >
                   ~{deliveryWeeks}w
                 </span>
                 <span className={styles.panelStatLbl}>
-                  {project.sprints.filter(s => s.status === "completed").length} done · {project.sprints.filter(s => s.status !== "completed").length} left
+                  {
+                    project.sprints.filter((s) => s.status === "completed")
+                      .length
+                  }{" "}
+                  done ·{" "}
+                  {
+                    project.sprints.filter((s) => s.status !== "completed")
+                      .length
+                  }{" "}
+                  left
                 </span>
               </>
             ) : (
-              <span className={styles.panelStatLbl} style={{ color: "var(--text-3)" }}>—</span>
+              <span
+                className={styles.panelStatLbl}
+                style={{ color: "var(--text-3)" }}
+              >
+                —
+              </span>
             )}
           </div>
         </div>
 
         <div className={styles.panelCard}>
           <div className={styles.panelCardHeader}>
-            <div className={styles.panelIcon} style={{ background: "rgba(139,92,246,0.12)" }}>
+            <div
+              className={styles.panelIcon}
+              style={{ background: "rgba(139,92,246,0.12)" }}
+            >
               <RiTeamLine size={15} color="var(--purple)" />
             </div>
             <span className={styles.panelCardTitle}>vs All Spaces</span>
@@ -437,19 +569,34 @@ export default function SummaryTab({ project }: { project: Project }) {
           <p className={styles.panelCardBody}>
             {healthDiff != null
               ? `This space is ${Math.abs(healthDiff)} pts ${healthDiff >= 0 ? "above" : "below"} the average across ${totalPods} spaces.`
-              : (podSummaryQuery.isPending ? "Loading comparison…" : "Only one space — no comparison available.")}
+              : podSummaryQuery.isPending
+                ? "Loading comparison…"
+                : "Only one space — no comparison available."}
           </p>
           {healthDiff != null && (
             <div className={styles.panelStat}>
-              <span className={styles.panelStatVal} style={{ color: healthDiff >= 0 ? "var(--green)" : "var(--red)", display: "flex", alignItems: "center", gap: 2 }}>
-                {healthDiff >= 0 ? <RiArrowUpLine size={16} /> : <RiArrowDownLine size={16} />}
+              <span
+                className={styles.panelStatVal}
+                style={{
+                  color: healthDiff >= 0 ? "var(--green)" : "var(--red)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
+                {healthDiff >= 0 ? (
+                  <RiArrowUpLine size={16} />
+                ) : (
+                  <RiArrowDownLine size={16} />
+                )}
                 {Math.abs(healthDiff)}
               </span>
-              <span className={styles.panelStatLbl}>pts vs avg {avgHealth}</span>
+              <span className={styles.panelStatLbl}>
+                pts vs avg {avgHealth}
+              </span>
             </div>
           )}
         </div>
-
       </div>
 
       {/* ── Charts row: Activity + Workload ── */}
