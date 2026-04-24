@@ -52,17 +52,44 @@ const PRIORITY_ORDER = ["Critical", "High", "Medium", "Low"];
 /*  Velocity Ring SVG                                                         */
 /* ══════════════════════════════════════════════════════════════════════════ */
 
-function VelocityRing({ done, total, size = 34 }: { done: number; total: number; size?: number }) {
+function VelocityRing({
+  done,
+  total,
+  size = 34,
+}: {
+  done: number;
+  total: number;
+  size?: number;
+}) {
   const r = (size - 5) / 2;
   const circ = 2 * Math.PI * r;
   const pct = total > 0 ? Math.min(done / total, 1) : 0;
-  const color = pct >= 1 ? "var(--green)" : pct >= 0.5 ? "var(--accent)" : "var(--amber)";
+  const color =
+    pct >= 1 ? "var(--green)" : pct >= 0.5 ? "var(--accent)" : "var(--amber)";
   return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)", flexShrink: 0 }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border-2)" strokeWidth={3} />
+    <svg
+      width={size}
+      height={size}
+      style={{ transform: "rotate(-90deg)", flexShrink: 0 }}
+    >
       <circle
-        cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={3}
-        strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)} strokeLinecap="round"
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke="var(--border-2)"
+        strokeWidth={3}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth={3}
+        strokeDasharray={circ}
+        strokeDashoffset={circ * (1 - pct)}
+        strokeLinecap="round"
         style={{ transition: "stroke-dashoffset 0.5s ease" }}
       />
     </svg>
@@ -74,21 +101,38 @@ function VelocityRing({ done, total, size = 34 }: { done: number; total: number;
 /* ══════════════════════════════════════════════════════════════════════════ */
 
 function computeSprintHealth(sprint: ProjectSprint) {
-  if (sprint.status !== "active" || !sprint.startDate || !sprint.endDate) return null;
+  if (sprint.status !== "active" || !sprint.startDate || !sprint.endDate)
+    return null;
   const now = new Date();
   const start = new Date(sprint.startDate);
   const end = new Date(sprint.endDate);
-  const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86_400_000));
-  const daysElapsed = Math.max(1, Math.ceil((now.getTime() - start.getTime()) / 86_400_000));
+  const totalDays = Math.max(
+    1,
+    Math.ceil((end.getTime() - start.getTime()) / 86_400_000),
+  );
+  const daysElapsed = Math.max(
+    1,
+    Math.ceil((now.getTime() - start.getTime()) / 86_400_000),
+  );
   const daysLeft = Math.max(0, totalDays - daysElapsed);
   const done = sprint.donePoints;
   const total = sprint.totalPoints;
   const remaining = total - done;
   const pace = done / daysElapsed;
-  const neededPace = daysLeft > 0 ? remaining / daysLeft : remaining > 0 ? 0 : pace;
-  const probability = Math.min(100, Math.round((neededPace > 0 ? pace / neededPace : 1) * 100));
-  const status = probability >= 80 ? "on-track" : probability >= 50 ? "at-risk" : "behind";
-  const color = status === "on-track" ? "var(--green)" : status === "at-risk" ? "var(--amber)" : "var(--red)";
+  const neededPace =
+    daysLeft > 0 ? remaining / daysLeft : remaining > 0 ? 0 : pace;
+  const probability = Math.min(
+    100,
+    Math.round((neededPace > 0 ? pace / neededPace : 1) * 100),
+  );
+  const status =
+    probability >= 80 ? "on-track" : probability >= 50 ? "at-risk" : "behind";
+  const color =
+    status === "on-track"
+      ? "var(--green)"
+      : status === "at-risk"
+        ? "var(--amber)"
+        : "var(--red)";
   return { probability, status, color, daysLeft, done, total };
 }
 
@@ -99,7 +143,10 @@ function computeSprintHealth(sprint: ProjectSprint) {
 export default function BacklogTab({ project }: { project: Project }) {
   const qc = useQueryClient();
   const userRole = useAuthStore((s) => s.user?.role);
-  const canManageSprints = userRole === "admin" || userRole === "engineering_manager" || userRole === "tech_lead";
+  const canManageSprints =
+    userRole === "admin" ||
+    userRole === "engineering_manager" ||
+    userRole === "tech_lead";
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("priority");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -111,16 +158,22 @@ export default function BacklogTab({ project }: { project: Project }) {
   const [localTasks, setLocalTasks] = useState<ProjectTask[]>([]);
   const [viewingTask, setViewingTask] = useState<ProjectTask | null>(null);
 
-  const [startSprintModal, setStartSprintModal] = useState<ProjectSprint | null>(null);
-  const [completeSprintModal, setCompleteSprintModal] = useState<ProjectSprint | null>(null);
+  const [startSprintModal, setStartSprintModal] =
+    useState<ProjectSprint | null>(null);
+  const [completeSprintModal, setCompleteSprintModal] =
+    useState<ProjectSprint | null>(null);
   const [showCreateSprintModal, setShowCreateSprintModal] = useState(false);
 
   /* ── EOS Plan Sprint ── */
   const [aiPlanLoading, setAiPlanLoading] = useState(false);
-  const [aiPlanResult, setAiPlanResult] = useState<SprintDraftResult | null>(null);
+  const [aiPlanResult, setAiPlanResult] = useState<SprintDraftResult | null>(
+    null,
+  );
 
   /* ── Duplicate detection / quick create ── */
-  const [quickCreateSprintId, setQuickCreateSprintId] = useState<string | null>(null);
+  const [quickCreateSprintId, setQuickCreateSprintId] = useState<string | null>(
+    null,
+  );
   const [defaultTitle, setDefaultTitle] = useState("");
 
   /* ── Derived data ── */
@@ -152,7 +205,10 @@ export default function BacklogTab({ project }: { project: Project }) {
     }
     return [...result].sort((a, b) => {
       if (sortBy === "priority")
-        return PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority);
+        return (
+          PRIORITY_ORDER.indexOf(a.priority) -
+          PRIORITY_ORDER.indexOf(b.priority)
+        );
       if (sortBy === "points") return b.storyPoints - a.storyPoints;
       if (sortBy === "key") return a.key.localeCompare(b.key);
       return 0;
@@ -161,8 +217,13 @@ export default function BacklogTab({ project }: { project: Project }) {
 
   /* ── Mutations ── */
   const moveToSprintMut = useMutation({
-    mutationFn: ({ sprintId, ticketKey }: { sprintId: string; ticketKey: string }) =>
-      addTicketToSprint(sprintId, ticketKey),
+    mutationFn: ({
+      sprintId,
+      ticketKey,
+    }: {
+      sprintId: string;
+      ticketKey: string;
+    }) => addTicketToSprint(sprintId, ticketKey),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["space-project", project.key] });
       toast.success("Moved to sprint");
@@ -171,8 +232,13 @@ export default function BacklogTab({ project }: { project: Project }) {
   });
 
   const moveToBacklogMut = useMutation({
-    mutationFn: ({ sprintId, ticketKey }: { sprintId: string; ticketKey: string }) =>
-      removeTicketFromSprint(sprintId, ticketKey),
+    mutationFn: ({
+      sprintId,
+      ticketKey,
+    }: {
+      sprintId: string;
+      ticketKey: string;
+    }) => removeTicketFromSprint(sprintId, ticketKey),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["space-project", project.key] });
       toast.success("Moved to backlog");
@@ -203,14 +269,20 @@ export default function BacklogTab({ project }: { project: Project }) {
   });
 
   const createSprintMut = useMutation({
-    mutationFn: (payload: { name: string; goal: string; start_date: string; end_date: string }) =>
-      createSprint({ ...payload, project_id: project.id }),
+    mutationFn: (payload: {
+      name: string;
+      goal: string;
+      start_date: string;
+      end_date: string;
+    }) => createSprint({ ...payload, project_id: project.id }),
     onSuccess: async (newSprint) => {
       if (selected.size > 0 && newSprint?.id) {
         const keys = Array.from(selected);
         await Promise.all(keys.map((k) => addTicketToSprint(newSprint.id, k)));
         setSelected(new Set());
-        toast.success(`Sprint created with ${keys.length} issue${keys.length > 1 ? "s" : ""}!`);
+        toast.success(
+          `Sprint created with ${keys.length} issue${keys.length > 1 ? "s" : ""}!`,
+        );
       } else {
         toast.success("Sprint created!");
       }
@@ -260,7 +332,9 @@ export default function BacklogTab({ project }: { project: Project }) {
     Promise.all(keys.map((k) => addTicketToSprint(sprintId, k)))
       .then(() => {
         qc.invalidateQueries({ queryKey: ["space-project", project.key] });
-        toast.success(`Moved ${keys.length} ticket${keys.length > 1 ? "s" : ""} to sprint`);
+        toast.success(
+          `Moved ${keys.length} ticket${keys.length > 1 ? "s" : ""} to sprint`,
+        );
         setSelected(new Set());
       })
       .catch((e) => toast.error(e.message));
@@ -283,7 +357,6 @@ export default function BacklogTab({ project }: { project: Project }) {
 
   return (
     <div className={styles.tab}>
-
       {/* ── Toolbar ── */}
       <div className={styles.toolbar}>
         <div className={styles.searchWrap}>
@@ -338,9 +411,13 @@ export default function BacklogTab({ project }: { project: Project }) {
             disabled={aiPlanLoading}
           >
             {aiPlanLoading ? (
-              <><span className={styles.spinner} /> Planning…</>
+              <>
+                <span className={styles.spinner} /> Planning…
+              </>
             ) : (
-              <><RiSparklingLine size={13} /> EOS Plan Sprint</>
+              <>
+                <RiSparklingLine size={13} /> EOS Plan Sprint
+              </>
             )}
           </button>
         </div>
@@ -348,7 +425,6 @@ export default function BacklogTab({ project }: { project: Project }) {
 
       {/* ── Sprint Sections ── */}
       <div className={styles.boardContainer}>
-
         {visibleSprints.length === 0 && (
           <div className={styles.emptySprintsHint}>
             <RiListCheck2 size={28} style={{ opacity: 0.25 }} />
@@ -361,10 +437,8 @@ export default function BacklogTab({ project }: { project: Project }) {
           const isCollapsed = collapsed.has(sprint.id);
           return (
             <div key={sprint.id} className={styles.sprintSection}>
-
               {/* ── Sprint Header ── */}
               <div className={styles.sprintHeader}>
-
                 {/* Left: collapse + name + meta */}
                 <div className={styles.sprintHeaderLeft}>
                   <button
@@ -373,7 +447,9 @@ export default function BacklogTab({ project }: { project: Project }) {
                   >
                     <span
                       className={styles.collapseArrow}
-                      style={{ transform: isCollapsed ? "rotate(-90deg)" : "none" }}
+                      style={{
+                        transform: isCollapsed ? "rotate(-90deg)" : "none",
+                      }}
                     >
                       ▾
                     </span>
@@ -383,20 +459,25 @@ export default function BacklogTab({ project }: { project: Project }) {
                       <span className={styles.sprintName}>{sprint.name}</span>
                       <span
                         className={`${styles.sprintStatusBadge} ${
-                          sprint.status === "active" ? styles.badgeActive : styles.badgePlanning
+                          sprint.status === "active"
+                            ? styles.badgeActive
+                            : styles.badgePlanning
                         }`}
                       >
                         {sprint.status === "active" ? "Active" : "Planning"}
                       </span>
                       {sprint.goal && (
                         <span className={styles.sprintGoal} title={sprint.goal}>
-                          {sprint.goal.length > 55 ? sprint.goal.slice(0, 55) + "…" : sprint.goal}
+                          {sprint.goal.length > 55
+                            ? sprint.goal.slice(0, 55) + "…"
+                            : sprint.goal}
                         </span>
                       )}
                     </div>
                     <div className={styles.sprintMeta}>
                       <span className={styles.sprintIssueCount}>
-                        {sprint.tasks.length} issue{sprint.tasks.length !== 1 ? "s" : ""}
+                        {sprint.tasks.length} issue
+                        {sprint.tasks.length !== 1 ? "s" : ""}
                       </span>
                       {(sprint.startDate || sprint.endDate) && (
                         <>
@@ -404,11 +485,17 @@ export default function BacklogTab({ project }: { project: Project }) {
                           <span className={styles.sprintDates}>
                             <RiCalendarLine size={10} />
                             {sprint.startDate
-                              ? new Date(sprint.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                              ? new Date(sprint.startDate).toLocaleDateString(
+                                  "en-US",
+                                  { month: "short", day: "numeric" },
+                                )
                               : "—"}
                             {" – "}
                             {sprint.endDate
-                              ? new Date(sprint.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                              ? new Date(sprint.endDate).toLocaleDateString(
+                                  "en-US",
+                                  { month: "short", day: "numeric" },
+                                )
                               : "—"}
                           </span>
                         </>
@@ -418,30 +505,49 @@ export default function BacklogTab({ project }: { project: Project }) {
                 </div>
 
                 {/* Center: EOS health (active) or velocity ring (planning) */}
-                {(() => {
+                {/* {(() => {
                   const health = computeSprintHealth(sprint);
                   if (health) {
                     return (
                       <div className={styles.sprintHeaderCenter}>
-                        <VelocityRing done={sprint.donePoints} total={sprint.totalPoints} />
+                        <VelocityRing
+                          done={sprint.donePoints}
+                          total={sprint.totalPoints}
+                        />
                         <div className={styles.healthInfo}>
                           <div className={styles.healthTopRow}>
-                            <span className={styles.healthProb} style={{ color: health.color }}>
+                            <span
+                              className={styles.healthProb}
+                              style={{ color: health.color }}
+                            >
                               {health.probability}%
                             </span>
                             <span
                               className={styles.healthBadge}
-                              style={{ color: health.color, background: `${health.color}18`, border: `1px solid ${health.color}33` }}
+                              style={{
+                                color: health.color,
+                                background: `${health.color}18`,
+                                border: `1px solid ${health.color}33`,
+                              }}
                             >
-                              {health.status === "on-track"
-                                ? <><RiCheckLine size={9} /> On Track</>
-                                : health.status === "at-risk"
-                                ? <><RiAlertLine size={9} /> At Risk</>
-                                : <><RiAlertLine size={9} /> Behind</>}
+                              {health.status === "on-track" ? (
+                                <>
+                                  <RiCheckLine size={9} /> On Track
+                                </>
+                              ) : health.status === "at-risk" ? (
+                                <>
+                                  <RiAlertLine size={9} /> At Risk
+                                </>
+                              ) : (
+                                <>
+                                  <RiAlertLine size={9} /> Behind
+                                </>
+                              )}
                             </span>
                           </div>
                           <span className={styles.healthMeta}>
-                            {health.done}/{health.total} pts · {health.daysLeft}d left
+                            {health.done}/{health.total} pts · {health.daysLeft}
+                            d left
                           </span>
                         </div>
                       </div>
@@ -450,16 +556,23 @@ export default function BacklogTab({ project }: { project: Project }) {
                   if (sprint.totalPoints > 0) {
                     return (
                       <div className={styles.sprintHeaderCenter}>
-                        <VelocityRing done={sprint.donePoints} total={sprint.totalPoints} />
+                        <VelocityRing
+                          done={sprint.donePoints}
+                          total={sprint.totalPoints}
+                        />
                         <div className={styles.velocityLabel}>
-                          <span className={styles.velocityDone}>{sprint.donePoints}</span>
-                          <span className={styles.velocityTotal}>/{sprint.totalPoints} pts</span>
+                          <span className={styles.velocityDone}>
+                            {sprint.donePoints}
+                          </span>
+                          <span className={styles.velocityTotal}>
+                            /{sprint.totalPoints} pts
+                          </span>
                         </div>
                       </div>
                     );
                   }
                   return null;
-                })()}
+                })()} */}
 
                 {/* Right: action buttons */}
                 <div className={styles.sprintActions}>
@@ -512,10 +625,16 @@ export default function BacklogTab({ project }: { project: Project }) {
                           sprints={visibleSprints}
                           currentSprintId={sprint.id}
                           onMoveToSprint={(sid) =>
-                            moveToSprintMut.mutate({ sprintId: sid, ticketKey: task.key })
+                            moveToSprintMut.mutate({
+                              sprintId: sid,
+                              ticketKey: task.key,
+                            })
                           }
                           onMoveToBacklog={() =>
-                            moveToBacklogMut.mutate({ sprintId: sprint.id, ticketKey: task.key })
+                            moveToBacklogMut.mutate({
+                              sprintId: sprint.id,
+                              ticketKey: task.key,
+                            })
                           }
                           onClick={() => setViewingTask(task)}
                         />
@@ -558,7 +677,11 @@ export default function BacklogTab({ project }: { project: Project }) {
               >
                 <span
                   className={styles.collapseArrow}
-                  style={{ transform: collapsed.has("backlog") ? "rotate(-90deg)" : "none" }}
+                  style={{
+                    transform: collapsed.has("backlog")
+                      ? "rotate(-90deg)"
+                      : "none",
+                  }}
                 >
                   ▾
                 </span>
@@ -567,12 +690,15 @@ export default function BacklogTab({ project }: { project: Project }) {
                 <div className={styles.sprintTitleRow}>
                   <span className={styles.sprintName}>Backlog</span>
                   <span className={styles.sprintIssueCount}>
-                    {backlogTasks.length} issue{backlogTasks.length !== 1 ? "s" : ""}
+                    {backlogTasks.length} issue
+                    {backlogTasks.length !== 1 ? "s" : ""}
                   </span>
                   {totalBacklogSP > 0 && (
                     <>
                       <span className={styles.metaDivider}>·</span>
-                      <span className={styles.sprintPoints}>{totalBacklogSP} pts</span>
+                      <span className={styles.sprintPoints}>
+                        {totalBacklogSP} pts
+                      </span>
                     </>
                   )}
                 </div>
@@ -619,7 +745,10 @@ export default function BacklogTab({ project }: { project: Project }) {
                       sprints={visibleSprints}
                       currentSprintId={undefined}
                       onMoveToSprint={(sid) =>
-                        moveToSprintMut.mutate({ sprintId: sid, ticketKey: task.key })
+                        moveToSprintMut.mutate({
+                          sprintId: sid,
+                          ticketKey: task.key,
+                        })
                       }
                       onMoveToBacklog={undefined}
                       onClick={() => setViewingTask(task)}
@@ -727,7 +856,9 @@ export default function BacklogTab({ project }: { project: Project }) {
             priority: data.priority || "Medium",
             assignee: data.assignee,
             pod: project.key,
-            story_points: data.story_points ? Number(data.story_points) : undefined,
+            story_points: data.story_points
+              ? Number(data.story_points)
+              : undefined,
             labels: data.labels,
             status: data.status || "To Do",
             sprint_id: createForSprint,
@@ -740,8 +871,12 @@ export default function BacklogTab({ project }: { project: Project }) {
             priority: (payload.priority || "Medium") as ProjectTask["priority"],
             type: _normalizeType(payload.issue_type) as ProjectTask["type"],
             assignee: payload.assignee || project.members[0]?.name || "",
-            assigneeInitials: _initials(payload.assignee || project.members[0]?.name),
-            assigneeColor: _hashColor(payload.assignee || project.members[0]?.name || ""),
+            assigneeInitials: _initials(
+              payload.assignee || project.members[0]?.name,
+            ),
+            assigneeColor: _hashColor(
+              payload.assignee || project.members[0]?.name || "",
+            ),
             storyPoints: payload.story_points || 0,
             createdAt: new Date().toISOString().split("T")[0],
             updatedAt: new Date().toISOString().split("T")[0],
@@ -759,21 +894,28 @@ export default function BacklogTab({ project }: { project: Project }) {
         size="sm"
         title="EOS Sprint Plan"
         avatar={<RiSparklingLine size={18} color="var(--accent)" />}
-        badge={aiPlanResult ? (
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            {aiPlanResult.nova_powered
-              ? <span className={styles.novaPoweredBadge}>AI</span>
-              : <span className={styles.novaFallbackBadge}>Deterministic</span>}
-            <span style={{ fontSize: 11, color: "var(--text-3)" }}>
-              {aiPlanResult.tickets.length} tickets · {aiPlanResult.total_points} pts
-            </span>
-          </div>
-        ) : undefined}
+        badge={
+          aiPlanResult ? (
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              {aiPlanResult.nova_powered ? (
+                <span className={styles.novaPoweredBadge}>AI</span>
+              ) : (
+                <span className={styles.novaFallbackBadge}>Deterministic</span>
+              )}
+              <span style={{ fontSize: 11, color: "var(--text-3)" }}>
+                {aiPlanResult.tickets.length} tickets ·{" "}
+                {aiPlanResult.total_points} pts
+              </span>
+            </div>
+          ) : undefined
+        }
       >
         {aiPlanResult && (
           <>
             {aiPlanResult.rationale && (
-              <p className={styles.eosDrawerRationale}>{aiPlanResult.rationale}</p>
+              <p className={styles.eosDrawerRationale}>
+                {aiPlanResult.rationale}
+              </p>
             )}
             <div className={styles.eosDrawerTickets}>
               {aiPlanResult.tickets.map((t) => {
@@ -781,15 +923,21 @@ export default function BacklogTab({ project }: { project: Project }) {
                   t.priority === "Critical" || t.priority === "Highest"
                     ? "var(--red)"
                     : t.priority === "High"
-                    ? "var(--amber)"
-                    : "var(--accent)";
+                      ? "var(--amber)"
+                      : "var(--accent)";
                 return (
                   <div key={t.key} className={styles.eosTicket}>
                     <div className={styles.eosTicketTop}>
                       <span className={styles.eosTicketKey}>{t.key}</span>
-                      <span className={styles.eosTicketDot} style={{ background: dotColor }} title={t.priority} />
+                      <span
+                        className={styles.eosTicketDot}
+                        style={{ background: dotColor }}
+                        title={t.priority}
+                      />
                       <span className={styles.eosTicketTitle}>{t.summary}</span>
-                      <span className={styles.eosTicketSP}>{t.suggested_points}pt</span>
+                      <span className={styles.eosTicketSP}>
+                        {t.suggested_points}pt
+                      </span>
                     </div>
                     {t.rationale && (
                       <p className={styles.eosTicketReason}>{t.rationale}</p>
@@ -887,15 +1035,22 @@ const TaskRow = React.memo(function TaskRow({
         <span className={styles.keyBadge}>{task.key}</span>
       </div>
       <div className={styles.tdTitle}>
-        <span className={styles.issueTypeIcon}>{ISSUE_TYPE_ICONS[task.type] ?? "🔵"}</span>
+        <span className={styles.issueTypeIcon}>
+          {ISSUE_TYPE_ICONS[task.type] ?? "🔵"}
+        </span>
         <span className={styles.titleText}>{task.title}</span>
         {isStale && (
-          <span className={styles.staleBadge} title={`No updates in ${staleDays} days`}>
+          <span
+            className={styles.staleBadge}
+            title={`No updates in ${staleDays} days`}
+          >
             <RiAlertLine size={9} /> {staleDays}d
           </span>
         )}
         {task.labels?.map((l) => (
-          <span key={l} className={styles.labelTag}>{l}</span>
+          <span key={l} className={styles.labelTag}>
+            {l}
+          </span>
         ))}
       </div>
       <div className={styles.tdStatus}>
@@ -912,7 +1067,10 @@ const TaskRow = React.memo(function TaskRow({
       </div>
       <div className={styles.tdAssignee}>
         <Tooltip title={task.assignee} arrow>
-          <div className={styles.assigneeAvatar} style={{ background: task.assigneeColor }}>
+          <div
+            className={styles.assigneeAvatar}
+            style={{ background: task.assigneeColor }}
+          >
             {task.assigneeInitials}
           </div>
         </Tooltip>
@@ -925,7 +1083,10 @@ const TaskRow = React.memo(function TaskRow({
           <span
             className={styles.dueDate}
             style={{
-              color: new Date(task.dueDate) < new Date() ? "var(--red)" : "var(--text-2)",
+              color:
+                new Date(task.dueDate) < new Date()
+                  ? "var(--red)"
+                  : "var(--text-2)",
             }}
           >
             {new Date(task.dueDate).toLocaleDateString("en-US", {
@@ -1009,9 +1170,14 @@ function QuickCreateRow({
   const [title, setTitle] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
-  const duplicates = useMemo(() => _findDuplicates(title, allTasks), [title, allTasks]);
+  const duplicates = useMemo(
+    () => _findDuplicates(title, allTasks),
+    [title, allTasks],
+  );
 
   return (
     <div className={styles.quickCreateWrap}>
@@ -1029,16 +1195,23 @@ function QuickCreateRow({
           }}
         />
         {title.trim() && (
-          <button className={styles.quickCreateBtn} onClick={() => onConfirm(title.trim())}>
+          <button
+            className={styles.quickCreateBtn}
+            onClick={() => onConfirm(title.trim())}
+          >
             Create →
           </button>
         )}
-        <button className={styles.quickCreateCancel} onClick={onCancel}>✕</button>
+        <button className={styles.quickCreateCancel} onClick={onCancel}>
+          ✕
+        </button>
       </div>
       {duplicates.length > 0 && (
         <div className={styles.dupeBanner}>
           <RiAlertLine size={11} style={{ flexShrink: 0 }} />
-          <span className={styles.dupeBannerLabel}>Similar tickets already exist:</span>
+          <span className={styles.dupeBannerLabel}>
+            Similar tickets already exist:
+          </span>
           {duplicates.map((d) => (
             <span key={d.key} className={styles.dupeChip}>
               <span className={styles.dupeKey}>{d.key}</span>
@@ -1067,7 +1240,9 @@ function StartSprintModal({
   isLoading: boolean;
 }) {
   const today = new Date().toISOString().split("T")[0];
-  const twoWeeks = new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0];
+  const twoWeeks = new Date(Date.now() + 14 * 86400000)
+    .toISOString()
+    .split("T")[0];
   const [name, setName] = useState(sprint.name);
   const [goal, setGoal] = useState(sprint.goal || "");
   const [startDate, setStartDate] = useState(sprint.startDate || today);
@@ -1102,7 +1277,9 @@ function StartSprintModal({
             onChange={(e) => setName(e.target.value)}
           />
 
-          <label className={styles.formLabel}>Sprint Goal <span className={styles.optional}>(optional)</span></label>
+          <label className={styles.formLabel}>
+            Sprint Goal <span className={styles.optional}>(optional)</span>
+          </label>
           <textarea
             className={styles.formTextarea}
             value={goal}
@@ -1134,7 +1311,11 @@ function StartSprintModal({
         </div>
 
         <div className={styles.modalFooter}>
-          <button className={styles.cancelBtn} onClick={onClose} disabled={isLoading}>
+          <button
+            className={styles.cancelBtn}
+            onClick={onClose}
+            disabled={isLoading}
+          >
             Cancel
           </button>
           <button
@@ -1143,9 +1324,13 @@ function StartSprintModal({
             disabled={isLoading}
           >
             {isLoading ? (
-              <><span className={styles.spinner} /> Starting…</>
+              <>
+                <span className={styles.spinner} /> Starting…
+              </>
             ) : (
-              <><RiPlayCircleLine size={14} /> Start Sprint</>
+              <>
+                <RiPlayCircleLine size={14} /> Start Sprint
+              </>
             )}
           </button>
         </div>
@@ -1186,13 +1371,19 @@ function CompleteSprintModal({
 
         <div className={styles.completeSprintStats}>
           <div className={styles.completeStat}>
-            <span className={styles.completeStatNum} style={{ color: "var(--green)" }}>
+            <span
+              className={styles.completeStatNum}
+              style={{ color: "var(--green)" }}
+            >
               {doneCount}
             </span>
             <span className={styles.completeStatLbl}>Done</span>
           </div>
           <div className={styles.completeStat}>
-            <span className={styles.completeStatNum} style={{ color: "var(--amber)" }}>
+            <span
+              className={styles.completeStatNum}
+              style={{ color: "var(--amber)" }}
+            >
               {incompleteCount}
             </span>
             <span className={styles.completeStatLbl}>Incomplete</span>
@@ -1207,10 +1398,14 @@ function CompleteSprintModal({
 
         {incompleteCount > 0 && (
           <div className={styles.incompleteNotice}>
-            <RiArrowGoBackLine size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+            <RiArrowGoBackLine
+              size={14}
+              style={{ flexShrink: 0, marginTop: 1 }}
+            />
             <span>
-              <strong>{incompleteCount}</strong> incomplete issue{incompleteCount !== 1 ? "s" : ""} will be
-              moved to the <strong>Backlog</strong> automatically.
+              <strong>{incompleteCount}</strong> incomplete issue
+              {incompleteCount !== 1 ? "s" : ""} will be moved to the{" "}
+              <strong>Backlog</strong> automatically.
             </span>
           </div>
         )}
@@ -1222,7 +1417,11 @@ function CompleteSprintModal({
         )}
 
         <div className={styles.modalFooter}>
-          <button className={styles.cancelBtn} onClick={onClose} disabled={isLoading}>
+          <button
+            className={styles.cancelBtn}
+            onClick={onClose}
+            disabled={isLoading}
+          >
             Cancel
           </button>
           <button
@@ -1231,9 +1430,13 @@ function CompleteSprintModal({
             disabled={isLoading}
           >
             {isLoading ? (
-              <><span className={styles.spinner} /> Completing…</>
+              <>
+                <span className={styles.spinner} /> Completing…
+              </>
             ) : (
-              <><RiCheckboxCircleLine size={14} /> Complete Sprint</>
+              <>
+                <RiCheckboxCircleLine size={14} /> Complete Sprint
+              </>
             )}
           </button>
         </div>
@@ -1253,12 +1456,19 @@ function CreateSprintModal({
   sprintNumber,
 }: {
   onClose: () => void;
-  onConfirm: (p: { name: string; goal: string; start_date: string; end_date: string }) => void;
+  onConfirm: (p: {
+    name: string;
+    goal: string;
+    start_date: string;
+    end_date: string;
+  }) => void;
   isLoading: boolean;
   sprintNumber: number;
 }) {
   const today = new Date().toISOString().split("T")[0];
-  const twoWeeks = new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0];
+  const twoWeeks = new Date(Date.now() + 14 * 86400000)
+    .toISOString()
+    .split("T")[0];
   const [name, setName] = useState(`Sprint ${sprintNumber}`);
   const [goal, setGoal] = useState("");
   const [startDate, setStartDate] = useState(today);
@@ -1282,7 +1492,9 @@ function CreateSprintModal({
             onChange={(e) => setName(e.target.value)}
           />
 
-          <label className={styles.formLabel}>Sprint Goal <span className={styles.optional}>(optional)</span></label>
+          <label className={styles.formLabel}>
+            Sprint Goal <span className={styles.optional}>(optional)</span>
+          </label>
           <textarea
             className={styles.formTextarea}
             value={goal}
@@ -1314,18 +1526,33 @@ function CreateSprintModal({
         </div>
 
         <div className={styles.modalFooter}>
-          <button className={styles.cancelBtn} onClick={onClose} disabled={isLoading}>
+          <button
+            className={styles.cancelBtn}
+            onClick={onClose}
+            disabled={isLoading}
+          >
             Cancel
           </button>
           <button
             className={styles.primaryBtn}
-            onClick={() => onConfirm({ name, goal, start_date: startDate, end_date: endDate })}
+            onClick={() =>
+              onConfirm({
+                name,
+                goal,
+                start_date: startDate,
+                end_date: endDate,
+              })
+            }
             disabled={isLoading || !name.trim()}
           >
             {isLoading ? (
-              <><span className={styles.spinner} /> Creating…</>
+              <>
+                <span className={styles.spinner} /> Creating…
+              </>
             ) : (
-              <><RiAddLine size={14} /> Create Sprint</>
+              <>
+                <RiAddLine size={14} /> Create Sprint
+              </>
             )}
           </button>
         </div>
@@ -1340,12 +1567,18 @@ function CreateSprintModal({
 
 function _daysSince(dateStr: string | undefined): number {
   if (!dateStr) return 0;
-  return Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000));
+  return Math.max(
+    0,
+    Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000),
+  );
 }
 
 function _findDuplicates(title: string, tasks: ProjectTask[]): ProjectTask[] {
   if (title.trim().length < 3) return [];
-  const words = title.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+  const words = title
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 2);
   return tasks
     .filter((t) => words.some((w) => t.title.toLowerCase().includes(w)))
     .slice(0, 3);
