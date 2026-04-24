@@ -6,6 +6,7 @@ import { fetchTickets, fetchTicket } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import { useDebounce } from "@/hooks";
 import { formatDate, formatHours } from "@/utils/formatters";
+import { ticketToInitialData } from "@/utils/ticketHelpers";
 import { IssueTypeBadge, StatusBadge, PODBadge } from "@/components/ui/Badge";
 import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
 import CreateTicketDrawer from "./CreateTicketDrawer";
@@ -93,8 +94,7 @@ export default function TicketsPage() {
   });
 
   const filters = useFilterStore();
-  const { pods, clients, togglePod, toggleClient, clearPods, clearClients } =
-    useFilterStore();
+  const { pods, clients, togglePod, toggleClient, clearPods, clearClients } = filters;
   const debouncedSearch = useDebounce(filters.search, 300);
 
   const { data, isLoading } = useQuery({
@@ -256,29 +256,7 @@ export default function TicketsPage() {
           open={!!selectedTicket}
           onClose={() => setSelectedTicket(null)}
           ticketKey={selectedTicket.key}
-          initialData={{
-            title: selectedTicket.summary,
-            description: (selectedTicket as any).description ?? "",
-            issue_type: selectedTicket.issue_type,
-            priority: selectedTicket.priority,
-            status: selectedTicket.status,
-            assignee: selectedTicket.assignee,
-            reporter: (selectedTicket as any).reporter ?? "",
-            pod: selectedTicket.pod,
-            client: selectedTicket.client,
-            story_points: selectedTicket.story_points,
-            labels: selectedTicket.labels,
-            due_date: selectedTicket.due_date,
-            epic: (selectedTicket as any).epic ?? "",
-            parent: (selectedTicket as any).parent ?? "",
-            originalEst: selectedTicket.original_estimate_hours
-              ? String(selectedTicket.original_estimate_hours)
-              : "",
-            timeSpent: selectedTicket.hours_spent ? String(selectedTicket.hours_spent) : "",
-            remaining: selectedTicket.remaining_estimate_hours
-              ? String(selectedTicket.remaining_estimate_hours)
-              : "",
-          }}
+          initialData={ticketToInitialData(selectedTicket)}
         />
       )}
 
@@ -290,33 +268,7 @@ export default function TicketsPage() {
           setSearchParams(searchParams);
         }}
         ticketKey={urlTicketKey ?? undefined}
-        initialData={
-          urlTicketData
-            ? {
-                title: urlTicketData.summary,
-                description: (urlTicketData as any).description ?? "",
-                issue_type: urlTicketData.issue_type,
-                priority: urlTicketData.priority,
-                status: urlTicketData.status,
-                assignee: urlTicketData.assignee,
-                reporter: (urlTicketData as any).reporter ?? "",
-                pod: urlTicketData.pod,
-                client: urlTicketData.client,
-                story_points: urlTicketData.story_points,
-                labels: urlTicketData.labels,
-                due_date: urlTicketData.due_date,
-                epic: (urlTicketData as any).epic ?? "",
-                parent: (urlTicketData as any).parent ?? "",
-                originalEst: urlTicketData.original_estimate_hours
-                  ? String(urlTicketData.original_estimate_hours)
-                  : "",
-                timeSpent: urlTicketData.hours_spent ? String(urlTicketData.hours_spent) : "",
-                remaining: urlTicketData.remaining_estimate_hours
-                  ? String(urlTicketData.remaining_estimate_hours)
-                  : "",
-              }
-            : undefined
-        }
+        initialData={urlTicketData ? ticketToInitialData(urlTicketData) : undefined}
       />
     </div>
   );

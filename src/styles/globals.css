@@ -69,6 +69,56 @@
   --sidebar-w-collapsed: 64px;
   --notif-panel-w: 340px;
   --topbar-h: 58px;
+
+  /* Font size scale */
+  --text-xs:   10px;
+  --text-sm:   11px;
+  --text-base: 13px;
+  --text-md:   14px;
+  --text-lg:   16px;
+  --text-xl:   18px;
+  --text-2xl:  20px;
+  --text-3xl:  24px;
+
+  /* Font weight */
+  --fw-normal:   400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  /* Line height */
+  --lh-tight:   1.3;
+  --lh-normal:  1.5;
+  --lh-relaxed: 1.6;
+
+  /* Letter spacing */
+  --ls-tight:  -0.03em;
+  --ls-snug:   -0.02em;
+  --ls-normal:  0;
+
+  /* Transitions */
+  --t-fast:   0.15s ease;
+  --t-base:   0.2s ease;
+  --t-slow:   0.3s ease;
+  --t-spring: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Z-index scale */
+  --z-base:     1;
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-overlay:  300;
+  --z-modal:    400;
+  --z-toast:    500;
+
+  /* Layout */
+  --content-max-w:  1440px;
+  --page-padding-x: 22px;
+  --page-padding-y: 18px;
+
+  /* Icon sizes */
+  --icon-sm: 14px;
+  --icon-md: 16px;
+  --icon-lg: 20px;
 }
 
 /* ── THEME: EMERALD ── */

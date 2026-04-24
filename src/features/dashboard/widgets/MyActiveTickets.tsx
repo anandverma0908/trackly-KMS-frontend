@@ -3,72 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchTickets, fetchTicket } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
+import { ticketToInitialData, statusToMeta, priorityToMeta } from "@/utils/ticketHelpers";
 import styles from "./MyActiveTickets.module.css";
 
 import { RiArrowRightLine, RiTimeLine } from "react-icons/ri";
 
-/* ── Constants ── */
-
-// All statuses considered "open / active"
 const DONE_STATUSES = new Set([
-  "Done",
-  "Closed",
-  "Resolved",
-  "Won't Fix",
-  "Duplicate",
-  "Cancelled",
-  "Rejected",
+  "Done", "Closed", "Resolved", "Won't Fix", "Duplicate", "Cancelled", "Rejected",
 ]);
-
-const STATUS_META: Record<
-  string,
-  { color: string; bg: string; label: string }
-> = {
-  "In Progress": {
-    color: "var(--accent)",
-    bg: "rgba(79,126,255,0.15)",
-    label: "In Progress",
-  },
-  "In Review": {
-    color: "var(--amber)",
-    bg: "rgba(251,191,36,0.15)",
-    label: "In Review",
-  },
-  Blocked: {
-    color: "var(--red,#F87171)",
-    bg: "rgba(248,113,113,0.15)",
-    label: "Blocked",
-  },
-  "To Do": { color: "var(--text-3)", bg: "var(--surface-2)", label: "To Do" },
-  Open: { color: "var(--text-3)", bg: "var(--surface-2)", label: "Open" },
-  Reopened: {
-    color: "var(--cyan,#22D3EE)",
-    bg: "rgba(34,211,238,0.12)",
-    label: "Reopened",
-  },
-};
-
-function getStatusMeta(status: string) {
-  // Check for blocked in any casing
-  if (status.toLowerCase().includes("block")) {
-    return STATUS_META["Blocked"];
-  }
-  return (
-    STATUS_META[status] ?? {
-      color: "var(--text-3)",
-      bg: "var(--surface-2)",
-      label: status,
-    }
-  );
-}
-
-const PRIORITY_ICON: Record<string, { icon: string; color: string }> = {
-  Highest: { icon: "⬆⬆", color: "var(--red,#F87171)" },
-  High: { icon: "⬆", color: "var(--amber)" },
-  Medium: { icon: "▶", color: "var(--accent)" },
-  Low: { icon: "⬇", color: "var(--green)" },
-  Lowest: { icon: "⬇⬇", color: "var(--text-3)" },
-};
 
 /* ── Filter tab definitions ── */
 type FilterKey = "all" | "in_progress" | "in_review" | "blocked" | "open";
@@ -289,8 +231,8 @@ export default function MyActiveTickets() {
       ) : (
         <div className={styles.list}>
           {sorted.map((t) => {
-            const sm = getStatusMeta(t.status);
-            const priData = PRIORITY_ICON[t.priority ?? ""];
+            const sm = statusToMeta(t.status);
+            const priData = priorityToMeta(t.priority ?? "");
             return (
               <button
                 key={t.key}
@@ -309,7 +251,7 @@ export default function MyActiveTickets() {
                     >
                       {sm.label}
                     </span>
-                    {priData && (
+                    {t.priority && priData.label && (
                       <span
                         className={styles.priorityIcon}
                         style={{ color: priData.color }}
@@ -353,33 +295,7 @@ export default function MyActiveTickets() {
           open
           onClose={() => setSelectedKey(null)}
           ticketKey={selectedKey}
-          initialData={
-            selectedTicketData
-              ? {
-                  title: selectedTicketData.summary,
-                  description: (selectedTicketData as any).description ?? "",
-                  issue_type: selectedTicketData.issue_type,
-                  priority: selectedTicketData.priority,
-                  status: selectedTicketData.status,
-                  assignee: selectedTicketData.assignee,
-                  reporter: (selectedTicketData as any).reporter ?? "",
-                  pod: selectedTicketData.pod,
-                  client: selectedTicketData.client,
-                  story_points: selectedTicketData.story_points,
-                  labels: selectedTicketData.labels,
-                  due_date: selectedTicketData.due_date,
-                  originalEst: selectedTicketData.original_estimate_hours
-                    ? String(selectedTicketData.original_estimate_hours)
-                    : "",
-                  timeSpent: selectedTicketData.hours_spent
-                    ? String(selectedTicketData.hours_spent)
-                    : "",
-                  remaining: selectedTicketData.remaining_estimate_hours
-                    ? String(selectedTicketData.remaining_estimate_hours)
-                    : "",
-                }
-              : undefined
-          }
+          initialData={selectedTicketData ? ticketToInitialData(selectedTicketData) : undefined}
         />
       )}
     </div>

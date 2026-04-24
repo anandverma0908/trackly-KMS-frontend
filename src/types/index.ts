@@ -31,6 +31,8 @@ export interface Ticket {
   priority:                 string
   url:                      string
   sprint_id?:               string | null
+  epic?:                    string
+  parent?:                  string
   worklogs:                 Worklog[]
 }
 
