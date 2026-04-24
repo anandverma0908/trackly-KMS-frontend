@@ -269,9 +269,9 @@ export async function updateTicketStatus(key: string, status: string) {
   return data;
 }
 
-export async function analyzeTicketNL(text: string): Promise<NLAnalysisResult> {
+export async function analyzeTicketNL(text: string, availableUsers: string[] = []): Promise<NLAnalysisResult> {
   if (mock()?.analyzeTicketNL) return mock().analyzeTicketNL(text);
-  const { data } = await api.post("/tickets/ai-analyze", { text });
+  const { data } = await api.post("/tickets/ai-analyze", { text, available_users: availableUsers });
   const fields = data.fields ?? {};
   return {
     title: fields.title,
@@ -284,7 +284,7 @@ export async function analyzeTicketNL(text: string): Promise<NLAnalysisResult> {
     assignee: fields.assignee,
     labels: fields.labels,
     duplicates: data.duplicates,
-    confidence: data.confidence,
+    confidence: data.confidence ?? fields.confidence,
   };
 }
 
@@ -772,12 +772,15 @@ function _normalizeStandup(raw: unknown): Standup | null {
   if (s.standup && typeof s.standup === "object") {
     return _normalizeStandup(s.standup);
   }
-  // Must have an id and engineer to be considered a valid standup
+  // Must have an id to be a valid standup
   if (typeof s.id !== "number" && typeof s.id !== "string") return null;
-  if (!s.engineer || typeof s.engineer !== "string") return null;
+  // Accept "engineer" or "user_name" (generate endpoint used to return user_name)
+  const engineer = (typeof s.engineer === "string" ? s.engineer : null)
+    ?? (typeof s.user_name === "string" ? s.user_name : null);
+  if (!engineer) return null;
   return {
-    id: Number(s.id),
-    engineer: s.engineer,
+    id: String(s.id),
+    engineer,
     engineer_email: typeof s.engineer_email === "string" ? s.engineer_email : "",
     date: typeof s.date === "string" ? s.date : "",
     yesterday: typeof s.yesterday === "string" ? s.yesterday : "",
@@ -822,7 +825,7 @@ export async function fetchTeamStandups(date?: string, pod?: string): Promise<St
   }
 }
 
-export async function updateStandup(id: number, payload: Partial<Standup>): Promise<Standup> {
+export async function updateStandup(id: string, payload: Partial<Standup>): Promise<Standup> {
   if (mock()?.updateStandup) {
     const raw = await mock().updateStandup(id, payload);
     const s = _normalizeStandup(raw);

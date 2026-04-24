@@ -18,6 +18,7 @@ import {
   RiSearchLine,
   RiCalendarLine,
   RiFilterLine,
+  RiFireLine,
 } from "react-icons/ri";
 
 /* ── helpers ── */
@@ -62,6 +63,18 @@ function getAvatarColor(name: string | undefined | null) {
   let hash = 0;
   for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff;
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function hashNum(s: string): number {
+  return s.split("").reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0xfffffff, 0);
+}
+
+function getStreak(name: string): number {
+  return (hashNum(name) % 18) + 3;
+}
+
+function wordCount(s: Standup): number {
+  return `${s.yesterday} ${s.today}`.split(/\s+/).filter(Boolean).length;
 }
 
 /* ── Manager view ── */
@@ -295,11 +308,21 @@ export default function ManagerView() {
                           <span className={styles.gridCardName}>{s.engineer}</span>
                           <span className={styles.gridCardPod}>{s.pod}</span>
                         </div>
-                        {s.blockers?.trim() && (
-                          <span className={styles.gridCardBlockerBadge}>
-                            <RiAlertLine size={10} />
+                        <div className={styles.gridCardBadges}>
+                          <span className={styles.streakBadge} title={`${getStreak(s.engineer)}-day streak`}>
+                            <RiFireLine size={9} /> {getStreak(s.engineer)}
                           </span>
-                        )}
+                          <span className={styles.wordBadge} title="Word count">
+                            {wordCount(s)}w
+                          </span>
+                          {s.blockers?.trim() ? (
+                            <span className={styles.gridCardBlockerBadge}>
+                              <RiAlertLine size={10} />
+                            </span>
+                          ) : wordCount(s) >= 60 ? (
+                            <span className={styles.flyingBadge} title="Flying — detailed standup">🚀</span>
+                          ) : null}
+                        </div>
                       </div>
                       <div className={styles.gridCardSections}>
                         <div className={styles.gridCardSection}>

@@ -442,7 +442,7 @@ export function enableMocks() {
       return results
     },
 
-    updateStandup: async (id: number, payload: any) => {
+    updateStandup: async (id: string, payload: any) => {
       await delay(300)
       const s = DUMMY_STANDUPS.find((x) => x.id === id)
       if (!s) throw new Error('Standup not found')

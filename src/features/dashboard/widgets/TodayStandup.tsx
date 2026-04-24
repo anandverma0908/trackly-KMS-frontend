@@ -38,7 +38,7 @@ export default function TodayStandup() {
   });
 
   const updateMut = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: any }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: any }) =>
       updateStandup(id, payload),
     onSuccess: () => {
       refetch();

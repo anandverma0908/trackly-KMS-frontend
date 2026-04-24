@@ -36,7 +36,7 @@
 
 *[Point to the EOS Agent Brief at the top — the typing animation.]*
 
-> "See this? EOS just read every ticket, every standup, every code review, every timesheet across your entire team... and wrote you a personal morning brief. Not notification spam. A *briefing*. Let me give you an example — it might say something like: 'Good morning. Three tickets need attention. TRKLY-284 is now blocking the auth flow. Your focus window is 9 to 11 AM — perfect for deep work. One standup is missing from yesterday.' That's it. You know everything in ten seconds."
+> "See this? EOS just read every ticket, every standup, every code review, every timesheet across your entire team... and wrote you a personal morning brief. Not notification spam. A *briefing*. Let me give you an example — it might say something like: 'Good morning. Three tickets need attention. TRKLY-4 — Blank Login Screen after Idle Session Expiration — is ranked #1 due to sprint deadline risk. Your focus window is 9 to 11 AM — perfect for deep work. One standup is missing from yesterday.' That's it. You know everything in ten seconds."
 
 *[Scroll down to the **EOS Insight Feed**. Point to the insight cards.]*
 
@@ -44,7 +44,23 @@
 
 *[Scroll down to the **AI Priority Queue**. Expand a ticket.]*
 
-> "Now look at this queue. EOS didn't just sort by priority. It *ranked* everything. Let me show you what that means. This ticket — TRKLY-284 — is ranked number one. Why? Because EOS knows it's blocking three other tickets. It knows it's been in 'In Progress' for four days. It knows the sprint ends in three days. And it knows your energy pattern from your timesheets shows you're most productive in the morning — which is right now. So it puts this at the top. Not because someone flagged it 'High Priority.' Because the math says it's the most important thing you can do right now."
+> "Now look at this queue. EOS didn't just sort by priority. It *ranked* everything. Let me show you what that means. This ticket right here — TRKLY-4. 'Blank Login Screen after Idle Session Expiration.' Status: To Do. Priority: High. 3 story points. POD: TRK. And look at why EOS ranked it #1 — 'sprint deadline risk.'"
+
+*[Point to the EOS Analysis line.]*
+
+> "Why #1? Because EOS knows this is a login screen bug. It knows users can't access the app after their session expires. It knows idle session expiration affects every single user. It knows the sprint deadline is approaching. And it knows 3 points is a focused, completable unit of work that can be knocked out in this focus window. So EOS puts it at the top. Not because someone flagged it 'High Priority.' Because the math says a login screen bug with sprint deadline risk is the most important thing you can ship right now."
+
+*[Point to the Quick Actions.]*
+
+> "And see these Quick Actions? EOS doesn't just rank the ticket. It gives you one-tap actions. Start focus. Ping the reviewer. Log time. Draft an unblock comment. Everything you need, right here, without opening five different tools."
+
+*[Scroll down slightly to the **Ambient Work Awareness** widget.]*
+
+> "And this — Ambient Work Awareness. It's a live feed of everything happening around your work. Blue dot? Someone moved a ticket to a new status. Amber? A review comment came in. Green? A ticket got reassigned. Red? Something just got blocked."
+
+*[Point to a few items in the feed.]*
+
+> "For example — 'TRKLY-301 moved to In Review — 2 min ago.' 'TRKLY-284 assigned to Anoop Rai — 15 min ago.' I didn't refresh anything. I didn't check Slack. I didn't open my email. The work just... talks to me. That's what ambient means. It's always on. Always watching. So you're never the last person to know when something changes."
 
 *[Point to the **Smart Focus Block**.]*
 
@@ -52,7 +68,7 @@
 
 *[Scroll to **Delivery Forecast**.]*
 
-> "Here's where it gets scary-accurate. Based on your *actual* velocity — real logged hours, real story points burned — EOS calculates whether you'll hit sprint goals. Let me read this: 'At 3.2 points per day, you'll finish 2 days before sprint end. Solid pace.' Green means you're ahead. Amber means tight — 'stay focused on top-ranked tickets.' Red means at risk — and EOS tells you exactly how many points to descope. No more surprise misses on sprint review day. You see the train wreck coming while you can still avoid it."
+> "Here's where it gets scary-accurate. Based on your *actual* velocity — real logged hours, real story points burned — EOS calculates whether you'll hit sprint goals. Look at this: 3 points on TRKLY-4, and EOS knows your pace is 3.2 points per day. That's one focused day of work. Green means you're ahead. Amber means tight — 'stay focused on top-ranked tickets like TRKLY-4.' Red means at risk — and EOS tells you exactly how many points to descope. No more surprise misses on sprint review day. You see the train wreck coming while you can still avoid it."
 
 *[Scroll down to **Knowledge Gaps**.]*
 
@@ -115,7 +131,7 @@
 
 *[Now click the **EOS Plan Sprint** button. Let the drawer load.]*
 
-> "And here's the big magic. I click 'EOS Plan Sprint' — and EOS drafts an entire sprint for me. From the backlog. Respecting capacity, dependencies, and priority. Look — it picked 8 tickets, 34 points total. And it tells me *why* each one: 'TRKLY-301 included because it unblocks auth flow.' 'TRKLY-284 included because assignee has capacity and matching skillset.' You don't plan sprints anymore. You *approve* what EOS designed."
+> "And here's the big magic. I click 'EOS Plan Sprint' — and EOS drafts an entire sprint for me. From the backlog. Respecting capacity, dependencies, and priority. Look — it picked 8 tickets, 34 points total. And it tells me *why* each one: 'TRKLY-4 included because sprint deadline risk on login screen bug.' 'TRKLY-301 included because it unblocks auth flow.' You don't plan sprints anymore. You *approve* what EOS designed."
 
 *[Close the drawer. Move on.]*
 
@@ -236,7 +252,7 @@
 
 *[Click **Generate with EOS**.]*
 
-> "Don't write anything. Just click 'Generate with EOS.' It reads your tickets, your time logs, your status changes... and writes your standup for you. 'Yesterday: Fixed mobile login redirect in TRKLY-284. Reviewed PR for auth module. Today: Pick up TRKLY-301 — password reset flow. Blockers: None.' You review it. You hit submit. Done. Two minutes."
+> "Don't write anything. Just click 'Generate with EOS.' It reads your tickets, your time logs, your status changes... and writes your standup for you. 'Yesterday: Completed TRKLY-4 — fixed blank login screen after idle session expiration. Moved to In Review. Today: Pick up TRKLY-301 — password reset flow. Blockers: None.' You review it. You hit submit. Done. Two minutes."
 
 *[Show the team view / submission rate.]*
 
@@ -270,11 +286,23 @@
 
 *[Smile.]*
 
-> "That's Trackly. And we're just getting started."
+> "That's Trackly. And honestly? We just scratched the surface."
+
+*[Pause. Let curiosity build.]*
+
+> "What you saw today — EOS briefing your mornings, AI planning your sprints, ambient awareness keeping you in the loop, intelligent assignee routing — that's Phase One. But we're already building what's next. Predictive sprint health that warns you a week before things go wrong. Automated root-cause analysis when incidents happen. AI-generated onboarding paths that adapt to each new hire's skill level. Cross-space resource optimization that moves engineers before bottlenecks form."
+
+*[Lower your voice slightly — intimacy.]*
+
+> "Aastha showed you what we built. What I showed you is how engineering teams work in 2026. And what's coming next? That's how they'll work in 2027."
+
+*[Beat. Smile.]*
+
+> "That's Trackly. Thank you — and we'll see you in the next phase."
 
 *[Pause. Beat.]*
 
-> "Thank you. Questions?"
+> "Questions?"
 
 ---
 
@@ -321,7 +349,7 @@
 
 | Section | Screen | What to Do |
 |---|---|---|
-| My Work | My Work page | Let EOS brief type. Scroll through insights, expand a ticket in queue, show focus block, scroll to forecast, show knowledge gaps. |
+| My Work | My Work page | Let EOS brief type. Scroll through insights, expand **TRKLY-4** in queue, show focus block, scroll to forecast, show knowledge gaps. |
 | Spaces grid | Spaces page | Let grid load, click a space with active sprint. |
 | Summary | Space detail → Summary tab | Brief sweep across: brief banner, health score, signal cards, charts, member list. 15 seconds. |
 | Backlog | Space detail → Backlog tab | Click **Create Issue**, type ticket title, show **Duplicacy** + **Points** + **Assignee (Anoop Rai)** suggestions, close. Then click **EOS Plan Sprint**, let drawer load, close it. |

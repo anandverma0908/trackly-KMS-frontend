@@ -49,7 +49,7 @@ export default function StandupDetailDrawer({
   const canEdit = standup?.engineer === user?.name || user?.role === "admin" || user?.role === "engineering_manager";
 
   const updateMut = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Partial<Standup> }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<Standup> }) =>
       updateStandup(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-standup"] });

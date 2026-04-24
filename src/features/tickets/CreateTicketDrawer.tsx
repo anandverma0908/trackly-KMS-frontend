@@ -5,7 +5,6 @@ import {
   createTicket,
   updateTicket,
   analyzeTicketNL,
-  novaQuery,
   novaGenerate,
   fetchFilters,
   fetchTicketComments,
@@ -51,6 +50,7 @@ import Autocomplete from "@mui/material/Autocomplete";
 
 import {
   RiSparklingLine,
+  RiCheckLine,
   RiAttachmentLine,
   RiLink,
   RiAddLine,
@@ -191,7 +191,7 @@ function buildStoryEstimateFromAnalysis(result: NLAnalysisResult): StoryEstimate
 
 function buildHeuristicStoryEstimate(form: Pick<FormState, "title" | "description" | "issue_type" | "priority">): StoryEstimate | null {
   const text = `${form.title} ${form.description}`.toLowerCase();
-  if (text.trim().length < 12) return null;
+  if (text.trim().length < 4) return null;
 
   let index = Math.max(0, STORY_POINTS.indexOf(
     form.issue_type === "Epic" ? 13 :
@@ -334,6 +334,7 @@ export default function CreateTicketDrawer({
   /* Live duplicate detection + story estimation */
   const [liveDupes, setLiveDupes] = useState<{ key: string; summary: string; similarity: number; ai?: boolean }[]>([]);
   const [aiDupeScanning, setAiDupeScanning] = useState(false);
+  const [dupeScanDone, setDupeScanDone] = useState(false);
   const [storyEstimate, setStoryEstimate] = useState<StoryEstimate | null>(null);
   const [storyAiLoading, setStoryAiLoading] = useState(false);
   const aiDupeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -497,11 +498,18 @@ export default function CreateTicketDrawer({
   const set = (k: keyof FormState, v: unknown) =>
     setForm((p) => ({ ...p, [k]: v }));
 
+  /* Filters — declared before analysis effect so it's in scope as a dep */
+  const { data: filtersData } = useQuery({
+    queryKey: QUERY_KEYS.filters(),
+    queryFn: fetchFilters,
+  });
+
   /* Reset AI suggestion state when the drawer session changes */
   useEffect(() => {
     if (!open) {
       setLiveDupes([]);
       setAiDupeScanning(false);
+      setDupeScanDone(false);
       setStoryEstimate(null);
       setStoryAiLoading(false);
       setRoutingSuggestion(null);
@@ -510,6 +518,7 @@ export default function CreateTicketDrawer({
     }
     setLiveDupes([]);
     setAiDupeScanning(false);
+    setDupeScanDone(false);
     setStoryEstimate(null);
     setStoryAiLoading(false);
     setRoutingSuggestion(null);
@@ -520,6 +529,7 @@ export default function CreateTicketDrawer({
   useEffect(() => {
     const availableUsers = uniqueValues([
       ...stableMembers.map((member) => member.name),
+      ...(filtersData?.users ?? []),
       form.assignee,
       detailedTicket?.assignee,
     ]);
@@ -528,6 +538,7 @@ export default function CreateTicketDrawer({
       // Use functional updates to avoid creating new array references when already empty,
       // which would otherwise trigger an infinite render loop.
       setLiveDupes((prev) => (prev.length === 0 ? prev : []));
+      setDupeScanDone(false);
       setStoryEstimate(null);
       setRoutingSuggestion(null);
       setAiDupeScanning(false);
@@ -542,14 +553,8 @@ export default function CreateTicketDrawer({
     if (aiDupeRef.current) clearTimeout(aiDupeRef.current);
     aiDupeRef.current = setTimeout(async () => {
       try {
-        const query = [
-          `Title: ${form.title}`,
-          form.description ? `Description: ${form.description}` : "",
-          `Type: ${form.issue_type}`,
-          `Priority: ${form.priority}`,
-          availableUsers.length > 0 ? `Available assignees: ${availableUsers.join(", ")}` : "",
-        ].filter(Boolean).join("\n");
-        const r = await analyzeTicketNL(query);
+        const text = [form.title, form.description].filter(Boolean).join(" ");
+        const r = await analyzeTicketNL(text, availableUsers);
         setLiveDupes(r.duplicates?.length ? r.duplicates.map((d) => ({ ...d, ai: true })) : []);
         if (!form.story_points) {
           setStoryEstimate(buildStoryEstimateFromAnalysis(r) ?? buildHeuristicStoryEstimate(form));
@@ -568,6 +573,7 @@ export default function CreateTicketDrawer({
         }
       } finally {
         setAiDupeScanning(false);
+        setDupeScanDone(true);
         setStoryAiLoading(false);
         setRoutingLoading(false);
       }
@@ -599,11 +605,7 @@ export default function CreateTicketDrawer({
     return () => { if (linkSearchRef.current) clearTimeout(linkSearchRef.current); };
   }, [newLinkKey]);
 
-  /* Filters */
-  const { data: filtersData } = useQuery({
-    queryKey: QUERY_KEYS.filters(),
-    queryFn: fetchFilters,
-  });
+  /* Filters (users/clients derived here — query declared above analysis effect) */
   const users = uniqueValues([
     ...(filtersData?.users ?? []),
     ...stableMembers.map((m) => m.name),
@@ -1216,15 +1218,17 @@ Return ONLY valid JSON: {"title": "improved title", "description": "improved des
             </div>
 
             {/* Live Duplicate Detection */}
-            {!isEdit && (aiDupeScanning || liveDupes.length > 0) && form.title.length >= 4 && (
-              <div className={styles.liveDupeBanner}>
+            {!isEdit && (aiDupeScanning || liveDupes.length > 0 || dupeScanDone) && form.title.length >= 4 && (
+              <div className={styles.liveDupeBanner} style={dupeScanDone && liveDupes.length === 0 ? { borderColor: "rgba(52,211,153,0.3)", background: "rgba(52,211,153,0.05)" } : undefined}>
                 <div className={styles.liveDupeHeader}>
                   {aiDupeScanning ? (
                     <><svg className={styles.spinner} width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg><span>EOS scanning for duplicates…</span></>
-                  ) : (
+                  ) : liveDupes.length > 0 ? (
                     <><RiAlertLine size={13} /><span>{liveDupes.length === 1 ? "A similar ticket" : `${liveDupes.length} similar tickets`} may already exist — review before creating</span></>
+                  ) : (
+                    <><RiCheckLine size={13} style={{ color: "var(--green)" }} /><span style={{ color: "var(--green)" }}>No duplicate tickets found</span></>
                   )}
-                  <button className={styles.liveDupeClose} onClick={() => { setLiveDupes([]); setAiDupeScanning(false); }}>✕</button>
+                  <button className={styles.liveDupeClose} onClick={() => { setLiveDupes([]); setAiDupeScanning(false); setDupeScanDone(false); }}>✕</button>
                 </div>
                 {liveDupes.map((d) => (
                   <div key={d.key} className={styles.liveDupeItem}>

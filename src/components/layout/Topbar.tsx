@@ -19,7 +19,20 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import Divider from "@mui/material/Divider";
 import CircularProgress from "@mui/material/CircularProgress";
 
-import { RiMenuFoldLine, RiMenuLine, RiSearchLine, RiNotification3Line, RiMoonLine, RiSunLine, RiLogoutBoxRLine, RiUserLine, RiTicketLine, RiArticleLine, RiSparklingLine, RiCloseLine } from "react-icons/ri";
+import {
+  RiMenuFoldLine,
+  RiMenuLine,
+  RiSearchLine,
+  RiNotification3Line,
+  RiMoonLine,
+  RiSunLine,
+  RiLogoutBoxRLine,
+  RiUserLine,
+  RiTicketLine,
+  RiArticleLine,
+  RiSparklingLine,
+  RiCloseLine,
+} from "react-icons/ri";
 import { GoNorthStar } from "react-icons/go";
 
 /* ── Commented out — preserved for later use ──────────────────────────────
@@ -228,7 +241,11 @@ export default function Topbar({
         <div
           className={`${styles.searchBar} ${searchFocused ? styles.searchBarFocused : ""}`}
         >
-          <RiSearchLine size={15} color="var(--text-3)" style={{ flexShrink: 0 }} />
+          <RiSearchLine
+            size={15}
+            color="var(--text-3)"
+            style={{ flexShrink: 0 }}
+          />
           <input
             ref={inputRef}
             className={styles.searchInput}
@@ -268,14 +285,14 @@ export default function Topbar({
             >
               Search
             </button>
-            <button
+            {/* <button
               className={`${styles.modePill} ${mode === "nova" ? styles.modePillActive : ""}`}
               onMouseDown={(e) => { e.preventDefault(); handleModeSwitch("nova"); }}
               tabIndex={-1}
             >
               <span className={styles.novaGlow} />
               EOS
-            </button>
+            </button> */}
           </div>
 
           {!searchFocused && <kbd className={styles.kbd}>⌘K</kbd>}
@@ -376,7 +393,7 @@ export default function Topbar({
         ──────────────────────────────────────────────────────────────── */}
 
         {/* EOS toggle */}
-        <Tooltip title="EOS Assistant" placement="bottom">
+        {/* <Tooltip title="EOS Assistant" placement="bottom">
           <IconButton
             size="small"
             onClick={onEosToggle}
@@ -388,7 +405,7 @@ export default function Topbar({
               {!eosOpen && <span className={styles.eosDot} />}
             </span>
           </IconButton>
-        </Tooltip>
+        </Tooltip> */}
 
         {/* Theme toggle */}
         <Tooltip title={isDark ? "Light mode" : "Dark mode"} placement="bottom">
@@ -397,11 +414,7 @@ export default function Topbar({
             onClick={toggleMode}
             className={styles.iconBtn}
           >
-            {isDark ? (
-              <RiSunLine size={20} />
-            ) : (
-              <RiMoonLine size={20} />
-            )}
+            {isDark ? <RiSunLine size={20} /> : <RiMoonLine size={20} />}
           </IconButton>
         </Tooltip>
 

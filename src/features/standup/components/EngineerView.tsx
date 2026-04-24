@@ -104,7 +104,7 @@ export default function EngineerView() {
   });
 
   const updateMut = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Partial<Standup> }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<Standup> }) =>
       updateStandup(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-standup"] });
@@ -177,7 +177,7 @@ export default function EngineerView() {
         <div className={styles.headerActions}>
           {myStandup && (
             <button className={styles.btnSecondary} onClick={copyToClipboard}>
-              <RiFileCopyLine size={14} /> Copy to Slack
+              <RiFileCopyLine size={14} /> Copy to Teams
             </button>
           )}
           {myStandup && !editing && (
@@ -189,7 +189,6 @@ export default function EngineerView() {
       </div>
 
       <div className={styles.twoColumn}>
-        {/* Left — My Standup */}
         <div className={styles.mainCol}>
           {isLoading ? (
             <div className={styles.skeletonCard}>

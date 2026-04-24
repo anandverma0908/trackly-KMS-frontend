@@ -451,16 +451,16 @@ export interface SprintComparison {
 
 /* ── Standup ── */
 export interface Standup {
-  id:          number
-  engineer:    string
+  id:             string
+  engineer:       string
   engineer_email: string
-  date:        string
-  yesterday:   string
-  today:       string
-  blockers:    string
-  pod:         string
-  shared:      boolean
-  created_at:  string
+  date:           string
+  yesterday:      string
+  today:          string
+  blockers:       string
+  pod:            string
+  shared:         boolean
+  created_at:     string
 }
 
 /* ── Knowledge Gap ── */
