@@ -821,21 +821,40 @@ export default function CreateTicketDrawer({
     }
     setEosFormLoading(true);
     try {
-      const prompt = `Improve this engineering ticket.
-Current title: "${form.title}"
-Current description: "${form.description}"
-Return ONLY valid JSON: {"title": "improved title", "description": "improved description"}`;
-
       const raw = await novaGenerate(
-        prompt,
-        "You are EOS, an expert at writing clear engineering tickets. Return ONLY a valid JSON object with keys: title, description. No prose, no markdown fences, no explanation.",
-        0.2,
+        `You are improving an engineering ticket. Output ONLY a raw JSON object — no prose, no code fences, no explanation.
+
+Title: ${form.title || "(empty)"}
+Description: ${form.description || "(empty)"}
+
+Respond with exactly this structure:
+{"title": "concise improved title under 80 chars", "description": "clear expanded description"}`,
+        "Output ONLY a raw JSON object. No markdown, no backticks, no explanation. Just the JSON.",
+        0.1,
       );
-      console.log("[EOS Form] raw response:", JSON.stringify(raw));
+
+      // 1. Try full JSON parse (strips fences first)
+      let title = "";
+      let description = "";
       const parsed = extractJSON(raw);
-      if (parsed?.title || parsed?.description) {
-        if (parsed.title) set("title", parsed.title);
-        if (parsed.description) set("description", parsed.description);
+      if (parsed) {
+        title = typeof parsed.title === "string" ? parsed.title : "";
+        description = typeof parsed.description === "string" ? parsed.description : "";
+      }
+
+      // 2. Regex fallback — handles single-quoted or partially malformed JSON
+      if (!title) {
+        const m = raw.match(/"title"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (m) title = m[1].replace(/\\"/g, '"');
+      }
+      if (!description) {
+        const m = raw.match(/"description"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (m) description = m[1].replace(/\\"/g, '"');
+      }
+
+      if (title || description) {
+        if (title) set("title", title);
+        if (description) set("description", description);
         toast.success("EOS improved the form");
       } else {
         toast.error("EOS couldn't parse the response — try again");
