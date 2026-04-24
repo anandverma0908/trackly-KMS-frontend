@@ -7,7 +7,7 @@ import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table
 import { TaskList, TaskItem } from "@tiptap/extension-list";
 import Placeholder from "@tiptap/extension-placeholder";
 import { RiSparklingLine, RiCloseLine } from "react-icons/ri";
-import { analyzeTicketNL } from "@/services/api";
+import { novaGenerate } from "@/services/api";
 import { TicketLinkExtension } from "./extensions/TicketLinkExtension";
 import { PageLinkExtension } from "./extensions/PageLinkExtension";
 import type { WikiPage } from "@/types";
@@ -141,9 +141,8 @@ export default function PageEditor({ initialTitle, initialContent, onSave, pages
     const prompt = buildAiPrompt(actionId, pageText || `Wiki page: ${title}`, title);
 
     try {
-      const result = await analyzeTicketNL(prompt);
-      const content = result.description ?? "Could not generate content.";
-      editor.chain().focus().insertContent(content).run();
+      const content = await novaGenerate(prompt);
+      editor.chain().focus().insertContent(content || "Could not generate content.").run();
     } catch {
       editor.chain().focus().insertContent("[EOS could not generate content]").run();
     } finally {

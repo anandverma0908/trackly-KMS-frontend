@@ -153,25 +153,27 @@ export default function MyWorkPage() {
         onNavigate={navigate}
       />
 
-      {/* ── Smart Focus Block ── */}
-      {focusBlock && (
-        <SmartFocusBlock block={focusBlock} onTicketClick={setSelectedKey} />
-      )}
-
       {/* ── Main content ── */}
       <div className={`${styles.mainRow} fade-up-2`}>
-        {/* Left: AI Priority Queue */}
+        {/* Row 1 col 1: Smart Focus Block */}
+        <SmartFocusBlock block={focusBlock} onTicketClick={setSelectedKey} />
+        {/* Row 1 col 2: Sprint Risk */}
+        <SprintRiskWidget risk={sprintRisk} loading={loading} />
+        {/* Row 2 col 1: AI Priority Queue */}
         <AIPriorityQueue
           tickets={aiTickets}
           loading={loading}
           onQuickAction={handleQuickAction}
         />
+        {/* Row 2 col 2: Ambient Awareness */}
+        <AmbientAwarenessWidget ambientEvents={ambientEvents} />
+      </div>
 
-        {/* Right: Risk + Time */}
-        <div className={styles.sideColumn}>
-          <SprintRiskWidget risk={sprintRisk} loading={loading} />
-          <TimeEnergyWidget energy={timeEnergy} loading={loading} />
-        </div>
+      {/* ── Delivery Forecast ── */}
+      <div className={`${styles.deliveryRow} fade-up-3`}>
+        <TimeEnergyWidget energy={timeEnergy} loading={loading} />
+        <NovaDeliveryForecast risk={sprintRisk} />
+        <NovaKnowledgeGaps gaps={knowledgeGaps} loading={loadingGaps} />
       </div>
 
       {/* ── Gen 2: Proactive Intelligence ── */}
@@ -184,11 +186,6 @@ export default function MyWorkPage() {
         onTicketClick={setSelectedKey}
       />
 
-      {/* ── Delivery Forecast ── */}
-      <div className={`${styles.deliveryRow} fade-up-3`}>
-        <NovaDeliveryForecast risk={sprintRisk} />
-      </div>
-
       {/* ── Gen 3: Predictive Intelligence ── */}
       <Gen3PredictiveSection
         aiTickets={aiTickets}
@@ -198,12 +195,6 @@ export default function MyWorkPage() {
       />
 
       {/* ── Knowledge Gaps ── */}
-      {(loadingGaps || knowledgeGaps.length > 0) && (
-        <NovaKnowledgeGaps gaps={knowledgeGaps} loading={loadingGaps} />
-      )}
-
-      {/* ── Ambient Awareness ── */}
-      <AmbientAwarenessWidget ambientEvents={ambientEvents} />
 
       {/* ── Quick Log Time Modal ── */}
       {logTimeTicket && (
@@ -330,9 +321,7 @@ function EosAgentBrief({
         </div>
         <div className={styles.agentContent}>
           <div className={styles.agentBubble}>
-            <span className={styles.agentLoadingText}>
-              EOS is analysing…
-            </span>
+            <span className={styles.agentLoadingText}>EOS is analysing…</span>
             <span className={styles.briefCursor}>|</span>
           </div>
         </div>
@@ -476,11 +465,10 @@ function SmartFocusBlock({
   block,
   onTicketClick,
 }: {
-  block: FocusBlock;
+  block: FocusBlock | null;
   onTicketClick: (key: string) => void;
 }) {
-  if (!block.recommendedTicket) return null;
-  const t = block.recommendedTicket;
+  const t = block?.recommendedTicket ?? null;
 
   return (
     <div className={`${styles.focusCard} fade-up-1`}>
@@ -489,28 +477,36 @@ function SmartFocusBlock({
           <RiFocus3Line size={16} color="var(--accent)" />
           <span>Smart Focus Block</span>
         </div>
-        <p className={styles.focusMessage}>Your top priority right now.</p>
-        <p className={styles.focusSub}>
-          {t.key} needs ~
-          {t.remaining_estimate_hours || t.original_estimate_hours || 2}h —
-          start here.
-        </p>
+        {t && (
+          <>
+            <p className={styles.focusMessage}>Your top priority right now.</p>
+            <p className={styles.focusSub}>
+              {t.key} needs ~
+              {t.remaining_estimate_hours || t.original_estimate_hours || 2}h —
+              start here.
+            </p>
+          </>
+        )}
       </div>
-      <div className={styles.focusRight}>
-        <div className={styles.focusTicket}>
-          <span className={styles.focusKey}>{t.key}</span>
-          <span className={styles.focusSummary}>{t.summary}</span>
+      {t ? (
+        <div className={styles.focusRight}>
+          <div className={styles.focusTicket}>
+            <span className={styles.focusKey}>{t.key}</span>
+            <span className={styles.focusSummary}>{t.summary}</span>
+          </div>
+          <div className={styles.focusActions}>
+            <button
+              className={styles.focusBtnPrimary}
+              onClick={() => onTicketClick(t.key)}
+            >
+              <RiFlashlightLine size={14} />
+              Start Focus
+            </button>
+          </div>
         </div>
-        <div className={styles.focusActions}>
-          <button
-            className={styles.focusBtnPrimary}
-            onClick={() => onTicketClick(t.key)}
-          >
-            <RiFlashlightLine size={14} />
-            Start Focus
-          </button>
-        </div>
-      </div>
+      ) : (
+        <p className={styles.focusNoData}>No record found</p>
+      )}
     </div>
   );
 }
@@ -918,8 +914,15 @@ function NovaKnowledgeGaps({
       <div className={styles.kgHeader}>
         <RiBookOpenLine size={14} />
         <span>Knowledge Gaps</span>
-        <span className={styles.kgCount}>{sorted.length} detected by EOS</span>
+        {sorted.length > 0 && (
+          <span className={styles.kgCount}>
+            {sorted.length} detected by EOS
+          </span>
+        )}
       </div>
+      {sorted.length === 0 ? (
+        <p className={styles.cardEmpty}>No record found</p>
+      ) : null}
       <div className={styles.kgGrid}>
         {sorted.map((gap) => {
           const severity =
@@ -1482,14 +1485,9 @@ function AmbientAwarenessWidget({
         <span>Ambient Work Awareness</span>
         <span className={styles.ambientLive}>Live</span>
       </div>
-      <p className={styles.ambientSubtitle}>
-        EOS is watching — no logging needed
-      </p>
       <div className={styles.ambientFeed}>
         {ambientEvents.length === 0 ? (
-          <p className={styles.ambientEmpty}>
-            No recent activity — queue is quiet.
-          </p>
+          <p className={styles.ambientEmpty}>No recent activity.</p>
         ) : (
           ambientEvents.map((ev) => (
             <div key={ev.id} className={styles.ambientItem}>
@@ -1708,9 +1706,23 @@ function SprintRiskWidget({
 
   return (
     <div className={styles.riskCard}>
-      <div className={styles.riskHeader}>
-        <RiBarChartBoxLine size={16} />
-        <span>Sprint Risk</span>
+      <div>
+        <div className={styles.riskHeader}>
+          <div
+            style={{
+              display: "flex",
+              gap: "5px",
+              alignItems: "center",
+            }}
+          >
+            <RiBarChartBoxLine size={16} />
+            <span>Sprint Risk</span>
+          </div>
+
+          <p className={styles.riskCoaching} style={{ color: ringColor }}>
+            {risk.coaching}
+          </p>
+        </div>
       </div>
       <div className={styles.riskBody}>
         <div className={styles.riskRingWrap}>
@@ -1760,9 +1772,6 @@ function SprintRiskWidget({
           </div>
         </div>
       </div>
-      <p className={styles.riskCoaching} style={{ color: ringColor }}>
-        {risk.coaching}
-      </p>
     </div>
   );
 }

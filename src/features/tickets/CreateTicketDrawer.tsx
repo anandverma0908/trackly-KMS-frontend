@@ -6,6 +6,7 @@ import {
   updateTicket,
   analyzeTicketNL,
   novaQuery,
+  novaGenerate,
   fetchFilters,
   fetchTicketComments,
   createComment,
@@ -303,6 +304,14 @@ export default function CreateTicketDrawer({
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
 
+  // Stabilize members reference — default `[]` in function params creates a new array on every
+  // render, which would cause the EOS analysis useEffect to fire on every render.
+  const stableMembers = useMemo(
+    () => members,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [members.map((m) => `${m.name}:${m.role}`).join(",")],
+  );
+
   const DEFAULT_CLIENTS = [
     "Colgate", "Jockey", "SAAS", "BSV", "ReckittBenckiser", "Henkel", "Unilever",
   ];
@@ -498,13 +507,15 @@ export default function CreateTicketDrawer({
   /* EOS analysis for duplicates, story points, and assignee suggestions */
   useEffect(() => {
     const availableUsers = uniqueValues([
-      ...members.map((member) => member.name),
+      ...stableMembers.map((member) => member.name),
       form.assignee,
       detailedTicket?.assignee,
     ]);
 
     if (isEdit || form.title.length < 4) {
-      setLiveDupes([]);
+      // Use functional updates to avoid creating new array references when already empty,
+      // which would otherwise trigger an infinite render loop.
+      setLiveDupes((prev) => (prev.length === 0 ? prev : []));
       setStoryEstimate(null);
       setRoutingSuggestion(null);
       setAiDupeScanning(false);
@@ -534,14 +545,14 @@ export default function CreateTicketDrawer({
         if (!form.assignee && !routingDismissed) {
           setRoutingSuggestion(
             buildRoutingSuggestionFromAnalysis(r, availableUsers)
-              ?? buildRoleAwareRoutingSuggestion(form, members),
+              ?? buildRoleAwareRoutingSuggestion(form, stableMembers),
           );
         }
       } catch {
-        setLiveDupes([]);
+        setLiveDupes((prev) => (prev.length === 0 ? prev : []));
         if (!form.story_points) setStoryEstimate(buildHeuristicStoryEstimate(form));
         if (!form.assignee && !routingDismissed) {
-          setRoutingSuggestion(buildRoleAwareRoutingSuggestion(form, members));
+          setRoutingSuggestion(buildRoleAwareRoutingSuggestion(form, stableMembers));
         }
       } finally {
         setAiDupeScanning(false);
@@ -550,7 +561,7 @@ export default function CreateTicketDrawer({
       }
     }, 600);
     return () => { if (aiDupeRef.current) clearTimeout(aiDupeRef.current); };
-  }, [form.title, form.description, form.issue_type, form.priority, form.story_points, form.assignee, isEdit, members, routingDismissed, detailedTicket?.assignee]);
+  }, [form.title, form.description, form.issue_type, form.priority, form.story_points, form.assignee, isEdit, stableMembers, routingDismissed, detailedTicket?.assignee]);
 
   /* Reset routing when drawer opens/closes */
   useEffect(() => {
@@ -583,7 +594,7 @@ export default function CreateTicketDrawer({
   });
   const users = uniqueValues([
     ...(filtersData?.users ?? []),
-    ...members.map((m) => m.name),
+    ...stableMembers.map((m) => m.name),
     form.assignee,
     detailedTicket?.assignee,
   ]);
@@ -805,8 +816,8 @@ Improve both the title and description. Make the title concise, specific, and de
 
 Return ONLY valid JSON, no prose: {"title": "improved title", "description": "improved description"}`;
 
-      const res = await novaQuery(prompt);
-      const m = res.answer.match(/\{[\s\S]*?\}/);
+      const raw = await novaGenerate(prompt, undefined, 0.3);
+      const m = raw.match(/\{[\s\S]*\}/);
       if (m) {
         const parsed = JSON.parse(m[0]);
         if (parsed.title) set("title", parsed.title);

@@ -128,9 +128,20 @@ function KnowledgeMapPanel({ pages, activeId }: { pages: WikiPageType[]; activeI
 export default function WikiPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { activeSpaceId, activePageId, setActiveSpace, setActivePage } = useWikiStore();
   const urlPageId = searchParams.get("page");
+
+  // Unified page selection: keeps URL and Zustand store in sync.
+  // Without updating the URL, the clearing useEffect immediately un-selects the page.
+  const selectPage = useCallback((id: string | null) => {
+    setActivePage(id);
+    if (id) {
+      setSearchParams({ page: id });
+    } else {
+      setSearchParams({});
+    }
+  }, [setActivePage, setSearchParams]);
 
   // UI state
   const [showNewSpace,      setShowNewSpace]      = useState(false);
@@ -181,9 +192,9 @@ export default function WikiPage() {
   }, [urlPageId, urlPage, activePageId, activeSpaceId, setActivePage, setActiveSpace]);
 
   const createSpaceMut = useMutation({ mutationFn: () => createWikiSpace({ name: newSpaceName, description: "" }), onSuccess: (s) => { qc.invalidateQueries({ queryKey: ["wiki-spaces"] }); setActiveSpace(s.id); setShowNewSpace(false); setNewSpaceName(""); }, onError: (e: Error) => toast.error(e.message) });
-  const createPageMut  = useMutation({ mutationFn: (p: { title: string; content: string; parent_id?: string }) => createWikiPage({ space_id: activeSpaceId!, ...p }), onSuccess: (p) => { qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] }); setActivePage(p.id); }, onError: (e: Error) => toast.error(e.message) });
+  const createPageMut  = useMutation({ mutationFn: (p: { title: string; content: string; parent_id?: string }) => createWikiPage({ space_id: activeSpaceId!, ...p }), onSuccess: (p) => { qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] }); selectPage(p.id); }, onError: (e: Error) => toast.error(e.message) });
   const updatePageMut  = useMutation({ mutationFn: ({ id, payload }: { id: string; payload: { title?: string; content?: string } }) => updateWikiPage(id, payload), onSuccess: () => { qc.invalidateQueries({ queryKey: ["wiki-page", activePageId] }); qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] }); setAutoSaveStatus("saved"); setTimeout(() => setAutoSaveStatus("idle"), 3000); }, onError: (e: Error) => { setAutoSaveStatus("idle"); toast.error(e.message || "Failed to save page"); } });
-  const deletePageMut  = useMutation({ mutationFn: (id: string) => deleteWikiPage(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] }); setActivePage(null); } });
+  const deletePageMut  = useMutation({ mutationFn: (id: string) => deleteWikiPage(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] }); selectPage(null); } });
   const restoreMut     = useMutation({ mutationFn: ({ versionId }: { versionId: number }) => restoreWikiVersion(activePageId!, versionId), onSuccess: () => { qc.invalidateQueries({ queryKey: ["wiki-page", activePageId] }); toast.success("Version restored"); setShowVersions(false); } });
 
   const handleSave = useCallback((content: string, title: string) => {
@@ -339,7 +350,7 @@ export default function WikiPage() {
                 </div>
                 <div className={styles.pageTree}>
                   {treePages.map(p => (
-                    <PageTreeItem key={p.id} page={p} activeId={activePageId} onSelect={setActivePage} depth={0} />
+                    <PageTreeItem key={p.id} page={p} activeId={activePageId} onSelect={selectPage} depth={0} />
                   ))}
                   {treePages.length === 0 && <p className={styles.emptyTree}>No pages yet — create one</p>}
                 </div>
@@ -379,7 +390,7 @@ export default function WikiPage() {
                   {breadcrumbs.map(b => (
                     <span key={b.id} className={styles.breadcrumbItem}>
                       <span className={styles.breadcrumbSep}>›</span>
-                      <button className={styles.breadcrumbLink} onClick={() => setActivePage(b.id)}>{b.title}</button>
+                      <button className={styles.breadcrumbLink} onClick={() => selectPage(b.id)}>{b.title}</button>
                     </span>
                   ))}
                 </div>
@@ -434,7 +445,7 @@ export default function WikiPage() {
                 onClick={e => {
                   const target = e.target as HTMLElement;
                   const pageId = target.closest("[data-page-id]")?.getAttribute("data-page-id");
-                  if (pageId) { setActivePage(pageId); return; }
+                  if (pageId) { selectPage(pageId); return; }
                   const ticketKey = target.closest("[data-ticket-key]")?.getAttribute("data-ticket-key");
                   if (ticketKey) navigate(`/backlog?search=${encodeURIComponent(ticketKey)}`);
                 }}
