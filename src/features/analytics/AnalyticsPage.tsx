@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { fetchWorkload, fetchKnowledgeGaps, detectKnowledgeGaps, createWikiPage, fetchWikiSpaces, fetchVelocity, analyzeTicketNL } from "@/services/api";
+import { fetchWorkload, fetchKnowledgeGaps, detectKnowledgeGaps, createWikiPage, fetchWikiSpaces, fetchVelocity, analyzeTicketNL, fetchBugCost, fetchRecurringProblems, fetchClientHealth } from "@/services/api";
+import type { BugCostData, RecurringPattern, ClientHealthEntry } from "@/services/api";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { RiSparklingLine, RiAlertLine, RiFileTextLine, RiHeartPulseLine, RiUserLine, RiGlobalLine, RiTeamLine, RiBarChartLine, RiArrowUpLine, RiArrowDownLine } from "react-icons/ri";
+import { RiSparklingLine, RiAlertLine, RiFileTextLine, RiHeartPulseLine, RiUserLine, RiGlobalLine, RiTeamLine, RiBarChartLine, RiArrowUpLine, RiArrowDownLine, RiBugLine, RiRepeatLine, RiHeartLine } from "react-icons/ri";
 import type { KnowledgeGap } from "@/types";
 import styles from "./AnalyticsPage.module.css";
 
@@ -15,6 +16,21 @@ export default function AnalyticsPage() {
   const { data: workload = [] } = useQuery({
     queryKey: ["analytics-workload"],
     queryFn: fetchWorkload,
+  });
+
+  const { data: bugCost } = useQuery<BugCostData>({
+    queryKey: ["analytics-bug-cost"],
+    queryFn: fetchBugCost,
+  });
+
+  const { data: recurringData } = useQuery({
+    queryKey: ["analytics-recurring-problems"],
+    queryFn: fetchRecurringProblems,
+  });
+
+  const { data: clientHealth = [] } = useQuery<ClientHealthEntry[]>({
+    queryKey: ["analytics-client-health"],
+    queryFn: fetchClientHealth,
   });
 
   const { data: gaps = [], isLoading: loadingGaps } = useQuery({
@@ -357,6 +373,162 @@ export default function AnalyticsPage() {
             <span>EOS forecasts a 3-person gap by Q3 based on current roadmap velocity. Recommended: start ML Engineer search immediately (3-month lead time).</span>
           </div>
         </div>
+      </div>
+
+      {/* ── Real Cost of a Bug ── */}
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <div>
+            <div className={styles.cardTitle}>Real Cost of a Bug</div>
+            <span className={styles.cardSub}>Engineering hours and estimated spend on bug tickets</span>
+          </div>
+          <span className={styles.eosBadge}><RiBugLine size={9} /> EOS</span>
+        </div>
+        {!bugCost ? (
+          <p className={styles.empty}>Loading bug cost data…</p>
+        ) : (
+          <>
+            <div className={styles.bugCostStats}>
+              <div className={styles.bugCostStat}>
+                <span className={styles.bugCostVal} style={{ color: "var(--red)" }}>{bugCost.total_bugs}</span>
+                <span className={styles.bugCostLbl}>Total Bugs</span>
+              </div>
+              <div className={styles.bugCostStat}>
+                <span className={styles.bugCostVal} style={{ color: "var(--amber)" }}>{bugCost.open_bugs}</span>
+                <span className={styles.bugCostLbl}>Open</span>
+              </div>
+              <div className={styles.bugCostStat}>
+                <span className={styles.bugCostVal}>{bugCost.total_hours}h</span>
+                <span className={styles.bugCostLbl}>Hours Spent</span>
+              </div>
+              <div className={styles.bugCostStat}>
+                <span className={styles.bugCostVal} style={{ color: "var(--red)" }}>${bugCost.total_cost_usd.toLocaleString()}</span>
+                <span className={styles.bugCostLbl}>Est. Cost (USD)</span>
+              </div>
+              <div className={styles.bugCostStat}>
+                <span className={styles.bugCostVal}>{bugCost.avg_hours_per_bug}h</span>
+                <span className={styles.bugCostLbl}>Avg/Bug</span>
+              </div>
+            </div>
+            {bugCost.by_pod.length > 0 && (
+              <div className={styles.bugCostPodList}>
+                <div className={styles.bugCostPodHeader}>
+                  <span>POD</span><span>Bugs</span><span>Hours</span><span>Est. Cost</span>
+                </div>
+                {bugCost.by_pod.slice(0, 5).map((p) => (
+                  <div key={p.pod} className={styles.bugCostPodRow}>
+                    <span className={styles.bugCostPodName}>{p.pod}</span>
+                    <span>{p.count} <span style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>({p.open} open)</span></span>
+                    <span>{p.hours}h</span>
+                    <span style={{ color: "var(--red)", fontWeight: 600 }}>${p.cost_usd.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className={styles.healthRec} style={{ marginTop: 12 }}>
+              <RiSparklingLine size={11} color="var(--accent)" />
+              <span>At ${bugCost.avg_hourly_rate}/h average rate, each unresolved bug costs ~${(bugCost.avg_hours_per_bug * bugCost.avg_hourly_rate).toFixed(0)} in engineering time. Prioritise high-priority open bugs to reclaim capacity.</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Recurring Problem Detector ── */}
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <div>
+            <div className={styles.cardTitle}>Recurring Problem Detector</div>
+            <span className={styles.cardSub}>Repeated keyword patterns in bug tickets · signals systemic issues</span>
+          </div>
+          <span className={styles.eosBadge}><RiRepeatLine size={9} /> EOS</span>
+        </div>
+        {!recurringData ? (
+          <p className={styles.empty}>Loading pattern analysis…</p>
+        ) : recurringData.patterns.length === 0 ? (
+          <div className={styles.anomalyHealthy}>
+            <RiSparklingLine size={16} color="var(--green)" />
+            <span>No recurring patterns detected in {recurringData.total_bugs_analyzed} bugs — issues appear unique.</span>
+          </div>
+        ) : (
+          <>
+            <p className={styles.cardSub} style={{ marginBottom: 12 }}>
+              Analysed {recurringData.total_bugs_analyzed} bug tickets · {recurringData.patterns.length} recurring pattern{recurringData.patterns.length !== 1 ? "s" : ""} found
+            </p>
+            <div className={styles.patternList}>
+              {recurringData.patterns.map((p: RecurringPattern) => (
+                <div key={p.pattern} className={styles.patternItem}>
+                  <div className={styles.patternTop}>
+                    <span className={styles.patternKeyword}>"{p.pattern}"</span>
+                    <span className={`${styles.patternSev} ${
+                      p.severity === "high" ? styles.patternSevHigh
+                      : p.severity === "medium" ? styles.patternSevMed
+                      : styles.patternSevLow
+                    }`}>{p.severity}</span>
+                    <span className={styles.patternCount}>{p.occurrences}×</span>
+                  </div>
+                  <div className={styles.patternKeys}>
+                    {p.ticket_keys.map((k) => (
+                      <span key={k} className={styles.patternKey}>{k}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className={styles.healthRec} style={{ marginTop: 12 }}>
+              <RiSparklingLine size={11} color="var(--accent)" />
+              <span>High-frequency patterns signal missing safeguards or undocumented tribal knowledge. Consider adding these topics to your wiki and retrospective action items.</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Client Health Score ── */}
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <div>
+            <div className={styles.cardTitle}>Client Health Score</div>
+            <span className={styles.cardSub}>Delivery rate, bug density, blockers, and overdue tickets per client</span>
+          </div>
+          <span className={styles.eosBadge}><RiHeartLine size={9} /> EOS</span>
+        </div>
+        {clientHealth.length === 0 ? (
+          <div className={styles.anomalyHealthy}>
+            <RiSparklingLine size={16} color="var(--green)" />
+            <span>No client data found. Assign tickets to clients to track health scores.</span>
+          </div>
+        ) : (
+          <div className={styles.clientHealthList}>
+            {clientHealth.map((c) => {
+              const color = c.status === "Healthy" ? "var(--green)" : c.status === "At Risk" ? "var(--amber)" : "var(--red)";
+              return (
+                <div key={c.client} className={styles.clientHealthRow}>
+                  <div className={styles.clientHealthLeft}>
+                    <div className={styles.clientHealthName}>{c.client}</div>
+                    <div className={styles.clientHealthMeta}>
+                      <span>{c.total_tickets} tickets</span>
+                      <span>·</span>
+                      <span>{c.delivery_rate}% delivered</span>
+                      <span>·</span>
+                      <span style={{ color: c.bug_rate > 20 ? "var(--red)" : "inherit" }}>{c.bug_rate}% bugs</span>
+                      {c.overdue_tickets > 0 && <><span>·</span><span style={{ color: "var(--red)" }}>{c.overdue_tickets} overdue</span></>}
+                    </div>
+                  </div>
+                  <div className={styles.clientHealthRight}>
+                    <div className={styles.clientHealthBar}>
+                      <div className={styles.clientHealthBarFill} style={{ width: `${c.health_score}%`, background: color }} />
+                    </div>
+                    <span className={styles.clientHealthScore} style={{ color }}>{c.health_score}</span>
+                    <span className={`${styles.clientHealthStatus} ${
+                      c.status === "Healthy" ? styles.clientStatusHealthy
+                      : c.status === "At Risk" ? styles.clientStatusRisk
+                      : styles.clientStatusCritical
+                    }`}>{c.status}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Knowledge Gaps */}

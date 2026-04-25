@@ -113,24 +113,21 @@ function AnimatedRoutes() {
           >
             <Route element={<RequireRole />}>
               <Route index element={<Navigate to="/my-work" replace />} />
-              <Route path="/dashboard" element={<Navigate to="/my-work" replace />} />
               <Route path="/tickets" element={<TicketsPage />} />
               <Route path="/wiki" element={<WikiPage />} />
               <Route path="/standup" element={<StandupPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/team" element={<TeamPage />} />
-              <Route path="/export" element={<Navigate to="/settings" replace />} />
-              <Route path="/manual-entry" element={<Navigate to="/timesheets/weekly" replace />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/timesheets/weekly" element={<ManualEntryPage />} />
-              <Route path="/admin/users" element={<Navigate to="/settings" replace />} />
+              <Route path="/timesheets" element={<ManualEntryPage />} />
               <Route path="/spaces" element={<SpacesPage />} />
-              <Route path="/spaces/:projectId" element={<ProjectDetailPage />} />
+              <Route
+                path="/spaces/:projectId"
+                element={<ProjectDetailPage />}
+              />
               <Route path="/my-work" element={<MyWorkPage />} />
               <Route path="/nova" element={<NovaPage />} />
               <Route path="/code-review" element={<CodeReviewPage />} />
-              <Route path="/decisions" element={<DecisionsPage />} />
-              <Route path="/processes" element={<ProcessesPage />} />
               <Route path="/goals" element={<GoalsPage />} />
             </Route>
           </Route>

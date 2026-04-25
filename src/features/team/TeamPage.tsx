@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useFilterStore } from "@/store";
-import { fetchSummary, fetchOrgMembers, novaQuery } from "@/services/api";
+import { fetchSummary, fetchOrgMembers, novaQuery, fetchCognitiveLoad, fetchTeamChemistry, fetchMemoryGraph } from "@/services/api";
+import type { CognitiveLoadMember, PodBalance, ExpertiseMember } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import { initials, formatNumber, formatDate } from "@/utils/formatters";
 import { useAuthStore } from "@/features/auth/useAuthStore";
@@ -19,6 +20,9 @@ import {
   RiEyeLine,
   RiAlertLine,
   RiCheckLine,
+  RiBrainLine,
+  RiFlashlightLine,
+  RiGitBranchLine,
 } from "react-icons/ri";
 
 const AVATAR_COLORS = [
@@ -197,6 +201,24 @@ export default function TeamPage() {
   const { data: orgMembers = [], isLoading: membersLoading } = useQuery({
     queryKey: ["org-members"],
     queryFn: fetchOrgMembers,
+    staleTime: 5 * 60_000,
+  });
+
+  const { data: cogLoadData } = useQuery({
+    queryKey: ["cognitive-load"],
+    queryFn: fetchCognitiveLoad,
+    staleTime: 5 * 60_000,
+  });
+
+  const { data: chemistryData } = useQuery({
+    queryKey: ["team-chemistry"],
+    queryFn: fetchTeamChemistry,
+    staleTime: 5 * 60_000,
+  });
+
+  const { data: memoryData } = useQuery({
+    queryKey: ["memory-graph"],
+    queryFn: fetchMemoryGraph,
     staleTime: 5 * 60_000,
   });
 
@@ -471,6 +493,122 @@ Keep it direct and actionable.`;
           })}
         </div>
       )}
+
+      {/* ── Cognitive Load Score ── */}
+      <div className={`${styles.aiPanel} fade-up-3`} style={{ marginTop: 8 }}>
+        <div className={styles.aiPanelHeader}>
+          <div className={styles.aiPanelIcon}><RiBrainLine size={14} /></div>
+          <div className={styles.aiPanelTitle}>Cognitive Load Score</div>
+          <span className={styles.eosInlineBadge}><RiSparklingLine size={8} />EOS</span>
+        </div>
+        <div className={styles.aiPanelBody}>
+          {!cogLoadData ? (
+            <div className={styles.aiPanelHint}>Loading cognitive load data…</div>
+          ) : cogLoadData.members.length === 0 ? (
+            <div className={styles.aiPanelHint}>No active ticket assignments found.</div>
+          ) : (
+            <>
+              {cogLoadData.ai_summary && (
+                <div className={styles.aiPanelText} style={{ marginBottom: 12 }}>{cogLoadData.ai_summary}</div>
+              )}
+              <div className={styles.cogLoadList}>
+                {cogLoadData.members.slice(0, 8).map((m: CognitiveLoadMember) => {
+                  const color = m.level === "Overloaded" ? "var(--red)" : m.level === "High" ? "var(--amber)" : m.level === "Moderate" ? "var(--accent)" : "var(--green)";
+                  return (
+                    <div key={m.name} className={styles.cogLoadRow}>
+                      <span className={styles.cogLoadName}>{m.name}</span>
+                      <div className={styles.cogLoadBar}>
+                        <div className={styles.cogLoadBarFill} style={{ width: `${m.load_score}%`, background: color }} />
+                      </div>
+                      <span className={styles.cogLoadScore} style={{ color }}>{m.load_score}</span>
+                      <span className={styles.cogLoadLevel} style={{ color, background: `${color}15`, borderColor: `${color}30` }}>{m.level}</span>
+                      <span className={styles.cogLoadMeta}>{m.wip_count} WIP · {m.overdue_count} overdue</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Institutional Memory Graph ── */}
+      <div className={`${styles.aiPanel} fade-up-3`} style={{ marginTop: 8 }}>
+        <div className={styles.aiPanelHeader}>
+          <div className={styles.aiPanelIcon}><RiGitBranchLine size={14} /></div>
+          <div className={styles.aiPanelTitle}>Institutional Memory Map</div>
+          <span className={styles.eosInlineBadge}><RiSparklingLine size={8} />EOS</span>
+        </div>
+        <div className={styles.aiPanelBody}>
+          {!memoryData ? (
+            <div className={styles.aiPanelHint}>Loading memory graph…</div>
+          ) : (
+            <>
+              {memoryData.ai_summary && (
+                <div className={styles.aiPanelText} style={{ marginBottom: 12 }}>{memoryData.ai_summary}</div>
+              )}
+              {memoryData.bus_factor_risks.filter((r: { pod: string; contributors: number; risk: string }) => r.risk === "High").length > 0 && (
+                <div className={styles.memoryRiskBanner}>
+                  <RiAlertLine size={12} color="var(--amber)" />
+                  <span>Bus factor risk: {memoryData.bus_factor_risks.filter((r: { pod: string; contributors: number; risk: string }) => r.risk === "High").map((r: { pod: string }) => r.pod).join(", ")} — only 1 contributor</span>
+                </div>
+              )}
+              <div className={styles.expertiseList}>
+                {memoryData.expertise_map.slice(0, 6).map((m: ExpertiseMember) => (
+                  <div key={m.name} className={styles.expertiseRow}>
+                    <div className={styles.expertiseAvatar}>{m.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}</div>
+                    <div className={styles.expertiseInfo}>
+                      <span className={styles.expertiseName}>{m.name}</span>
+                      <div className={styles.expertisePods}>
+                        {m.pods.slice(0, 3).map((pod: string) => <span key={pod} className={styles.expertisePodTag}>{pod}</span>)}
+                        {m.pods.length > 3 && <span className={styles.expertisePodTag}>+{m.pods.length - 3}</span>}
+                      </div>
+                    </div>
+                    <span className={styles.expertiseCount}>{m.ticket_count} tickets</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Team Chemistry Analyser ── */}
+      <div className={`${styles.aiPanel} fade-up-3`} style={{ marginTop: 8 }}>
+        <div className={styles.aiPanelHeader}>
+          <div className={styles.aiPanelIcon}><RiFlashlightLine size={14} /></div>
+          <div className={styles.aiPanelTitle}>Team Chemistry Analyser</div>
+          <span className={styles.eosInlineBadge}><RiSparklingLine size={8} />EOS</span>
+        </div>
+        <div className={styles.aiPanelBody}>
+          {!chemistryData ? (
+            <div className={styles.aiPanelHint}>Loading chemistry analysis…</div>
+          ) : chemistryData.pod_count === 0 ? (
+            <div className={styles.aiPanelHint}>No multi-member pod data found.</div>
+          ) : (
+            <>
+              {chemistryData.ai_analysis && (
+                <div className={styles.aiPanelText} style={{ marginBottom: 12, whiteSpace: "pre-line" }}>{chemistryData.ai_analysis}</div>
+              )}
+              <div className={styles.chemistryList}>
+                {chemistryData.pod_balance.slice(0, 5).map((p: PodBalance) => {
+                  const imbalColor = p.imbalance_pct >= 60 ? "var(--red)" : p.imbalance_pct >= 35 ? "var(--amber)" : "var(--green)";
+                  return (
+                    <div key={p.pod} className={styles.chemistryRow}>
+                      <span className={styles.chemistryPod}>{p.pod}</span>
+                      <span className={styles.chemistryMembers}>{p.members} members</span>
+                      <div className={styles.chemistryBar}>
+                        <div className={styles.chemistryBarFill} style={{ width: `${Math.min(100, p.imbalance_pct)}%`, background: imbalColor }} />
+                      </div>
+                      <span className={styles.chemistryImbal} style={{ color: imbalColor }}>{p.imbalance_pct}% imbalance</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
       {selectedMember && (
         <TimesheetDrawer

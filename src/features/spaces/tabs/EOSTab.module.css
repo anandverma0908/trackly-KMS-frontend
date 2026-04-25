@@ -467,3 +467,14 @@
 .chatSend { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: opacity 0.15s; flex-shrink: 0; }
 .chatSend:hover { opacity: 0.85; }
 .chatSend:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── Technical Debt Radar dimensions ── */
+.debtDimRow { margin-bottom: 10px; }
+.debtDimRow:last-child { margin-bottom: 0; }
+.debtDimHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.debtDimName { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+.debtDimBar {
+  height: 6px; background: var(--border-2); border-radius: 3px; overflow: hidden; margin-bottom: 4px;
+}
+.debtDimFill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+.debtDimDetail { font-size: 0.74rem; color: var(--text-3); margin: 0; line-height: 1.4; }

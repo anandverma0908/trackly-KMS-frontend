@@ -326,3 +326,82 @@
   border-radius: var(--r-sm);
   font-size: 0.8rem; color: var(--text-2); line-height: 1.5;
 }
+
+/* ── Real Cost of Bug ── */
+.bugCostStats {
+  display: flex; gap: 0; margin-bottom: 16px;
+  border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden;
+}
+.bugCostStat {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 14px 10px; gap: 3px;
+  border-right: 1px solid var(--border); background: var(--surface-2);
+}
+.bugCostStat:last-child { border-right: none; }
+.bugCostVal { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; }
+.bugCostLbl { font-size: 0.68rem; color: var(--text-3); text-align: center; }
+
+.bugCostPodList { display: flex; flex-direction: column; gap: 0; }
+.bugCostPodHeader {
+  display: grid; grid-template-columns: 1fr auto auto auto; gap: 16px;
+  padding: 6px 10px; font-size: 0.68rem; font-weight: 700;
+  color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em;
+  background: var(--surface-2); border-radius: var(--r-xs) var(--r-xs) 0 0;
+  border: 1px solid var(--border);
+}
+.bugCostPodRow {
+  display: grid; grid-template-columns: 1fr auto auto auto; gap: 16px;
+  padding: 9px 10px; font-size: 0.82rem; color: var(--text-2);
+  border: 1px solid var(--border); border-top: none;
+  align-items: center;
+}
+.bugCostPodRow:last-child { border-radius: 0 0 var(--r-xs) var(--r-xs); }
+.bugCostPodName { font-weight: 600; color: var(--text); }
+
+/* ── Recurring Problems ── */
+.patternList { display: flex; flex-direction: column; gap: 8px; }
+.patternItem {
+  border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 6px;
+  background: var(--surface-2);
+}
+.patternTop { display: flex; align-items: center; gap: 8px; }
+.patternKeyword { font-size: 0.88rem; font-weight: 700; color: var(--text); flex: 1; }
+.patternSev {
+  font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 2px 8px; border-radius: 100px;
+}
+.patternSevHigh { background: rgba(248,113,113,0.12); color: var(--red, #F87171); }
+.patternSevMed  { background: rgba(251,191,36,0.12);  color: var(--amber, #FBBF24); }
+.patternSevLow  { background: rgba(52,211,153,0.12);  color: var(--green, #34D399); }
+.patternCount { font-size: 0.8rem; font-weight: 700; color: var(--text-3); }
+.patternKeys { display: flex; flex-wrap: wrap; gap: 4px; }
+.patternKey {
+  font-size: 0.68rem; padding: 2px 7px; border-radius: 100px;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text-3); font-family: var(--font-mono, monospace);
+}
+
+/* ── Client Health Score ── */
+.clientHealthList { display: flex; flex-direction: column; gap: 0; }
+.clientHealthRow {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.clientHealthRow:last-child { border-bottom: none; }
+.clientHealthLeft { flex: 1; min-width: 0; }
+.clientHealthName { font-size: 0.9rem; font-weight: 600; margin-bottom: 3px; }
+.clientHealthMeta { font-size: 0.72rem; color: var(--text-3); display: flex; gap: 5px; flex-wrap: wrap; }
+.clientHealthRight { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.clientHealthBar {
+  width: 80px; height: 6px; background: var(--border-2); border-radius: 3px; overflow: hidden;
+}
+.clientHealthBarFill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.clientHealthScore { font-size: 0.9rem; font-weight: 800; min-width: 28px; text-align: right; }
+.clientHealthStatus {
+  font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 2px 8px; border-radius: 100px;
+}
+.clientStatusHealthy  { background: rgba(52,211,153,0.12); color: var(--green, #34D399); }
+.clientStatusRisk     { background: rgba(251,191,36,0.12);  color: var(--amber, #FBBF24); }
+.clientStatusCritical { background: rgba(248,113,113,0.12); color: var(--red, #F87171);  }

@@ -1,4 +1,4 @@
-import { RiShieldLine, RiLineChartLine, RiAlertLine, RiArrowRightLine, RiSendPlaneLine } from "react-icons/ri";
+import { RiShieldLine, RiLineChartLine, RiAlertLine, RiArrowRightLine, RiSendPlaneLine, RiTimerLine } from "react-icons/ri";
 import styles from "../MyWorkPage.module.css";
 import type { AITicket, MyWorkFlowAnalysis, MyWorkBlockerPrediction, VelocityPattern } from "../useMyWork";
 
@@ -168,6 +168,56 @@ function BlockerPredictionCard({
   );
 }
 
+/* ── Context Switch Tax Card ── */
+function ContextSwitchTaxCard({
+  contextSwitches,
+  flowState,
+}: {
+  contextSwitches: number;
+  flowState: "focused" | "disrupted" | "scattered";
+}) {
+  const SWITCH_COST_MIN = 23;
+  const HOURLY_RATE = 75;
+  const totalMinutes = contextSwitches * SWITCH_COST_MIN;
+  const taxHours = parseFloat((totalMinutes / 60).toFixed(1));
+  const taxCost = Math.round(taxHours * HOURLY_RATE);
+  const isHigh = flowState !== "focused";
+
+  return (
+    <div className={`${styles.proactiveCard} ${isHigh ? styles.proactiveCardAlert : ""}`}>
+      <div className={styles.proactiveHeader}>
+        <RiTimerLine size={14} color={isHigh ? "var(--amber)" : "var(--accent)"} />
+        <span>Context Switch Tax</span>
+      </div>
+      <p className={styles.proactiveMessage}>
+        <strong style={{ color: isHigh ? "var(--amber)" : "var(--text)" }}>{contextSwitches} context switches</strong> today
+        cost an estimated{" "}
+        <strong style={{ color: isHigh ? "var(--amber)" : "var(--text)" }}>{taxHours}h</strong> of deep-work time
+        ({SWITCH_COST_MIN} min recovery each).
+      </p>
+      <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+        <div style={{ flex: 1, textAlign: "center", padding: "8px 6px", background: "var(--surface)", borderRadius: 6, border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: "1.1rem", fontWeight: 800, color: isHigh ? "var(--amber)" : "var(--text)" }}>{taxHours}h</div>
+          <div style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>Focus Lost</div>
+        </div>
+        <div style={{ flex: 1, textAlign: "center", padding: "8px 6px", background: "var(--surface)", borderRadius: 6, border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: "1.1rem", fontWeight: 800, color: isHigh ? "var(--red)" : "var(--text)" }}>${taxCost}</div>
+          <div style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>Est. Cost</div>
+        </div>
+        <div style={{ flex: 1, textAlign: "center", padding: "8px 6px", background: "var(--surface)", borderRadius: 6, border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--text)" }}>{contextSwitches}</div>
+          <div style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>Switches</div>
+        </div>
+      </div>
+      {isHigh && (
+        <p className={styles.proactiveMessage} style={{ marginTop: 8, fontSize: "0.76rem" }}>
+          Block 2h of uninterrupted focus time to recover ~${Math.round(taxCost * 0.6)} of lost output.
+        </p>
+      )}
+    </div>
+  );
+}
+
 /* ── Gen2 Section ── */
 interface Props {
   aiTickets: AITicket[];
@@ -224,6 +274,10 @@ export default function Gen2ProactiveSection({
           topTickets={topTickets}
           onTicketClick={onTicketClick}
           loading={loading}
+        />
+        <ContextSwitchTaxCard
+          contextSwitches={flowAnalysis.context_switches}
+          flowState={flowAnalysis.flow_state}
         />
         <VelocityPatternCard velocityPatterns={velocityPatterns} />
         <BlockerPredictionCard

@@ -1082,6 +1082,94 @@ export async function fetchWorkload(): Promise<WorkloadEntry[]> {
   return data?.data ?? data ?? [];
 }
 
+export interface BugCostData {
+  total_bugs: number;
+  open_bugs: number;
+  high_priority_bugs: number;
+  total_hours: number;
+  total_cost_usd: number;
+  avg_hours_per_bug: number;
+  avg_hourly_rate: number;
+  by_pod: { pod: string; count: number; hours: number; open: number; cost_usd: number }[];
+}
+
+export async function fetchBugCost(): Promise<BugCostData> {
+  const { data } = await api.get("/analytics/bug-cost");
+  return data;
+}
+
+export interface RecurringPattern {
+  pattern: string;
+  occurrences: number;
+  ticket_keys: string[];
+  severity: "high" | "medium" | "low";
+}
+
+export async function fetchRecurringProblems(): Promise<{ patterns: RecurringPattern[]; total_bugs_analyzed: number }> {
+  const { data } = await api.get("/analytics/recurring-problems");
+  return data;
+}
+
+export interface ClientHealthEntry {
+  client: string;
+  health_score: number;
+  status: "Healthy" | "At Risk" | "Critical";
+  total_tickets: number;
+  done_tickets: number;
+  delivery_rate: number;
+  bug_rate: number;
+  blocked_tickets: number;
+  overdue_tickets: number;
+  total_hours: number;
+}
+
+export async function fetchClientHealth(): Promise<ClientHealthEntry[]> {
+  const { data } = await api.get("/analytics/client-health");
+  return Array.isArray(data) ? data : data?.data ?? [];
+}
+
+export interface CognitiveLoadMember {
+  name: string;
+  load_score: number;
+  level: "Overloaded" | "High" | "Moderate" | "Optimal";
+  wip_count: number;
+  high_priority_count: number;
+  overdue_count: number;
+  story_points: number;
+}
+
+export async function fetchCognitiveLoad(): Promise<{ members: CognitiveLoadMember[]; ai_summary: string; total_members: number }> {
+  const { data } = await api.get("/nova/cognitive-load");
+  return data;
+}
+
+export interface PodBalance {
+  pod: string;
+  members: number;
+  avg_pts: number;
+  imbalance_pct: number;
+  most_loaded: string;
+  least_loaded: string;
+}
+
+export async function fetchTeamChemistry(): Promise<{ pod_balance: PodBalance[]; ai_analysis: string; pod_count: number }> {
+  const { data } = await api.get("/nova/team-chemistry");
+  return data;
+}
+
+export interface ExpertiseMember {
+  name: string;
+  pods: string[];
+  ticket_count: number;
+  specializations: string[];
+  knowledge_breadth: number;
+}
+
+export async function fetchMemoryGraph(): Promise<{ expertise_map: ExpertiseMember[]; bus_factor_risks: { pod: string; contributors: number; risk: string }[]; ai_summary: string }> {
+  const { data } = await api.get("/nova/memory-graph");
+  return data;
+}
+
 export async function fetchOrgMembers() {
   if (mock()?.fetchOrgMembers) return mock().fetchOrgMembers();
   const { data } = await api.get("/users/members");

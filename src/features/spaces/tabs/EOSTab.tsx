@@ -20,7 +20,7 @@ import styles from "./EOSTab.module.css";
 interface RetroSection { title: string; items: string[] }
 interface RiskItem { title: string; description: string; impact: "high" | "medium" | "low"; confidence: number; mitigation: string }
 
-type DrawerType = "retro" | "release" | "risk" | "debt" | "teamperf" | "client" | "forecast" | "anomaly" | "gaps";
+type DrawerType = "retro" | "release" | "risk" | "debt" | "teamperf" | "client" | "forecast" | "anomaly" | "gaps" | "sprint_fail" | "silent_blockers";
 interface DrawerState { type: DrawerType; title: string; loading: boolean; data: any }
 
 // ─── Parsers ────────────────────────────────────────────────────────────────
@@ -187,23 +187,44 @@ function RiskContent({ data }: { data: RiskItem[] }) {
   );
 }
 
-function DebtContent({ data }: { data: { percentage: number; threshold: number; insight: string; recommendation: string } }) {
-  const over = data.percentage > data.threshold;
-  const color = over ? "var(--red)" : "var(--green)";
+function DebtContent({ data }: { data: { overall_percentage?: number; percentage?: number; threshold: number; insight?: string; recommendation: string; dimensions?: { name: string; score: number; detail: string }[] } }) {
+  const pct = data.overall_percentage ?? data.percentage ?? 0;
+  const over = pct > data.threshold;
+  const overallColor = over ? "var(--red)" : "var(--green)";
   return (
     <div className={styles.drawerContent}>
       <div className={styles.debtGaugeRow}>
         <div className={styles.debtGauge}>
-          <div className={styles.debtGaugeFill} style={{ width: `${Math.min(100, (data.percentage / 40) * 100)}%`, background: color }} />
+          <div className={styles.debtGaugeFill} style={{ width: `${Math.min(100, (pct / 40) * 100)}%`, background: overallColor }} />
           <div className={styles.debtThresholdLine} style={{ left: `${(data.threshold / 40) * 100}%` }} />
         </div>
-        <span className={styles.debtPct} style={{ color }}>{data.percentage}%</span>
+        <span className={styles.debtPct} style={{ color: overallColor }}>{pct}%</span>
       </div>
       <div className={styles.debtMeta}>
-        <span className={styles.debtLabel} style={{ color }}>{over ? `${data.percentage - data.threshold}pp above safe threshold` : "Within safe threshold"}</span>
+        <span className={styles.debtLabel} style={{ color: overallColor }}>{over ? `${pct - data.threshold}pp above safe threshold` : "Within safe threshold"}</span>
         <span className={styles.debtThreshLabel}>Safe limit: {data.threshold}%</span>
       </div>
-      <p className={styles.bodyText}>{data.insight}</p>
+      {data.dimensions && data.dimensions.length > 0 && (
+        <div className={styles.drawerSection} style={{ marginTop: 12 }}>
+          <span className={styles.drawerSectionTitle}>Debt Dimensions</span>
+          {data.dimensions.map((d) => {
+            const dimColor = d.score >= 60 ? "var(--red)" : d.score >= 35 ? "var(--amber)" : "var(--green)";
+            return (
+              <div key={d.name} className={styles.debtDimRow}>
+                <div className={styles.debtDimHeader}>
+                  <span className={styles.debtDimName}>{d.name}</span>
+                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: dimColor }}>{d.score}</span>
+                </div>
+                <div className={styles.debtDimBar}>
+                  <div className={styles.debtDimFill} style={{ width: `${d.score}%`, background: dimColor }} />
+                </div>
+                {d.detail && <p className={styles.debtDimDetail}>{d.detail}</p>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {data.insight && <p className={styles.bodyText}>{data.insight}</p>}
       <div className={styles.mitBox}><RiLightbulbLine size={11} color="var(--accent)" /><span>{data.recommendation}</span></div>
     </div>
   );
@@ -329,6 +350,81 @@ function GapsContent({ data }: { data: KnowledgeGap[] }) {
   );
 }
 
+function SprintFailContent({ data }: { data: { probability: number; warning_signs: { sign: string; severity: "high" | "medium" | "low"; detail: string }[]; root_causes: string[]; recommendation: string } }) {
+  const color = data.probability >= 60 ? "var(--red)" : data.probability >= 35 ? "var(--amber)" : "var(--green)";
+  const label = data.probability >= 60 ? "High Failure Risk" : data.probability >= 35 ? "Moderate Risk" : "Low Risk";
+  return (
+    <div className={styles.drawerContent}>
+      <div className={styles.forecastProbRow}>
+        <div className={styles.forecastRing}>
+          <svg width={72} height={72} style={{ transform: "rotate(-90deg)" }}>
+            <circle cx={36} cy={36} r={26} fill="none" stroke="var(--border-2)" strokeWidth={6} />
+            <circle cx={36} cy={36} r={26} fill="none" stroke={color} strokeWidth={6}
+              strokeDasharray={2 * Math.PI * 26}
+              strokeDashoffset={2 * Math.PI * 26 * (1 - data.probability / 100)}
+              strokeLinecap="round" />
+          </svg>
+          <span className={styles.forecastPct} style={{ color }}>{data.probability}%</span>
+        </div>
+        <div className={styles.forecastMeta}>
+          <span className={styles.forecastLabel}>Failure probability</span>
+          <p className={styles.forecastNote} style={{ color }}>{label}</p>
+        </div>
+      </div>
+      {data.warning_signs?.length > 0 && (
+        <div className={styles.drawerSection}>
+          <span className={styles.drawerSectionTitle}>Warning Signs</span>
+          {data.warning_signs.map((w, i) => (
+            <div key={i} className={styles.factorRow}>
+              <RiAlertLine size={11} color={w.severity === "high" ? "var(--red)" : w.severity === "medium" ? "var(--amber)" : "var(--text-3)"} />
+              <div style={{ flex: 1 }}>
+                <span style={{ fontWeight: 600, fontSize: "0.82rem" }}>{w.sign}</span>
+                {w.detail && <p style={{ margin: "2px 0 0", fontSize: "0.76rem", color: "var(--text-3)" }}>{w.detail}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {data.root_causes?.length > 0 && (
+        <div className={styles.drawerSection}>
+          <span className={styles.drawerSectionTitle}>Root Causes</span>
+          <ul className={styles.bulletList}>
+            {data.root_causes.map((c, i) => <li key={i} className={styles.bulletItem}><span className={styles.bullet} />{c}</li>)}
+          </ul>
+        </div>
+      )}
+      {data.recommendation && (
+        <div className={styles.mitBox}><RiLightbulbLine size={11} color="var(--accent)" /><span>{data.recommendation}</span></div>
+      )}
+    </div>
+  );
+}
+
+function SilentBlockersContent({ data }: { data: { blockers: { key: string; summary: string; risk: string; signal: string; severity: "high" | "medium" | "low" }[]; summary: string } }) {
+  if (!data.blockers?.length) {
+    return <div className={styles.drawerContent}><div className={styles.emptyDrawer}><RiEyeLine size={28} color="var(--text-3)" /><p>No silent blockers detected — ticket flow looks healthy.</p></div></div>;
+  }
+  return (
+    <div className={styles.drawerContent}>
+      {data.summary && <p className={styles.bodyText}>{data.summary}</p>}
+      {data.blockers.map((b, i) => {
+        const color = b.severity === "high" ? "var(--red)" : b.severity === "medium" ? "var(--amber)" : "var(--text-3)";
+        return (
+          <div key={i} className={styles.anomalyCard}>
+            <div className={styles.anomalyCardHeader}>
+              <span className={styles.anomalySev} style={{ color, background: `${color}12`, borderColor: `${color}28` }}>{b.severity}</span>
+              <span className={styles.anomalyType}>{b.key}</span>
+            </div>
+            <p style={{ margin: "4px 0 2px", fontSize: "0.84rem", fontWeight: 600 }}>{b.summary}</p>
+            <p className={styles.anomalyDesc}><strong>Signal:</strong> {b.signal}</p>
+            <p className={styles.anomalyDesc}><strong>Risk:</strong> {b.risk}</p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Drawer shell ───────────────────────────────────────────────────────────
 
 function Drawer({ drawer, onClose }: { drawer: DrawerState; onClose: () => void }) {
@@ -352,9 +448,11 @@ function Drawer({ drawer, onClose }: { drawer: DrawerState; onClose: () => void 
        drawer.type === "debt"     ? <DebtContent data={drawer.data} /> :
        drawer.type === "teamperf" ? <TeamPerfContent data={drawer.data} /> :
        drawer.type === "client"   ? <ClientContent data={drawer.data} /> :
-       drawer.type === "forecast" ? <ForecastContent data={drawer.data} /> :
-       drawer.type === "anomaly"  ? <AnomalyContent data={drawer.data.anomalies} summary={drawer.data.summary} /> :
-       drawer.type === "gaps"     ? <GapsContent data={drawer.data} /> : null}
+       drawer.type === "forecast"        ? <ForecastContent data={drawer.data} /> :
+       drawer.type === "anomaly"         ? <AnomalyContent data={drawer.data.anomalies} summary={drawer.data.summary} /> :
+       drawer.type === "gaps"            ? <GapsContent data={drawer.data} /> :
+       drawer.type === "sprint_fail"     ? <SprintFailContent data={drawer.data} /> :
+       drawer.type === "silent_blockers" ? <SilentBlockersContent data={drawer.data} /> : null}
     </SideDrawer>
   );
 }
@@ -384,15 +482,17 @@ function CapCard({ icon, title, description, onActivate, loading, ctaLabel }: {
 // ─── Permission map ─────────────────────────────────────────────────────────
 
 const CARD_ROLES: Record<DrawerType, UserRole[]> = {
-  retro:    ["admin", "engineering_manager", "tech_lead", "team_member"],
-  release:  ["admin", "engineering_manager", "tech_lead"],
-  risk:     ["admin", "engineering_manager", "tech_lead"],
-  debt:     ["admin", "engineering_manager", "tech_lead"],
-  teamperf: ["admin", "engineering_manager", "tech_lead"],
-  client:   ["admin", "engineering_manager"],
-  forecast: ["admin", "engineering_manager", "tech_lead"],
-  anomaly:  ["admin", "engineering_manager", "tech_lead"],
-  gaps:     ["admin", "engineering_manager", "tech_lead", "team_member"],
+  retro:           ["admin", "engineering_manager", "tech_lead", "team_member"],
+  release:         ["admin", "engineering_manager", "tech_lead"],
+  risk:            ["admin", "engineering_manager", "tech_lead"],
+  debt:            ["admin", "engineering_manager", "tech_lead"],
+  teamperf:        ["admin", "engineering_manager", "tech_lead"],
+  client:          ["admin", "engineering_manager"],
+  forecast:        ["admin", "engineering_manager", "tech_lead"],
+  anomaly:         ["admin", "engineering_manager", "tech_lead"],
+  gaps:            ["admin", "engineering_manager", "tech_lead", "team_member"],
+  sprint_fail:     ["admin", "engineering_manager", "tech_lead"],
+  silent_blockers: ["admin", "engineering_manager", "tech_lead", "team_member"],
 };
 
 // ─── Main component ─────────────────────────────────────────────────────────
@@ -504,26 +604,30 @@ Identify the top 3 delivery risks. Return a JSON array ONLY with exactly 3 objec
   }
 
   async function handleDebt() {
-    setActiveLoading("debt"); open("debt", "Technical Debt Analysis");
+    setActiveLoading("debt"); open("debt", "Technical Debt Radar");
     try {
       const ctx = sprintContext();
-      const res = await novaQuery(
-        `You are EOS. Analyse technical debt based on the sprint data below.
-${ctx}
-Safe bug-rate threshold: 15%. Estimate overall debt percentage, explain in 2 sentences, give one actionable recommendation.
-Format: first mention the debt % explicitly (e.g. "30%"), then insight, then recommendation.`
-      );
-      const pctMatch = res.answer.match(/\b(\d{1,3})\s*%/);
       const bugCount = activeSprint?.tasks.filter((t) => t.type === "Bug").length ?? 0;
       const total = Math.max(1, activeSprint?.tasks.length ?? 10);
-      const fallbackPct = Math.round((bugCount / total) * 100) + 8;
-      const debtPct = pctMatch ? parseInt(pctMatch[1]) : fallbackPct;
-      const sentences = res.answer.replace(/\n/g, " ").split(/(?<=[.!?])\s+/);
+      const res = await novaQuery(
+        `You are EOS, a technical debt radar engine.
+${ctx}
+Analyse debt across 4 dimensions. Return JSON ONLY:
+{"dimensions": [{"name": "Code Debt", "score": 0-100, "detail": string}, {"name": "Test Debt", "score": 0-100, "detail": string}, {"name": "Documentation Debt", "score": 0-100, "detail": string}, {"name": "Dependency Debt", "score": 0-100, "detail": string}], "overall_percentage": 0-100, "threshold": 15, "recommendation": string}
+score = how severe the debt is (0=none, 100=critical). Be data-driven: code debt from bug ratio, test debt from bug recurrence, doc debt from knowledge gap signals, dependency debt from blocked tickets.`
+      );
+      const parsed = parseJson<any>(res.answer);
+      const fallbackPct = Math.min(40, Math.round((bugCount / total) * 100) + 8);
       resolve({
-        percentage: Math.min(40, debtPct),
+        dimensions: parsed?.dimensions ?? [
+          { name: "Code Debt", score: fallbackPct + 5, detail: `${bugCount} bugs out of ${total} tickets indicates accumulated code quality issues.` },
+          { name: "Test Debt", score: Math.max(10, fallbackPct - 5), detail: "Recurring bugs suggest insufficient test coverage." },
+          { name: "Documentation Debt", score: 35, detail: "Ticket patterns show undocumented areas causing repeated issues." },
+          { name: "Dependency Debt", score: 20, detail: "Blocked tickets may indicate outdated or fragile dependencies." },
+        ],
+        overall_percentage: parsed?.overall_percentage ?? fallbackPct,
         threshold: 15,
-        insight: sentences.slice(0, 2).join(" ").trim() || res.answer,
-        recommendation: sentences.slice(2).join(" ").trim() || "Allocate 20% of next sprint to debt reduction.",
+        recommendation: parsed?.recommendation ?? "Allocate 20% of next sprint to debt reduction, prioritising code and test debt.",
       });
     } catch (e: any) { toast.error(e?.message ?? "Tech debt analysis failed"); closeDrawer(); }
     finally { setActiveLoading(null); }
@@ -627,6 +731,53 @@ If everything looks normal return an empty anomalies array with a positive nova_
     finally { setActiveLoading(null); }
   }
 
+  async function handleSprintFail() {
+    if (!activeSprint) return;
+    setActiveLoading("sprint_fail"); open("sprint_fail", "Sprint Failure Predictor");
+    try {
+      const ctx = sprintContext();
+      const res = await novaQuery(
+        `You are EOS, a sprint failure prediction engine.
+${ctx}
+Analyse this sprint and predict the probability it will FAIL (not complete on time or scope).
+Return JSON ONLY:
+{"probability": 0-100, "warning_signs": [{"sign": string, "severity": "high"|"medium"|"low", "detail": string}], "root_causes": [string], "recommendation": string}
+probability = likelihood the sprint will NOT complete. Be data-driven: consider blocked tickets, bug ratio, WIP, team capacity, and progress vs timeline.`
+      );
+      const parsed = parseJson<any>(res.answer);
+      const pct = activeSprint.totalPoints > 0 ? Math.round((activeSprint.donePoints / activeSprint.totalPoints) * 100) : 0;
+      const bugs = activeSprint.tasks.filter((t) => t.type === "Bug").length;
+      const blocked = activeSprint.tasks.filter((t) => t.status === "Blocked").length;
+      const fallbackProb = Math.min(90, blocked * 20 + (bugs > 3 ? 15 : 0) + Math.max(0, 60 - pct));
+      resolve({
+        probability: parsed?.probability ?? fallbackProb,
+        warning_signs: parsed?.warning_signs ?? (blocked > 0 ? [{ sign: `${blocked} blocked ticket(s)`, severity: "high", detail: "Blockers directly impede sprint completion." }] : []),
+        root_causes: parsed?.root_causes ?? ["Sprint data insufficient for full analysis"],
+        recommendation: parsed?.recommendation ?? "Review blocked tickets immediately and escalate unresolved dependencies.",
+      });
+    } catch (e: any) { toast.error(e?.message ?? "Failure prediction failed"); closeDrawer(); }
+    finally { setActiveLoading(null); }
+  }
+
+  async function handleSilentBlockers() {
+    if (!activeSprint) return;
+    setActiveLoading("silent_blockers"); open("silent_blockers", "Silent Blocker Detection");
+    try {
+      const ctx = sprintContext();
+      const res = await novaQuery(
+        `You are EOS, a blocker detection engine.
+${ctx}
+Identify tickets that are NOT marked as "Blocked" but show signs of being blocked: stale updates, external dependencies, waiting-on-others signals, or vague status.
+Return JSON ONLY:
+{"blockers": [{"key": string, "summary": string, "risk": string, "signal": string, "severity": "high"|"medium"|"low"}], "summary": string}
+Focus on In Progress or To Do tickets that haven't moved. Return empty array if none found.`
+      );
+      const parsed = parseJson<any>(res.answer);
+      resolve({ blockers: parsed?.blockers ?? [], summary: parsed?.summary ?? res.answer });
+    } catch (e: any) { toast.error(e?.message ?? "Silent blocker scan failed"); closeDrawer(); }
+    finally { setActiveLoading(null); }
+  }
+
   async function handleGaps() {
     setActiveLoading("gaps"); open("gaps", "Knowledge Gap Analysis");
     try {
@@ -685,9 +836,9 @@ Return a JSON array ONLY of up to 5 gap objects:
     {
       type: "debt",
       icon: <RiBarChartLine size={20} color="var(--accent)" />,
-      title: "Technical Debt",
-      description: "Debt accumulation rate from ticket analysis — gauged against the safe threshold.",
-      cta: "Analyse Debt",
+      title: "Technical Debt Radar",
+      description: "Multi-dimensional debt scan: code, test, docs, and dependency debt — with severity scores.",
+      cta: "Run Debt Radar",
       handler: handleDebt,
       requiresSprint: false,
     },
@@ -735,6 +886,24 @@ Return a JSON array ONLY of up to 5 gap objects:
       cta: "Identify Gaps",
       handler: handleGaps,
       requiresSprint: false,
+    },
+    {
+      type: "sprint_fail",
+      icon: <RiAlertLine size={20} color="var(--accent)" />,
+      title: "Sprint Failure Predictor",
+      description: "Probability the sprint will not complete — based on blockers, bugs, WIP, and pace.",
+      cta: "Predict Failure Risk",
+      handler: handleSprintFail,
+      requiresSprint: true,
+    },
+    {
+      type: "silent_blockers",
+      icon: <RiEyeLine size={20} color="var(--accent)" />,
+      title: "Silent Blocker Detection",
+      description: "Tickets not marked Blocked but showing hidden dependency or stall signals.",
+      cta: "Scan for Blockers",
+      handler: handleSilentBlockers,
+      requiresSprint: true,
     },
   ];
 
