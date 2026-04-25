@@ -6,19 +6,19 @@ import { useMyWorkActions } from "./useMyWorkActions";
 import { ticketToInitialData } from "@/utils/ticketHelpers";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
 
-import EosAgentBrief         from "./components/EosAgentBrief";
-import NovaInsightFeed        from "./components/NovaInsightFeed";
-import SmartFocusBlock        from "./components/SmartFocusBlock";
-import AIPriorityQueue        from "./components/AIPriorityQueue";
-import NovaDeliveryForecast   from "./components/NovaDeliveryForecast";
-import NovaKnowledgeGaps      from "./components/NovaKnowledgeGaps";
-import Gen2ProactiveSection   from "./components/Gen2ProactiveSection";
-import Gen3PredictiveSection  from "./components/Gen3PredictiveSection";
+import EosAgentBrief from "./components/EosAgentBrief";
+import NovaInsightFeed from "./components/NovaInsightFeed";
+import SmartFocusBlock from "./components/SmartFocusBlock";
+import AIPriorityQueue from "./components/AIPriorityQueue";
+import NovaDeliveryForecast from "./components/NovaDeliveryForecast";
+import NovaKnowledgeGaps from "./components/NovaKnowledgeGaps";
+import Gen2ProactiveSection from "./components/Gen2ProactiveSection";
+import Gen3PredictiveSection from "./components/Gen3PredictiveSection";
 import AmbientAwarenessWidget from "./components/AmbientAwarenessWidget";
-import SprintRiskWidget       from "./components/SprintRiskWidget";
-import TimeEnergyWidget       from "./components/TimeEnergyWidget";
-import QuickLogTimeModal      from "./components/QuickLogTimeModal";
-import QuickCommentModal      from "./components/QuickCommentModal";
+import SprintRiskWidget from "./components/SprintRiskWidget";
+import TimeEnergyWidget from "./components/TimeEnergyWidget";
+import QuickLogTimeModal from "./components/QuickLogTimeModal";
+import QuickCommentModal from "./components/QuickCommentModal";
 
 import styles from "./MyWorkPage.module.css";
 import type { AITicket } from "./useMyWork";
@@ -44,17 +44,20 @@ export default function MyWorkPage() {
     loadingGaps,
   } = useMyWork();
 
-  const [selectedKey, setSelectedKey]     = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [logTimeTicket, setLogTimeTicket] = useState<AITicket | null>(null);
   const [commentTicket, setCommentTicket] = useState<AITicket | null>(null);
 
-  const { handleLogTime, handleComment, handleQuickAction: _handleQuickAction } =
-    useMyWorkActions();
+  const {
+    handleLogTime,
+    handleComment,
+    handleQuickAction: _handleQuickAction,
+  } = useMyWorkActions();
 
   const { data: selectedTicketData } = useQuery({
     queryKey: ["ticket", selectedKey],
-    queryFn:  () => fetchTicket(selectedKey!),
-    enabled:  !!selectedKey,
+    queryFn: () => fetchTicket(selectedKey!),
+    enabled: !!selectedKey,
   });
 
   const handleQuickAction = useCallback(
@@ -157,7 +160,11 @@ export default function MyWorkPage() {
           open
           onClose={() => setSelectedKey(null)}
           ticketKey={selectedKey}
-          initialData={selectedTicketData ? ticketToInitialData(selectedTicketData) : undefined}
+          initialData={
+            selectedTicketData
+              ? ticketToInitialData(selectedTicketData)
+              : undefined
+          }
         />
       )}
     </div>

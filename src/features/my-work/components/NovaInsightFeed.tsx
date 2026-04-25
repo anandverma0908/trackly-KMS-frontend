@@ -10,14 +10,18 @@ interface Props {
   onNavigate: (path: string) => void;
 }
 
-export default function NovaInsightFeed({ insights, loading, onTicketClick, onNavigate }: Props) {
+export default function NovaInsightFeed({
+  insights,
+  loading,
+  onTicketClick,
+  onNavigate,
+}: Props) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   if (loading) {
     return (
       <div className={`${styles.insightCard} fade-up-1`}>
         <div className={styles.insightHeader}>
-          <RiSparklingLine size={14} />
           <span>EOS Insights</span>
         </div>
         <div className={styles.insightSkeleton}>
@@ -35,7 +39,6 @@ export default function NovaInsightFeed({ insights, loading, onTicketClick, onNa
   return (
     <div className={`${styles.insightCard} fade-up-1`}>
       <div className={styles.insightHeader}>
-        <RiSparklingLine size={14} />
         <span>EOS Insights</span>
         <span className={styles.insightCount}>{visible.length} new</span>
       </div>
@@ -76,7 +79,9 @@ export default function NovaInsightFeed({ insights, loading, onTicketClick, onNa
             </div>
             <button
               className={styles.insightDismiss}
-              onClick={() => setDismissed((prev) => new Set([...prev, insight.id]))}
+              onClick={() =>
+                setDismissed((prev) => new Set([...prev, insight.id]))
+              }
               title="Dismiss"
             >
               <RiCloseLine size={14} />
