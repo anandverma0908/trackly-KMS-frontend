@@ -31,6 +31,10 @@ import type {
   DecisionsResponse,
   Process,
   ProcessesResponse,
+  TestCase,
+  TestCycle,
+  TestExecution,
+  TestCoverage,
 } from "@/types";
 import type { Project } from "@/features/spaces/spacesData";
 import { getAuthHeader } from "@/features/auth/useAuthStore";
@@ -1801,4 +1805,121 @@ export async function deleteProcess(id: string): Promise<void> {
     if (!_shouldUseKnowledgeFallback(error)) throw error;
     _saveLocalProcesses(_getLocalProcesses().filter((item) => item.id !== id));
   }
+}
+
+// ── Tests / QA ────────────────────────────────────────────────────────────────
+
+export async function fetchTestCases(pod: string, ticketKey?: string): Promise<TestCase[]> {
+  const params: Record<string, string> = {};
+  if (ticketKey) params.ticket_key = ticketKey;
+  const { data } = await api.get(`/spaces/${pod}/tests/cases`, { params });
+  return data;
+}
+
+export async function createTestCase(
+  pod: string,
+  payload: {
+    title: string;
+    description?: string;
+    preconditions?: string;
+    steps?: { step: string; expected_result: string }[];
+    priority?: string;
+    ticket_key?: string;
+    ticket_id?: string;
+  },
+): Promise<TestCase> {
+  const { data } = await api.post(`/spaces/${pod}/tests/cases`, payload);
+  return data;
+}
+
+export async function updateTestCase(
+  pod: string,
+  caseId: string,
+  payload: Partial<{
+    title: string;
+    description: string;
+    preconditions: string;
+    steps: { step: string; expected_result: string }[];
+    priority: string;
+    status: string;
+    ticket_key: string;
+  }>,
+): Promise<TestCase> {
+  const { data } = await api.put(`/spaces/${pod}/tests/cases/${caseId}`, payload);
+  return data;
+}
+
+export async function deleteTestCase(pod: string, caseId: string): Promise<void> {
+  await api.delete(`/spaces/${pod}/tests/cases/${caseId}`);
+}
+
+export async function generateTestCases(
+  pod: string,
+  payload: {
+    ticket_key: string;
+    ticket_summary: string;
+    ticket_description?: string;
+    count?: number;
+  },
+): Promise<TestCase[]> {
+  const { data } = await api.post(`/spaces/${pod}/tests/cases/generate`, payload);
+  return data;
+}
+
+export async function fetchTestCycles(pod: string): Promise<TestCycle[]> {
+  const { data } = await api.get(`/spaces/${pod}/tests/cycles`);
+  return data;
+}
+
+export async function createTestCycle(
+  pod: string,
+  payload: { name: string; description?: string; sprint_id?: string; release_id?: string },
+): Promise<TestCycle> {
+  const { data } = await api.post(`/spaces/${pod}/tests/cycles`, payload);
+  return data;
+}
+
+export async function updateTestCycle(
+  pod: string,
+  cycleId: string,
+  payload: Partial<{ name: string; description: string; status: string }>,
+): Promise<TestCycle> {
+  const { data } = await api.put(`/spaces/${pod}/tests/cycles/${cycleId}`, payload);
+  return data;
+}
+
+export async function deleteTestCycle(pod: string, cycleId: string): Promise<void> {
+  await api.delete(`/spaces/${pod}/tests/cycles/${cycleId}`);
+}
+
+export async function fetchTestExecutions(pod: string, cycleId: string): Promise<TestExecution[]> {
+  const { data } = await api.get(`/spaces/${pod}/tests/cycles/${cycleId}/executions`);
+  return data;
+}
+
+export async function addTestToCycle(
+  pod: string,
+  cycleId: string,
+  testCaseId: string,
+): Promise<TestExecution> {
+  const { data } = await api.post(`/spaces/${pod}/tests/cycles/${cycleId}/executions`, { test_case_id: testCaseId });
+  return data;
+}
+
+export async function updateTestExecution(
+  pod: string,
+  execId: string,
+  payload: { status: string; notes?: string },
+): Promise<TestExecution> {
+  const { data } = await api.put(`/spaces/${pod}/tests/executions/${execId}`, payload);
+  return data;
+}
+
+export async function removeTestFromCycle(pod: string, execId: string): Promise<void> {
+  await api.delete(`/spaces/${pod}/tests/executions/${execId}`);
+}
+
+export async function fetchTestCoverage(pod: string): Promise<TestCoverage> {
+  const { data } = await api.get(`/spaces/${pod}/tests/coverage`);
+  return data;
 }

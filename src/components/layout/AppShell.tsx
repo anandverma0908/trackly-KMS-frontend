@@ -11,7 +11,7 @@ import styles from "./AppShell.module.css";
 
 export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [eosOpen, setEosOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);

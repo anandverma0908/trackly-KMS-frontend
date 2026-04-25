@@ -16,6 +16,7 @@ import ProcessesTab from "./tabs/ProcessesTab";
 import ReportsTab from "./tabs/ReportsTab";
 import EpicsTab from "./tabs/EpicsTab";
 import ReleasesTab from "./tabs/ReleasesTab";
+import TestsTab from "./tabs/TestsTab";
 import styles from "./ProjectDetailPage.module.css";
 
 import {
@@ -34,6 +35,7 @@ import {
   RiPieChartLine,
   RiStackLine,
   RiPriceTag3Line,
+  RiTestTubeLine,
 } from "react-icons/ri";
 
 function VelocityRing({ done, total, size = 28 }: { done: number; total: number; size?: number }) {
@@ -51,7 +53,7 @@ function VelocityRing({ done, total, size = 28 }: { done: number; total: number;
   );
 }
 
-type Tab = "summary" | "backlog" | "board" | "sprints" | "roadmap" | "nova" | "decisions" | "processes" | "settings" | "reports" | "epics" | "releases";
+type Tab = "summary" | "backlog" | "board" | "sprints" | "roadmap" | "nova" | "decisions" | "processes" | "settings" | "reports" | "epics" | "releases" | "tests";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "summary",   label: "Summary",   icon: <RiBarChartBoxLine size={15} /> },
@@ -61,6 +63,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "epics",     label: "Epics",     icon: <RiStackLine size={15} /> },
   { id: "reports",   label: "Reports",   icon: <RiPieChartLine size={15} /> },
   { id: "releases",  label: "Releases",  icon: <RiPriceTag3Line size={15} /> },
+  { id: "tests",     label: "Tests",     icon: <RiTestTubeLine size={15} /> },
   { id: "nova",      label: "EOS",       icon: <RiSparklingLine size={15} /> },
   { id: "decisions", label: "Decisions", icon: <RiFileTextLine size={15} /> },
   { id: "processes", label: "Processes", icon: <RiShieldCheckLine size={15} /> },
@@ -303,6 +306,7 @@ export default function ProjectDetailPage() {
           {activeTab === "reports" && <ReportsTab pod={pod ?? ""} />}
           {activeTab === "epics" && <EpicsTab pod={pod ?? ""} />}
           {activeTab === "releases" && <ReleasesTab pod={pod ?? ""} />}
+          {activeTab === "tests"    && <TestsTab pod={pod ?? ""} />}
         </div>
       </div>
     </div>

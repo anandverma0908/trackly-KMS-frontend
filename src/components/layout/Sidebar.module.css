@@ -115,8 +115,8 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 8px 8px 16px;
-  width: 228px; /* fixed — never reflows during collapse animation */
-  min-width: 228px;
+  width: 180px; /* fixed — never reflows during collapse animation */
+  min-width: 180px;
   /* Custom scrollbar */
   scrollbar-width: thin;
   scrollbar-color: var(--border-2) transparent;

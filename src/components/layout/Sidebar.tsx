@@ -4,7 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import { useFilterStore } from "@/features/filters/useFilterStore";
-import { fetchPodSummary, fetchOrgMembers, fetchSavedFilters } from "@/services/api";
+import {
+  fetchPodSummary,
+  fetchOrgMembers,
+  fetchSavedFilters,
+} from "@/services/api";
 import { getPodColor } from "@/config/themes";
 import styles from "./Sidebar.module.css";
 import Tooltip from "@mui/material/Tooltip";
@@ -47,7 +51,10 @@ export default function Sidebar({
     staleTime: 1000 * 60 * 2,
   });
 
-  const isManagerRole = user?.role === "admin" || user?.role === "engineering_manager" || user?.role === "tech_lead";
+  const isManagerRole =
+    user?.role === "admin" ||
+    user?.role === "engineering_manager" ||
+    user?.role === "tech_lead";
 
   // Only fetch org members for non-managers to check if they have direct reports
   const { data: orgMembersRaw } = useQuery({
@@ -58,15 +65,23 @@ export default function Sidebar({
   });
 
   const orgMembers = Array.isArray(orgMembersRaw) ? orgMembersRaw : [];
-  const myProfile = orgMembers.find((m: { email: string }) => m.email === user?.email);
+  const myProfile = orgMembers.find(
+    (m: { email: string }) => m.email === user?.email,
+  );
 
   // reporting_to could be emp_no, id, email, or name depending on backend
   const myIds = myProfile
-    ? [myProfile.emp_no, myProfile.id, myProfile.email, myProfile.name].filter(Boolean)
+    ? [myProfile.emp_no, myProfile.id, myProfile.email, myProfile.name].filter(
+        Boolean,
+      )
     : [];
-  const hasDirectReports = myIds.length > 0
-    ? orgMembers.some((m: { reporting_to: string | null }) => m.reporting_to && myIds.includes(m.reporting_to))
-    : false;
+  const hasDirectReports =
+    myIds.length > 0
+      ? orgMembers.some(
+          (m: { reporting_to: string | null }) =>
+            m.reporting_to && myIds.includes(m.reporting_to),
+        )
+      : false;
   const showTeamNav = isManagerRole || hasDirectReports;
 
   function handleNavClick(path: string) {
@@ -109,8 +124,8 @@ export default function Sidebar({
   return (
     <motion.aside
       className={`${styles.sidebar} ${open ? styles.sidebarOpen : ""}`}
-      initial={{ width: collapsed ? 55 : 220 }}
-      animate={{ width: collapsed ? 55 : 220 }}
+      initial={{ width: collapsed ? 55 : 180 }}
+      animate={{ width: collapsed ? 55 : 180 }}
       transition={{ type: "spring", stiffness: 320, damping: 38, mass: 0.7 }}
     >
       {/* Mobile close */}
@@ -129,7 +144,6 @@ export default function Sidebar({
 
       <div className={styles.body}>
         <div className={styles.navGroup}>
-
           {/* ── ME ── */}
           {sectionLabel("Me")}
           {nav(<RiUser3Line size={18} />, "My Work", "/my-work")}
@@ -145,7 +159,9 @@ export default function Sidebar({
                 style={{ width: "auto" }}
                 onClick={() => handleNavClick("/spaces")}
               >
-                <span className={styles.itemIcon}><RiRocketLine size={18} /></span>
+                <span className={styles.itemIcon}>
+                  <RiRocketLine size={18} />
+                </span>
               </button>
             </Tooltip>
           ) : (
@@ -156,7 +172,9 @@ export default function Sidebar({
                   className={`${styles.spacesMain} ${isActive("/spaces") && !isInSpace ? styles.itemActive : ""}`}
                   onClick={() => handleNavClick("/spaces")}
                 >
-                  <span className={styles.itemIcon}><RiRocketLine size={18} /></span>
+                  <span className={styles.itemIcon}>
+                    <RiRocketLine size={18} />
+                  </span>
                   <span className={styles.label}>Spaces</span>
                 </button>
                 {pods.length > 0 && (
@@ -168,7 +186,9 @@ export default function Sidebar({
                     <RiArrowRightSLine
                       size={15}
                       style={{
-                        transform: spacesOpen ? "rotate(90deg)" : "rotate(0deg)",
+                        transform: spacesOpen
+                          ? "rotate(90deg)"
+                          : "rotate(0deg)",
                         transition: "transform 0.18s",
                         color: "var(--text-3)",
                       }}
@@ -238,7 +258,6 @@ export default function Sidebar({
           {sectionLabel("People")}
           {nav(<RiTeamLine size={18} />, "My Team", "/team", showTeamNav)}
           {nav(<RiSunLine size={18} />, "Standup", "/standup")}
-
         </div>
 
         <div className={styles.navGroupBottom} />
@@ -264,13 +283,20 @@ function SavedFiltersSection({ collapsed }: { collapsed: boolean }) {
       {!collapsed && <div className={styles.section}>Saved Filters</div>}
       {collapsed && <div className={styles.sectionDividerCollapsed} />}
       {filters.map((f) => (
-        <Tooltip key={f.id} title={collapsed ? f.name : ""} placement="right" arrow>
+        <Tooltip
+          key={f.id}
+          title={collapsed ? f.name : ""}
+          placement="right"
+          arrow
+        >
           <button
             className={styles.item}
             style={{ width: collapsed ? "auto" : "100%" }}
             onClick={() => setActiveFilter(f.filters)}
           >
-            <span className={styles.itemIcon}><RiFilter3Line size={16} /></span>
+            <span className={styles.itemIcon}>
+              <RiFilter3Line size={16} />
+            </span>
             {!collapsed && <span className={styles.label}>{f.name}</span>}
           </button>
         </Tooltip>

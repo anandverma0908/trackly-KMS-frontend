@@ -6,7 +6,6 @@ import { useAuthStore } from "@/features/auth/useAuthStore";
 import type { Project, ProjectTask, ProjectSprint } from "../spacesData";
 import { getPriorityColor, getTaskStatusColor } from "../spacesData";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
-import TicketDetailDrawer from "@/features/tickets/TicketDetailDrawer";
 import {
   createTicket,
   addTicketToSprint,
@@ -726,14 +725,12 @@ export default function BacklogTab({ project }: { project: Project }) {
 
       {/* ── Ticket Detail Drawer ── */}
       {viewingTask && (
-        <TicketDetailDrawer
+        <CreateTicketDrawer
           open={Boolean(viewingTask)}
           onClose={() => setViewingTask(null)}
           ticketKey={viewingTask.key}
           members={project.members}
-          epics={project.epics}
-          sprints={project.sprints.map((s) => ({ id: s.id, name: s.name }))}
-          onUpdated={() => {
+          onSuccess={() => {
             qc.invalidateQueries({ queryKey: ["space-project", project.key] });
           }}
         />

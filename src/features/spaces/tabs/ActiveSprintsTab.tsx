@@ -16,7 +16,6 @@ import toast from "react-hot-toast";
 import type { Project, ProjectTask } from "../spacesData";
 import { getPriorityColor } from "../spacesData";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
-import TicketDetailDrawer from "@/features/tickets/TicketDetailDrawer";
 import BoardConfigPanel from "@/features/spaces/components/BoardConfigPanel";
 import { createTicket, updateTicketStatus, createSavedFilter } from "@/services/api";
 import type { TicketCreate } from "@/types";
@@ -807,14 +806,12 @@ export default function ActiveSprintsTab({
         }}
       />
       {viewTicket && (
-        <TicketDetailDrawer
+        <CreateTicketDrawer
           open={Boolean(viewTicket)}
           onClose={() => setViewTicket(null)}
           ticketKey={viewTicket.key}
           members={project.members}
-          epics={project.epics}
-          sprints={project.sprints.map((s) => ({ id: s.id, name: s.name }))}
-          onUpdated={() => {
+          onSuccess={() => {
             qc.invalidateQueries({ queryKey: ["space-project", project.key] });
           }}
         />

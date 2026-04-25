@@ -601,3 +601,68 @@ export interface ProcessesResponse {
   processes: Process[];
   total: number;
 }
+
+/* ── Tests / QA ── */
+export interface TestStep {
+  step: string;
+  expected_result: string;
+}
+
+export interface TestCase {
+  id: string;
+  org_id: string;
+  pod: string;
+  ticket_id?: string | null;
+  ticket_key?: string | null;
+  title: string;
+  description?: string | null;
+  preconditions?: string | null;
+  steps: TestStep[];
+  priority: 'high' | 'medium' | 'low';
+  status: 'active' | 'archived';
+  ai_generated: boolean;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TestCycle {
+  id: string;
+  org_id: string;
+  pod: string;
+  name: string;
+  description?: string | null;
+  sprint_id?: string | null;
+  release_id?: string | null;
+  status: 'planning' | 'active' | 'completed';
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  total: number;
+  passed: number;
+  failed: number;
+  blocked: number;
+  pending: number;
+}
+
+export interface TestExecution {
+  id: string;
+  cycle_id: string;
+  test_case_id: string;
+  status: 'pending' | 'passed' | 'failed' | 'blocked' | 'skipped';
+  executed_by?: string | null;
+  notes?: string | null;
+  executed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  test_case?: TestCase | null;
+}
+
+export interface TestCoverage {
+  total_tickets: number;
+  tested_tickets: number;
+  untested_tickets: number;
+  coverage_pct: number;
+  untested: { key: string; summary: string; priority: string; assignee: string }[];
+  eos_insight: string;
+}
