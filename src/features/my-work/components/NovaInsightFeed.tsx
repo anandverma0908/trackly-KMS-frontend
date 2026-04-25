@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RiSparklingLine, RiCloseLine } from "react-icons/ri";
+import { RiCloseLine } from "react-icons/ri";
 import styles from "../MyWorkPage.module.css";
 import type { Insight } from "../useMyWork";
 

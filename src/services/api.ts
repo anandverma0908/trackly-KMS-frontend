@@ -1006,6 +1006,190 @@ export async function fetchProject(pod: string): Promise<Project> {
   return data;
 }
 
+export async function fetchBurndownReport(pod: string): Promise<{ sprint: { id: string; name: string; total_points: number } | null; data: { date: string; remaining: number; ideal: number }[] }> {
+  const { data } = await api.get(`/spaces/${pod}/reports/burndown`);
+  return data;
+}
+
+export async function fetchVelocityReport(pod: string): Promise<{ sprint: string; committed: number; completed: number; start_date: string; end_date: string }[]> {
+  const { data } = await api.get(`/spaces/${pod}/reports/velocity`);
+  return data;
+}
+
+export async function fetchCfdReport(pod: string): Promise<{ date: string; "To Do": number; "In Progress": number; "In Review": number; Blocked: number; Done: number }[]> {
+  const { data } = await api.get(`/spaces/${pod}/reports/cfd`);
+  return data;
+}
+
+export async function createEpic(pod: string, payload: { title: string; color?: string; start_date?: string; end_date?: string }) {
+  const { data } = await api.post(`/spaces/${pod}/epics`, payload);
+  return data;
+}
+
+export async function updateEpic(pod: string, epicId: string, payload: { title?: string; color?: string; start_date?: string; end_date?: string }) {
+  const { data } = await api.put(`/spaces/${pod}/epics/${epicId}`, payload);
+  return data;
+}
+
+export async function deleteEpic(pod: string, epicId: string) {
+  await api.delete(`/spaces/${pod}/epics/${epicId}`);
+}
+
+export async function linkTicketToEpic(ticketKey: string, epicId: string | null) {
+  const { data } = await api.post(`/tickets/${ticketKey}/epic`, { epic_id: epicId });
+  return data;
+}
+
+export interface SavedFilter {
+  id: string;
+  name: string;
+  filters: Record<string, any>;
+  is_shared: boolean;
+  created_at?: string;
+}
+
+export async function fetchSavedFilters(): Promise<SavedFilter[]> {
+  const { data } = await api.get("/filters");
+  return data ?? [];
+}
+
+export async function createSavedFilter(payload: { name: string; filters: Record<string, any>; is_shared?: boolean }): Promise<SavedFilter> {
+  const { data } = await api.post("/filters", payload);
+  return data;
+}
+
+export async function deleteSavedFilter(id: string) {
+  await api.delete(`/filters/${id}`);
+}
+
+export interface BoardConfig {
+  columns: { id: string; name: string; status_mapping: string[] }[];
+  swimlane_by: "none" | "assignee" | "epic" | "priority";
+  wip_limits: Record<string, number>;
+}
+
+export async function fetchBoardConfig(pod: string): Promise<BoardConfig> {
+  const { data } = await api.get(`/spaces/${pod}/board-config`);
+  return data;
+}
+
+export async function updateBoardConfig(pod: string, payload: BoardConfig): Promise<BoardConfig> {
+  const { data } = await api.put(`/spaces/${pod}/board-config`, payload);
+  return data;
+}
+
+export interface Release {
+  id: string;
+  name: string;
+  description?: string;
+  status: "unreleased" | "released";
+  release_date?: string;
+  ticket_count: number;
+  created_at?: string;
+}
+
+export async function fetchReleases(pod: string): Promise<Release[]> {
+  const { data } = await api.get(`/spaces/${pod}/releases`);
+  return data ?? [];
+}
+
+export async function createRelease(pod: string, payload: { name: string; description?: string; release_date?: string }): Promise<Release> {
+  const { data } = await api.post(`/spaces/${pod}/releases`, payload);
+  return data;
+}
+
+export async function updateRelease(pod: string, id: string, payload: Partial<{ name: string; description: string; status: string; release_date: string }>): Promise<Release> {
+  const { data } = await api.put(`/spaces/${pod}/releases/${id}`, payload);
+  return data;
+}
+
+export async function deleteRelease(pod: string, id: string) {
+  await api.delete(`/spaces/${pod}/releases/${id}`);
+}
+
+export async function setFixVersion(ticketKey: string, versionName: string | null) {
+  const { data } = await api.post(`/spaces/tickets/${ticketKey}/fix-version`, { version_name: versionName });
+  return data;
+}
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  is_active: boolean;
+  trigger_type: string;
+  trigger_config: Record<string, any>;
+  condition_type?: string;
+  condition_config?: Record<string, any>;
+  action_type: string;
+  action_config: Record<string, any>;
+  run_count: number;
+  created_at?: string;
+}
+
+export async function fetchAutomations(pod: string): Promise<AutomationRule[]> {
+  const { data } = await api.get(`/spaces/${pod}/automations`);
+  return data ?? [];
+}
+
+export async function createAutomation(pod: string, payload: Omit<AutomationRule, "id" | "run_count" | "created_at">): Promise<AutomationRule> {
+  const { data } = await api.post(`/spaces/${pod}/automations`, payload);
+  return data;
+}
+
+export async function updateAutomation(pod: string, id: string, payload: Partial<AutomationRule>): Promise<AutomationRule> {
+  const { data } = await api.put(`/spaces/${pod}/automations/${id}`, payload);
+  return data;
+}
+
+export async function deleteAutomation(pod: string, id: string) {
+  await api.delete(`/spaces/${pod}/automations/${id}`);
+}
+
+export interface CustomFieldDefinition {
+  id: string;
+  org_id: string;
+  pod: string;
+  name: string;
+  field_type: "text" | "number" | "select" | "date" | "checkbox";
+  options?: string[];
+  is_required: boolean;
+  display_order: number;
+  created_at?: string;
+}
+
+export async function fetchCustomFields(pod: string): Promise<CustomFieldDefinition[]> {
+  const { data } = await api.get(`/spaces/${pod}/custom-fields`);
+  return data ?? [];
+}
+
+export async function createCustomField(pod: string, payload: Omit<CustomFieldDefinition, "id" | "org_id" | "pod" | "created_at">): Promise<CustomFieldDefinition> {
+  const { data } = await api.post(`/spaces/${pod}/custom-fields`, payload);
+  return data;
+}
+
+export async function updateCustomField(pod: string, id: string, payload: Partial<CustomFieldDefinition>): Promise<CustomFieldDefinition> {
+  const { data } = await api.put(`/spaces/${pod}/custom-fields/${id}`, payload);
+  return data;
+}
+
+export async function deleteCustomField(pod: string, id: string) {
+  await api.delete(`/spaces/${pod}/custom-fields/${id}`);
+}
+
+export async function fetchSubtasks(ticketKey: string): Promise<Ticket[]> {
+  const { data } = await api.get(`/tickets/${ticketKey}/subtasks`);
+  return (data ?? []).map(_mapTicketOut);
+}
+
+export async function createSubtask(ticketKey: string, payload: { summary: string; assignee?: string; story_points?: number }): Promise<Ticket> {
+  const { data } = await api.post(`/tickets/${ticketKey}/subtasks`, payload);
+  return _mapTicketOut(data);
+}
+
+export async function unlinkSubtask(ticketKey: string, childKey: string) {
+  await api.delete(`/tickets/${ticketKey}/subtasks/${childKey}`);
+}
+
 export async function createSpace(payload: {
   key: string;
   name: string;

@@ -441,7 +441,7 @@ export function enableMocks() {
       const user = useAuthStore.getState().user
       const today = new Date().toISOString().slice(0, 10)
       const standup: import('@/types').Standup = {
-        id: Date.now(),
+        id: String(Date.now()),
         engineer: user?.name || 'Current User',
         engineer_email: user?.email || 'user@3scsolution.com',
         date: today,
@@ -464,7 +464,7 @@ export function enableMocks() {
         (s) => s.date === today && (s.engineer === user?.name || s.engineer_email === user?.email)
       )
       const generated: import('@/types').Standup = {
-        id: existingIdx >= 0 ? DUMMY_STANDUPS[existingIdx].id : Date.now(),
+        id: existingIdx >= 0 ? DUMMY_STANDUPS[existingIdx].id : String(Date.now()),
         engineer: user?.name || 'Current User',
         engineer_email: user?.email || 'user@3scsolution.com',
         date: today,

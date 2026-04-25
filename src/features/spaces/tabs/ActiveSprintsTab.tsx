@@ -16,7 +16,9 @@ import toast from "react-hot-toast";
 import type { Project, ProjectTask } from "../spacesData";
 import { getPriorityColor } from "../spacesData";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
-import { createTicket, updateTicketStatus } from "@/services/api";
+import TicketDetailDrawer from "@/features/tickets/TicketDetailDrawer";
+import BoardConfigPanel from "@/features/spaces/components/BoardConfigPanel";
+import { createTicket, updateTicketStatus, createSavedFilter } from "@/services/api";
 import type { TicketCreate } from "@/types";
 import styles from "./ActiveSprintsTab.module.css";
 
@@ -26,6 +28,7 @@ import {
   RiFilter3Line,
   RiSparklingLine,
   RiAlertLine,
+  RiSettings3Line,
 } from "react-icons/ri";
 import { IssueTypeBadge } from "@/components/ui/Badge";
 
@@ -153,6 +156,12 @@ export default function ActiveSprintsTab({
     [activeSprints, project],
   );
 
+  const epicColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    project.epics?.forEach((e) => { map[e.id] = e.color; });
+    return map;
+  }, [project.epics]);
+
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(
     new Set(),
   );
@@ -171,6 +180,9 @@ export default function ActiveSprintsTab({
   const [localTasks, setLocalTasks] = useState<ProjectTask[]>([]);
   const [draggedTask, setDraggedTask] = useState<ProjectTask | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const [showSaveFilter, setShowSaveFilter] = useState(false);
+  const [filterName, setFilterName] = useState("");
+  const [showBoardConfig, setShowBoardConfig] = useState(false);
 
   const statusMut = useMutation({
     mutationFn: ({ key, status }: { key: string; status: string }) =>
@@ -191,6 +203,20 @@ export default function ActiveSprintsTab({
       });
       toast.error("Failed to update status");
     },
+  });
+
+  const saveFilterMut = useMutation({
+    mutationFn: (name: string) => createSavedFilter({
+      name,
+      filters: { search, pod: project.key },
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saved-filters"] });
+      toast.success("Filter saved");
+      setShowSaveFilter(false);
+      setFilterName("");
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const createMut = useMutation({
@@ -558,6 +584,13 @@ export default function ActiveSprintsTab({
               </button>
             )}
           </div>
+          <button
+            className={styles.clearAllBtn}
+            onClick={() => setShowBoardConfig(true)}
+            title="Board settings"
+          >
+            <RiSettings3Line size={14} />
+          </button>
 
           {/* My Tasks */}
           <Tooltip title="Show only my tasks" arrow>
@@ -632,6 +665,28 @@ export default function ActiveSprintsTab({
           >
             Clear all
           </button>
+          {showSaveFilter ? (
+            <>
+              <input
+                className={styles.searchInput}
+                placeholder="Filter name"
+                value={filterName}
+                onChange={(e) => setFilterName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && filterName.trim()) saveFilterMut.mutate(filterName.trim());
+                  if (e.key === "Escape") { setShowSaveFilter(false); setFilterName(""); }
+                }}
+                autoFocus
+                style={{ width: 120, marginLeft: 8 }}
+              />
+              <button className={styles.clearAllBtn} onClick={() => { if (filterName.trim()) saveFilterMut.mutate(filterName.trim()); }}>Save</button>
+              <button className={styles.clearAllBtn} onClick={() => { setShowSaveFilter(false); setFilterName(""); }}>Cancel</button>
+            </>
+          ) : (
+            <button className={styles.clearAllBtn} onClick={() => setShowSaveFilter(true)}>
+              Save Filter
+            </button>
+          )}
         </div>
       )}
 
@@ -705,6 +760,7 @@ export default function ActiveSprintsTab({
                     onDragStart={() => handleDragStart(task)}
                     onDragEnd={handleDragEnd}
                     onView={setViewTicket}
+                    epicColor={task.epicId ? epicColorMap[task.epicId] : undefined}
                   />
                 ))}
               </AnimatePresence>
@@ -750,35 +806,25 @@ export default function ActiveSprintsTab({
           });
         }}
       />
-      <CreateTicketDrawer
-        open={Boolean(viewTicket)}
-        onClose={() => setViewTicket(null)}
-        ticketKey={viewTicket?.key}
-        defaultPod={project.key}
-        initialData={
-          viewTicket
-            ? {
-                title: viewTicket.title,
-                description: viewTicket.description,
-                issue_type: viewTicket.type,
-                priority:
-                  viewTicket.priority === "Critical"
-                    ? "Highest"
-                    : viewTicket.priority,
-                status: viewTicket.status,
-                assignee: viewTicket.assignee,
-                labels: viewTicket.labels,
-                story_points: viewTicket.storyPoints,
-                due_date: viewTicket.dueDate,
-                pod: project.key,
-              }
-            : undefined
-        }
-        members={project.members}
-        sprintName={selectedSprint.name}
-        onSuccess={() => {
-          qc.invalidateQueries({ queryKey: ["space-project", project.key] });
-        }}
+      {viewTicket && (
+        <TicketDetailDrawer
+          open={Boolean(viewTicket)}
+          onClose={() => setViewTicket(null)}
+          ticketKey={viewTicket.key}
+          members={project.members}
+          epics={project.epics}
+          sprints={project.sprints.map((s) => ({ id: s.id, name: s.name }))}
+          onUpdated={() => {
+            qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+          }}
+        />
+      )}
+
+      {/* ── Board Config Panel ── */}
+      <BoardConfigPanel
+        pod={project.key}
+        open={showBoardConfig}
+        onClose={() => setShowBoardConfig(false)}
       />
     </div>
   );
@@ -790,12 +836,14 @@ function KanbanCard({
   onDragStart,
   onDragEnd,
   onView,
+  epicColor,
 }: {
   task: ProjectTask;
   projectColor?: string;
   onDragStart: () => void;
   onDragEnd: () => void;
   onView?: (task: ProjectTask) => void;
+  epicColor?: string;
 }) {
   const priorityColor = getPriorityColor(task.priority);
 
@@ -846,7 +894,12 @@ function KanbanCard({
       {/* Header */}
       <div className={styles.cardHeader}>
         <span className={styles.cardKey}>{task.key}</span>
-        <IssueTypeBadge type={task.type} />
+        <div className={styles.cardHeaderRight}>
+          {epicColor && (
+            <span className={styles.epicDot} style={{ background: epicColor }} title="Epic" />
+          )}
+          <IssueTypeBadge type={task.type} />
+        </div>
       </div>
 
       {/* Title */}

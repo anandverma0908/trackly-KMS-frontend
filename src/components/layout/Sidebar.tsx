@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/useAuthStore";
-import { fetchPodSummary, fetchOrgMembers } from "@/services/api";
+import { useFilterStore } from "@/features/filters/useFilterStore";
+import { fetchPodSummary, fetchOrgMembers, fetchSavedFilters } from "@/services/api";
 import { getPodColor } from "@/config/themes";
 import styles from "./Sidebar.module.css";
 import Tooltip from "@mui/material/Tooltip";
@@ -21,6 +22,7 @@ import {
   RiTimeLine,
   RiArrowRightSLine,
   RiBugLine,
+  RiFilter3Line,
 } from "react-icons/ri";
 
 interface SidebarProps {
@@ -214,6 +216,9 @@ export default function Sidebar({
             </div>
           )}
 
+          {/* ── SAVED FILTERS ── */}
+          <SavedFiltersSection collapsed={collapsed} />
+
           {/* ── KNOWLEDGE ── */}
           {sectionLabel("Knowledge")}
           {nav(<RiBookOpenLine size={18} />, "Wiki", "/wiki")}
@@ -239,6 +244,38 @@ export default function Sidebar({
         <div className={styles.navGroupBottom} />
       </div>
     </motion.aside>
+  );
+}
+
+/* ── Saved Filters Section ───────────────────────────────────────────────── */
+function SavedFiltersSection({ collapsed }: { collapsed: boolean }) {
+  const { data: filters = [] } = useQuery({
+    queryKey: ["saved-filters"],
+    queryFn: fetchSavedFilters,
+    staleTime: 1000 * 60 * 2,
+  });
+
+  const setActiveFilter = useFilterStore((s) => s.setActiveFilter);
+
+  if (filters.length === 0) return null;
+
+  return (
+    <>
+      {!collapsed && <div className={styles.section}>Saved Filters</div>}
+      {collapsed && <div className={styles.sectionDividerCollapsed} />}
+      {filters.map((f) => (
+        <Tooltip key={f.id} title={collapsed ? f.name : ""} placement="right" arrow>
+          <button
+            className={styles.item}
+            style={{ width: collapsed ? "auto" : "100%" }}
+            onClick={() => setActiveFilter(f.filters)}
+          >
+            <span className={styles.itemIcon}><RiFilter3Line size={16} /></span>
+            {!collapsed && <span className={styles.label}>{f.name}</span>}
+          </button>
+        </Tooltip>
+      ))}
+    </>
   );
 }
 

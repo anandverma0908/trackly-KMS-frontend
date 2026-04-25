@@ -25,6 +25,7 @@ export interface Ticket {
   story_points?:            number
   labels?:                  string[]
   due_date?:                string
+  custom_fields?:           Record<string, any>
   created:                  string
   updated:                  string
   issue_type:               string

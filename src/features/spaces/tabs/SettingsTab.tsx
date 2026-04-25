@@ -10,6 +10,8 @@ import {
   RiTeamLine,
   RiAddLine,
 } from "react-icons/ri";
+import AutomationRuleBuilder from "@/features/spaces/components/AutomationRuleBuilder";
+import CustomFieldManager from "@/features/spaces/components/CustomFieldManager";
 import styles from "./SettingsTab.module.css";
 
 interface Props {
@@ -195,6 +197,16 @@ export default function SettingsTab({ project }: Props) {
           </div>
         </div>
 
+      </div>
+
+      {/* ── Automation Rules ── */}
+      <div style={{ marginTop: 28 }}>
+        <AutomationRuleBuilder pod={pod} />
+      </div>
+
+      {/* ── Custom Fields ── */}
+      <div style={{ marginTop: 28 }}>
+        <CustomFieldManager pod={pod} />
       </div>
     </div>
   );

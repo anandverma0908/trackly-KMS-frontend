@@ -6,6 +6,7 @@ import { useAuthStore } from "@/features/auth/useAuthStore";
 import type { Project, ProjectTask, ProjectSprint } from "../spacesData";
 import { getPriorityColor, getTaskStatusColor } from "../spacesData";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
+import TicketDetailDrawer from "@/features/tickets/TicketDetailDrawer";
 import {
   createTicket,
   addTicketToSprint,
@@ -14,6 +15,9 @@ import {
   completeSprint,
   createSprint,
   fetchSprintDraft,
+  updateTicket,
+  updateTicketStatus,
+  createSavedFilter,
 } from "@/services/api";
 import type { SprintDraftResult } from "@/services/api";
 import type { TicketCreate } from "@/types";
@@ -34,6 +38,8 @@ import {
   RiListCheck2,
   RiArrowGoBackLine,
   RiAlertLine,
+  RiCloseCircleLine,
+  RiFilter3Line,
 } from "react-icons/ri";
 
 const ISSUE_TYPE_ICONS: Record<string, string> = {
@@ -68,6 +74,8 @@ export default function BacklogTab({ project }: { project: Project }) {
   const [createForSprint, setCreateForSprint] = useState<string | undefined>();
   const [localTasks, setLocalTasks] = useState<ProjectTask[]>([]);
   const [viewingTask, setViewingTask] = useState<ProjectTask | null>(null);
+  const [showSaveFilter, setShowSaveFilter] = useState(false);
+  const [filterName, setFilterName] = useState("");
 
   const [startSprintModal, setStartSprintModal] =
     useState<ProjectSprint | null>(null);
@@ -220,6 +228,20 @@ export default function BacklogTab({ project }: { project: Project }) {
     },
   });
 
+  const saveFilterMut = useMutation({
+    mutationFn: (name: string) => createSavedFilter({
+      name,
+      filters: { search, sortBy, pod: project.key },
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saved-filters"] });
+      toast.success("Filter saved");
+      setShowSaveFilter(false);
+      setFilterName("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   /* ── Handlers ── */
   function toggleCollapse(id: string) {
     setCollapsed((prev) => {
@@ -251,6 +273,42 @@ export default function BacklogTab({ project }: { project: Project }) {
       .catch((e) => toast.error(e.message));
   }
 
+  function handleBulkAssign(assignee: string) {
+    if (selected.size === 0) return;
+    const keys = Array.from(selected);
+    Promise.all(keys.map((k) => updateTicket(k, { assignee })))
+      .then(() => {
+        qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+        toast.success(`Assigned ${keys.length} ticket${keys.length > 1 ? "s" : ""}`);
+        setSelected(new Set());
+      })
+      .catch((e) => toast.error(e.message));
+  }
+
+  function handleBulkPriority(priority: string) {
+    if (selected.size === 0) return;
+    const keys = Array.from(selected);
+    Promise.all(keys.map((k) => updateTicket(k, { priority })))
+      .then(() => {
+        qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+        toast.success(`Priority updated for ${keys.length} ticket${keys.length > 1 ? "s" : ""}`);
+        setSelected(new Set());
+      })
+      .catch((e) => toast.error(e.message));
+  }
+
+  function handleBulkTransition(status: string) {
+    if (selected.size === 0) return;
+    const keys = Array.from(selected);
+    Promise.all(keys.map((k) => updateTicketStatus(k, status)))
+      .then(() => {
+        qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+        toast.success(`Transitioned ${keys.length} ticket${keys.length > 1 ? "s" : ""}`);
+        setSelected(new Set());
+      })
+      .catch((e) => toast.error(e.message));
+  }
+
   async function handleEosPlanSprint() {
     setAiPlanLoading(true);
     setAiPlanResult(null);
@@ -265,6 +323,12 @@ export default function BacklogTab({ project }: { project: Project }) {
   }
 
   const totalBacklogSP = backlogTasks.reduce((s, t) => s + t.storyPoints, 0);
+
+  const epicColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    project?.epics?.forEach((e) => { map[e.id] = e.color; });
+    return map;
+  }, [project?.epics]);
 
   return (
     <div className={styles.tab}>
@@ -299,21 +363,27 @@ export default function BacklogTab({ project }: { project: Project }) {
             </select>
           </div>
 
-          {selected.size > 0 && visibleSprints.length > 0 && (
+          {showSaveFilter ? (
             <div className={styles.sortWrap}>
-              <select
+              <input
                 className={styles.select}
-                value=""
-                onChange={(e) => handleBulkMoveToSprint(e.target.value)}
-              >
-                <option value="">Move {selected.size} to sprint…</option>
-                {visibleSprints.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="Filter name"
+                value={filterName}
+                onChange={(e) => setFilterName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && filterName.trim()) saveFilterMut.mutate(filterName.trim());
+                  if (e.key === "Escape") { setShowSaveFilter(false); setFilterName(""); }
+                }}
+                autoFocus
+                style={{ width: 120 }}
+              />
+              <button className={styles.clearBtn} onClick={() => { if (filterName.trim()) saveFilterMut.mutate(filterName.trim()); }}>Save</button>
+              <button className={styles.clearBtn} onClick={() => { setShowSaveFilter(false); setFilterName(""); }}>Cancel</button>
             </div>
+          ) : (
+            <button className={styles.clearBtn} onClick={() => setShowSaveFilter(true)} style={{ color: "var(--text-2)", fontWeight: 600 }}>
+              <RiFilter3Line size={12} /> Save Filter
+            </button>
           )}
 
           <button
@@ -479,6 +549,7 @@ export default function BacklogTab({ project }: { project: Project }) {
                             })
                           }
                           onClick={() => setViewingTask(task)}
+                          epicColor={task.epicId ? epicColorMap[task.epicId] : undefined}
                         />
                       ))
                     )}
@@ -595,6 +666,7 @@ export default function BacklogTab({ project }: { project: Project }) {
                       onMoveToBacklog={undefined}
                       onClick={() => setViewingTask(task)}
                       isBacklog
+                      epicColor={task.epicId ? epicColorMap[task.epicId] : undefined}
                     />
                   ))
                 )}
@@ -654,25 +726,14 @@ export default function BacklogTab({ project }: { project: Project }) {
 
       {/* ── Ticket Detail Drawer ── */}
       {viewingTask && (
-        <CreateTicketDrawer
+        <TicketDetailDrawer
           open={Boolean(viewingTask)}
           onClose={() => setViewingTask(null)}
           ticketKey={viewingTask.key}
-          defaultPod={project.key}
-          initialData={{
-            title: viewingTask.title,
-            description: viewingTask.description,
-            issue_type: viewingTask.type,
-            priority: viewingTask.priority,
-            status: viewingTask.status,
-            assignee: viewingTask.assignee,
-            story_points: viewingTask.storyPoints,
-            labels: viewingTask.labels,
-            due_date: viewingTask.dueDate,
-            pod: project.key,
-          }}
           members={project.members}
-          onSuccess={() => {
+          epics={project.epics}
+          sprints={project.sprints.map((s) => ({ id: s.id, name: s.name }))}
+          onUpdated={() => {
             qc.invalidateQueries({ queryKey: ["space-project", project.key] });
           }}
         />
@@ -728,6 +789,55 @@ export default function BacklogTab({ project }: { project: Project }) {
           createMut.mutate(payload);
         }}
       />
+
+      {/* ── Floating Bulk Action Bar ── */}
+      {selected.size > 0 && (
+        <div className={styles.bulkBar}>
+          <span className={styles.bulkCount}>{selected.size} selected</span>
+          <div className={styles.bulkActions}>
+            {visibleSprints.length > 0 && (
+              <div className={styles.bulkWrap}>
+                <select className={styles.bulkSelect} value="" onChange={(e) => handleBulkMoveToSprint(e.target.value)}>
+                  <option value="">Move to Sprint</option>
+                  {visibleSprints.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className={styles.bulkWrap}>
+              <select className={styles.bulkSelect} value="" onChange={(e) => handleBulkAssign(e.target.value)}>
+                <option value="">Assign</option>
+                {project.members.map((m) => (
+                  <option key={m.id} value={m.name}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.bulkWrap}>
+              <select className={styles.bulkSelect} value="" onChange={(e) => handleBulkPriority(e.target.value)}>
+                <option value="">Set Priority</option>
+                <option value="Critical">Critical</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+            <div className={styles.bulkWrap}>
+              <select className={styles.bulkSelect} value="" onChange={(e) => handleBulkTransition(e.target.value)}>
+                <option value="">Transition</option>
+                <option value="To Do">To Do</option>
+                <option value="In Progress">In Progress</option>
+                <option value="In Review">In Review</option>
+                <option value="Blocked">Blocked</option>
+                <option value="Done">Done</option>
+              </select>
+            </div>
+            <button className={styles.bulkClear} onClick={() => setSelected(new Set())}>
+              <RiCloseCircleLine size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── EOS Plan Sprint Drawer ── */}
       <SideDrawer
@@ -828,6 +938,7 @@ const TaskRow = React.memo(function TaskRow({
   onMoveToBacklog,
   onClick,
   isBacklog,
+  epicColor,
 }: {
   task: ProjectTask;
   selected: boolean;
@@ -838,6 +949,7 @@ const TaskRow = React.memo(function TaskRow({
   onMoveToBacklog: (() => void) | undefined;
   onClick?: () => void;
   isBacklog?: boolean;
+  epicColor?: string;
 }) {
   const priorityColor = getPriorityColor(task.priority);
   const statusColor = getTaskStatusColor(task.status);
@@ -880,6 +992,9 @@ const TaskRow = React.memo(function TaskRow({
         <span className={styles.issueTypeIcon}>
           {ISSUE_TYPE_ICONS[task.type] ?? "🔵"}
         </span>
+        {epicColor && (
+          <span className={styles.epicDot} style={{ background: epicColor }} title="Epic" />
+        )}
         <span className={styles.titleText}>{task.title}</span>
         {isStale && (
           <span
