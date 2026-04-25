@@ -32,10 +32,6 @@ export default function AppShell() {
     setEosOpen(false);
   }
 
-  function toggleEos() {
-    setEosOpen((v) => !v);
-    setNotifOpen(false);
-  }
 
   return (
     <div className={styles.shell}>
@@ -60,8 +56,6 @@ export default function AppShell() {
           sidebarCollapsed={sidebarCollapsed}
           notifOpen={notifOpen}
           onNotifToggle={toggleNotif}
-          eosOpen={eosOpen}
-          onEosToggle={toggleEos}
         />
         <main className={styles.main}>
           <Outlet />

@@ -6,7 +6,7 @@ interface BadgeProps {
   className?: string
 }
 
-export function Badge({ children, variant = 'badge-gray', className }: BadgeProps) {
+function Badge({ children, variant = 'badge-gray', className }: BadgeProps) {
   return <span className={`badge ${variant} ${className ?? ''}`}>{children}</span>
 }
 

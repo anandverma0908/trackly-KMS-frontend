@@ -5,7 +5,7 @@ import styles from "./OnboardingModal.module.css";
 
 const ONBOARDING_KEY = "trackly_onboarding_done";
 
-export function isOnboardingDone(): boolean {
+function isOnboardingDone(): boolean {
   return localStorage.getItem(ONBOARDING_KEY) === "true";
 }
 

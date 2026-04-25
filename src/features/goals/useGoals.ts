@@ -2,11 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
   fetchGoals,
-  fetchGoal,
   createGoal,
   updateGoal,
   deleteGoal,
-  fetchGoalNovaInsight,
 } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import type { Goal } from "@/types";
@@ -17,23 +15,6 @@ export function useGoals(quarter?: string) {
     queryKey: QUERY_KEYS.goals(quarter),
     queryFn: () => fetchGoals(quarter),
     staleTime: 0,
-  });
-}
-
-export function useGoal(id: string) {
-  return useQuery({
-    queryKey: QUERY_KEYS.goal(id),
-    queryFn: () => fetchGoal(id),
-    enabled: !!id,
-  });
-}
-
-export function useGoalNovaInsight(goalId: string) {
-  return useQuery({
-    queryKey: ["goal-insight", goalId],
-    queryFn: () => fetchGoalNovaInsight(goalId),
-    enabled: !!goalId,
-    staleTime: 5 * 60 * 1000,
   });
 }
 

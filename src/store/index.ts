@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { FilterState, ThemeId, ColorMode, TimerState } from "@/types";
+import type { FilterState, ThemeId, ColorMode } from "@/types";
 import { applyTheme, DEFAULT_THEME, DEFAULT_MODE } from "@/config/themes";
 import { getPresetDates } from "@/config/queryKeys";
 
@@ -104,52 +104,6 @@ export const useThemeStore = create<ThemeStore>()(
       },
     }),
     { name: "eap-theme" },
-  ),
-);
-
-/* ─────────────────────────────────────────────
-   TIMER STORE — persisted to localStorage
-   ───────────────────────────────────────────── */
-interface TimerStore extends TimerState {
-  start:   (ticketKey?: string, ticketTitle?: string) => void;
-  stop:    () => void;
-  reset:   () => void;
-  tick:    () => void;
-}
-
-export const useTimerStore = create<TimerStore>()(
-  persist(
-    (set, get) => ({
-      running:      false,
-      startedAt:    null,
-      elapsed:      0,
-      ticketKey:    undefined,
-      ticketTitle:  undefined,
-
-      start: (ticketKey, ticketTitle) => set({
-        running:    true,
-        startedAt:  Date.now(),
-        elapsed:    0,
-        ticketKey,
-        ticketTitle,
-      }),
-
-      stop: () => {
-        const { startedAt, elapsed } = get();
-        const totalElapsed = startedAt ? elapsed + (Date.now() - startedAt) : elapsed;
-        set({ running: false, startedAt: null, elapsed: totalElapsed });
-      },
-
-      reset: () => set({ running: false, startedAt: null, elapsed: 0, ticketKey: undefined, ticketTitle: undefined }),
-
-      tick: () => {
-        const { running, startedAt, elapsed } = get();
-        if (running && startedAt) {
-          set({ elapsed: elapsed + (Date.now() - startedAt), startedAt: Date.now() });
-        }
-      },
-    }),
-    { name: "trackly-timer" },
   ),
 );
 

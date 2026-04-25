@@ -2,7 +2,7 @@ import type { Ticket } from "@/types";
 
 /* ── Ticket → drawer form shape ─────────────────────────────────────────── */
 
-export interface TicketInitialData {
+interface TicketInitialData {
   title: string;
   description: string;
   issue_type: string;
@@ -50,7 +50,7 @@ export function ticketToInitialData(ticket: Ticket): TicketInitialData {
 
 /* ── Status metadata ─────────────────────────────────────────────────────── */
 
-export interface StatusMeta {
+interface StatusMeta {
   color: string;
   bg:    string;
   label: string;
@@ -78,41 +78,4 @@ export function statusToMeta(status: string): StatusMeta {
   return STATUS_MAP[status] ?? { ...STATUS_DEFAULT, label: status };
 }
 
-/* ── Priority metadata ───────────────────────────────────────────────────── */
 
-export interface PriorityMeta {
-  icon:  string;
-  color: string;
-  label: string;
-}
-
-const PRIORITY_MAP: Record<string, PriorityMeta> = {
-  Highest: { icon: "⬆⬆", color: "var(--red,#F87171)",  label: "Highest" },
-  High:    { icon: "⬆",   color: "var(--amber)",        label: "High"    },
-  Medium:  { icon: "▶",   color: "var(--accent)",       label: "Medium"  },
-  Low:     { icon: "⬇",   color: "var(--green)",        label: "Low"     },
-  Lowest:  { icon: "⬇⬇", color: "var(--text-3)",       label: "Lowest"  },
-};
-
-const PRIORITY_DEFAULT: PriorityMeta = {
-  icon:  "▶",
-  color: "var(--text-3)",
-  label: "",
-};
-
-export function priorityToMeta(priority: string): PriorityMeta {
-  return PRIORITY_MAP[priority] ?? { ...PRIORITY_DEFAULT, label: priority };
-}
-
-/* ── Avatar color ────────────────────────────────────────────────────────── */
-
-const AVATAR_COLORS = [
-  "#4F7EFF", "#8B5CF6", "#EC4899", "#F59E0B",
-  "#10B981", "#3B82F6", "#EF4444", "#06B6D4",
-];
-
-export function avatarColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}

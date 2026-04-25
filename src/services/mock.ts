@@ -283,16 +283,6 @@ export function enableMocks() {
       return t
     },
 
-    deleteTicket: async (key: string) => {
-      await delay(300)
-      const idx = DUMMY_TICKETS.tickets.findIndex((x) => x.key === key)
-      if (idx !== -1) {
-        DUMMY_TICKETS.tickets.splice(idx, 1)
-        DUMMY_TICKETS.count -= 1
-      }
-      return { key }
-    },
-
     createSprint: async (payload: any) => {
       await delay(300)
       const id = `sprint-${Date.now()}`
@@ -356,13 +346,6 @@ export function enableMocks() {
       const goals = quarter ? DUMMY_GOALS.filter((g) => g.quarter === quarter) : [...DUMMY_GOALS]
       const quarters = Array.from(new Set(DUMMY_GOALS.map((g) => g.quarter)))
       return { goals, quarters } as GoalsResponse
-    },
-
-    fetchGoal: async (id: string) => {
-      await delay(250)
-      const g = DUMMY_GOALS.find((x) => x.id === id)
-      if (!g) throw new Error('Goal not found')
-      return g
     },
 
     createGoal: async (payload: any) => {

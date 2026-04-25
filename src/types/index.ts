@@ -114,24 +114,6 @@ export interface Theme {
 /* ── Export ── */
 export type ReportType = 'monthly' | 'fy'
 
-export interface ExportConfig {
-  reportType:  ReportType
-  monthLabel:  string
-  fyLabel:     string
-  dateFrom:    string
-  dateTo:      string
-  pod:         string | null
-  client:      string | null
-  project:     string | null
-  engineer:    string | null
-  sheets: {
-    rawData:    boolean
-    podSummary: boolean
-    breakdown:  boolean
-    pivot:      boolean
-  }
-}
-
 /* ── Ticket (extended for creation/management) ── */
 export interface TicketCreate {
   title:        string
@@ -367,14 +349,6 @@ export interface SprintDependencyEdge {
   type:          'blocks' | 'relates_to' | 'duplicates'
 }
 
-export interface SprintDependencyGraph {
-  nodes:         SprintDependencyNode[]
-  edges:         SprintDependencyEdge[]
-  critical_path_length: number
-  slack_tickets: string[]
-  nova_analysis: string
-}
-
 /* ── Sprint What-If ── */
 export interface WhatIfScenario {
   id:            string
@@ -441,14 +415,6 @@ export interface SprintChatMessage {
   text:          string
   citations?:    { key: string; title: string; quote: string }[]
   created_at:    string
-}
-
-/* ── Sprint Comparison ── */
-export interface SprintComparison {
-  sprint_a:      { name: string; committed: number; completed: number; velocity: number; blockers: number }
-  sprint_b:      { name: string; committed: number; completed: number; velocity: number; blockers: number }
-  delta:         { committed: number; completed: number; velocity: number; blockers: number }
-  nova_insight:  string
 }
 
 /* ── Standup ── */
@@ -533,15 +499,6 @@ export interface WorkloadEntry {
   engineer:    string
   pod:         string
   total_hours: number
-}
-
-/* ── Timer ── */
-export interface TimerState {
-  running:    boolean
-  startedAt:  number | null
-  elapsed:    number
-  ticketKey?: string
-  ticketTitle?: string
 }
 
 /* ── Goals / OKRs ── */

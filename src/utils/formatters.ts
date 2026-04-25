@@ -18,17 +18,6 @@ export function formatNumber(n: number): string {
   return new Intl.NumberFormat('en-IN').format(n)
 }
 
-/* ── Percent ── */
-export function formatPercent(value: number, total: number): string {
-  if (!total) return '0%'
-  return `${Math.round((value / total) * 100)}%`
-}
-
-/* ── Truncate text ── */
-export function truncate(str: string, max = 40): string {
-  return str.length > max ? str.slice(0, max) + '…' : str
-}
-
 /* ── Initials from name ── */
 export function initials(name: string | undefined | null): string {
   if (!name) return '?';
@@ -41,8 +30,4 @@ export function initials(name: string | undefined | null): string {
     .toUpperCase()
 }
 
-/* ── Month label from date ── */
-export function toMonthLabel(dateStr: string): string {
-  try { return format(parseISO(dateStr), 'MMM yy').toUpperCase() }
-  catch { return '' }
-}
+

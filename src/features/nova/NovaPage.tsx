@@ -7,7 +7,10 @@ import {
   RiSparklingLine, RiAlertLine, RiBarChartLine,
   RiFileTextLine, RiArrowRightLine, RiLightbulbLine,
   RiRobot2Line, RiHistoryLine, RiImageLine, RiRefreshLine,
+  RiFlashlightLine, RiCheckLine, RiErrorWarningLine, RiLoader4Line,
 } from "react-icons/ri";
+import { runAgentLoop } from "./agent/agentController";
+import type { AgentStep } from "./agent/agentTypes";
 import {
   novaQuery,
   novaGenerate,
@@ -53,6 +56,8 @@ interface Message {
   id: string; role: "user" | "nova";
   text: string; intent?: Intent;
   citations?: Citation[]; created?: CreatedItem;
+  /** Populated when the message was produced by the agent loop */
+  agentSteps?: AgentStep[];
   ts: Date;
 }
 
@@ -291,6 +296,56 @@ function CreatedItemCard({ item }: { item: CreatedItem }) {
 }
 
 /* ══════════════════════════════════════════════════════════
+   AGENT STEP TRACE
+   Shows the tool calls Nova made in agent mode as a compact
+   expandable trace — collapsed by default to keep UI clean.
+══════════════════════════════════════════════════════════ */
+function AgentStepTrace({ steps }: { steps: AgentStep[] }) {
+  const [open, setOpen] = useState(false);
+  const toolSteps = steps.filter((s) => s.toolCall);
+  if (toolSteps.length === 0) return null;
+
+  return (
+    <div className={styles.agentTrace}>
+      <button className={styles.agentTraceToggle} onClick={() => setOpen((o) => !o)}>
+        <RiFlashlightLine size={10} />
+        <span>{toolSteps.length} tool call{toolSteps.length !== 1 ? "s" : ""}</span>
+        <RiArrowRightLine size={9} style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className={styles.agentTraceBody}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            style={{ overflow: "hidden" }}
+          >
+            {toolSteps.map((s, i) => (
+              <div key={i} className={styles.agentTraceStep}>
+                <div className={styles.agentTraceStepHead}>
+                  {s.toolResult?.success
+                    ? <RiCheckLine size={10} style={{ color: "var(--green)" }} />
+                    : <RiErrorWarningLine size={10} style={{ color: "var(--red, #f87171)" }} />
+                  }
+                  <span className={styles.agentTraceToolName}>{s.toolCall!.action}</span>
+                  {s.toolCall!.reasoning && (
+                    <span className={styles.agentTraceReason}>— {s.toolCall!.reasoning}</span>
+                  )}
+                </div>
+                {s.toolResult && !s.toolResult.success && (
+                  <div className={styles.agentTraceError}>{s.toolResult.error}</div>
+                )}
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
    HIGHLIGHTED TEXT  (citation hover)
 ══════════════════════════════════════════════════════════ */
 function HighlightedText({ text, citations, hoveredKey, streaming, done }: {
@@ -361,6 +416,9 @@ function MessageBubble({ msg, isLatestNova }: { msg: Message; isLatestNova: bool
           </div>
         )}
         {msg.created && (streaming ? done : true) && <CreatedItemCard item={msg.created} />}
+        {msg.agentSteps && msg.agentSteps.length > 0 && (streaming ? done : true) && (
+          <AgentStepTrace steps={msg.agentSteps} />
+        )}
       </div>
     </motion.div>
   );
@@ -380,6 +438,10 @@ export default function NovaPage() {
   const [dragOver,    setDragOver]    = useState(false);
   const [attachedImg, setAttachedImg] = useState<string | null>(null);
   const [recentItems, setRecentItems] = useState<(CreatedItem & { age: string })[]>([]);
+  /** When true, "ask" messages are routed through the multi-step agent loop */
+  const [agentMode,   setAgentMode]   = useState(false);
+  /** Live tool-call steps streamed into the loading indicator */
+  const [liveSteps,   setLiveSteps]   = useState<AgentStep[]>([]);
 
   const textareaRef    = useRef<HTMLTextAreaElement>(null);
   const threadRef      = useRef<HTMLDivElement>(null);
@@ -623,22 +685,55 @@ Input: "${text}"`,
           setLoading(false);
           return;
         }
-        const res = await novaQuery(text);
-        novaMsg = {
-          id: crypto.randomUUID(), role: "nova",
-          text: res.answer || "I couldn't find a relevant answer. Try rephrasing your question.",
-          citations: res.citations
-            .filter(c => c.title)
-            .map(c => ({
-              key: String(c.key ?? c.id),
-              title: c.title,
-              type: (["ticket", "decision", "wiki", "standup"].includes(c.type)
-                ? c.type
-                : "ticket") as Citation["type"],
-              quote: c.snippet || undefined,
-            })),
-          ts: new Date(),
-        };
+        // Short/conversational messages bypass the agent loop even in agent mode —
+        // the backend handles this too, but we skip the round-trip for speed.
+        const isShortOrConversational =
+          text.split(/\s+/).filter(Boolean).length <= 3 ||
+          /^(hi|hello|hey|thanks|thank you|ok|okay|cool|bye|yo|sup)\b/i.test(text.trim());
+
+        if (agentMode && !isShortOrConversational) {
+          /* ── Agent loop: multi-step tool execution ── */
+          setLiveSteps([]);
+          const history = messages.slice(-10).map((m) => ({
+            role:    (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
+            content: m.text,
+          }));
+          const result = await runAgentLoop(text, history, (step) => {
+            setLiveSteps((prev) => [...prev, step]);
+          });
+          novaMsg = {
+            id: crypto.randomUUID(), role: "nova",
+            text: result.answer || "Agent loop completed.",
+            agentSteps: result.steps,
+            ts: new Date(),
+          };
+          if (result.createdTicket) {
+            const { id, title, priority, issue_type } = result.createdTicket;
+            novaMsg.created = { type: "ticket", id, title, meta: `Priority: ${priority} · ${issue_type} · Unassigned` };
+            qc.invalidateQueries({ queryKey: ["tickets"] });
+            qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+            setRecentItems(prev => [{ type: "ticket" as CreatedType, id, title, meta: `Priority: ${priority}`, age: "just now" }, ...prev].slice(0, 6));
+          }
+          setLiveSteps([]);
+        } else {
+          /* ── Standard RAG query ── */
+          const res = await novaQuery(text);
+          novaMsg = {
+            id: crypto.randomUUID(), role: "nova",
+            text: res.answer || "I couldn't find a relevant answer. Try rephrasing your question.",
+            citations: res.citations
+              .filter(c => c.title)
+              .map(c => ({
+                key: String(c.key ?? c.id),
+                title: c.title,
+                type: (["ticket", "decision", "wiki", "standup"].includes(c.type)
+                  ? c.type
+                  : "ticket") as Citation["type"],
+                quote: c.snippet || undefined,
+              })),
+            ts: new Date(),
+          };
+        }
       }
 
       setMessages(prev => [...prev, novaMsg]);
@@ -653,7 +748,7 @@ Input: "${text}"`,
     } finally {
       setLoading(false);
     }
-  }, [input, attachedImg, loading, qc]);
+  }, [input, attachedImg, loading, agentMode, messages, qc]);
 
   /* ── Voice input (Web Speech API) ── */
   function toggleRecording() {
@@ -739,6 +834,14 @@ Input: "${text}"`,
             <span className={styles.statLbl}>Nova status</span>
           </div>
           <div className={styles.statDivider} />
+          <button
+            className={`${styles.reindexBtn} ${agentMode ? styles.reindexBtnActive : ""}`}
+            onClick={() => setAgentMode((m) => !m)}
+            title={agentMode ? "Agent mode ON — Nova uses tools autonomously. Click to switch back to RAG mode." : "Enable agent mode — Nova will reason and use tools to complete multi-step tasks."}
+          >
+            <RiFlashlightLine size={13} />
+            {agentMode ? "Agent ON" : "Agent mode"}
+          </button>
           <button
             className={styles.reindexBtn}
             onClick={handleReindex}
@@ -829,7 +932,24 @@ Input: "${text}"`,
                 {loading && (
                   <div className={styles.novaMsg}>
                     <div className={styles.novaAvatar}><RiBrainLine size={13} /></div>
-                    <div className={styles.thinkingDots}><span /><span /><span /></div>
+                    {agentMode && liveSteps.length > 0 ? (
+                      <div className={styles.agentLiveTrace}>
+                        {liveSteps.filter((s) => s.toolCall).map((s, i) => (
+                          <div key={i} className={styles.agentLiveStep}>
+                            <RiLoader4Line size={10} className={styles.spinning} />
+                            <span>{s.toolCall!.action}</span>
+                            {s.toolResult && (
+                              s.toolResult.success
+                                ? <RiCheckLine size={10} style={{ color: "var(--green)", marginLeft: 4 }} />
+                                : <RiErrorWarningLine size={10} style={{ color: "var(--red, #f87171)", marginLeft: 4 }} />
+                            )}
+                          </div>
+                        ))}
+                        <div className={styles.thinkingDots} style={{ marginTop: 4 }}><span /><span /><span /></div>
+                      </div>
+                    ) : (
+                      <div className={styles.thinkingDots}><span /><span /><span /></div>
+                    )}
                   </div>
                 )}
               </div>

@@ -18,7 +18,7 @@ export function applyTheme(themeId: ThemeId, mode: ColorMode) {
 }
 
 /* ── POD colors — consistent across charts & cards ── */
-export const POD_COLORS: Record<string, string> = {
+const POD_COLORS: Record<string, string> = {
   DPAI:       "#4F7EFF",
   SNOP:       "#A78BFA",
   EDM:        "#FBBF24",
@@ -32,7 +32,7 @@ export function getPodColor(pod: string): string {
 }
 
 /* ── Issue type badge variant ── */
-export const ISSUE_TYPE_VARIANT: Record<string, string> = {
+const ISSUE_TYPE_VARIANT: Record<string, string> = {
   Feature: "badge-blue",
   Bug: "badge-red",
   Meeting: "badge-amber",
@@ -40,7 +40,7 @@ export const ISSUE_TYPE_VARIANT: Record<string, string> = {
   Story: "badge-cyan",
 };
 
-export const STATUS_VARIANT: Record<string, string> = {
+const STATUS_VARIANT: Record<string, string> = {
   Done: "badge-green",
   Open: "badge-gray",
   "In Progress": "badge-amber",
@@ -54,19 +54,6 @@ export function getIssueTypeBadge(type: string) {
 export function getStatusBadge(status: string) {
   return STATUS_VARIANT[status] ?? "badge-gray";
 }
-export const CLIENT_COLORS = [
-  "#4F7EFF",
-  "#34D399",
-  "#FBBF24",
-  "#F87171",
-  "#A78BFA",
-  "#22D3EE",
-  "#FB923C",
-  "#E879F9",
-  "#4ADE80",
-  "#F472B6",
-];
-
 // src/config/muiTheme.ts
 
 export function buildMuiTheme(themeId: ThemeId, colorMode: ColorMode) {

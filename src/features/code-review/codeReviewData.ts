@@ -1,12 +1,12 @@
 export type ReviewSeverity = "critical" | "high" | "medium";
 export type ReviewStatus = "new" | "reviewing" | "approved" | "rejected" | "ticketed";
 
-export interface FindingFileRef {
+interface FindingFileRef {
   path: string;
   line?: number;
 }
 
-export interface CodeReviewFinding {
+interface CodeReviewFinding {
   id: string;
   title: string;
   area: string;
@@ -41,7 +41,7 @@ export const CODE_REVIEW_SNAPSHOT = {
   scope: "trackly-frontend",
 };
 
-export const SEEDED_FINDINGS: CodeReviewFinding[] = [
+const SEEDED_FINDINGS: CodeReviewFinding[] = [
   {
     id: "wiki-ticket-links-backlog-route",
     title: "Wiki ticket links route to a non-existent /backlog page",
@@ -144,7 +144,7 @@ function defaultFindingState(): CodeReviewFindingState {
   };
 }
 
-export function readFindingState(): Record<string, CodeReviewFindingState> {
+function readFindingState(): Record<string, CodeReviewFindingState> {
   if (!canUseStorage()) return {};
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -156,7 +156,7 @@ export function readFindingState(): Record<string, CodeReviewFindingState> {
   }
 }
 
-export function writeFindingState(state: Record<string, CodeReviewFindingState>) {
+function writeFindingState(state: Record<string, CodeReviewFindingState>) {
   if (!canUseStorage()) return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }

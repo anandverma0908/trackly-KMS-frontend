@@ -5,7 +5,6 @@ import type {
   SummaryResponse,
   FiltersResponse,
   FilterState,
-  ExportConfig,
   TicketCreate,
   TicketComment,
   TicketAttachment,
@@ -169,42 +168,6 @@ export async function fetchFilters(): Promise<FiltersResponse> {
   return data;
 }
 
-export async function downloadMonthlyReport(config: ExportConfig): Promise<void> {
-  if (mock()) { mock().downloadMonthlyReport(config); return; }
-  const p: Record<string, string> = {};
-  if (config.dateFrom)   p.date_from   = config.dateFrom;
-  if (config.dateTo)     p.date_to     = config.dateTo;
-  if (config.monthLabel) p.month_label = config.monthLabel;
-  if (config.pod)        p.pod         = config.pod;
-  if (config.client)     p.client      = config.client;
-  if (config.project)    p.project     = config.project;
-  if (config.engineer)   p.user        = config.engineer;
-  const { data } = await api.get("/export/monthly", { params: p, responseType: "blob" });
-  _download(data, `timesheet_${config.monthLabel?.replace(" ", "_") ?? "report"}.xlsx`);
-}
-
-export async function downloadFYReport(config: ExportConfig): Promise<void> {
-  if (mock()) { mock().downloadFYReport(config); return; }
-  const p: Record<string, string> = {};
-  if (config.dateFrom) p.date_from = config.dateFrom;
-  if (config.dateTo)   p.date_to   = config.dateTo;
-  if (config.fyLabel)  p.fy_label  = config.fyLabel;
-  if (config.pod)      p.pod       = config.pod;
-  if (config.client)   p.client    = config.client;
-  if (config.project)  p.project   = config.project;
-  if (config.engineer) p.user      = config.engineer;
-  const { data } = await api.get("/export/fy", { params: p, responseType: "blob" });
-  _download(data, `engineering_FY_${config.fyLabel ?? "2024-2025"}.xlsx`);
-}
-
-function _download(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a   = document.createElement("a");
-  a.href     = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
 /* ── Ticket Management ── */
 function _mapTicketIn(payload: Partial<TicketCreate>): any {
@@ -258,11 +221,6 @@ export async function updateTicket(key: string, payload: Partial<TicketCreate>) 
   return _mapTicketOut(data);
 }
 
-export async function deleteTicket(key: string) {
-  if (mock()?.deleteTicket) return mock().deleteTicket(key);
-  await api.delete(`/tickets/${key}`);
-}
-
 export async function updateTicketStatus(key: string, status: string) {
   if (mock()?.updateTicketStatus) return mock().updateTicketStatus(key, status);
   const { data } = await api.post(`/tickets/${key}/status`, { status });
@@ -286,11 +244,6 @@ export async function analyzeTicketNL(text: string, availableUsers: string[] = [
     duplicates: data.duplicates,
     confidence: data.confidence ?? fields.confidence,
   };
-}
-
-export async function analyzeTicket(key: string): Promise<NLAnalysisResult> {
-  const { data } = await api.post("/tickets/ai-analyze", { ticket_key: key });
-  return data;
 }
 
 export async function fetchTicketComments(key: string): Promise<TicketComment[]> {
@@ -585,6 +538,34 @@ export async function novaGenerate(
   return data?.answer ?? "";
 }
 
+export interface AgentStepResult {
+  iteration:   number;
+  tool_call?:  { action: string; parameters: Record<string, unknown>; reasoning?: string };
+  tool_result?:{ success: boolean; data: unknown; error?: string };
+  final_text?: string;
+  timestamp:   string;
+}
+
+export interface AgentResponse {
+  answer:          string;
+  steps:           AgentStepResult[];
+  tools_used:      string[];
+  created_ticket?: { id: string; title: string; priority: string; issue_type: string } | null;
+}
+
+export async function novaAgent(
+  message: string,
+  history: Array<{ role: "user" | "assistant"; content: string }> = [],
+  maxIterations = 8,
+): Promise<AgentResponse> {
+  const { data } = await api.post("/nova/agent", {
+    message,
+    history,
+    max_iterations: maxIterations,
+  });
+  return data as AgentResponse;
+}
+
 /* ── Sprints ── */
 export async function fetchSprints(): Promise<Sprint[]> {
   const { data } = await api.get("/sprints");
@@ -645,11 +626,6 @@ export async function generateSprintRetro(sprintId: string) {
   return data;
 }
 
-export async function generateReleaseNotes(sprintId: string) {
-  const { data } = await api.post(`/nova/release-notes/${sprintId}`);
-  return data;
-}
-
 /* ── Sprint Capacity ── */
 export async function fetchSprintCapacity(sprintId: string): Promise<import("@/types").SprintCapacity> {
   const { data } = await api.get(`/sprints/${sprintId}/capacity`);
@@ -685,12 +661,6 @@ export async function fetchSprintBlockers(sprintId: string): Promise<import("@/t
 
 export async function escalateBlocker(sprintId: string, ticketKey: string) {
   const { data } = await api.post(`/sprints/${sprintId}/blockers/${ticketKey}/escalate`);
-  return data;
-}
-
-/* ── Sprint Dependencies ── */
-export async function fetchSprintDependencies(sprintId: string): Promise<import("@/types").SprintDependencyGraph> {
-  const { data } = await api.get(`/sprints/${sprintId}/dependencies`);
   return data;
 }
 
@@ -737,12 +707,6 @@ export async function fetchSprintDrift(sprintId: string): Promise<{ drift_points
 export async function fetchVelocityTrend(pod?: string): Promise<import("@/types").VelocityPoint[]> {
   const { data } = await api.get("/analytics/velocity-trend", { params: pod ? { pod } : {} });
   return data?.data ?? data ?? [];
-}
-
-/* ── Sprint Comparison ── */
-export async function fetchSprintComparison(sprintA: string, sprintB: string): Promise<import("@/types").SprintComparison> {
-  const { data } = await api.get("/sprints/compare", { params: { sprint_a: sprintA, sprint_b: sprintB } });
-  return data;
 }
 
 /* ── Sprint Risk Heatmap ── */
@@ -1035,34 +999,6 @@ export async function fetchSprintDraft(pod: string): Promise<SprintDraftResult> 
   return data;
 }
 
-/* ── Sprint Detail (with tickets) ── */
-export interface SprintTicket {
-  id: string;
-  jira_key: string;
-  summary: string;
-  status: string;
-  assignee: string | null;
-  story_points: number | null;
-  issue_type: string | null;
-  priority: string;
-}
-
-export interface SprintDetail {
-  id: string;
-  name: string;
-  goal: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  status: string;
-  velocity: number | null;
-  tickets: SprintTicket[];
-}
-
-export async function fetchSprintDetail(id: string): Promise<SprintDetail> {
-  const { data } = await api.get<SprintDetail>(`/sprints/${id}`);
-  return data;
-}
-
 /* ── Spaces / Projects ── */
 export async function fetchProject(pod: string): Promise<Project> {
   if (mock()?.fetchProject) return mock().fetchProject(pod);
@@ -1159,22 +1095,6 @@ export async function fetchNovaStatus() {
   return data;
 }
 
-export interface MyBriefResponse {
-  brief:              string;
-  top_ticket_key:     string | null;
-  sprint_probability: number | null;
-  blocker_count:      number;
-  overdue_count:      number;
-  wip_count:          number;
-  open_count:         number;
-  chips: Array<{ label: string; type: "critical" | "warning" | "info" | "action" }>;
-}
-
-export async function fetchMyBrief(): Promise<MyBriefResponse> {
-  const { data } = await api.get("/nova/my-brief");
-  return data;
-}
-
 /* ── My Work (AI-powered consolidated endpoint) ── */
 
 export interface MyWorkAIRanking {
@@ -1255,11 +1175,6 @@ export async function logTime(ticketKey: string, hours: number, comment: string,
 /* ── Goals / OKRs ── */
 export async function fetchGoals(quarter?: string): Promise<GoalsResponse> {
   const { data } = await api.get<GoalsResponse>("/goals", { params: quarter ? { quarter } : undefined });
-  return data;
-}
-
-export async function fetchGoal(id: string): Promise<Goal> {
-  const { data } = await api.get<Goal>(`/goals/${id}`);
   return data;
 }
 
@@ -1500,19 +1415,6 @@ export async function fetchDecisions(params?: {
   }
 }
 
-export async function fetchDecision(id: string): Promise<Decision> {
-  if (mock()?.fetchDecision) return mock().fetchDecision(id);
-  try {
-    const { data } = await api.get<any>(`/decisions/${id}`);
-    return _mapDecisionOut(data);
-  } catch (error) {
-    if (!_shouldUseKnowledgeFallback(error)) throw error;
-    const decision = _getLocalDecisions().find((item) => item.id === id);
-    if (!decision) throw new Error("Decision not found");
-    return decision;
-  }
-}
-
 export async function createDecision(
   payload: Omit<Decision, "id" | "created_at" | "updated_at">,
 ): Promise<Decision> {
@@ -1537,34 +1439,6 @@ export async function createDecision(
     items.unshift(created);
     _saveLocalDecisions(items);
     return created;
-  }
-}
-
-export async function updateDecision(
-  id: string,
-  payload: Partial<Omit<Decision, "id">>,
-): Promise<Decision> {
-  if (mock()?.updateDecision) return mock().updateDecision(id, payload);
-  try {
-    const { data } = await api.patch<any>(`/decisions/${id}`, {
-      ...payload,
-      linked_tickets: payload.linkedTickets,
-    });
-    return _mapDecisionOut(data);
-  } catch (error) {
-    if (!_shouldUseKnowledgeFallback(error)) throw error;
-    const items = _getLocalDecisions();
-    const index = items.findIndex((item) => item.id === id);
-    if (index === -1) throw new Error("Decision not found");
-    const updated = _mapDecisionOut({
-      ...items[index],
-      ...payload,
-      id,
-      updated_at: new Date().toISOString(),
-    });
-    items[index] = updated;
-    _saveLocalDecisions(items);
-    return updated;
   }
 }
 
@@ -1618,19 +1492,6 @@ export async function fetchProcesses(params?: {
   }
 }
 
-export async function fetchProcess(id: string): Promise<Process> {
-  if (mock()?.fetchProcess) return mock().fetchProcess(id);
-  try {
-    const { data } = await api.get<any>(`/processes/${id}`);
-    return _mapProcessOut(data);
-  } catch (error) {
-    if (!_shouldUseKnowledgeFallback(error)) throw error;
-    const process = _getLocalProcesses().find((item) => item.id === id);
-    if (!process) throw new Error("Process not found");
-    return process;
-  }
-}
-
 export async function createProcess(
   payload: Omit<Process, "id" | "created_at" | "updated_at">,
 ): Promise<Process> {
@@ -1657,37 +1518,6 @@ export async function createProcess(
     items.unshift(created);
     _saveLocalProcesses(items);
     return created;
-  }
-}
-
-export async function updateProcess(
-  id: string,
-  payload: Partial<Omit<Process, "id">>,
-): Promise<Process> {
-  if (mock()?.updateProcess) return mock().updateProcess(id, payload);
-  try {
-    const { data } = await api.patch<any>(`/processes/${id}`, {
-      ...payload,
-      last_updated: payload.lastUpdated,
-      compliance_required: payload.complianceRequired,
-      avg_completion_time: payload.avgCompletionTime,
-      run_count: payload.runCount,
-    });
-    return _mapProcessOut(data);
-  } catch (error) {
-    if (!_shouldUseKnowledgeFallback(error)) throw error;
-    const items = _getLocalProcesses();
-    const index = items.findIndex((item) => item.id === id);
-    if (index === -1) throw new Error("Process not found");
-    const updated = _mapProcessOut({
-      ...items[index],
-      ...payload,
-      id,
-      updated_at: new Date().toISOString(),
-    });
-    items[index] = updated;
-    _saveLocalProcesses(items);
-    return updated;
   }
 }
 

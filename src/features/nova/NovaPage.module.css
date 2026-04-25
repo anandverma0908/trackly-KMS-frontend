@@ -635,6 +635,49 @@
 .createdListTitle { font-size: 11.5px; font-weight: 600; color: var(--text); }
 .createdListMeta  { font-size: 10.5px; color: var(--text-3); }
 
+/* ── Agent mode toggle button (active state) ── */
+.reindexBtnActive {
+  color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  background: var(--accent-glow, rgba(99,102,241,.1)) !important;
+}
+
+/* ── Agent step trace (collapsed in message bubble) ── */
+.agentTrace {
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.agentTraceToggle {
+  display: inline-flex; align-items: center; gap: 5px;
+  width: 100%; padding: 5px 9px;
+  font-size: 10.5px; font-weight: 600; color: var(--text-3);
+  background: transparent; border: none; cursor: pointer;
+  text-align: left;
+}
+.agentTraceToggle:hover { color: var(--accent); }
+.agentTraceBody { padding: 4px 9px 8px; display: flex; flex-direction: column; gap: 4px; }
+.agentTraceStep { display: flex; flex-direction: column; gap: 2px; }
+.agentTraceStepHead { display: flex; align-items: center; gap: 5px; }
+.agentTraceToolName {
+  font-size: 10.5px; font-weight: 700;
+  font-family: var(--font-mono, monospace); color: var(--text-2);
+}
+.agentTraceReason { font-size: 10px; color: var(--text-3); }
+.agentTraceError  { font-size: 10px; color: var(--red, #f87171); padding-left: 14px; }
+
+/* ── Live agent step feed inside loading bubble ── */
+.agentLiveTrace {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 4px 0;
+}
+.agentLiveStep {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; color: var(--text-3); font-family: var(--font-mono, monospace);
+}
+
 /* ── Responsive ── */
 @media (max-width: 1100px) {
   .body { grid-template-columns: 240px 1fr 230px; }

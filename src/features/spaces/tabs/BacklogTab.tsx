@@ -34,7 +34,6 @@ import {
   RiListCheck2,
   RiArrowGoBackLine,
   RiAlertLine,
-  RiCheckLine,
 } from "react-icons/ri";
 
 const ISSUE_TYPE_ICONS: Record<string, string> = {
@@ -47,94 +46,6 @@ const ISSUE_TYPE_ICONS: Record<string, string> = {
 
 type SortBy = "priority" | "created" | "updated" | "points" | "key";
 const PRIORITY_ORDER = ["Critical", "High", "Medium", "Low"];
-
-/* ══════════════════════════════════════════════════════════════════════════ */
-/*  Velocity Ring SVG                                                         */
-/* ══════════════════════════════════════════════════════════════════════════ */
-
-function VelocityRing({
-  done,
-  total,
-  size = 34,
-}: {
-  done: number;
-  total: number;
-  size?: number;
-}) {
-  const r = (size - 5) / 2;
-  const circ = 2 * Math.PI * r;
-  const pct = total > 0 ? Math.min(done / total, 1) : 0;
-  const color =
-    pct >= 1 ? "var(--green)" : pct >= 0.5 ? "var(--accent)" : "var(--amber)";
-  return (
-    <svg
-      width={size}
-      height={size}
-      style={{ transform: "rotate(-90deg)", flexShrink: 0 }}
-    >
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        fill="none"
-        stroke="var(--border-2)"
-        strokeWidth={3}
-      />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        fill="none"
-        stroke={color}
-        strokeWidth={3}
-        strokeDasharray={circ}
-        strokeDashoffset={circ * (1 - pct)}
-        strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset 0.5s ease" }}
-      />
-    </svg>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════════════════ */
-/*  Sprint Health                                                             */
-/* ══════════════════════════════════════════════════════════════════════════ */
-
-function computeSprintHealth(sprint: ProjectSprint) {
-  if (sprint.status !== "active" || !sprint.startDate || !sprint.endDate)
-    return null;
-  const now = new Date();
-  const start = new Date(sprint.startDate);
-  const end = new Date(sprint.endDate);
-  const totalDays = Math.max(
-    1,
-    Math.ceil((end.getTime() - start.getTime()) / 86_400_000),
-  );
-  const daysElapsed = Math.max(
-    1,
-    Math.ceil((now.getTime() - start.getTime()) / 86_400_000),
-  );
-  const daysLeft = Math.max(0, totalDays - daysElapsed);
-  const done = sprint.donePoints;
-  const total = sprint.totalPoints;
-  const remaining = total - done;
-  const pace = done / daysElapsed;
-  const neededPace =
-    daysLeft > 0 ? remaining / daysLeft : remaining > 0 ? 0 : pace;
-  const probability = Math.min(
-    100,
-    Math.round((neededPace > 0 ? pace / neededPace : 1) * 100),
-  );
-  const status =
-    probability >= 80 ? "on-track" : probability >= 50 ? "at-risk" : "behind";
-  const color =
-    status === "on-track"
-      ? "var(--green)"
-      : status === "at-risk"
-        ? "var(--amber)"
-        : "var(--red)";
-  return { probability, status, color, daysLeft, done, total };
-}
 
 /* ══════════════════════════════════════════════════════════════════════════ */
 /*  Main Component                                                            */
@@ -504,75 +415,6 @@ export default function BacklogTab({ project }: { project: Project }) {
                   </div>
                 </div>
 
-                {/* Center: EOS health (active) or velocity ring (planning) */}
-                {/* {(() => {
-                  const health = computeSprintHealth(sprint);
-                  if (health) {
-                    return (
-                      <div className={styles.sprintHeaderCenter}>
-                        <VelocityRing
-                          done={sprint.donePoints}
-                          total={sprint.totalPoints}
-                        />
-                        <div className={styles.healthInfo}>
-                          <div className={styles.healthTopRow}>
-                            <span
-                              className={styles.healthProb}
-                              style={{ color: health.color }}
-                            >
-                              {health.probability}%
-                            </span>
-                            <span
-                              className={styles.healthBadge}
-                              style={{
-                                color: health.color,
-                                background: `${health.color}18`,
-                                border: `1px solid ${health.color}33`,
-                              }}
-                            >
-                              {health.status === "on-track" ? (
-                                <>
-                                  <RiCheckLine size={9} /> On Track
-                                </>
-                              ) : health.status === "at-risk" ? (
-                                <>
-                                  <RiAlertLine size={9} /> At Risk
-                                </>
-                              ) : (
-                                <>
-                                  <RiAlertLine size={9} /> Behind
-                                </>
-                              )}
-                            </span>
-                          </div>
-                          <span className={styles.healthMeta}>
-                            {health.done}/{health.total} pts · {health.daysLeft}
-                            d left
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  }
-                  if (sprint.totalPoints > 0) {
-                    return (
-                      <div className={styles.sprintHeaderCenter}>
-                        <VelocityRing
-                          done={sprint.donePoints}
-                          total={sprint.totalPoints}
-                        />
-                        <div className={styles.velocityLabel}>
-                          <span className={styles.velocityDone}>
-                            {sprint.donePoints}
-                          </span>
-                          <span className={styles.velocityTotal}>
-                            /{sprint.totalPoints} pts
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()} */}
 
                 {/* Right: action buttons */}
                 <div className={styles.sprintActions}>

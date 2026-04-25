@@ -1,6 +1,4 @@
 /* ── Spaces / Projects feature data + real-data bridge ── */
-import type { PodSummary, SprintDetail } from "@/services/api";
-import type { Sprint } from "@/types";
 
 export interface ProjectMember {
   id: string;
@@ -848,10 +846,6 @@ export const MOCK_PROJECTS: Project[] = [
 ];
 
 /* ── Helpers ── */
-export function getProjectById(id: string): Project | undefined {
-  return MOCK_PROJECTS.find((p) => p.id === id);
-}
-
 export function getStatusColor(status: Project["status"]): string {
   return {
     active: "var(--green)",
@@ -880,141 +874,5 @@ export function getTaskStatusColor(status: ProjectTask["status"]): string {
   }[status];
 }
 
-/* ── Real-data bridge: build a Project from API data ── */
-function normalizeStatus(s: string): ProjectTask["status"] {
-  const l = s.toLowerCase();
-  if (l === "done" || l === "closed" || l === "resolved") return "Done";
-  if (l === "blocked") return "Blocked";
-  if (l.includes("review") || l.includes("qa")) return "In Review";
-  if (l.includes("progress") || l.includes("development")) return "In Progress";
-  return "To Do";
-}
 
-function normalizePriority(p: string): ProjectTask["priority"] {
-  const l = p.toLowerCase();
-  if (l === "critical" || l === "blocker") return "Critical";
-  if (l === "high") return "High";
-  if (l === "low" || l === "minor" || l === "trivial") return "Low";
-  return "Medium";
-}
 
-function normalizeType(t: string | null): ProjectTask["type"] {
-  if (!t) return "Task";
-  const l = t.toLowerCase();
-  if (l.includes("bug") || l.includes("defect")) return "Bug";
-  if (l.includes("story") || l.includes("feature")) return "Story";
-  if (l.includes("epic")) return "Epic";
-  if (l.includes("subtask") || l.includes("sub-task")) return "Subtask";
-  return "Task";
-}
-
-function hashColor(name: string): string {
-  let h = 0;
-  for (const c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
-  return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length];
-}
-
-function initials(name: string | null): string {
-  if (!name) return "";
-  const parts = name.trim().split(" ");
-  return parts.length >= 2
-    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    : name.slice(0, 2).toUpperCase();
-}
-
-export function buildProjectFromAPI(
-  pod: string,
-  podStats: PodSummary | undefined,
-  activeSprint: (Sprint & { ticket_count?: number }) | undefined,
-  sprintDetail: SprintDetail | undefined,
-  podColor: string,
-): Project {
-  const statuses = podStats?.statuses ?? {};
-  const DONE_KEYS = ["Done", "Closed", "Resolved"];
-  const IN_PROG_KEYS = ["In Progress", "In Development", "Development Ready"];
-  const BLOCKED_KEYS = ["Blocked"];
-
-  const totalTickets = Object.values(statuses).reduce((a, b) => a + b, 0);
-  const completedTickets = DONE_KEYS.reduce(
-    (a, k) => a + (statuses[k] ?? 0),
-    0,
-  );
-  const inProgress = IN_PROG_KEYS.reduce((a, k) => a + (statuses[k] ?? 0), 0);
-  const blocked = BLOCKED_KEYS.reduce((a, k) => a + (statuses[k] ?? 0), 0);
-  const progress =
-    totalTickets > 0 ? Math.round((completedTickets / totalTickets) * 100) : 0;
-
-  // Build members from sprint ticket assignees
-  const memberMap: Record<string, ProjectMember> = {};
-  (sprintDetail?.tickets ?? []).forEach((t, i) => {
-    if (t.assignee && !memberMap[t.assignee]) {
-      memberMap[t.assignee] = {
-        id: `m-${pod}-${i}`,
-        name: t.assignee,
-        role: "Team Member",
-        initials: initials(t.assignee),
-        color: hashColor(t.assignee),
-      };
-    }
-  });
-  const members = Object.values(memberMap);
-
-  // Map sprint tickets to ProjectTask[]
-  const sprintTasks: ProjectTask[] = (sprintDetail?.tickets ?? []).map(
-    (t, i) => ({
-      id: t.id,
-      key: t.jira_key,
-      title: t.summary,
-      status: normalizeStatus(t.status),
-      priority: normalizePriority(t.priority),
-      type: normalizeType(t.issue_type),
-      assignee: t.assignee ?? "",
-      assigneeInitials: initials(t.assignee),
-      assigneeColor: hashColor(t.assignee ?? String(i)),
-      storyPoints: t.story_points ?? 0,
-      createdAt: "2026-01-01",
-      updatedAt: "2026-04-14",
-    }),
-  );
-
-  const projectSprint: ProjectSprint | undefined = activeSprint
-    ? {
-        id: String(activeSprint.id),
-        name: activeSprint.name,
-        status: activeSprint.status as ProjectSprint["status"],
-        startDate: activeSprint.start_date ?? "",
-        endDate: activeSprint.end_date ?? "",
-        goal: activeSprint.goal ?? "",
-        totalPoints: activeSprint.total_points ?? 0,
-        donePoints: activeSprint.done_points ?? 0,
-        tasks: sprintTasks,
-      }
-    : undefined;
-
-  return {
-    id: pod,
-    key: pod,
-    name: `${pod} Pod`,
-    description: `${pod} engineering pod — ${totalTickets.toLocaleString()} total tickets`,
-    status: "active",
-    category: "Product",
-    color: podColor,
-    lead: members[0]?.name ?? "",
-    leadInitials: members[0]?.initials ?? "",
-    leadColor: members[0]?.color ?? podColor,
-    members: members.slice(0, 8),
-    sprints: projectSprint ? [projectSprint] : [],
-    epics: [],
-    startDate: "2026-01-01",
-    progress,
-    totalTickets,
-    completedTickets,
-    inProgressTickets: inProgress,
-    blockedTickets: blocked,
-    priority: "high",
-    tags: [pod],
-    weeklyActivity: [3, 5, 4, 6, 7, 5, 4],
-    roles: ["admin", "engineering_manager", "tech_lead", "team_member"],
-    backlogTasks: [],
-  };
-}

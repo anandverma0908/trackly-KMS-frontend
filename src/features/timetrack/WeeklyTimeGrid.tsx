@@ -431,40 +431,4 @@ export function ManualTab() {
   );
 }
 
-/* ── Page shell with tabs ───────────────────────────────────────────────── */
-type Tab = "weekly" | "manual";
 
-export default function WeeklyTimeGrid() {
-  const [tab, setTab] = useState<Tab>("weekly");
-
-  return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Timesheets</h1>
-          <p className={styles.subtitle}>
-            {tab === "weekly"
-              ? <>Log hours across sprint tickets. Use <kbd>Tab</kbd> to move between cells.</>
-              : "Quickly log a single time entry against any ticket."}
-          </p>
-        </div>
-        <div className={styles.tabs}>
-          <button
-            className={`${styles.tab} ${tab === "weekly" ? styles.tabActive : ""}`}
-            onClick={() => setTab("weekly")}
-          >
-            Weekly
-          </button>
-          <button
-            className={`${styles.tab} ${tab === "manual" ? styles.tabActive : ""}`}
-            onClick={() => setTab("manual")}
-          >
-            Manual Entry
-          </button>
-        </div>
-      </div>
-
-      {tab === "weekly" ? <WeeklyTab /> : <ManualTab />}
-    </div>
-  );
-}
