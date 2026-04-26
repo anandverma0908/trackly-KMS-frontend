@@ -1,5 +1,8 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { fetchStories } from "@/services/api";
+import type { StoryItem } from "@/services/api";
 
 const WIP_LIMIT = 5;
 
@@ -21,6 +24,7 @@ import { createTicket, updateTicketStatus, createSavedFilter } from "@/services/
 import type { TicketCreate } from "@/types";
 import styles from "./ActiveSprintsTab.module.css";
 
+import LinearProgress from "@mui/material/LinearProgress";
 import {
   RiSearchLine,
   RiUserLine,
@@ -29,6 +33,9 @@ import {
   RiAlertLine,
   RiSettings3Line,
   RiAddLine,
+  RiArrowLeftLine,
+  RiBookOpenLine,
+  RiArrowDownSLine,
 } from "react-icons/ri";
 import { IssueTypeBadge } from "@/components/ui/Badge";
 
@@ -157,10 +164,11 @@ export default function ActiveSprintsTab({
     [project],
   );
 
-  const selectedSprint = useMemo(
-    () => activeSprints[0] ?? project.sprints[0],
-    [activeSprints, project],
-  );
+  const [selectedSprintId, setSelectedSprintId] = useState<string | undefined>(undefined);
+  const selectedSprint = useMemo(() => {
+    if (selectedSprintId) return project.sprints.find((s) => s.id === selectedSprintId) ?? activeSprints[0] ?? project.sprints[0];
+    return activeSprints[0] ?? project.sprints[0];
+  }, [selectedSprintId, activeSprints, project]);
 
   const epicColorMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -168,9 +176,29 @@ export default function ActiveSprintsTab({
     return map;
   }, [project.epics]);
 
+  // Stories strip state
+  const [storiesOpen, setStoriesOpen] = useState(true);
+  const [focusedStory, setFocusedStory] = useState<StoryItem | null>(null);
+  const [showAllStories, setShowAllStories] = useState(false);
+  const [drawerStoryKey, setDrawerStoryKey] = useState<string | null>(null);
+
+  const { data: storiesData } = useQuery({
+    queryKey: ["pod-stories", project.key, selectedSprint?.id],
+    queryFn: () => fetchStories(project.key, selectedSprint?.id),
+    enabled: !!selectedSprint,
+  });
+
+  const allStories = storiesData?.stories ?? [];
+  const everythingElse = storiesData?.everything_else;
+
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(
     new Set(),
   );
+
+  const stories = useMemo(() => {
+    if (selectedMembers.size === 0) return allStories;
+    return allStories.filter((s) => !s.assignee || selectedMembers.has(s.assignee));
+  }, [allStories, selectedMembers]);
   const [search, setSearch] = useState("");
   const [myTasksActive, setMyTasksActive] = useState(false);
   const [aiFilter, setAiFilter] = useState<AIFilter>(null);
@@ -265,6 +293,15 @@ export default function ActiveSprintsTab({
   const filteredTasks = useMemo(() => {
     let tasks = allSprintTasks;
 
+    // Exclude stories and epics from the kanban board
+    tasks = tasks.filter((t) => t.type !== "Story" && t.type !== "Epic");
+
+    // Story focus — show only tasks belonging to the focused story
+    if (focusedStory) {
+      const storyTaskIds = new Set(focusedStory.tasks.map((t) => t.id));
+      tasks = tasks.filter((t) => storyTaskIds.has(t.id));
+    }
+
     // Member filter
     if (selectedMembers.size > 0) {
       tasks = tasks.filter((t) => selectedMembers.has(t.assignee));
@@ -309,6 +346,7 @@ export default function ActiveSprintsTab({
     myTasksActive,
     aiFilter,
     project,
+    focusedStory,
   ]);
 
   // Group by column
@@ -427,119 +465,30 @@ export default function ActiveSprintsTab({
     );
   }
 
+  const inProgress = allSprintTasks.filter((t) => t.status === "In Progress");
+  const blocked = allSprintTasks.filter((t) => t.status === "Blocked");
+  const sprintPct = selectedSprint.totalPoints > 0
+    ? Math.round((selectedSprint.donePoints / selectedSprint.totalPoints) * 100)
+    : 0;
+
   return (
     <div className={styles.tab}>
-      {/* ── Sprint selector + info ── */}
-      {/* <div className={styles.sprintBar}>
-        <div className={styles.sprintLeft}>
-          {activeSprints.length > 1 ? (
-            <div className={styles.sprintSelect}>
-              <select
-                className={styles.sprintDropdown}
-                value={selectedSprint.id}
-                onChange={(e) => {
-                  const s = project.sprints.find(
-                    (sp) => sp.id === e.target.value,
-                  );
-                  if (s) setSelectedSprint(s);
-                }}
-              >
-                {activeSprints.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-              <RiArrowDownSLine size={16} color="var(--text-3)" />
-            </div>
-          ) : (
-            <div className={styles.sprintName}>{selectedSprint.name}</div>
-          )}
-          <div className={styles.sprintDates}>
-            {selectedSprint.startDate} → {selectedSprint.endDate}
-          </div>
-          <div className={styles.sprintGoal}>Goal: {selectedSprint.goal}</div>
-        </div>
 
-        <div className={styles.sprintRight}>
-          <div className={styles.sprintStats}>
-            <div className={styles.sStat}>
-              <span
-                className={styles.sStatVal}
-                style={{ color: "var(--green)" }}
-              >
-                {selectedSprint.donePoints}
-              </span>
-              <span className={styles.sStatLbl}>Done pts</span>
-            </div>
-            <div className={styles.sStatDiv} />
-            <div className={styles.sStat}>
-              <span className={styles.sStatVal}>
-                {selectedSprint.totalPoints}
-              </span>
-              <span className={styles.sStatLbl}>Total pts</span>
-            </div>
-            <div className={styles.sStatDiv} />
-            <div className={styles.sStat}>
-              <span
-                className={styles.sStatVal}
-                style={{ color: project.color }}
-              >
-                {sprintPct}%
-              </span>
-              <span className={styles.sStatLbl}>Complete</span>
-            </div>
-          </div>
-          <LinearProgress
-            variant="determinate"
-            value={sprintPct}
-            sx={{
-              width: 160,
-              height: 5,
-              borderRadius: 100,
-              backgroundColor: "var(--surface-2)",
-              "& .MuiLinearProgress-bar": {
-                background: `linear-gradient(90deg, ${project.color}, ${project.color}aa)`,
-                borderRadius: 100,
-              },
-            }}
-          />
-        </div>
-      </div> */}
-
-      {/* ── Flow Metrics Strip ── */}
-      <FlowMetricsStrip tasks={allSprintTasks} onCreateTask={() => setShowCreateModal(true)} />
-
-      {/* ── Toolbar: member chips + search + my tasks + AI filters + create ── */}
+      {/* ── Toolbar: filters + search + EOS badges + create ── */}
       <div className={styles.toolbar}>
-        {/* Member avatar filter chips */}
         <div className={styles.memberChips}>
           {project.members.slice(0, 6).map((m, idx) => {
             const isActive = selectedMembers.has(m.name);
             return (
-              <Tooltip
-                key={m.id}
-                title={`${m.name} · ${m.role}`}
-                arrow
-                placement="bottom"
-              >
+              <Tooltip key={m.id} title={`${m.name} · ${m.role}`} arrow placement="bottom">
                 <button
                   className={`${styles.memberChip} ${isActive ? styles.memberChipActive : ""}`}
                   onClick={() => toggleMember(m.name)}
-                  style={{
-                    marginLeft: idx === 0 ? 0 : -10,
-                    zIndex: isActive ? 30 : 20 - idx,
-                  }}
+                  style={{ marginLeft: idx === 0 ? 0 : -10, zIndex: isActive ? 30 : 20 - idx }}
                 >
                   <div
                     className={styles.memberChipAvatar}
-                    style={{
-                      background: m.color,
-                      outline: isActive
-                        ? `2px solid ${project.color}`
-                        : undefined,
-                      outlineOffset: 2,
-                    }}
+                    style={{ background: m.color, outline: isActive ? `2px solid ${project.color}` : undefined, outlineOffset: 2 }}
                   >
                     {m.initials}
                   </div>
@@ -548,30 +497,28 @@ export default function ActiveSprintsTab({
             );
           })}
           {project.members.length > 6 && (
-            <div
-              className={styles.memberChipAvatar}
-              style={{
-                background: "var(--surface-2)",
-                marginLeft: -10,
-                zIndex: 0,
-                color: "var(--text-2)",
-                fontSize: 11,
-              }}
-            >
+            <div className={styles.memberChipAvatar} style={{ background: "var(--surface-2)", marginLeft: -10, zIndex: 0, color: "var(--text-2)", fontSize: 11 }}>
               +{project.members.length - 6}
             </div>
           )}
           {selectedMembers.size > 0 && (
-            <button
-              className={styles.clearMembersBtn}
-              onClick={() => setSelectedMembers(new Set())}
-            >
-              Clear
-            </button>
+            <button className={styles.clearMembersBtn} onClick={() => setSelectedMembers(new Set())}>Clear</button>
           )}
         </div>
 
         <div className={styles.toolbarRight}>
+          {/* EOS compact badges */}
+          {inProgress.length > 0 && (
+            <span className={styles.eosBadge} style={{ color: inProgress.length > WIP_LIMIT ? "var(--amber)" : "var(--text-2)" }}>
+              ⚡ {inProgress.length} in progress{inProgress.length > WIP_LIMIT ? " ⚠" : ""}
+            </span>
+          )}
+          {blocked.length > 0 && (
+            <span className={styles.eosBadge} style={{ color: "var(--red)" }}>
+              🚫 {blocked.length} blocked
+            </span>
+          )}
+
           {/* Search */}
           <div className={styles.searchWrap}>
             <RiSearchLine size={14} style={{ opacity: 0.5 }} />
@@ -581,24 +528,13 @@ export default function ActiveSprintsTab({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            {search && (
-              <button
-                className={styles.searchClear}
-                onClick={() => setSearch("")}
-              >
-                ✕
-              </button>
-            )}
+            {search && <button className={styles.searchClear} onClick={() => setSearch("")}>✕</button>}
           </div>
-          <button
-            className={styles.clearAllBtn}
-            onClick={() => setShowBoardConfig(true)}
-            title="Board settings"
-          >
+
+          <button className={styles.clearAllBtn} onClick={() => setShowBoardConfig(true)} title="Board settings">
             <RiSettings3Line size={14} />
           </button>
 
-          {/* My Tasks */}
           <Tooltip title="Show only my tasks" arrow>
             <button
               className={`${styles.myTasksBtn} ${myTasksActive ? styles.myTasksBtnActive : ""}`}
@@ -609,30 +545,9 @@ export default function ActiveSprintsTab({
             </button>
           </Tooltip>
 
-          {/* AI filters */}
-          {/* <div className={styles.aiFiltersWrap}>
-            <RiSparklingLine size={13} color="var(--accent)" />
-            <span className={styles.aiLabel}>EOS:</span>
-            {AI_FILTERS.map((f) => (
-              <button
-                key={f.id}
-                className={`${styles.aiChip} ${aiFilter === f.id ? styles.aiChipActive : ""}`}
-                style={
-                  aiFilter === f.id
-                    ? {
-                        color: f.color,
-                        borderColor: f.color,
-                        background: `${f.color}18`,
-                      }
-                    : {}
-                }
-                onClick={() => setAiFilter(aiFilter === f.id ? null : f.id)}
-              >
-                <span>{f.icon}</span>
-                {f.label}
-              </button>
-            ))}
-          </div> */}
+          <button className={styles.createBtn} onClick={() => setShowCreateModal(true)}>
+            <RiAddLine size={14} /> Create Task
+          </button>
         </div>
       </div>
 
@@ -641,62 +556,214 @@ export default function ActiveSprintsTab({
         <div className={styles.activeFilters}>
           <RiFilter3Line size={13} color="var(--text-3)" />
           <span className={styles.activeFiltersLabel}>Filtering:</span>
-          {selectedMembers.size > 0 && (
-            <span className={styles.activeFilterChip}>
-              {selectedMembers.size} member{selectedMembers.size > 1 ? "s" : ""}
-            </span>
-          )}
-          {myTasksActive && (
-            <span className={styles.activeFilterChip}>My Tasks</span>
-          )}
-          {aiFilter && (
-            <span className={styles.activeFilterChip}>
-              {AI_FILTERS.find((filter) => filter.id === aiFilter)?.label ?? aiFilter}
-            </span>
-          )}
-          {search && (
-            <span className={styles.activeFilterChip}>"{search}"</span>
-          )}
-          <span className={styles.activeFilterCount}>
-            {filteredTasks.length} tasks shown
-          </span>
-          <button
-            className={styles.clearAllBtn}
-            onClick={() => {
-              setSelectedMembers(new Set());
-              setMyTasksActive(false);
-              setAiFilter(null);
-              setSearch("");
-            }}
-          >
-            Clear all
-          </button>
+          {selectedMembers.size > 0 && <span className={styles.activeFilterChip}>{selectedMembers.size} member{selectedMembers.size > 1 ? "s" : ""}</span>}
+          {myTasksActive && <span className={styles.activeFilterChip}>My Tasks</span>}
+          {aiFilter && <span className={styles.activeFilterChip}>{AI_FILTERS.find((f) => f.id === aiFilter)?.label ?? aiFilter}</span>}
+          {search && <span className={styles.activeFilterChip}>"{search}"</span>}
+          <span className={styles.activeFilterCount}>{filteredTasks.length} tasks shown</span>
+          <button className={styles.clearAllBtn} onClick={() => { setSelectedMembers(new Set()); setMyTasksActive(false); setAiFilter(null); setSearch(""); }}>Clear all</button>
           {showSaveFilter ? (
             <>
-              <input
-                className={styles.searchInput}
-                placeholder="Filter name"
-                value={filterName}
-                onChange={(e) => setFilterName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && filterName.trim()) saveFilterMut.mutate(filterName.trim());
-                  if (e.key === "Escape") { setShowSaveFilter(false); setFilterName(""); }
-                }}
-                autoFocus
-                style={{ width: 120, marginLeft: 8 }}
-              />
+              <input className={styles.searchInput} placeholder="Filter name" value={filterName} onChange={(e) => setFilterName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && filterName.trim()) saveFilterMut.mutate(filterName.trim()); if (e.key === "Escape") { setShowSaveFilter(false); setFilterName(""); } }} autoFocus style={{ width: 120, marginLeft: 8 }} />
               <button className={styles.clearAllBtn} onClick={() => { if (filterName.trim()) saveFilterMut.mutate(filterName.trim()); }}>Save</button>
               <button className={styles.clearAllBtn} onClick={() => { setShowSaveFilter(false); setFilterName(""); }}>Cancel</button>
             </>
           ) : (
-            <button className={styles.clearAllBtn} onClick={() => setShowSaveFilter(true)}>
-              Save Filter
-            </button>
+            <button className={styles.clearAllBtn} onClick={() => setShowSaveFilter(true)}>Save Filter</button>
           )}
         </div>
       )}
 
+      {/* ── Stories Strip ── */}
+      {stories.length > 0 && (
+        <div className={styles.storiesStrip}>
+          <div className={styles.storiesStripHeader}>
+            <button
+              className={styles.storiesToggle}
+              onClick={() => setStoriesOpen((v) => !v)}
+            >
+              <RiBookOpenLine size={12} />
+              <span>Stories</span>
+              <span className={styles.storiesCount}>{stories.length}</span>
+              <span className={styles.storiesChevron}>{storiesOpen ? "▾" : "▸"}</span>
+            </button>
+            {focusedStory && (
+              <button
+                className={styles.storiesClearFocus}
+                onClick={() => setFocusedStory(null)}
+              >
+                <RiArrowLeftLine size={11} /> Back to all tasks
+              </button>
+            )}
+          </div>
+
+          <AnimatePresence initial={false}>
+            {storiesOpen && (
+              <motion.div
+                className={styles.storiesList}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {(showAllStories ? stories : stories.slice(0, 5)).map((story) => {
+                  const isFocused = focusedStory?.id === story.id;
+                  const insightColor =
+                    story.eosInsight.color === "green" ? "var(--green)"
+                    : story.eosInsight.color === "red" ? "var(--red)"
+                    : story.eosInsight.color === "amber" ? "var(--amber)"
+                    : "var(--accent)";
+
+                  return (
+                    <div
+                      key={story.id}
+                      className={`${styles.storyRow} ${isFocused ? styles.storyRowFocused : ""}`}
+                      onClick={() => setDrawerStoryKey(story.key)}
+                    >
+                      {/* Left — key + title */}
+                      <div className={styles.storyRowLeft}>
+                        <span className={styles.storyKey}>{story.key}</span>
+                        <Tooltip title={story.title} arrow placement="top">
+                          <span className={styles.storyTitle}>{story.title}</span>
+                        </Tooltip>
+                      </div>
+
+                      {/* Middle — progress + task count */}
+                      <div className={styles.storyRowMid}>
+                        <div className={styles.storyProgressBar}>
+                          <div
+                            className={styles.storyProgressFill}
+                            style={{ width: `${story.progressPct}%` }}
+                          />
+                        </div>
+                        <span className={styles.storyProgressPct}>{story.progressPct}%</span>
+                        <span className={styles.storyTaskCount}>
+                          {story.doneTasks}/{story.totalTasks} tasks
+                        </span>
+                      </div>
+
+                      {/* Right — EOS insight + assignee */}
+                      <div className={styles.storyRowRight}>
+                        <Tooltip title={story.eosInsight.text} arrow placement="top">
+                          <span
+                            className={styles.storyInsightBadge}
+                            style={{ color: insightColor, borderColor: `${insightColor}40`, background: `${insightColor}12` }}
+                          >
+                            <RiSparklingLine size={9} />
+                            {story.eosInsight.label}
+                          </span>
+                        </Tooltip>
+                        {story.assignee && (
+                          <Tooltip title={story.assignee} arrow placement="top">
+                            <div
+                              className={styles.storyAssignee}
+                              style={{ background: story.assigneeColor }}
+                            >
+                              {story.assigneeInitials}
+                            </div>
+                          </Tooltip>
+                        )}
+                        <span
+                          className={styles.storyZoomBtn}
+                          onClick={(e) => { e.stopPropagation(); setFocusedStory(isFocused ? null : story); }}
+                          title={isFocused ? "Clear filter" : "Filter board to this story"}
+                        >
+                          {isFocused ? "✕" : "→"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Everything else row */}
+                {everythingElse && everythingElse.totalTasks > 0 && (
+                  <div
+                    className={`${styles.storyRow} ${styles.storyRowEverything} ${focusedStory?.id === "__everything__" ? styles.storyRowFocused : ""}`}
+                    onClick={() => {
+                      if (focusedStory?.id === "__everything__") {
+                        setFocusedStory(null);
+                      } else {
+                        setFocusedStory({
+                          id: "__everything__",
+                          key: "",
+                          title: "Everything else",
+                          status: "To Do",
+                          priority: "Medium",
+                          assignee: "",
+                          assigneeInitials: "",
+                          assigneeColor: "",
+                          epicId: undefined,
+                          storyPoints: 0,
+                          totalTasks: everythingElse.totalTasks,
+                          doneTasks: everythingElse.doneTasks,
+                          blockedTasks: 0,
+                          progressPct: Math.round((everythingElse.doneTasks / Math.max(1, everythingElse.totalTasks)) * 100),
+                          eosInsight: { label: "Unlinked", color: "amber", text: "Tasks not linked to any story." },
+                          tasks: everythingElse.tasks,
+                        });
+                      }
+                    }}
+                  >
+                    <div className={styles.storyRowLeft}>
+                      <span className={styles.storyTitle} style={{ color: "var(--text-2)" }}>
+                        Everything else
+                      </span>
+                    </div>
+                    <div className={styles.storyRowMid}>
+                      <div className={styles.storyProgressBar}>
+                        <div
+                          className={styles.storyProgressFill}
+                          style={{
+                            width: `${Math.round((everythingElse.doneTasks / Math.max(1, everythingElse.totalTasks)) * 100)}%`,
+                            background: "var(--text-3)",
+                          }}
+                        />
+                      </div>
+                      <span className={styles.storyTaskCount}>
+                        {everythingElse.totalTasks} work items
+                      </span>
+                    </div>
+                    <div className={styles.storyRowRight}>
+                      <span className={styles.storyZoomBtn}>
+                        {focusedStory?.id === "__everything__" ? "✕" : "→"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {stories.length > 5 && (
+                  <button
+                    className={styles.storiesShowMore}
+                    onClick={(e) => { e.stopPropagation(); setShowAllStories((v) => !v); }}
+                  >
+                    {showAllStories ? "Show less" : `Show ${stories.length - 5} more stories`}
+                  </button>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
       {/* ── Kanban Board ── */}
+      <div className={styles.boardWrap}>
+
+        {/* Zoom breadcrumb — scrolls with board */}
+        {focusedStory && (
+          <div className={styles.zoomBreadcrumb}>
+            <button className={styles.zoomBack} onClick={() => setFocusedStory(null)}>
+              <RiArrowLeftLine size={13} /> Sprint Board
+            </button>
+            <span className={styles.zoomSep}>›</span>
+            <span className={styles.zoomStoryTitle}>
+              {focusedStory.key && <span className={styles.zoomStoryKey}>{focusedStory.key}</span>}
+              {focusedStory.title}
+            </span>
+            <span className={styles.zoomTaskCount}>{focusedStory.totalTasks} tasks · {focusedStory.progressPct}% done</span>
+          </div>
+        )}
+
+
       <div className={styles.board}>
         {columns.map((col) => (
           <div
@@ -784,6 +851,7 @@ export default function ActiveSprintsTab({
           </div>
         ))}
       </div>
+      </div>
 
       {/* ── Create task drawer ── */}
       <CreateTicketDrawer
@@ -820,6 +888,18 @@ export default function ActiveSprintsTab({
           members={project.members}
           onSuccess={() => {
             qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+          }}
+        />
+      )}
+      {drawerStoryKey && (
+        <CreateTicketDrawer
+          open={Boolean(drawerStoryKey)}
+          onClose={() => setDrawerStoryKey(null)}
+          ticketKey={drawerStoryKey}
+          members={project.members}
+          onSuccess={() => {
+            qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+            qc.invalidateQueries({ queryKey: ["pod-stories", project.key] });
           }}
         />
       )}

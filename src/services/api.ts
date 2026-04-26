@@ -1010,6 +1010,48 @@ export async function fetchProject(pod: string): Promise<Project> {
   return data;
 }
 
+export interface StoryInsight {
+  label: string;
+  color: "green" | "amber" | "red" | "accent";
+  text: string;
+}
+
+export interface StoryItem {
+  id: string;
+  key: string;
+  title: string;
+  status: string;
+  priority: string;
+  assignee: string;
+  assigneeInitials: string;
+  assigneeColor: string;
+  epicId?: string;
+  storyPoints: number;
+  totalTasks: number;
+  doneTasks: number;
+  blockedTasks: number;
+  progressPct: number;
+  eosInsight: StoryInsight;
+  tasks: import("@/features/spaces/spacesData").ProjectTask[];
+}
+
+export interface StoriesResponse {
+  sprint_id: string | null;
+  sprint_name: string;
+  stories: StoryItem[];
+  everything_else: {
+    totalTasks: number;
+    doneTasks: number;
+    tasks: import("@/features/spaces/spacesData").ProjectTask[];
+  };
+}
+
+export async function fetchStories(pod: string, sprintId?: string): Promise<StoriesResponse> {
+  const params = sprintId ? `?sprint_id=${sprintId}` : "";
+  const { data } = await api.get(`/spaces/${pod}/stories${params}`);
+  return data;
+}
+
 export async function fetchBurndownReport(pod: string): Promise<{ sprint: { id: string; name: string; total_points: number } | null; data: { date: string; remaining: number; ideal: number }[] }> {
   const { data } = await api.get(`/spaces/${pod}/reports/burndown`);
   return data;
@@ -1114,6 +1156,45 @@ export async function deleteRelease(pod: string, id: string) {
 export async function setFixVersion(ticketKey: string, versionName: string | null) {
   const { data } = await api.post(`/spaces/tickets/${ticketKey}/fix-version`, { version_name: versionName });
   return data;
+}
+
+export interface ReleaseTicket {
+  id: string;
+  key: string;
+  summary: string;
+  status?: string;
+  priority?: string;
+  issue_type?: string;
+  assignee?: string;
+  assignee_email?: string;
+  story_points?: number;
+  url?: string;
+}
+
+export async function fetchReleaseTickets(pod: string, releaseId: string): Promise<ReleaseTicket[]> {
+  const { data } = await api.get(`/spaces/${pod}/releases/${releaseId}/tickets`);
+  return data ?? [];
+}
+
+export async function fetchPodTickets(pod: string, search?: string): Promise<{ tickets: ReleaseTicket[]; total: number }> {
+  const params = new URLSearchParams({ pod, limit: "100" });
+  if (search) params.set("search", search);
+  const { data } = await api.get(`/tickets?${params.toString()}`);
+  return data;
+}
+
+export async function fetchPodEpics(pod: string): Promise<{ key: string; summary: string }[]> {
+  const { data } = await api.get("/tickets", { params: { pod, issue_type: "Epic", limit: 100 } });
+  return (data.tickets ?? []).map((t: any) => ({ key: t.key ?? t.jira_key, summary: t.summary }));
+}
+
+export async function fetchPodStories(pod: string, search?: string): Promise<{ key: string; summary: string }[]> {
+  const params: Record<string, any> = { pod, limit: 100 };
+  if (search) params.search = search;
+  const { data } = await api.get("/tickets", { params });
+  return (data.tickets ?? [])
+    .filter((t: any) => ["Story", "Task", "Bug", "Epic", "Improvement"].includes(t.issue_type))
+    .map((t: any) => ({ key: t.key ?? t.jira_key, summary: t.summary, issue_type: t.issue_type }));
 }
 
 export interface AutomationRule {

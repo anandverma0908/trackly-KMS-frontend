@@ -22,6 +22,9 @@ import {
   createTicketLink,
   deleteTicketLink,
   searchTickets,
+  fetchPodEpics,
+  fetchPodStories,
+  fetchReleases,
   type CodeContextResult,
 } from "@/services/api";
 import { useNavigate } from "react-router-dom";
@@ -383,6 +386,9 @@ export default function CreateTicketDrawer({
   /* Track whether this open-session has been initialized */
   const hasInitialized = useRef(false);
 
+  /* Hierarchy search */
+  const [parentSearch, setParentSearch] = useState("");
+
   /* Form */
   const [form, setForm] = useState<FormState>({
     title: "",
@@ -398,6 +404,9 @@ export default function CreateTicketDrawer({
     remaining: "",
     attachments: [],
     labels: [],
+    epic_key: undefined,
+    parent_key: undefined,
+    fix_version: undefined,
   });
 
   const isEdit = Boolean(ticketKey);
@@ -408,6 +417,24 @@ export default function CreateTicketDrawer({
     queryKey: ["ticket", ticketKey],
     queryFn: () => fetchTicket(ticketKey!),
     enabled: isEdit,
+  });
+
+  const activePod = form.pod ?? defaultPod ?? "";
+  const { data: podEpics = [] } = useQuery({
+    queryKey: ["pod-epics", activePod],
+    queryFn: () => fetchPodEpics(activePod),
+    enabled: !!activePod && open,
+  });
+  const { data: podParents = [] } = useQuery({
+    queryKey: ["pod-stories", activePod, parentSearch],
+    queryFn: () => fetchPodStories(activePod, parentSearch || undefined),
+    enabled: !!activePod && open,
+    placeholderData: (prev) => prev,
+  });
+  const { data: podReleases = [] } = useQuery({
+    queryKey: ["releases", activePod],
+    queryFn: () => fetchReleases(activePod),
+    enabled: !!activePod && open,
   });
 
   // Populate form exactly once per open-session
@@ -443,6 +470,9 @@ export default function CreateTicketDrawer({
         client: initialData?.client ?? detailedTicket?.client,
         story_points: initialData?.story_points ?? detailedTicket?.story_points,
         due_date: initialData?.due_date ?? detailedTicket?.due_date,
+        epic_key: (detailedTicket as any)?.epic_key ?? undefined,
+        parent_key: (detailedTicket as any)?.parent_key ?? undefined,
+        fix_version: (detailedTicket as any)?.fix_version ?? undefined,
       });
       setTab(0);
       setLabelInput("");
@@ -476,6 +506,9 @@ export default function CreateTicketDrawer({
         attachments: [],
         labels: [],
         pod: defaultPod,
+        epic_key: undefined,
+        parent_key: undefined,
+        fix_version: undefined,
       });
       setTab(0);
       setLabelInput("");
@@ -901,6 +934,9 @@ Respond with exactly this structure:
       story_points: form.story_points,
       labels: form.labels,
       due_date: form.due_date,
+      epic_key: form.epic_key || undefined,
+      parent_key: form.parent_key || undefined,
+      fix_version: form.fix_version || undefined,
     };
     if (sprintId) payload.sprint_id = String(sprintId);
     if (isEdit) {
@@ -1080,6 +1116,64 @@ Respond with exactly this structure:
 
             </div>
 
+            {/* Hierarchy */}
+            {activePod && (
+              <div className={styles.sectionCard}>
+                <div className={styles.sectionTitle}>Hierarchy</div>
+
+                {/* Epic */}
+                <Autocomplete
+                  options={podEpics}
+                  getOptionLabel={(o) => typeof o === "string" ? o : `${o.key}: ${o.summary}`}
+                  value={podEpics.find((e) => e.key === form.epic_key) ?? null}
+                  onChange={(_, v) => set("epic_key", v ? v.key : undefined)}
+                  size="small"
+                  fullWidth
+                  disabled={readOnly}
+                  renderInput={(params) => <TextField {...params} label="Epic" placeholder="Link to an Epic" />}
+                  sx={{ "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                  isOptionEqualToValue={(o, v) => o.key === v.key}
+                />
+
+                {/* Parent Story / Task */}
+                <Autocomplete
+                  options={podParents.filter((p) => p.key !== ticketKey)}
+                  getOptionLabel={(o) => typeof o === "string" ? o : `${o.key}: ${o.summary}`}
+                  value={podParents.find((p) => p.key === form.parent_key) ?? null}
+                  onChange={(_, v) => set("parent_key", v ? v.key : undefined)}
+                  onInputChange={(_, val) => setParentSearch(val)}
+                  size="small"
+                  fullWidth
+                  disabled={readOnly}
+                  renderInput={(params) => <TextField {...params} label="Parent" placeholder="Link to a parent ticket" />}
+                  sx={{ "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                  isOptionEqualToValue={(o, v) => o.key === v.key}
+                />
+
+                {/* Release */}
+                <FormControl size="small" fullWidth disabled={readOnly}>
+                  <InputLabel>Release</InputLabel>
+                  <Select
+                    label="Release"
+                    value={form.fix_version ?? ""}
+                    onChange={(e) => set("fix_version", e.target.value || undefined)}
+                  >
+                    <MenuItem value=""><em>None</em></MenuItem>
+                    {podReleases.map((r) => (
+                      <MenuItem key={r.id} value={r.name}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                          {r.name}
+                          <span style={{ fontSize: 10, color: r.status === "released" ? "var(--green)" : "var(--amber)", fontWeight: 700, textTransform: "uppercase" }}>
+                            {r.status}
+                          </span>
+                        </span>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </div>
+            )}
+
             {/* Context */}
             <div className={styles.sectionCard}>
               <div className={styles.sectionTitle}>Context</div>
@@ -1161,6 +1255,21 @@ Respond with exactly this structure:
               {(form.pod ?? defaultPod) && (
                 <span className={`${styles.summaryChip} ${styles.summaryChipDefault}`} style={{ color: "var(--accent)", borderColor: "var(--accent-border)" }}>
                   {form.pod ?? defaultPod}
+                </span>
+              )}
+              {form.epic_key && (
+                <span className={`${styles.summaryChip} ${styles.summaryChipDefault}`} style={{ color: "#FBBF24", borderColor: "rgba(251,191,36,0.4)" }}>
+                  ⚡ {form.epic_key}
+                </span>
+              )}
+              {form.parent_key && (
+                <span className={`${styles.summaryChip} ${styles.summaryChipDefault}`} style={{ color: "#A78BFA", borderColor: "rgba(167,139,250,0.4)" }}>
+                  ↳ {form.parent_key}
+                </span>
+              )}
+              {form.fix_version && (
+                <span className={`${styles.summaryChip} ${styles.summaryChipDefault}`} style={{ color: "var(--green)", borderColor: "rgba(52,211,153,0.4)" }}>
+                  🚀 {form.fix_version}
                 </span>
               )}
             </div>

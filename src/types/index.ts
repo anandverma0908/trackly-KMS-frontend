@@ -130,6 +130,9 @@ export interface TicketCreate {
   sprint_id?:   string
   labels?:      string[]
   due_date?:    string
+  parent_key?:  string
+  epic_key?:    string
+  fix_version?: string
 }
 
 export interface TicketComment {
