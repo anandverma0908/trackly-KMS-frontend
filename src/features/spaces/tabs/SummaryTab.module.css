@@ -266,6 +266,24 @@
   align-items: center;
   justify-content: space-between;
 }
+.chartCardSub {
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+.chartEmpty {
+  font-size: 0.8rem;
+  color: var(--text-3);
+  padding: 24px 0;
+  text-align: center;
+}
+.reportsSectionTitle {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  margin-top: 8px;
+}
 
 /* Risk list */
 .riskList {

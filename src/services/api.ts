@@ -1316,6 +1316,54 @@ export async function fetchClientHealth(): Promise<ClientHealthEntry[]> {
   return Array.isArray(data) ? data : data?.data ?? [];
 }
 
+export interface SentimentSignal {
+  engineer: string;
+  signal: string;
+  phrases: string[];
+  ticket_keys: string[];
+  severity: "high" | "medium";
+  sprint: string;
+}
+export interface SentimentSignalsResponse {
+  signals: SentimentSignal[];
+  window_hours: number;
+}
+export async function fetchSentimentSignals(): Promise<SentimentSignalsResponse> {
+  const { data } = await api.get("/analytics/sentiment-signals");
+  return data;
+}
+
+export interface BenchmarkEntry {
+  metric: string;
+  your_value: string;
+  industry_avg: string;
+  similar_teams: string;
+  direction: "up" | "down";
+  insight: string;
+}
+export async function fetchBenchmarks(): Promise<BenchmarkEntry[]> {
+  const { data } = await api.get("/analytics/benchmarks");
+  return Array.isArray(data) ? data : data?.data ?? [];
+}
+
+export interface ResourceGap {
+  goal: string;
+  skill: string;
+  urgency: "high" | "medium";
+  needed_by: string;
+  note: string;
+}
+export interface ResourceGapsResponse {
+  gaps: ResourceGap[];
+  total_open_high_priority: number;
+  team_size: number;
+  forecast_note: string;
+}
+export async function fetchResourceGaps(): Promise<ResourceGapsResponse> {
+  const { data } = await api.get("/analytics/resource-gaps");
+  return data;
+}
+
 export interface CognitiveLoadMember {
   name: string;
   load_score: number;

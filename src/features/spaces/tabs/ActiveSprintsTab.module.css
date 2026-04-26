@@ -688,6 +688,26 @@
 .emptyTitle { font-size: 16px; font-weight: 700; }
 .emptyDesc { font-size: 12px; color: var(--text-3); }
 
+.createTaskBtn {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.createTaskBtn:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 /* ── Flow Metrics Strip ── */
 .flowStrip {
   display: flex;

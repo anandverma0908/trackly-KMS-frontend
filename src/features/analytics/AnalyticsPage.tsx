@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { fetchWorkload, fetchKnowledgeGaps, detectKnowledgeGaps, createWikiPage, fetchWikiSpaces, fetchVelocity, analyzeTicketNL, fetchBugCost, fetchRecurringProblems, fetchClientHealth } from "@/services/api";
-import type { BugCostData, RecurringPattern, ClientHealthEntry } from "@/services/api";
+import { fetchWorkload, fetchKnowledgeGaps, detectKnowledgeGaps, createWikiPage, fetchWikiSpaces, fetchVelocity, analyzeTicketNL, fetchBugCost, fetchRecurringProblems, fetchClientHealth, fetchSentimentSignals, fetchBenchmarks, fetchResourceGaps } from "@/services/api";
+import type { BugCostData, RecurringPattern, ClientHealthEntry, SentimentSignalsResponse, BenchmarkEntry, ResourceGapsResponse } from "@/services/api";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -46,6 +46,21 @@ export default function AnalyticsPage() {
   const { data: velocityData = [] } = useQuery({
     queryKey: ["velocity"],
     queryFn: fetchVelocity,
+  });
+
+  const { data: sentimentData } = useQuery<SentimentSignalsResponse>({
+    queryKey: ["analytics-sentiment-signals"],
+    queryFn: fetchSentimentSignals,
+  });
+
+  const { data: benchmarkData = [] } = useQuery<BenchmarkEntry[]>({
+    queryKey: ["analytics-benchmarks"],
+    queryFn: fetchBenchmarks,
+  });
+
+  const { data: resourceData } = useQuery<ResourceGapsResponse>({
+    queryKey: ["analytics-resource-gaps"],
+    queryFn: fetchResourceGaps,
   });
 
   const detectMut = useMutation({
@@ -130,26 +145,9 @@ export default function AnalyticsPage() {
     return anomalies;
   }, [velocityData]);
 
-  // Emotion-Aware: mock sentiment signals
-  const sentimentSignals = [
-    { engineer: "Priya S.", signal: "Frustration", phrases: ["'this keeps breaking'", "'same issue again'"], sprint: "Sprint 9", severity: "high" as const },
-    { engineer: "Rahul D.", signal: "Overload", phrases: ["'too many things at once'", "'not enough time'"], sprint: "Sprint 9", severity: "high" as const },
-    { engineer: "Karan M.", signal: "Disengagement", phrases: ["'not sure why we're doing this'"], sprint: "Sprint 9", severity: "medium" as const },
-  ];
-
-  // Cross-Org Benchmarks: static industry data
-  const benchmarks = [
-    { metric: "Sprint predictability", yourValue: "61%", industryAvg: "68%", similar: "79%", direction: "up" as const, insight: "Teams with your velocity profile who adopted sprint scope freeze policies improved predictability by 34%." },
-    { metric: "Avg ticket resolution time", yourValue: "3.4d", industryAvg: "4.1d", similar: "2.8d", direction: "down" as const, insight: "Your resolution time is 17% better than industry average. Similar-stage teams with dedicated triage rotations reach 2.8d." },
-    { metric: "Knowledge coverage", yourValue: "54%", industryAvg: "48%", similar: "71%", direction: "up" as const, insight: "Teams with weekly doc-review rituals reach 71% wiki coverage within 6 months." },
-  ];
-
-  // Predictive Resource Planning: mock roadmap → gap data
-  const resourceGaps = [
-    { goal: "Q3: ML-powered ticket routing", skill: "Senior ML Engineer", urgency: "high" as const, neededBy: "June 2029", note: "No ML expertise on current team. Lead time ~3 months. Start hiring now." },
-    { goal: "Q3: Infrastructure auto-scaling", skill: "DevOps / SRE Specialist", urgency: "high" as const, neededBy: "August 2029", note: "Current team has 1 DevOps generalist. Dedicated SRE needed for 99.9% SLA target." },
-    { goal: "Q4: Mobile SDK", skill: "iOS Engineer", urgency: "medium" as const, neededBy: "October 2029", note: "No mobile engineers. Consider contracting for initial SDK, then hire full-time in Q4." },
-  ];
+  const sentimentSignals = sentimentData?.signals ?? [];
+  const benchmarks = benchmarkData;
+  const resourceGaps = resourceData?.gaps ?? [];
 
   return (
     <div className={styles.page}>
@@ -291,6 +289,12 @@ export default function AnalyticsPage() {
           <span className={styles.eosBadge}><RiSparklingLine size={9} /> EOS</span>
         </div>
         <div className={styles.sentimentList}>
+          {sentimentSignals.length === 0 && (
+            <div className={styles.anomalyHealthy}>
+              <RiSparklingLine size={16} color="var(--green)" />
+              <span>No emotional friction signals detected in the last 72 hours.</span>
+            </div>
+          )}
           {sentimentSignals.map((s) => (
             <div key={s.engineer} className={`${styles.sentimentRow} ${s.severity === "high" ? styles.sentimentRowHigh : styles.sentimentRowMed}`}>
               <div className={styles.sentimentAvatar}><RiUserLine size={13} /></div>
@@ -306,10 +310,12 @@ export default function AnalyticsPage() {
               </div>
             </div>
           ))}
-          <div className={styles.sentimentRec}>
-            <RiSparklingLine size={11} color="var(--accent)" />
-            <span>EOS detected emotional friction signals in Sprint 9 — not surveillance, care. Consider a team check-in before sprint end.</span>
-          </div>
+          {sentimentSignals.length > 0 && (
+            <div className={styles.sentimentRec}>
+              <RiSparklingLine size={11} color="var(--accent)" />
+              <span>EOS detected {sentimentSignals.length} emotional friction signal{sentimentSignals.length !== 1 ? "s" : ""} in the last {sentimentData?.window_hours ?? 72}h — not surveillance, care. Consider a team check-in.</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -326,16 +332,18 @@ export default function AnalyticsPage() {
           </div>
         </div>
         <div className={styles.benchmarkList}>
-          {benchmarks.map((b) => (
+          {benchmarks.length === 0 ? (
+            <p className={styles.empty}>Computing benchmarks…</p>
+          ) : benchmarks.map((b) => (
             <div key={b.metric} className={styles.benchmarkItem}>
               <div className={styles.benchmarkHeader}>
                 <span className={styles.benchmarkMetric}>{b.metric}</span>
                 <div className={styles.benchmarkValues}>
-                  <span className={styles.benchmarkYours}>You: <strong>{b.yourValue}</strong></span>
-                  <span className={styles.benchmarkIndustry}>Industry avg: {b.industryAvg}</span>
+                  <span className={styles.benchmarkYours}>You: <strong>{b.your_value}</strong></span>
+                  <span className={styles.benchmarkIndustry}>Industry avg: {b.industry_avg}</span>
                   <span className={`${styles.benchmarkSimilar} ${b.direction === "up" ? styles.benchmarkUp : styles.benchmarkDown}`}>
                     {b.direction === "up" ? <RiArrowUpLine size={10} /> : <RiArrowDownLine size={10} />}
-                    Similar teams: {b.similar}
+                    Similar teams: {b.similar_teams}
                   </span>
                 </div>
               </div>
@@ -355,23 +363,27 @@ export default function AnalyticsPage() {
           <span className={styles.eosBadge}><RiSparklingLine size={9} /> EOS</span>
         </div>
         <div className={styles.resourceList}>
-          {resourceGaps.map((r) => (
+          {resourceGaps.length === 0 ? (
+            <p className={styles.empty}>No resource gaps detected from current ticket data.</p>
+          ) : resourceGaps.map((r) => (
             <div key={r.goal} className={`${styles.resourceItem} ${r.urgency === "high" ? styles.resourceItemHigh : styles.resourceItemMed}`}>
               <div className={styles.resourceHeader}>
                 <span className={`${styles.resourceUrgency} ${r.urgency === "high" ? styles.resourceUrgencyHigh : styles.resourceUrgencyMed}`}>
-                  {r.urgency === "high" ? "Hire Now" : "Plan Q4"}
+                  {r.urgency === "high" ? "Hire Now" : "Plan Ahead"}
                 </span>
-                <span className={styles.resourceNeededBy}>Needed by {r.neededBy}</span>
+                <span className={styles.resourceNeededBy}>Needed by {r.needed_by}</span>
               </div>
               <div className={styles.resourceSkill}>{r.skill}</div>
               <div className={styles.resourceGoal}><RiBarChartLine size={10} /> For: {r.goal}</div>
               <p className={styles.resourceNote}>{r.note}</p>
             </div>
           ))}
-          <div className={styles.resourceRec}>
-            <RiTeamLine size={11} color="var(--accent)" />
-            <span>EOS forecasts a 3-person gap by Q3 based on current roadmap velocity. Recommended: start ML Engineer search immediately (3-month lead time).</span>
-          </div>
+          {resourceData?.forecast_note && (
+            <div className={styles.resourceRec}>
+              <RiTeamLine size={11} color="var(--accent)" />
+              <span>{resourceData.forecast_note}</span>
+            </div>
+          )}
         </div>
       </div>
 

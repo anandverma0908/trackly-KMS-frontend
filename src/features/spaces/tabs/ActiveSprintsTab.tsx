@@ -28,6 +28,7 @@ import {
   RiSparklingLine,
   RiAlertLine,
   RiSettings3Line,
+  RiAddLine,
 } from "react-icons/ri";
 import { IssueTypeBadge } from "@/components/ui/Badge";
 
@@ -70,7 +71,7 @@ type AIFilter =
   | null;
 
 /* ── Flow Metrics Strip ── */
-function FlowMetricsStrip({ tasks }: { tasks: ProjectTask[] }) {
+function FlowMetricsStrip({ tasks, onCreateTask }: { tasks: ProjectTask[]; onCreateTask?: () => void }) {
   const inProgress = tasks.filter((t) => t.status === "In Progress");
   const blocked = tasks.filter((t) => t.status === "Blocked");
   const inReview = tasks.filter((t) => t.status === "In Review");
@@ -128,6 +129,12 @@ function FlowMetricsStrip({ tasks }: { tasks: ProjectTask[] }) {
           </span>
         </div>
       </div>
+      {onCreateTask && (
+        <button className="btn btn-primary btn-sm" onClick={onCreateTask}>
+          <RiAddLine size={16} />
+          Create Task
+        </button>
+      )}
     </div>
   );
 }
@@ -168,7 +175,7 @@ export default function ActiveSprintsTab({
   const [myTasksActive, setMyTasksActive] = useState(false);
   const [aiFilter, setAiFilter] = useState<AIFilter>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const createOpen = externalCreateOpen ?? showCreateModal;
+  const createOpen = externalCreateOpen || showCreateModal;
   const [createColumn, _setCreateColumn] = useState("To Do");
   const [viewTicket, setViewTicket] = useState<ProjectTask | null>(null);
   // Optimistic local status overrides for drag-and-drop
@@ -501,7 +508,7 @@ export default function ActiveSprintsTab({
       </div> */}
 
       {/* ── Flow Metrics Strip ── */}
-      <FlowMetricsStrip tasks={allSprintTasks} />
+      <FlowMetricsStrip tasks={allSprintTasks} onCreateTask={() => setShowCreateModal(true)} />
 
       {/* ── Toolbar: member chips + search + my tasks + AI filters + create ── */}
       <div className={styles.toolbar}>

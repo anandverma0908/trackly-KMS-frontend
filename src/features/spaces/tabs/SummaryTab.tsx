@@ -4,6 +4,9 @@ import {
   fetchSpaceHealth,
   fetchSpacesBrief,
   fetchPodSummary,
+  fetchBurndownReport,
+  fetchVelocityReport,
+  fetchCfdReport,
 } from "@/services/api";
 import {
   AreaChart,
@@ -150,6 +153,19 @@ export default function SummaryTab({ project }: { project: Project }) {
     queryFn: fetchPodSummary,
     staleTime: 1000 * 60 * 15,
     retry: 1,
+  });
+
+  const { data: burndown } = useQuery({
+    queryKey: ["reports-burndown", project.key],
+    queryFn: () => fetchBurndownReport(project.key),
+  });
+  const { data: velocity } = useQuery({
+    queryKey: ["reports-velocity", project.key],
+    queryFn: () => fetchVelocityReport(project.key),
+  });
+  const { data: cfd } = useQuery({
+    queryKey: ["reports-cfd", project.key],
+    queryFn: () => fetchCfdReport(project.key),
   });
 
   const { avgHealth, healthDiff, totalPods } = useMemo(() => {
@@ -875,6 +891,84 @@ export default function SummaryTab({ project }: { project: Project }) {
             </div>
           );
         })}
+      </div>
+
+      {/* ── Reports ── */}
+      <div className={styles.reportsSectionTitle}>Reports</div>
+
+      {/* Burndown */}
+      <div className={styles.chartCard}>
+        <div className={styles.chartCardHeader}>
+          <span className={styles.cardLabel}>Burndown</span>
+          <span className={styles.chartCardSub}>{burndown?.sprint?.name ?? "Active Sprint"}</span>
+        </div>
+        {burndown && burndown.data.length > 0 ? (
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={burndown.data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="bdRemaining" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-3)" }} tickFormatter={(v) => v.slice(5)} />
+              <YAxis tick={{ fontSize: 10, fill: "var(--text-3)" }} allowDecimals={false} />
+              <ReTooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }} />
+              <Area type="monotone" dataKey="remaining" stroke="var(--accent)" strokeWidth={2} fill="url(#bdRemaining)" name="Remaining" dot={{ fill: "var(--accent)", strokeWidth: 0, r: 3 }} />
+              <Area type="monotone" dataKey="ideal" stroke="var(--text-3)" strokeWidth={1.5} strokeDasharray="4 4" fill="none" name="Ideal" dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className={styles.chartEmpty}>No active sprint data available.</p>
+        )}
+      </div>
+
+      {/* Velocity */}
+      <div className={styles.chartCard}>
+        <div className={styles.chartCardHeader}>
+          <span className={styles.cardLabel}>Velocity</span>
+          <span className={styles.chartCardSub}>Last {velocity?.length ?? 0} sprints</span>
+        </div>
+        {velocity && velocity.length > 0 ? (
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={velocity} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="sprint" tick={{ fontSize: 10, fill: "var(--text-3)" }} />
+              <YAxis tick={{ fontSize: 10, fill: "var(--text-3)" }} allowDecimals={false} />
+              <ReTooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }} />
+              <Bar dataKey="committed" fill="var(--surface-3)" maxBarSize={28} name="Committed" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="completed" fill="var(--green)" maxBarSize={28} name="Completed" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className={styles.chartEmpty}>No completed sprint data yet.</p>
+        )}
+      </div>
+
+      {/* Cumulative Flow */}
+      <div className={styles.chartCard}>
+        <div className={styles.chartCardHeader}>
+          <span className={styles.cardLabel}>Cumulative Flow</span>
+          <span className={styles.chartCardSub}>Last 30 days</span>
+        </div>
+        {cfd && cfd.length > 0 ? (
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={cfd} margin={{ top: 8, right: 16, left: 0, bottom: 0 }} stackOffset="expand">
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-3)" }} tickFormatter={(v) => v.slice(5)} />
+              <YAxis tick={{ fontSize: 10, fill: "var(--text-3)" }} allowDecimals={false} />
+              <ReTooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }} />
+              <Area type="monotone" dataKey="To Do" stackId="1" stroke="var(--text-3)" fill="var(--surface-3)" />
+              <Area type="monotone" dataKey="In Progress" stackId="1" stroke="var(--amber)" fill="var(--amber)" />
+              <Area type="monotone" dataKey="In Review" stackId="1" stroke="var(--purple)" fill="var(--purple)" />
+              <Area type="monotone" dataKey="Blocked" stackId="1" stroke="var(--red)" fill="var(--red)" />
+              <Area type="monotone" dataKey="Done" stackId="1" stroke="var(--green)" fill="var(--green)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className={styles.chartEmpty}>No flow data available.</p>
+        )}
       </div>
     </div>
   );
