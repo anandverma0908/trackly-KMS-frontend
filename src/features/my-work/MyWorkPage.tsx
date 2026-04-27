@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { useMyWork, fetchTicket } from "./useMyWork";
 import { useMyWorkActions } from "./useMyWorkActions";
 import { ticketToInitialData } from "@/utils/ticketHelpers";
@@ -54,11 +55,19 @@ export default function MyWorkPage() {
     handleQuickAction: _handleQuickAction,
   } = useMyWorkActions();
 
-  const { data: selectedTicketData } = useQuery({
+  const { data: selectedTicketData, isError: ticketError } = useQuery({
     queryKey: ["ticket", selectedKey],
     queryFn: () => fetchTicket(selectedKey!),
     enabled: !!selectedKey,
+    retry: false,
   });
+
+  useEffect(() => {
+    if (ticketError && selectedKey) {
+      toast.error(`Failed to load ticket ${selectedKey}`);
+      setSelectedKey(null);
+    }
+  }, [ticketError, selectedKey]);
 
   const handleQuickAction = useCallback(
     (actionId: string, ticket: AITicket) => {

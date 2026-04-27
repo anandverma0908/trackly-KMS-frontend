@@ -109,6 +109,11 @@
 }
 .eosBtn:hover { opacity: 0.88; box-shadow: 0 4px 14px rgba(79, 126, 255, 0.35); }
 .eosBtn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+.eosBtnError {
+  background: var(--red) !important;
+  box-shadow: 0 2px 8px rgba(248, 113, 113, 0.28) !important;
+}
+.eosBtnError:hover { box-shadow: 0 4px 14px rgba(248, 113, 113, 0.38) !important; }
 
 .spinner {
   display: inline-block;
@@ -409,6 +414,77 @@
 .completeSprintBtn:hover { background: rgba(52, 211, 153, 0.22); }
 .completeSprintBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.deleteSprintBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--text-3);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+.deleteSprintBtn:hover {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: var(--red);
+}
+
+.deleteConfirmInline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+
+.deleteConfirmText {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--red);
+  white-space: nowrap;
+}
+
+.deleteConfirmYes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: opacity 0.12s;
+  white-space: nowrap;
+}
+.deleteConfirmYes:hover { opacity: 0.85; }
+.deleteConfirmYes:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.deleteConfirmNo {
+  background: none;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  padding: 3px 6px;
+  border-radius: 5px;
+  transition: color 0.12s;
+}
+.deleteConfirmNo:hover { color: var(--text); }
+
 .createSprintBtn {
   display: inline-flex;
   align-items: center;
@@ -434,6 +510,8 @@
 .sectionTable {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  border-radius: 0 0 10px 10px;
 }
 
 /* Grid: checkbox | key | title | status | assignee | SP | due | action */
@@ -523,7 +601,6 @@
   min-width: 0;
 }
 
-.issueTypeIcon { font-size: 11px; flex-shrink: 0; }
 
 .titleText {
   font-size: 12px;

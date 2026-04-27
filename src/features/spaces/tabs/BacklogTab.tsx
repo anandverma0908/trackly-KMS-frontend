@@ -13,6 +13,7 @@ import {
   startSprint,
   completeSprint,
   createSprint,
+  deleteSprint,
   fetchSprintDraft,
   updateTicket,
   updateTicketStatus,
@@ -21,6 +22,7 @@ import {
 import type { SprintDraftResult } from "@/services/api";
 import type { TicketCreate } from "@/types";
 import SideDrawer from "@/components/ui/SideDrawer";
+import { IssueTypeBadge } from "@/components/ui/Badge";
 import styles from "./BacklogTab.module.css";
 
 import {
@@ -41,13 +43,6 @@ import {
   RiFilter3Line,
 } from "react-icons/ri";
 
-const ISSUE_TYPE_ICONS: Record<string, string> = {
-  Story: "🟢",
-  Bug: "🔴",
-  Task: "🔵",
-  Epic: "⚡",
-  Subtask: "◾",
-};
 
 type SortBy = "priority" | "created" | "updated" | "points" | "key";
 const PRIORITY_ORDER = ["Critical", "High", "Medium", "Low"];
@@ -72,10 +67,12 @@ export default function BacklogTab({ project }: { project: Project }) {
   const [showCreateDrawer, setShowCreateDrawer] = useState(false);
   const [createForSprint, setCreateForSprint] = useState<string | undefined>();
   const [localTasks, setLocalTasks] = useState<ProjectTask[]>([]);
+  const [movingTicketKey, setMovingTicketKey] = useState<string | null>(null);
   const [viewingTask, setViewingTask] = useState<ProjectTask | null>(null);
   const [showSaveFilter, setShowSaveFilter] = useState(false);
   const [filterName, setFilterName] = useState("");
 
+  const [confirmDeleteSprintId, setConfirmDeleteSprintId] = useState<string | null>(null);
   const [startSprintModal, setStartSprintModal] =
     useState<ProjectSprint | null>(null);
   const [completeSprintModal, setCompleteSprintModal] =
@@ -84,9 +81,30 @@ export default function BacklogTab({ project }: { project: Project }) {
 
   /* ── EOS Plan Sprint ── */
   const [aiPlanLoading, setAiPlanLoading] = useState(false);
-  const [aiPlanResult, setAiPlanResult] = useState<SprintDraftResult | null>(
-    null,
-  );
+  const [aiPlanResult, setAiPlanResult] = useState<SprintDraftResult | null>(null);
+  const [aiPlanError, setAiPlanError] = useState(false);
+
+  const confirmEosMut = useMutation({
+    mutationFn: () => {
+      if (!aiPlanResult) throw new Error("No plan to confirm");
+      const today = new Date().toISOString().split("T")[0];
+      const twoWeeks = new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0];
+      return createSprint({
+        name: `Sprint ${project.sprints.length + 1}`,
+        start_date: today,
+        end_date: twoWeeks,
+        project_id: project.id,
+        ticket_keys: aiPlanResult.tickets.map((t) => t.key),
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+      qc.invalidateQueries({ queryKey: ["sprints"] });
+      toast.success("Sprint created from EOS plan!");
+      setAiPlanResult(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   /* ── Duplicate detection / quick create ── */
   const [quickCreateSprintId, setQuickCreateSprintId] = useState<string | null>(
@@ -100,15 +118,33 @@ export default function BacklogTab({ project }: { project: Project }) {
     [project.sprints],
   );
 
+  // Clear stale delete confirmation if the sprint is no longer visible (BUG-R5)
+  useEffect(() => {
+    if (confirmDeleteSprintId && !visibleSprints.some((s) => s.id === confirmDeleteSprintId)) {
+      setConfirmDeleteSprintId(null);
+    }
+  }, [visibleSprints, confirmDeleteSprintId]);
+
+  // Escape key dismisses inline delete confirm (BUG-R4)
+  useEffect(() => {
+    if (!confirmDeleteSprintId) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setConfirmDeleteSprintId(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [confirmDeleteSprintId]);
+
   const backlogTasks: ProjectTask[] = useMemo(() => {
     const base = project.backlogTasks ?? [];
     return [...localTasks, ...base];
   }, [project.backlogTasks, localTasks]);
 
+  // Use only active/planning sprints for duplicate detection — completed sprints cause false positives (BUG-10)
   const allTasksPool = useMemo(() => {
-    const sprintTasks = project.sprints.flatMap((s) => s.tasks);
+    const sprintTasks = visibleSprints.flatMap((s) => s.tasks);
     return [...backlogTasks, ...sprintTasks];
-  }, [backlogTasks, project.sprints]);
+  }, [backlogTasks, visibleSprints]);
 
   function filterAndSort(tasks: ProjectTask[]): ProjectTask[] {
     let result = tasks;
@@ -135,41 +171,38 @@ export default function BacklogTab({ project }: { project: Project }) {
 
   /* ── Mutations ── */
   const moveToSprintMut = useMutation({
-    mutationFn: ({
-      sprintId,
-      ticketKey,
-    }: {
-      sprintId: string;
-      ticketKey: string;
-    }) => addTicketToSprint(sprintId, ticketKey),
+    mutationFn: ({ sprintId, ticketKey }: { sprintId: string; ticketKey: string }) => {
+      setMovingTicketKey(ticketKey);
+      return addTicketToSprint(sprintId, ticketKey);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["space-project", project.key] });
       toast.success("Moved to sprint");
     },
     onError: (e: Error) => toast.error(e.message),
+    onSettled: () => setMovingTicketKey(null),
   });
 
   const moveToBacklogMut = useMutation({
-    mutationFn: ({
-      sprintId,
-      ticketKey,
-    }: {
-      sprintId: string;
-      ticketKey: string;
-    }) => removeTicketFromSprint(sprintId, ticketKey),
+    mutationFn: ({ sprintId, ticketKey }: { sprintId: string; ticketKey: string }) => {
+      setMovingTicketKey(ticketKey);
+      return removeTicketFromSprint(sprintId, ticketKey);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["space-project", project.key] });
       toast.success("Moved to backlog");
     },
     onError: (e: Error) => toast.error(e.message),
+    onSettled: () => setMovingTicketKey(null),
   });
 
   const startSprintMut = useMutation({
-    mutationFn: (id: string) => startSprint(id),
+    mutationFn: ({ id, body }: { id: string; body: { name: string; goal: string; start_date: string; end_date: string } }) =>
+      startSprint(id, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["space-project", project.key] });
       qc.invalidateQueries({ queryKey: ["sprints"] });
-      toast.success("Sprint started! 🚀");
+      toast.success("Sprint started!");
       setStartSprintModal(null);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -186,6 +219,17 @@ export default function BacklogTab({ project }: { project: Project }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteSprintMut = useMutation({
+    mutationFn: (id: string) => deleteSprint(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+      qc.invalidateQueries({ queryKey: ["sprints"] });
+      toast.success("Sprint deleted");
+      setConfirmDeleteSprintId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const createSprintMut = useMutation({
     mutationFn: (payload: {
       name: string;
@@ -196,11 +240,15 @@ export default function BacklogTab({ project }: { project: Project }) {
     onSuccess: async (newSprint) => {
       if (selected.size > 0 && newSprint?.id) {
         const keys = Array.from(selected);
-        await Promise.all(keys.map((k) => addTicketToSprint(newSprint.id, k)));
+        // Use allSettled so a partial failure doesn't hide the sprint creation (BUG-04)
+        const results = await Promise.allSettled(keys.map((k) => addTicketToSprint(newSprint.id, k)));
+        const failed = results.filter((r) => r.status === "rejected").length;
         setSelected(new Set());
-        toast.success(
-          `Sprint created with ${keys.length} issue${keys.length > 1 ? "s" : ""}!`,
-        );
+        if (failed > 0) {
+          toast.error(`Sprint created, but ${failed} ticket${failed > 1 ? "s" : ""} failed to assign`);
+        } else {
+          toast.success(`Sprint created with ${keys.length} issue${keys.length > 1 ? "s" : ""}!`);
+        }
       } else {
         toast.success("Sprint created!");
       }
@@ -214,12 +262,12 @@ export default function BacklogTab({ project }: { project: Project }) {
   const createMut = useMutation({
     mutationFn: createTicket,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["space-project", project.key] });
-      qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
       toast.success("Ticket created!");
       setShowCreateDrawer(false);
       setCreateForSprint(undefined);
-      setTimeout(() => setLocalTasks([]), 400);
+      // Clear optimistic task after re-fetch; .finally ensures cleanup even if re-fetch fails (BUG-R1)
+      qc.invalidateQueries({ queryKey: ["space-project", project.key] }).finally(() => setLocalTasks([]));
+      qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
     },
     onError: (e: Error) => {
       toast.error(e.message);
@@ -258,64 +306,64 @@ export default function BacklogTab({ project }: { project: Project }) {
     });
   }
 
-  function handleBulkMoveToSprint(sprintId: string) {
-    if (selected.size === 0) return;
+  async function handleBulkMoveToSprint(sprintId: string) {
+    if (!sprintId || selected.size === 0) return;
     const keys = Array.from(selected);
-    Promise.all(keys.map((k) => addTicketToSprint(sprintId, k)))
-      .then(() => {
-        qc.invalidateQueries({ queryKey: ["space-project", project.key] });
-        toast.success(
-          `Moved ${keys.length} ticket${keys.length > 1 ? "s" : ""} to sprint`,
-        );
-        setSelected(new Set());
-      })
-      .catch((e) => toast.error(e.message));
+    const results = await Promise.allSettled(keys.map((k) => addTicketToSprint(sprintId, k)));
+    const failed = results.filter((r) => r.status === "rejected").length;
+    const ok = keys.length - failed;
+    qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+    setSelected(new Set());
+    if (failed > 0) toast.error(`${ok} moved, ${failed} failed`);
+    else toast.success(`Moved ${ok} ticket${ok > 1 ? "s" : ""} to sprint`);
   }
 
-  function handleBulkAssign(assignee: string) {
-    if (selected.size === 0) return;
+  async function handleBulkAssign(assignee: string) {
+    if (!assignee || selected.size === 0) return;
     const keys = Array.from(selected);
-    Promise.all(keys.map((k) => updateTicket(k, { assignee })))
-      .then(() => {
-        qc.invalidateQueries({ queryKey: ["space-project", project.key] });
-        toast.success(`Assigned ${keys.length} ticket${keys.length > 1 ? "s" : ""}`);
-        setSelected(new Set());
-      })
-      .catch((e) => toast.error(e.message));
+    const results = await Promise.allSettled(keys.map((k) => updateTicket(k, { assignee })));
+    const failed = results.filter((r) => r.status === "rejected").length;
+    const ok = keys.length - failed;
+    qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+    setSelected(new Set());
+    if (failed > 0) toast.error(`${ok} assigned, ${failed} failed`);
+    else toast.success(`Assigned ${ok} ticket${ok > 1 ? "s" : ""}`);
   }
 
-  function handleBulkPriority(priority: string) {
-    if (selected.size === 0) return;
+  async function handleBulkPriority(priority: string) {
+    if (!priority || selected.size === 0) return;
     const keys = Array.from(selected);
-    Promise.all(keys.map((k) => updateTicket(k, { priority })))
-      .then(() => {
-        qc.invalidateQueries({ queryKey: ["space-project", project.key] });
-        toast.success(`Priority updated for ${keys.length} ticket${keys.length > 1 ? "s" : ""}`);
-        setSelected(new Set());
-      })
-      .catch((e) => toast.error(e.message));
+    const results = await Promise.allSettled(keys.map((k) => updateTicket(k, { priority })));
+    const failed = results.filter((r) => r.status === "rejected").length;
+    const ok = keys.length - failed;
+    qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+    setSelected(new Set());
+    if (failed > 0) toast.error(`${ok} updated, ${failed} failed`);
+    else toast.success(`Priority updated for ${ok} ticket${ok > 1 ? "s" : ""}`);
   }
 
-  function handleBulkTransition(status: string) {
-    if (selected.size === 0) return;
+  async function handleBulkTransition(status: string) {
+    if (!status || selected.size === 0) return;
     const keys = Array.from(selected);
-    Promise.all(keys.map((k) => updateTicketStatus(k, status)))
-      .then(() => {
-        qc.invalidateQueries({ queryKey: ["space-project", project.key] });
-        toast.success(`Transitioned ${keys.length} ticket${keys.length > 1 ? "s" : ""}`);
-        setSelected(new Set());
-      })
-      .catch((e) => toast.error(e.message));
+    const results = await Promise.allSettled(keys.map((k) => updateTicketStatus(k, status)));
+    const failed = results.filter((r) => r.status === "rejected").length;
+    const ok = keys.length - failed;
+    qc.invalidateQueries({ queryKey: ["space-project", project.key] });
+    setSelected(new Set());
+    if (failed > 0) toast.error(`${ok} transitioned, ${failed} failed`);
+    else toast.success(`Transitioned ${ok} ticket${ok > 1 ? "s" : ""}`);
   }
 
   async function handleEosPlanSprint() {
     setAiPlanLoading(true);
     setAiPlanResult(null);
+    setAiPlanError(false);
     try {
       const result = await fetchSprintDraft(project.key);
       setAiPlanResult(result);
     } catch {
       toast.error("EOS sprint planning failed");
+      setAiPlanError(true);
     } finally {
       setAiPlanLoading(false);
     }
@@ -370,13 +418,13 @@ export default function BacklogTab({ project }: { project: Project }) {
                 value={filterName}
                 onChange={(e) => setFilterName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && filterName.trim()) saveFilterMut.mutate(filterName.trim());
+                  if (e.key === "Enter" && filterName.trim() && !saveFilterMut.isPending) saveFilterMut.mutate(filterName.trim());
                   if (e.key === "Escape") { setShowSaveFilter(false); setFilterName(""); }
                 }}
                 autoFocus
                 style={{ width: 120 }}
               />
-              <button className={styles.clearBtn} onClick={() => { if (filterName.trim()) saveFilterMut.mutate(filterName.trim()); }}>Save</button>
+              <button className={styles.clearBtn} disabled={saveFilterMut.isPending || !filterName.trim()} onClick={() => { if (filterName.trim()) saveFilterMut.mutate(filterName.trim()); }}>Save</button>
               <button className={styles.clearBtn} onClick={() => { setShowSaveFilter(false); setFilterName(""); }}>Cancel</button>
             </div>
           ) : (
@@ -386,13 +434,17 @@ export default function BacklogTab({ project }: { project: Project }) {
           )}
 
           <button
-            className={styles.eosBtn}
+            className={`${styles.eosBtn} ${aiPlanError ? styles.eosBtnError : ""}`}
             onClick={handleEosPlanSprint}
             disabled={aiPlanLoading}
           >
             {aiPlanLoading ? (
               <>
                 <span className={styles.spinner} /> Planning…
+              </>
+            ) : aiPlanError ? (
+              <>
+                <RiAlertLine size={13} /> Retry EOS Plan
               </>
             ) : (
               <>
@@ -488,13 +540,41 @@ export default function BacklogTab({ project }: { project: Project }) {
                 {/* Right: action buttons */}
                 <div className={styles.sprintActions}>
                   {canManageSprints && sprint.status === "planning" && (
-                    <button
-                      className={styles.startSprintBtn}
-                      onClick={() => setStartSprintModal(sprint)}
-                    >
-                      <RiPlayCircleLine size={13} />
-                      Start Sprint
-                    </button>
+                    <>
+                      {confirmDeleteSprintId === sprint.id ? (
+                        <div className={styles.deleteConfirmInline}>
+                          <span className={styles.deleteConfirmText}>Delete sprint?</span>
+                          <button
+                            className={styles.deleteConfirmYes}
+                            disabled={deleteSprintMut.isPending}
+                            onClick={() => deleteSprintMut.mutate(sprint.id)}
+                          >
+                            {deleteSprintMut.isPending ? <span className={styles.spinner} /> : "Delete"}
+                          </button>
+                          <button
+                            className={styles.deleteConfirmNo}
+                            onClick={() => setConfirmDeleteSprintId(null)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          className={styles.deleteSprintBtn}
+                          onClick={() => setConfirmDeleteSprintId(sprint.id)}
+                          title="Delete sprint"
+                        >
+                          <RiCloseLine size={13} />
+                        </button>
+                      )}
+                      <button
+                        className={styles.startSprintBtn}
+                        onClick={() => setStartSprintModal(sprint)}
+                      >
+                        <RiPlayCircleLine size={13} />
+                        Start Sprint
+                      </button>
+                    </>
                   )}
                   {canManageSprints && sprint.status === "active" && (
                     <button
@@ -536,18 +616,13 @@ export default function BacklogTab({ project }: { project: Project }) {
                           sprints={visibleSprints}
                           currentSprintId={sprint.id}
                           onMoveToSprint={(sid) =>
-                            moveToSprintMut.mutate({
-                              sprintId: sid,
-                              ticketKey: task.key,
-                            })
+                            moveToSprintMut.mutate({ sprintId: sid, ticketKey: task.key })
                           }
                           onMoveToBacklog={() =>
-                            moveToBacklogMut.mutate({
-                              sprintId: sprint.id,
-                              ticketKey: task.key,
-                            })
+                            moveToBacklogMut.mutate({ sprintId: sprint.id, ticketKey: task.key })
                           }
                           onClick={() => setViewingTask(task)}
+                          isMoving={movingTicketKey === task.key}
                           epicColor={task.epicId ? epicColorMap[task.epicId] : undefined}
                         />
                       ))
@@ -634,41 +709,41 @@ export default function BacklogTab({ project }: { project: Project }) {
             <div className={styles.sectionTable}>
               <TableHeader />
               <div className={styles.rows}>
-                {filterAndSort(backlogTasks).length === 0 ? (
-                  <div className={styles.emptyRows}>
-                    Backlog is empty.{" "}
-                    <span
-                      className={styles.emptyRowsLink}
-                      onClick={() => {
-                        setCreateForSprint(undefined);
-                        setShowCreateDrawer(true);
-                      }}
-                    >
-                      Create an issue
-                    </span>
-                  </div>
-                ) : (
-                  filterAndSort(backlogTasks).map((task) => (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      selected={selected.has(task.key)}
-                      onSelect={() => toggleSelect(task.key)}
-                      sprints={visibleSprints}
-                      currentSprintId={undefined}
-                      onMoveToSprint={(sid) =>
-                        moveToSprintMut.mutate({
-                          sprintId: sid,
-                          ticketKey: task.key,
-                        })
-                      }
-                      onMoveToBacklog={undefined}
-                      onClick={() => setViewingTask(task)}
-                      isBacklog
-                      epicColor={task.epicId ? epicColorMap[task.epicId] : undefined}
-                    />
-                  ))
-                )}
+                {(() => {
+                  const filteredBacklog = filterAndSort(backlogTasks);
+                  return filteredBacklog.length === 0 ? (
+                    <div className={styles.emptyRows}>
+                      Backlog is empty.{" "}
+                      <span
+                        className={styles.emptyRowsLink}
+                        onClick={() => {
+                          setCreateForSprint(undefined);
+                          setShowCreateDrawer(true);
+                        }}
+                      >
+                        Create an issue
+                      </span>
+                    </div>
+                  ) : (
+                    filteredBacklog.map((task) => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        selected={selected.has(task.key)}
+                        onSelect={() => toggleSelect(task.key)}
+                        sprints={visibleSprints}
+                        currentSprintId={undefined}
+                        onMoveToSprint={(sid) =>
+                          moveToSprintMut.mutate({ sprintId: sid, ticketKey: task.key })
+                        }
+                        onMoveToBacklog={undefined}
+                        onClick={() => setViewingTask(task)}
+                        isMoving={movingTicketKey === task.key}
+                        epicColor={task.epicId ? epicColorMap[task.epicId] : undefined}
+                      />
+                    ))
+                  );
+                })()}
                 {quickCreateSprintId === "backlog" ? (
                   <QuickCreateRow
                     allTasks={allTasksPool}
@@ -700,7 +775,7 @@ export default function BacklogTab({ project }: { project: Project }) {
         <StartSprintModal
           sprint={startSprintModal}
           onClose={() => setStartSprintModal(null)}
-          onConfirm={(id) => startSprintMut.mutate(id)}
+          onConfirm={(id, body) => startSprintMut.mutate({ id, body })}
           isLoading={startSprintMut.isPending}
         />
       )}
@@ -763,24 +838,23 @@ export default function BacklogTab({ project }: { project: Project }) {
             status: data.status || "To Do",
             sprint_id: createForSprint,
           };
+          const _ts = Date.now();
           const tempTask: ProjectTask = {
-            id: `local-${Date.now()}`,
-            key: `${project.key}-L${Date.now() % 1000}`,
+            id: `local-${_ts}-${Math.random().toString(36).slice(2, 6)}`,
+            key: `${project.key}-L${_ts}-${Math.random().toString(36).slice(2, 6)}`,
             title: payload.title,
             status: _normalizeStatus(payload.status) as ProjectTask["status"],
             priority: (payload.priority || "Medium") as ProjectTask["priority"],
             type: _normalizeType(payload.issue_type) as ProjectTask["type"],
             assignee: payload.assignee || project.members[0]?.name || "",
-            assigneeInitials: _initials(
-              payload.assignee || project.members[0]?.name,
-            ),
-            assigneeColor: _hashColor(
-              payload.assignee || project.members[0]?.name || "",
-            ),
+            assigneeInitials: _initials(payload.assignee || project.members[0]?.name),
+            assigneeColor: _hashColor(payload.assignee || project.members[0]?.name || ""),
             storyPoints: payload.story_points || 0,
             createdAt: new Date().toISOString().split("T")[0],
             updatedAt: new Date().toISOString().split("T")[0],
             labels: payload.labels || [],
+            pod: project.key,
+            sprint: createForSprint ?? undefined,
           };
           setLocalTasks((prev) => [...prev, tempTask]);
           createMut.mutate(payload);
@@ -884,8 +958,8 @@ export default function BacklogTab({ project }: { project: Project }) {
                         title={t.priority}
                       />
                       <span className={styles.eosTicketTitle}>{t.summary}</span>
-                      <span className={styles.eosTicketSP}>
-                        {t.suggested_points}pt
+                      <span className={styles.eosTicketSP} title="AI suggested points">
+                        {t.suggested_points}pt <span style={{ fontWeight: 400, opacity: 0.55, fontSize: 9 }}>AI</span>
                       </span>
                     </div>
                     {t.rationale && (
@@ -895,6 +969,22 @@ export default function BacklogTab({ project }: { project: Project }) {
                 );
               })}
             </div>
+            {canManageSprints && (
+              <div style={{ padding: "12px 12px 4px", borderTop: "1px solid var(--border-2)" }}>
+                <button
+                  className={styles.eosBtn}
+                  style={{ width: "100%", justifyContent: "center" }}
+                  onClick={() => confirmEosMut.mutate()}
+                  disabled={confirmEosMut.isPending}
+                >
+                  {confirmEosMut.isPending ? (
+                    <><span className={styles.spinner} /> Creating Sprint…</>
+                  ) : (
+                    <><RiAddLine size={13} /> Create Sprint from Plan</>
+                  )}
+                </button>
+              </div>
+            )}
           </>
         )}
       </SideDrawer>
@@ -934,7 +1024,7 @@ const TaskRow = React.memo(function TaskRow({
   onMoveToSprint,
   onMoveToBacklog,
   onClick,
-  isBacklog,
+  isMoving,
   epicColor,
 }: {
   task: ProjectTask;
@@ -945,7 +1035,7 @@ const TaskRow = React.memo(function TaskRow({
   onMoveToSprint: (sprintId: string) => void;
   onMoveToBacklog: (() => void) | undefined;
   onClick?: () => void;
-  isBacklog?: boolean;
+  isMoving?: boolean;
   epicColor?: string;
 }) {
   const priorityColor = getPriorityColor(task.priority);
@@ -966,13 +1056,22 @@ const TaskRow = React.memo(function TaskRow({
     return () => document.removeEventListener("mousedown", handle);
   }, [menuOpen]);
 
-  const otherSprints = sprints.filter((s) => s.id !== currentSprintId);
+  // Memoized to avoid recompute on every render (BUG-22)
+  const otherSprints = useMemo(
+    () => sprints.filter((s) => s.id !== currentSprintId),
+    [sprints, currentSprintId],
+  );
 
   return (
     <div
-      className={`${styles.row} ${selected ? styles.rowSelected : ""} ${menuOpen ? styles.rowMenuOpen : ""} ${isStale && isBacklog ? styles.rowStale : ""}`}
+      className={`${styles.row} ${selected ? styles.rowSelected : ""} ${menuOpen ? styles.rowMenuOpen : ""} ${isStale ? styles.rowStale : ""}`}
       style={{ "--priority-color": priorityColor } as React.CSSProperties}
-      onClick={onClick}
+      onClick={(e) => {
+        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+        const x = e.clientX - rect.left - 12; // subtract row left padding
+        if (x < 40) return; // skip clicks in the checkbox column + gap area
+        onClick?.();
+      }}
     >
       <div className={styles.tdCheck} onClick={(e) => e.stopPropagation()}>
         <input
@@ -986,9 +1085,7 @@ const TaskRow = React.memo(function TaskRow({
         <span className={styles.keyBadge}>{task.key}</span>
       </div>
       <div className={styles.tdTitle}>
-        <span className={styles.issueTypeIcon}>
-          {ISSUE_TYPE_ICONS[task.type] ?? "🔵"}
-        </span>
+        <IssueTypeBadge type={task.type} />
         {epicColor && (
           <span className={styles.epicDot} style={{ background: epicColor }} title="Epic" />
         )}
@@ -1061,9 +1158,11 @@ const TaskRow = React.memo(function TaskRow({
       >
         <button
           className={styles.actionMenuBtn}
-          onClick={() => setMenuOpen((v) => !v)}
+          onClick={() => !isMoving && setMenuOpen((v) => !v)}
+          disabled={isMoving}
+          title={isMoving ? "Moving…" : undefined}
         >
-          <RiMore2Line size={14} />
+          {isMoving ? <span className={styles.spinner} /> : <RiMore2Line size={14} />}
         </button>
         {menuOpen && (
           <div className={styles.actionMenu}>
@@ -1074,6 +1173,7 @@ const TaskRow = React.memo(function TaskRow({
                   <button
                     key={s.id}
                     className={styles.menuItem}
+                    disabled={isMoving}
                     onClick={() => {
                       onMoveToSprint(s.id);
                       setMenuOpen(false);
@@ -1089,6 +1189,7 @@ const TaskRow = React.memo(function TaskRow({
             {onMoveToBacklog && (
               <button
                 className={styles.menuItem}
+                disabled={isMoving}
                 onClick={() => {
                   onMoveToBacklog();
                   setMenuOpen(false);
@@ -1122,6 +1223,7 @@ function QuickCreateRow({
   onCancel: () => void;
 }) {
   const [title, setTitle] = useState("");
+  const confirmedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -1132,6 +1234,12 @@ function QuickCreateRow({
     () => _findDuplicates(title, allTasks),
     [title, allTasks],
   );
+
+  function handleConfirm() {
+    if (!title.trim() || confirmedRef.current) return;
+    confirmedRef.current = true; // guard against double-Enter (BUG-20)
+    onConfirm(title.trim());
+  }
 
   return (
     <div className={styles.quickCreateWrap}>
@@ -1144,14 +1252,14 @@ function QuickCreateRow({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && title.trim()) onConfirm(title.trim());
+            if (e.key === "Enter") handleConfirm();
             if (e.key === "Escape") onCancel();
           }}
         />
         {title.trim() && (
           <button
             className={styles.quickCreateBtn}
-            onClick={() => onConfirm(title.trim())}
+            onClick={handleConfirm}
           >
             Create →
           </button>
@@ -1190,7 +1298,7 @@ function StartSprintModal({
 }: {
   sprint: ProjectSprint;
   onClose: () => void;
-  onConfirm: (id: string) => void;
+  onConfirm: (id: string, body: { name: string; goal: string; start_date: string; end_date: string }) => void;
   isLoading: boolean;
 }) {
   const today = new Date().toISOString().split("T")[0];
@@ -1274,8 +1382,8 @@ function StartSprintModal({
           </button>
           <button
             className={styles.primaryBtn}
-            onClick={() => onConfirm(sprint.id)}
-            disabled={isLoading}
+            onClick={() => onConfirm(sprint.id, { name, goal, start_date: startDate, end_date: endDate })}
+            disabled={isLoading || !name.trim() || endDate < startDate}
           >
             {isLoading ? (
               <>
@@ -1310,8 +1418,8 @@ function CompleteSprintModal({
 }) {
   const doneCount = sprint.tasks.filter((t) => t.status === "Done").length;
   const incompleteCount = sprint.tasks.length - doneCount;
-  const donePts = sprint.donePoints;
-  const totalPts = sprint.totalPoints;
+  const donePts = sprint.donePoints ?? 0;
+  const totalPts = sprint.totalPoints ?? 0;
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -1427,6 +1535,7 @@ function CreateSprintModal({
   const [goal, setGoal] = useState("");
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(twoWeeks);
+  const dateError = endDate < startDate ? "End date must be after start date" : null;
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -1477,6 +1586,9 @@ function CreateSprintModal({
               />
             </div>
           </div>
+          {dateError && (
+            <p style={{ fontSize: 11, color: "var(--red)", margin: "4px 0 0" }}>{dateError}</p>
+          )}
         </div>
 
         <div className={styles.modalFooter}>
@@ -1497,7 +1609,7 @@ function CreateSprintModal({
                 end_date: endDate,
               })
             }
-            disabled={isLoading || !name.trim()}
+            disabled={isLoading || !name.trim() || !!dateError}
           >
             {isLoading ? (
               <>
@@ -1521,10 +1633,12 @@ function CreateSprintModal({
 
 function _daysSince(dateStr: string | undefined): number {
   if (!dateStr) return 0;
-  return Math.max(
-    0,
-    Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000),
-  );
+  const now = new Date();
+  const then = new Date(dateStr);
+  // Use UTC midnight diff to avoid DST-caused off-by-one (BUG-21)
+  const nowUTC  = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const thenUTC = Date.UTC(then.getFullYear(), then.getMonth(), then.getDate());
+  return Math.max(0, Math.floor((nowUTC - thenUTC) / 86_400_000));
 }
 
 function _findDuplicates(title: string, tasks: ProjectTask[]): ProjectTask[] {

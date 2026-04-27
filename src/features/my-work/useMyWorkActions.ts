@@ -54,6 +54,7 @@ export function useMyWorkActions() {
       const tid = toast.loading("Posting comment…");
       try {
         await createComment(key, text);
+        queryClient.invalidateQueries({ queryKey: ["my-work"] });
         toast.success(`Comment posted on ${key}`, { id: tid });
       } catch {
         toast.error("Failed to post comment", { id: tid });
@@ -83,7 +84,9 @@ export function useMyWorkActions() {
           setLogTimeTicket(ticket);
           break;
         case "approve":
-          handleStatusUpdate(ticket.key, "Done");
+          if (window.confirm(`Move ${ticket.key} to Done?`)) {
+            handleStatusUpdate(ticket.key, "Done");
+          }
           break;
         case "escalate":
           handleEscalate(ticket.key);

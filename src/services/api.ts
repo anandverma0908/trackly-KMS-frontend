@@ -603,13 +603,17 @@ export async function fetchSprint(id: string): Promise<Sprint> {
   return data;
 }
 
-export async function createSprint(payload: { name: string; goal?: string; start_date: string; end_date: string; project_id?: string }): Promise<Sprint> {
+export async function createSprint(payload: { name: string; goal?: string; start_date: string; end_date: string; project_id?: string; ticket_keys?: string[] }): Promise<Sprint> {
   const { data } = await api.post("/sprints", payload);
   return data;
 }
 
-export async function startSprint(id: string): Promise<Sprint> {
-  const { data } = await api.post(`/sprints/${id}/start`);
+export async function deleteSprint(id: string): Promise<void> {
+  await api.delete(`/sprints/${id}`);
+}
+
+export async function startSprint(id: string, body?: { name?: string; goal?: string; start_date?: string; end_date?: string }): Promise<Sprint> {
+  const { data } = await api.post(`/sprints/${id}/start`, body ?? {});
   return data;
 }
 
@@ -901,8 +905,22 @@ export interface PodSummary {
   sprint_prediction: number | null;
   has_active_sprint: boolean;
   sprint_name: string | null;
+  active_sprint_id: string | null;
   risk_flags: PodRiskFlags;
   trend: number[];
+}
+
+export interface HealthForecastResult {
+  missed_weeks: number;
+  summary: string;
+  options: { label: string; impact: string; risk: "Low" | "Medium" | "High" }[];
+  health_score: number;
+  delivery_confidence: number;
+}
+
+export async function fetchHealthForecast(pod: string): Promise<HealthForecastResult> {
+  const { data } = await api.post<HealthForecastResult>(`/nova/health-forecast/${pod}`);
+  return data;
 }
 
 export async function fetchPodSummary(): Promise<PodSummary[]> {

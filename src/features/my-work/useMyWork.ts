@@ -190,8 +190,8 @@ export function useMyWork() {
     queryKey: ["my-work", user?.name],
     queryFn:  fetchMyWork,
     enabled:  !!user,
-    staleTime: 1000 * 60 * 5,
-    retry: false,
+    staleTime: 1000 * 60 * 60 * 4,
+    retry: 2,
   });
 
   const canViewGaps = user?.role === "admin" || user?.role === "engineering_manager";
@@ -325,7 +325,8 @@ export function useMyWork() {
   const focusBlock: FocusBlock | null = useMemo(() => {
     const top = aiTickets[0];
     if (!top) return null;
-    const availableMinutes = 135;
+    const hour = new Date().getHours();
+    const availableMinutes = hour < 10 ? 120 : hour < 12 ? 90 : hour < 14 ? 60 : 120;
     const remainingWork    = top.remaining_estimate_hours || top.original_estimate_hours || 2;
     const fits             = remainingWork * 60 <= availableMinutes;
     return {

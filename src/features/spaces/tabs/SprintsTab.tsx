@@ -164,7 +164,7 @@ export default function SprintsTab({ project }: { project: Project }) {
 
   /* ── Mutations ── */
   const startMut = useMutation({
-    mutationFn: startSprint,
+    mutationFn: (id: string) => startSprint(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sprints"] }); toast.success("Sprint started!"); },
   });
 

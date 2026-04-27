@@ -914,6 +914,204 @@
 .retroActionItem { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); }
 .retroOwner { font-size: 10px; font-weight: 700; color: var(--accent); background: var(--accent-glow); border: 1px solid var(--accent-border); padding: 1px 7px; border-radius: 100px; flex-shrink: 0; }
 
+/* ── Retro Drawer ── */
+.retroAvatarIcon {
+  width: 34px; height: 34px;
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.retroEosBadge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--accent);
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  padding: 2px 8px; border-radius: 100px;
+}
+
+/* Idle state */
+.retroDrawerIdle {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+  padding: 48px 32px 32px;
+  gap: 14px;
+  overflow: hidden;
+}
+.retroDrawerIdleGlow {
+  position: absolute; top: -40px; left: 50%; transform: translateX(-50%);
+  width: 280px; height: 280px; border-radius: 50%;
+  pointer-events: none;
+}
+.retroDrawerIdleIcon {
+  position: relative;
+  width: 64px; height: 64px; border-radius: var(--r-lg);
+  border: 1px solid;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 4px;
+}
+.retroDrawerIdleTitle {
+  font-size: 16px; font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+.retroDrawerIdleSub {
+  font-size: 13px; color: var(--text-2); line-height: 1.6;
+  max-width: 300px;
+}
+.retroDrawerIdleSub strong { color: var(--text); font-weight: 600; }
+.retroDrawerIdlePills {
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+  margin-top: 4px;
+}
+.retroDrawerIdlePill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 4px 10px; border-radius: 100px;
+}
+.retroDrawerNoSprint {
+  font-size: 11px; color: var(--text-3);
+  background: var(--surface-2); border: 1px solid var(--border);
+  padding: 6px 14px; border-radius: var(--r-sm); margin-top: 4px;
+}
+
+/* Loading state */
+.retroDrawerLoading {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 14px;
+  padding: 80px 24px; text-align: center;
+}
+.retroDrawerLoadingDots {
+  display: flex; gap: 6px; align-items: center;
+}
+.retroDrawerLoadingDots span {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+  animation: retroDotPulse 1.2s ease-in-out infinite;
+}
+.retroDrawerLoadingDots span:nth-child(2) { animation-delay: 0.2s; }
+.retroDrawerLoadingDots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes retroDotPulse {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.85); }
+  40% { opacity: 1; transform: scale(1); }
+}
+.retroDrawerLoadingTitle { font-size: 14px; font-weight: 700; color: var(--text); }
+.retroDrawerLoadingSub   { font-size: 12px; color: var(--text-3); }
+
+/* Content */
+.retroDrawerContent {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 18px 20px;
+}
+.retroDrawerMeta {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  background: var(--bgrnd);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  margin-bottom: 2px;
+}
+.retroDrawerMetaPod {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
+  padding: 3px 9px; border-radius: 100px;
+  border: 1px solid;
+}
+.retroDrawerMetaSprint {
+  font-size: 12px; color: var(--text-2); font-weight: 500;
+}
+.retroDrawerMetaCount {
+  margin-left: auto;
+  font-size: 10px; color: var(--text-3);
+  background: var(--surface-2);
+  padding: 2px 8px; border-radius: 100px;
+  border: 1px solid var(--border);
+  font-weight: 600;
+}
+
+/* Version history bar */
+.retroVersionBar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  background: var(--bgrnd);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.retroVersionLabel {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-3); flex-shrink: 0;
+}
+.retroVersionPills {
+  display: flex; gap: 4px; flex-wrap: wrap;
+}
+.retroVersionPill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; color: var(--text-2);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 9px;
+  cursor: pointer; transition: all 0.15s;
+}
+.retroVersionPill:hover {
+  background: var(--surface-2); border-color: var(--border-2); color: var(--text);
+}
+.retroVersionPillActive {
+  background: var(--accent-glow) !important;
+  border-color: var(--accent-border) !important;
+  color: var(--accent) !important;
+}
+.retroVersionPillDate {
+  font-size: 10px; font-weight: 400; color: inherit; opacity: 0.65;
+}
+
+/* Sections */
+.retroSection2 {
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--surface);
+}
+.retroSectionHeader {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.retroSectionHeaderIcon {
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 4px;
+  background: rgba(0,0,0,0.12); flex-shrink: 0;
+}
+.retroSectionBody {
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--surface);
+}
+.retroSubheading {
+  font-size: 11px; font-weight: 700;
+  color: var(--text); letter-spacing: 0.03em;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-top: 4px;
+}
+.retroLine {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 13px; color: var(--text-2); line-height: 1.6;
+}
+.retroLineDot {
+  width: 4px; height: 4px; border-radius: 50%;
+  flex-shrink: 0; margin-top: 7px;
+  opacity: 0.8;
+}
+.retroPara {
+  font-size: 13px; color: var(--text-2); line-height: 1.65; margin: 0;
+}
+.retroPara strong { color: var(--text); font-weight: 600; }
+.retroLine strong { color: var(--text); font-weight: 600; }
+
 /* ── Empty & loading ── */
 .empty {
   display: flex;
@@ -950,4 +1148,53 @@
   .heatmapGrid { grid-template-columns: 1fr; }
   .eosPanel { width: 100%; position: relative; top: 0; }
   .contentArea { flex-direction: column; }
+}
+
+/* ── Forecast error state ── */
+.forecastErrorState {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 28px 16px; text-align: center;
+  font-size: 12px; color: var(--text-3);
+}
+.forecastRetryBtn {
+  font-size: 11px; font-weight: 600; color: var(--accent);
+  background: var(--accent-glow); border: 1px solid var(--accent-border);
+  border-radius: 6px; padding: 5px 14px; cursor: pointer;
+}
+.forecastRetryBtn:hover { opacity: 0.85; }
+
+/* ── Inline delete confirmation banner ── */
+.confirmBanner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; margin-bottom: 12px;
+  background: color-mix(in srgb, var(--red) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--red) 25%, transparent);
+  border-radius: var(--r); font-size: 13px; color: var(--text);
+}
+.confirmBanner strong { color: var(--red); }
+.confirmBannerConfirm {
+  margin-left: auto; padding: 5px 14px;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  background: var(--red); color: #fff; border: none;
+  border-radius: 6px; white-space: nowrap;
+}
+.confirmBannerConfirm:disabled { opacity: 0.6; cursor: default; }
+.confirmBannerCancel {
+  padding: 5px 12px; font-size: 12px; font-weight: 600;
+  background: var(--surface-2); color: var(--text-2);
+  border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+}
+.confirmBannerCancel:hover { border-color: var(--border-2); color: var(--text); }
+
+/* ── Deps show-more button ── */
+.depShowMore {
+  font-size: 11px; font-weight: 600; color: var(--accent);
+  background: none; border: none; cursor: pointer; padding: 2px 0;
+  text-align: left;
+}
+.depShowMore:hover { text-decoration: underline; }
+
+/* ── Sparkline empty state ── */
+.sparkEmpty {
+  font-size: 13px; color: var(--text-3); align-self: center; line-height: 1;
 }
