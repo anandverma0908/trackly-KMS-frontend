@@ -528,6 +528,28 @@ export async function novaQuery(query: string, scope?: 'all' | 'wiki'): Promise<
   };
 }
 
+/* ── Media-to-Ticket ── */
+export async function analyzeScreenshot(base64: string, description: string): Promise<{
+  title: string; description: string; repro_steps: string[];
+  severity: string; issue_type: string;
+}> {
+  const { data } = await api.post("/nova/analyze-image", { image: base64, description });
+  return data;
+}
+
+export async function transcribeMedia(file: File): Promise<{
+  transcript: string;
+  fields: { title?: string; description?: string; priority?: string; issue_type?: string };
+  source: string;
+}> {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await api.post("/nova/transcribe", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
 export async function novaGenerate(
   prompt: string,
   systemPrompt?: string,

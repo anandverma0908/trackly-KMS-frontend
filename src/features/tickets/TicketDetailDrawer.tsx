@@ -9,7 +9,6 @@ import {
   fetchTicketComments,
   createComment,
   fetchTicketWorklogs,
-  logTime,
   fetchTicketActivity,
   fetchTicketLinks,
   createTicketLink,
@@ -378,8 +377,6 @@ function ActivityTab({ ticketKey }: { ticketKey: string }) {
   });
 
   const [commentText, setCommentText] = useState("");
-  const [wlHours, setWlHours] = useState("");
-  const [wlComment, setWlComment] = useState("");
 
   const commentMut = useMutation({
     mutationFn: (body: string) => createComment(ticketKey, body),
@@ -387,17 +384,6 @@ function ActivityTab({ ticketKey }: { ticketKey: string }) {
       qc.invalidateQueries({ queryKey: ["ticket-comments", ticketKey] });
       qc.invalidateQueries({ queryKey: ["ticket-activity", ticketKey] });
       setCommentText("");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const wlMut = useMutation({
-    mutationFn: () => logTime(ticketKey, Number(wlHours) || 0, wlComment, new Date().toISOString().split("T")[0]),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["ticket-worklogs", ticketKey] });
-      qc.invalidateQueries({ queryKey: ["ticket-activity", ticketKey] });
-      setWlHours("");
-      setWlComment("");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -424,29 +410,6 @@ function ActivityTab({ ticketKey }: { ticketKey: string }) {
         <div className={styles.composeActions}>
           <button className={styles.composeBtn} onClick={() => commentMut.mutate(commentText)} disabled={!commentText.trim() || commentMut.isPending}>
             <RiMessage3Line size={12} /> Comment
-          </button>
-        </div>
-      </div>
-
-      {/* Log time */}
-      <div className={styles.composeBox}>
-        <div className={styles.wlRow}>
-          <input
-            type="number"
-            className={styles.inlineInput}
-            placeholder="Hours"
-            value={wlHours}
-            onChange={(e) => setWlHours(e.target.value)}
-            style={{ width: 70 }}
-          />
-          <input
-            className={styles.inlineInput}
-            placeholder="Work description"
-            value={wlComment}
-            onChange={(e) => setWlComment(e.target.value)}
-          />
-          <button className={styles.composeBtn} onClick={() => wlMut.mutate()} disabled={!wlHours || wlMut.isPending}>
-            <RiTimeLine size={12} /> Log Time
           </button>
         </div>
       </div>

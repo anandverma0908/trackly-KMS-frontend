@@ -15,8 +15,7 @@ import { useAuthStore } from "@/features/auth/useAuthStore";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
 import styles from "./CodeReviewPage.module.css";
 import {
-  CODE_REVIEW_SNAPSHOT,
-  getFindingRecords,
+  mergeFindingsWithState,
   updateFindingState,
   type CodeReviewFindingRecord,
   type CodeReviewFindingState,
@@ -37,7 +36,7 @@ const SCAN_STEPS = [
   "Compiling findings",
 ];
 
-const SCAN_FILES = [
+const SCAN_STEPS_PLACEHOLDER = [
   "src/app/App.tsx",
   "src/features/wiki/WikiPage.tsx",
   "src/features/tickets/TicketsPage.tsx",
@@ -57,6 +56,12 @@ const SCAN_FILES = [
 ];
 
 type Phase = "idle" | "scanning" | "done";
+
+interface RepoOption {
+  slug: string;
+  name: string;
+  full_name: string;
+}
 
 const SEV_LABEL: Record<ReviewSeverity, string> = {
   critical: "Critical",
@@ -81,6 +86,13 @@ export default function CodeReviewPage() {
   const [scanStep, setScanStep] = useState(0);
   const [scanFileIdx, setScanFileIdx] = useState(0);
   const [records, setRecords] = useState<CodeReviewFindingRecord[]>([]);
+  const [snapshotId, setSnapshotId] = useState<string | null>(null);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+
+  // Repo selector
+  const [repos, setRepos] = useState<RepoOption[]>([]);
+  const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
+  const [scannedFiles, setScannedFiles] = useState<string[]>(SCAN_STEPS_PLACEHOLDER);
 
   // Drawer state
   const [viewingId, setViewingId] = useState<string | null>(null);
@@ -93,6 +105,23 @@ export default function CodeReviewPage() {
 
   const defaultPod = user?.pod ?? filtersData?.pods?.[0] ?? "DPAI";
 
+  // Load configured repos on mount
+  useEffect(() => {
+    const raw = localStorage.getItem("eap-auth");
+    const token: string | null = raw ? (JSON.parse(raw)?.state?.token ?? null) : null;
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    fetch(`${apiUrl}/api/code-review/repos`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        const list: RepoOption[] = data?.repos ?? [];
+        setRepos(list);
+        if (list.length === 1) setSelectedRepo(list[0].slug);
+      })
+      .catch(() => {});
+  }, []);
+
   // File ticker during scan
   const fileIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -104,13 +133,13 @@ export default function CodeReviewPage() {
     setScanFileIdx(0);
     fileIntervalRef.current = setInterval(() => {
       setScanFileIdx((prev) => {
-        if (prev >= SCAN_FILES.length - 1) {
+        if (prev >= scannedFiles.length - 1) {
           if (fileIntervalRef.current) clearInterval(fileIntervalRef.current);
           return prev;
         }
         return prev + 1;
       });
-    }, 280);
+    }, 80);
     return () => {
       if (fileIntervalRef.current) clearInterval(fileIntervalRef.current);
     };
@@ -120,6 +149,7 @@ export default function CodeReviewPage() {
   useEffect(() => {
     if (phase !== "scanning") return;
     setScanStep(0);
+    setAnalyzeError(null);
     const timeouts: ReturnType<typeof setTimeout>[] = [];
     for (let i = 0; i < SCAN_STEPS.length; i++) {
       const t = setTimeout(() => setScanStep(i), i * 650);
@@ -129,23 +159,26 @@ export default function CodeReviewPage() {
       try {
         const raw = localStorage.getItem("eap-auth");
         const token: string | null = raw ? (JSON.parse(raw)?.state?.token ?? null) : null;
-        const apiUrl = import.meta.env.VITE_API_URL ?? "";
-        const res = await fetch(`${apiUrl}/code-review/analyze`, {
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+        const res = await fetch(`${apiUrl}/api/code-review/analyze`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
+          body: JSON.stringify({ github_repo: selectedRepo }),
         });
-        if (!res.ok) throw new Error("Backend unavailable");
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
         const data = await res.json();
-        if (Array.isArray(data?.findings) && data.findings.length > 0) {
-          setRecords(data.findings as CodeReviewFindingRecord[]);
-        } else {
-          setRecords(getFindingRecords());
-        }
-      } catch {
-        setRecords(getFindingRecords());
+        const findings = Array.isArray(data?.findings) ? data.findings : [];
+        const serverFiles: string[] = Array.isArray(data?.scanned_files) ? data.scanned_files : [];
+        if (serverFiles.length > 0) setScannedFiles(serverFiles);
+        setSnapshotId(data?.snapshot_id ?? null);
+        setRecords(mergeFindingsWithState(findings));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Analysis failed";
+        setAnalyzeError(msg);
+        setRecords([]);
       }
       setPhase("done");
     }, SCAN_STEPS.length * 650 + 800);
@@ -161,12 +194,14 @@ export default function CodeReviewPage() {
   };
 
   function patchFinding(findingId: string, patch: Partial<CodeReviewFindingState>) {
-    setRecords(updateFindingState(findingId, patch));
+    setRecords((prev) => updateFindingState(findingId, patch, prev));
   }
 
   function handleStart() {
     setPhase("scanning");
     setRecords([]);
+    setSnapshotId(null);
+    setAnalyzeError(null);
     setViewingId(null);
     setTicketFindingId(null);
   }
@@ -174,10 +209,13 @@ export default function CodeReviewPage() {
   function handleRerun() {
     setPhase("scanning");
     setRecords([]);
+    setSnapshotId(null);
+    setAnalyzeError(null);
     setViewingId(null);
     setTicketFindingId(null);
     setScanStep(0);
     setScanFileIdx(0);
+    setScannedFiles(SCAN_STEPS_PLACEHOLDER);
   }
 
   function handleApprove(findingId: string) {
@@ -206,8 +244,8 @@ export default function CodeReviewPage() {
         </div>
         {phase === "done" && (
           <div className={styles.headerRight}>
-            <div className={styles.liveDot} />
-            <span className={styles.snapshotId}>{CODE_REVIEW_SNAPSHOT.id}</span>
+            {!analyzeError && <div className={styles.liveDot} />}
+            {snapshotId && <span className={styles.snapshotId}>{snapshotId}</span>}
             <button className={styles.rerunBtn} onClick={handleRerun}>
               <RiRefreshLine size={14} />
               Re-run Analysis
@@ -217,20 +255,30 @@ export default function CodeReviewPage() {
       </header>
 
       {/* Body */}
-      {phase === "idle" && <IdleScreen onStart={handleStart} />}
+      {phase === "idle" && (
+        <IdleScreen
+          repos={repos}
+          selectedRepo={selectedRepo}
+          onSelectRepo={setSelectedRepo}
+          onStart={handleStart}
+        />
+      )}
 
       {(phase === "scanning" || phase === "done") && (
         <div className={styles.workspace}>
           <ScanPanel
             phase={phase}
             scanStep={scanStep}
-            visibleFiles={SCAN_FILES.slice(0, scanFileIdx + 1)}
+            visibleFiles={scannedFiles.slice(0, scanFileIdx + 1)}
+            totalFiles={scannedFiles.length}
             stats={stats}
             onRerun={handleRerun}
           />
           <div className={styles.resultsPane}>
             {phase === "scanning" ? (
               <ShimmerGrid />
+            ) : analyzeError ? (
+              <AnalyzeErrorState error={analyzeError} onRetry={handleRerun} />
             ) : (
               <BugGrid
                 records={records}
@@ -282,9 +330,35 @@ export default function CodeReviewPage() {
   );
 }
 
+/* ─── AnalyzeErrorState ──────────────────────────────────── */
+
+function AnalyzeErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className={styles.emptyBugs}>
+      <RiBugLine size={32} color="var(--text-3)" />
+      <p style={{ color: "var(--text-2)", marginBottom: 4 }}>Analysis failed</p>
+      <p style={{ color: "var(--text-3)", fontSize: 13, marginBottom: 16 }}>{error}</p>
+      <button className={styles.rerunBtn} onClick={onRetry}>
+        <RiRefreshLine size={14} />
+        Retry
+      </button>
+    </div>
+  );
+}
+
 /* ─── IdleScreen ─────────────────────────────────────────── */
 
-function IdleScreen({ onStart }: { onStart: () => void }) {
+function IdleScreen({
+  repos,
+  selectedRepo,
+  onSelectRepo,
+  onStart,
+}: {
+  repos: RepoOption[];
+  selectedRepo: string | null;
+  onSelectRepo: (slug: string) => void;
+  onStart: () => void;
+}) {
   return (
     <div className={styles.idleScreen}>
       <div className={styles.idleOrb}>
@@ -298,18 +372,54 @@ function IdleScreen({ onStart }: { onStart: () => void }) {
       <div className={styles.idleTitleWrap}>
         <h2 className={styles.idleTitle}>AI Code Review</h2>
         <p className={styles.idleSub}>
-          EOS scans your entire frontend codebase, validates bugs with direct evidence,<br />
+          EOS fetches source files from your GitHub repo, validates bugs with direct evidence,
+          <br />
           and surfaces only the findings that are real and actionable.
         </p>
       </div>
-      <button className={styles.idleStartBtn} onClick={onStart}>
+
+      {repos.length === 0 ? (
+        <div className={styles.repoEmptyHint}>
+          No repos configured. Add <code>GITHUB_REPOS=org/repo1,org/repo2</code> to your backend <code>.env</code>.
+        </div>
+      ) : (
+        <div className={styles.repoSelector}>
+          <div className={styles.repoSelectorLabel}>Select a repository to analyse</div>
+          <div className={styles.repoList}>
+            {repos.map((repo) => (
+              <button
+                key={repo.slug}
+                className={[
+                  styles.repoChip,
+                  selectedRepo === repo.slug ? styles.repoChipSelected : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={() => onSelectRepo(repo.slug)}
+              >
+                <RiCodeBoxLine size={13} />
+                <span className={styles.repoChipName}>{repo.name}</span>
+                <span className={styles.repoChipFull}>{repo.full_name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button
+        className={styles.idleStartBtn}
+        onClick={onStart}
+        disabled={!selectedRepo}
+      >
         <RiPlayLine size={18} />
         Start Analysis
       </button>
-      <div className={styles.idleMeta}>
-        Snapshot: <strong>{CODE_REVIEW_SNAPSHOT.id}</strong> &nbsp;·&nbsp; Scope:{" "}
-        <strong>{CODE_REVIEW_SNAPSHOT.scope}</strong>
-      </div>
+
+      {selectedRepo && (
+        <div className={styles.idleMeta}>
+          Analysing &nbsp;<strong>{selectedRepo}</strong>&nbsp;·&nbsp; Powered by <strong>EOS + NOVA</strong>
+        </div>
+      )}
     </div>
   );
 }
@@ -320,15 +430,18 @@ function ScanPanel({
   phase,
   scanStep,
   visibleFiles,
+  totalFiles,
   stats,
   onRerun,
 }: {
   phase: Phase;
   scanStep: number;
   visibleFiles: string[];
+  totalFiles: number;
   stats: { critical: number; high: number; medium: number; total: number };
   onRerun: () => void;
 }) {
+  const batchCount = Math.ceil(totalFiles / 8);
   return (
     <div className={styles.scanPanel}>
       {/* Panel head */}
@@ -337,7 +450,9 @@ function ScanPanel({
           <RiFileCodeLine size={14} color="#fff" />
         </div>
         <span className={styles.scanPanelHeadTitle}>
-          {phase === "scanning" ? "Scanning…" : "Analysis Complete"}
+          {phase === "scanning"
+            ? `Scanning ${totalFiles} files across ${batchCount} batch${batchCount !== 1 ? "es" : ""}…`
+            : `Analysed ${totalFiles} files`}
         </span>
         {phase === "done" && (
           <button className={styles.scanRerunBtn} onClick={onRerun} title="Re-run">

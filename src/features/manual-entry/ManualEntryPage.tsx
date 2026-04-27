@@ -8,7 +8,7 @@ import StepParsing from "./StepParsing";
 import StepPreview from "./StepPreview";
 import StepConfirmed from "./StepConfirmed";
 import MyTimesheets from "./MyTimesheets";
-import { WeeklyTab, ManualTab } from "@/features/timetrack/WeeklyTimeGrid";
+import { WeeklyTab } from "@/features/timetrack/WeeklyTimeGrid";
 import styles from "./ManualEntryPage.module.css";
 import { BsFillCalendar2EventFill } from "react-icons/bs";
 import { PiStarFourFill } from "react-icons/pi";
@@ -140,13 +140,8 @@ export default function ManualEntryPage() {
 
       {/* ── Tab: Ticket Time ── */}
       {activeTab === "weekly" && (
-        <div className={`${styles.ticketTimeLayout} fade-up-1`}>
-          <div className={styles.ticketGridPanel}>
-            <WeeklyTab />
-          </div>
-          <div className={styles.ticketFormPanel}>
-            <ManualTab />
-          </div>
+        <div className={`fade-up-1`}>
+          <WeeklyTab />
         </div>
       )}
     </div>

@@ -8,6 +8,7 @@ import {
   RiFileTextLine, RiArrowRightLine, RiLightbulbLine,
   RiRobot2Line, RiHistoryLine, RiImageLine, RiRefreshLine,
   RiFlashlightLine, RiCheckLine, RiErrorWarningLine, RiLoader4Line,
+  RiAttachmentLine, RiVideoLine, RiMusicLine,
 } from "react-icons/ri";
 import { runAgentLoop } from "./agent/agentController";
 import type { AgentStep } from "./agent/agentTypes";
@@ -22,6 +23,8 @@ import {
   extractMeetingActions,
   createTicket,
   triggerReindex,
+  analyzeScreenshot,
+  transcribeMedia,
   type SpaceAnomaly,
 } from "@/services/api";
 import type { KnowledgeGap, Decision, Standup } from "@/types";
@@ -434,9 +437,14 @@ export default function NovaPage() {
   const [indexing,    setIndexing]    = useState(false);
   const [pulse,       setPulse]       = useState<PulseItem[]>([]);
   const [input,       setInput]       = useState("");
-  const [recording,   setRecording]   = useState(false);
-  const [dragOver,    setDragOver]    = useState(false);
-  const [attachedImg, setAttachedImg] = useState<string | null>(null);
+  const [recording,     setRecording]     = useState(false);
+  const [dragOver,      setDragOver]      = useState(false);
+  const [attachedMedia, setAttachedMedia] = useState<{
+    name: string;
+    mediaType: "image" | "audio" | "video";
+    base64?: string;   // images only
+    file?: File;       // audio / video
+  } | null>(null);
   const [recentItems, setRecentItems] = useState<(CreatedItem & { age: string })[]>([]);
   /** When true, "ask" messages are routed through the multi-step agent loop */
   const [agentMode,   setAgentMode]   = useState(false);
@@ -446,8 +454,9 @@ export default function NovaPage() {
   const textareaRef    = useRef<HTMLTextAreaElement>(null);
   const threadRef      = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+  const fileInputRef   = useRef<HTMLInputElement>(null);
 
-  const intent    = detectIntent(input, !!attachedImg);
+  const intent    = detectIntent(input, !!attachedMedia);
   const wordCount = input.trim().split(/\s+/).filter(Boolean).length;
 
   /* ── Data queries ── */
@@ -550,11 +559,12 @@ export default function NovaPage() {
 
   const send = useCallback(async (overrideText?: string, overrideIntent?: Intent) => {
     const text        = (overrideText ?? input).trim();
-    const finalIntent = overrideIntent ?? (attachedImg ? "screenshot" : detectIntent(text, false));
-    if ((!text && !attachedImg) || loading) return;
+    const finalIntent = overrideIntent ?? (attachedMedia ? "screenshot" : detectIntent(text, false));
+    if ((!text && !attachedMedia) || loading) return;
 
+    const capturedMedia = attachedMedia;
     setInput("");
-    setAttachedImg(null);
+    setAttachedMedia(null);
 
     const userMsg: Message = {
       id: crypto.randomUUID(), role: "user",
@@ -619,18 +629,51 @@ Input: "${text}"`,
         } as any;
 
       } else if (finalIntent === "screenshot") {
-        /* ── Screenshot → analyze bug, let user confirm before filing ── */
-        const bugDesc = text || "No additional description provided.";
-        const raw = await novaGenerate(
-          `A screenshot was shared showing a potential bug. Description: "${bugDesc}". Describe the likely issue, probable cause, and suggest reproduction steps. Be concise.`,
-          "You are NOVA, a bug triage assistant. Give a clear, factual analysis. Do not invent specific details not mentioned in the description.",
-          0.3,
-        );
+        /* ── Screenshot / audio / video → analyze → confirm before filing ── */
+        let analysisResult: { title: string; description: string; repro_steps?: string[]; severity?: string; issue_type?: string } | null = null;
+        let mediaLabel = "screenshot";
+
+        if (capturedMedia?.mediaType === "image" && capturedMedia.base64) {
+          // Real vision analysis via llava
+          analysisResult = await analyzeScreenshot(capturedMedia.base64, text);
+          mediaLabel = "screenshot";
+        } else if (capturedMedia?.mediaType === "audio" || capturedMedia?.mediaType === "video") {
+          // Transcribe and extract bug fields
+          mediaLabel = capturedMedia.mediaType;
+          const result = await transcribeMedia(capturedMedia.file!);
+          const f = result.fields ?? {};
+          analysisResult = {
+            title:       f.title ?? "Issue from " + mediaLabel,
+            description: f.description ?? result.transcript,
+            issue_type:  f.issue_type ?? "Bug",
+            severity:    (f.priority ?? "medium").toLowerCase(),
+            repro_steps: [],
+          };
+        } else {
+          // Fallback: text-only description (old behaviour)
+          const raw = await novaGenerate(
+            `A ${mediaLabel} was shared showing a potential bug. Description: "${text || "No description"}". Describe the likely issue and reproduction steps.`,
+            "You are NOVA, a bug triage assistant. Be concise and factual.",
+            0.3,
+          );
+          analysisResult = { title: text.slice(0, 72) || "Bug from " + mediaLabel, description: raw || text, severity: "medium", issue_type: "Bug" };
+        }
+
+        const steps = analysisResult.repro_steps?.length
+          ? "\n\n**Steps to reproduce:**\n" + analysisResult.repro_steps.map((s, i) => `${i + 1}. ${s}`).join("\n")
+          : "";
+
         novaMsg = {
           id: crypto.randomUUID(), role: "nova",
-          text: `${raw || "Screenshot received. Here's my analysis:"}\n\nWant me to file this as a bug? Just reply "file it" or describe more details.`,
+          text: `Analysed ${mediaLabel}:\n\n**${analysisResult.title}**\n${analysisResult.description}${steps}\n\n_Severity: ${analysisResult.severity ?? "medium"} · ${analysisResult.issue_type ?? "Bug"}_\n\nShall I file this as a bug? Reply "file it" to confirm.`,
           ts: new Date(),
-        };
+          _pendingTicket: {
+            title:       analysisResult.title,
+            description: analysisResult.description + (steps ? "\n" + steps : ""),
+            priority:    analysisResult.severity === "critical" ? "Highest" : analysisResult.severity === "high" ? "High" : "Medium",
+            issue_type:  analysisResult.issue_type ?? "Bug",
+          },
+        } as any;
       } else {
         /* ── Ask anything → novaQuery (RAG) ── */
         // Check if user is confirming a pending ticket
@@ -657,29 +700,25 @@ Input: "${text}"`,
           return;
         }
 
-        // Check if user is confirming a bug filing
-        const lastNovaBugAnalysis = [...messages].reverse().find(
-          m => m.role === "nova" && m.text.includes("Want me to file this as a bug?")
-        );
-        const filingConfirm = /^(file it|yes|create it|go ahead|file|create bug)/i.test(text.trim());
-        if (filingConfirm && lastNovaBugAnalysis) {
-          const bugTitle = "Bug from screenshot analysis";
-          const created = await createTicket({
-            title: bugTitle,
-            description: lastNovaBugAnalysis.text.split("\n\nWant me")[0],
-            priority: "High",
-            issue_type: "Bug",
-          });
+        // Check if user is confirming a bug/media filing ("file it" also maps to pending ticket)
+        const filingConfirm = /^(file it|yes|create it|go ahead|file|create bug|create)/i.test(text.trim());
+        if (filingConfirm && pendingTicket) {
+          // handled by the isConfirm + pendingTicket block above — but treat "file it" the same way
+          // mark type as bug so the CreatedItemCard shows correctly
+          const { title, description, priority, issue_type } = pendingTicket;
+          const created = await createTicket({ title, description, priority, issue_type });
           qc.invalidateQueries({ queryKey: ["tickets"] });
+          qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+          const createdType: CreatedType = (issue_type === "Bug" || issue_type === "UI Bug") ? "bug" : "ticket";
           novaMsg = {
             id: crypto.randomUUID(), role: "nova",
-            text: "Bug filed.",
-            created: { type: "bug", id: created?.key ?? "BUG-???", title: bugTitle, meta: "Priority: High · Bug · Unassigned" },
+            text: createdType === "bug" ? "Bug filed." : "Ticket created.",
+            created: { type: createdType, id: created?.key ?? "TRK-???", title, meta: `Priority: ${priority} · ${issue_type} · Unassigned` },
             ts: new Date(),
           };
           setRecentItems(prev => [{
-            type: "bug" as CreatedType, id: created?.key ?? "BUG-???", title: bugTitle,
-            meta: "Priority: High", age: "just now",
+            type: createdType, id: created?.key ?? "TRK-???", title,
+            meta: `Priority: ${priority}`, age: "just now",
           }, ...prev].slice(0, 6));
           setMessages(prev => [...prev, novaMsg!]);
           setLoading(false);
@@ -748,7 +787,7 @@ Input: "${text}"`,
     } finally {
       setLoading(false);
     }
-  }, [input, attachedImg, loading, agentMode, messages, qc]);
+  }, [input, attachedMedia, loading, agentMode, messages, qc]);
 
   /* ── Voice input (Web Speech API) ── */
   function toggleRecording() {
@@ -789,7 +828,37 @@ Input: "${text}"`,
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file?.type.startsWith("image/")) setAttachedImg(file.name);
+    if (!file) return;
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        setAttachedMedia({ name: file.name, mediaType: "image", base64 });
+      };
+      reader.readAsDataURL(file);
+    } else if (file.type.startsWith("audio/")) {
+      setAttachedMedia({ name: file.name, mediaType: "audio", file });
+    } else if (file.type.startsWith("video/")) {
+      setAttachedMedia({ name: file.name, mediaType: "video", file });
+    }
+  }
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        setAttachedMedia({ name: file.name, mediaType: "image", base64 });
+      };
+      reader.readAsDataURL(file);
+    } else if (file.type.startsWith("audio/")) {
+      setAttachedMedia({ name: file.name, mediaType: "audio", file });
+    } else if (file.type.startsWith("video/")) {
+      setAttachedMedia({ name: file.name, mediaType: "video", file });
+    }
+    e.target.value = "";
   }
 
   const latestNovaId = [...messages].reverse().find(m => m.role === "nova")?.id;
@@ -894,7 +963,7 @@ Input: "${text}"`,
             {dragOver && (
               <motion.div className={styles.dropOverlay} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <RiImageLine size={34} />
-                <span>Drop screenshot — Nova will file a bug report</span>
+                <span>Drop screenshot, audio, or video — Nova will analyze and file a bug report</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -958,17 +1027,36 @@ Input: "${text}"`,
 
           {/* Input bar */}
           <div className={styles.inputWrap}>
-            {attachedImg && (
+            {attachedMedia && (
               <div className={styles.attachedBadge}>
-                <RiImageLine size={11} />
-                <span>{attachedImg}</span>
-                <button onClick={() => setAttachedImg(null)} aria-label="Remove attachment">
+                {attachedMedia.mediaType === "image"
+                  ? <RiImageLine size={11} />
+                  : attachedMedia.mediaType === "audio"
+                  ? <RiMusicLine size={11} />
+                  : <RiVideoLine size={11} />}
+                <span>{attachedMedia.name}</span>
+                <button onClick={() => setAttachedMedia(null)} aria-label="Remove attachment">
                   <RiCloseLine size={10} />
                 </button>
               </div>
             )}
 
             <div className={`${styles.inputBar} ${recording ? styles.inputBarRecording : ""} ${dragOver ? styles.inputBarDrag : ""}`}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,audio/*,video/*"
+                style={{ display: "none" }}
+                onChange={handleFileUpload}
+              />
+              <button
+                className={styles.micBtn}
+                onClick={() => fileInputRef.current?.click()}
+                aria-label="Attach image, audio, or video"
+                title="Attach image, audio, or video"
+              >
+                <RiAttachmentLine size={15} />
+              </button>
               <button
                 className={`${styles.micBtn} ${recording ? styles.micBtnOn : ""}`}
                 onClick={toggleRecording}
@@ -1000,9 +1088,9 @@ Input: "${text}"`,
               )}
 
               <button
-                className={`${styles.sendBtn} ${(input.trim() || attachedImg) && !recording ? styles.sendBtnOn : ""}`}
+                className={`${styles.sendBtn} ${(input.trim() || attachedMedia) && !recording ? styles.sendBtnOn : ""}`}
                 onClick={() => send()}
-                disabled={(!input.trim() && !attachedImg) || loading || recording}
+                disabled={(!input.trim() && !attachedMedia) || loading || recording}
                 aria-label="Send"
               >
                 <RiSendPlaneLine size={16} />
@@ -1010,7 +1098,7 @@ Input: "${text}"`,
             </div>
 
             <AnimatePresence>
-              {intentLabel(intent, wordCount) && (input.trim() || attachedImg) && (
+              {intentLabel(intent, wordCount) && (input.trim() || attachedMedia) && (
                 <motion.div
                   className={styles.intentHint}
                   initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
