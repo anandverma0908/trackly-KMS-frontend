@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import SideDrawer from "@/components/ui/SideDrawer";
 import { fetchBoardConfig, updateBoardConfig } from "@/services/api";
 import type { BoardConfig } from "@/services/api";
+import { validateBoardConfig } from "@/utils/validation";
 import styles from "./BoardConfigPanel.module.css";
 import { RiSettings3Line, RiDragMoveLine, RiDeleteBinLine, RiAddLine } from "react-icons/ri";
 
@@ -37,19 +38,35 @@ export default function BoardConfigPanel({ pod, open, onClose }: { pod: string; 
   });
 
   function addColumn() {
-    setColumns((prev) => [...prev, { id: `col-${Date.now()}`, name: "New Column", status_mapping: [] }]);
+    const newId = `col-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setColumns((prev) => [...prev, { id: newId, name: "New Column", status_mapping: [] }]);
+    setWipLimits((prev) => ({ ...prev, [newId]: 5 }));
   }
 
-  function updateColumn(idx: number, field: string, value: any) {
+  function updateColumn(idx: number, field: string, value: string | string[]) {
     setColumns((prev) => prev.map((c, i) => (i === idx ? { ...c, [field]: value } : c)));
   }
 
   function removeColumn(idx: number) {
+    const colId = columns[idx]?.id;
     setColumns((prev) => prev.filter((_, i) => i !== idx));
+    if (colId) {
+      setWipLimits((prev) => {
+        const next = { ...prev };
+        delete next[colId];
+        return next;
+      });
+    }
   }
 
   function handleSave() {
-    saveMut.mutate({ columns, swimlane_by: swimlane as any, wip_limits: wipLimits });
+    const trimmedColumns = columns.map((c) => ({ ...c, name: c.name.trim() }));
+    const errors = validateBoardConfig(trimmedColumns, wipLimits);
+    if (errors.length > 0) {
+      toast.error(errors.map((e) => e.message).join("; "));
+      return;
+    }
+    saveMut.mutate({ columns: trimmedColumns, swimlane_by: swimlane as BoardConfig["swimlane_by"], wip_limits: wipLimits });
   }
 
   return (
@@ -69,8 +86,18 @@ export default function BoardConfigPanel({ pod, open, onClose }: { pod: string; 
                 type="number"
                 className={styles.wipInput}
                 placeholder="WIP"
-                value={wipLimits[col.id] || ""}
-                onChange={(e) => setWipLimits((prev) => ({ ...prev, [col.id]: Number(e.target.value) || 0 }))}
+                min={0}
+                max={999}
+                value={wipLimits[col.id] ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value === "" ? undefined : Math.max(0, Math.min(999, Number(e.target.value)));
+                  setWipLimits((prev) => {
+                    const next = { ...prev };
+                    if (val === undefined) delete next[col.id];
+                    else next[col.id] = val;
+                    return next;
+                  });
+                }}
               />
               <button className={styles.colDelete} onClick={() => removeColumn(idx)}>
                 <RiDeleteBinLine size={12} />

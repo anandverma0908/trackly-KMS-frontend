@@ -32,10 +32,16 @@ import { useAuthStore } from "@/features/auth/useAuthStore";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import SideDrawer from "@/components/ui/SideDrawer";
 import { formatDate } from "@/utils/formatters";
+import {
+  validateTicketCreate,
+  validateLlmTicketSuggestion,
+  validateLlmStoryPoints,
+  validateLlmConfidence,
+  validateLlmAssignee,
+} from "@/utils/validation";
 import type {
   TicketCreate,
   NLAnalysisResult,
-  // (unused types removed)
   TicketActivity,
 } from "@/types";
 import type { ProjectMember } from "@/features/spaces/spacesData";
@@ -84,14 +90,24 @@ type CodeLayer = "frontend" | "backend" | "unknown";
 
 function inferLayer(repo: string | undefined, path: string): CodeLayer {
   const r = (repo ?? "").toLowerCase();
+  const p = path.toLowerCase();
   if (/front|^fe[-_]|\bweb\b|client|ui/.test(r)) return "frontend";
   if (/back|^be[-_]|\bapi\b|\bserver\b|service/.test(r)) return "backend";
-  if (/\.(tsx|jsx)$/.test(path)) return "frontend";
-  if (/\/(components|features|pages|hooks|views)\//.test(path)) return "frontend";
-  if (/\.(py|go|java|rb|php|rs)$/.test(path)) return "backend";
-  if (/\/(routes|models|controllers|migrations|db)\//.test(path)) return "backend";
-  if (/\/services\/api\.ts/.test(path)) return "backend";
-  if (/\.(ts)$/.test(path)) return "frontend";
+  if (/\.(tsx|jsx)$/.test(p)) return "frontend";
+  if (/\/(components|features|pages|hooks|views)\//.test(p)) return "frontend";
+  if (/\.(py|go|java|rb|php|rs)$/.test(p)) return "backend";
+  if (/\/(routes|models|controllers|migrations|db|services)\//.test(p)) return "backend";
+  // TypeScript files in known backend paths
+  if (/\/(server|api|backend|middleware|utils)\/.*\.ts$/.test(p)) return "backend";
+  // Generic .ts files — check path hints first
+  if (/\.(ts)$/.test(p)) {
+    if (/\btest\b|\bspec\b/.test(p)) return "frontend"; // test files usually frontend in this codebase
+    if (/\bnode_modules\b/.test(p)) return "unknown";
+    // Default: frontend for src/ components, backend for api/services
+    if (/src\/(components|features|pages|hooks)/.test(p)) return "frontend";
+    if (/src\/(services\/api|server|api|routes)/.test(p)) return "backend";
+    return "frontend"; // default assumption for TS in this codebase
+  }
   return "unknown";
 }
 
@@ -157,13 +173,10 @@ interface RoutingSuggestion {
   reason: string;
 }
 
-function extractJSON(raw: string): Record<string, string> | null {
+function extractJSON(raw: string): Record<string, unknown> | null {
   if (!raw) return null;
-  // Strip markdown code fences
   const clean = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-  // Try direct parse first
   try { return JSON.parse(clean); } catch {}
-  // Extract outermost JSON object
   const m = clean.match(/\{[\s\S]*\}/);
   if (m) { try { return JSON.parse(m[0]); } catch {} }
   return null;
@@ -180,13 +193,14 @@ function nearestStoryPoint(value: number): number {
 }
 
 function buildStoryEstimateFromAnalysis(result: NLAnalysisResult): StoryEstimate | null {
-  if (!result.story_points) return null;
-  const suggested = nearestStoryPoint(result.story_points);
+  const validatedPoints = validateLlmStoryPoints(result.story_points);
+  if (validatedPoints === null) return null;
+  const suggested = nearestStoryPoint(validatedPoints);
   const index = STORY_POINTS.indexOf(suggested);
   return {
     min: STORY_POINTS[Math.max(0, index - 1)],
     max: suggested,
-    confidence: Math.max(0.55, result.confidence ?? 0.72),
+    confidence: validateLlmConfidence(result.confidence),
     basedOn: result.duplicates?.length ?? 0,
     reasoning: "Based on EOS ticket analysis of the title, description, and similar tickets.",
   };
@@ -225,11 +239,10 @@ function buildHeuristicStoryEstimate(form: Pick<FormState, "title" | "descriptio
 }
 
 function buildRoutingSuggestionFromAnalysis(result: NLAnalysisResult, candidates: string[]): RoutingSuggestion | null {
-  if (!result.assignee) return null;
-  const matched = candidates.find((candidate) => candidate === result.assignee);
-  if (!matched) return null;
+  const validated = validateLlmAssignee(result.assignee, candidates);
+  if (!validated) return null;
   return {
-    assignee: matched,
+    assignee: validated,
     reason: "EOS matched this ticket to the available team list from the ticket analysis.",
   };
 }
@@ -588,7 +601,10 @@ export default function CreateTicketDrawer({
       try {
         const text = [form.title, form.description].filter(Boolean).join(" ");
         const r = await analyzeTicketNL(text, availableUsers);
-        setLiveDupes(r.duplicates?.length ? r.duplicates.map((d) => ({ ...d, ai: true })) : []);
+        const safeDupes = Array.isArray(r.duplicates)
+          ? r.duplicates.filter((d) => d && typeof d.key === "string" && typeof d.summary === "string").map((d) => ({ ...d, ai: true }))
+          : [];
+        setLiveDupes(safeDupes);
         if (!form.story_points) {
           setStoryEstimate(buildStoryEstimateFromAnalysis(r) ?? buildHeuristicStoryEstimate(form));
         }
@@ -866,28 +882,12 @@ Respond with exactly this structure:
         0.1,
       );
 
-      // 1. Try full JSON parse (strips fences first)
-      let title = "";
-      let description = "";
       const parsed = extractJSON(raw);
-      if (parsed) {
-        title = typeof parsed.title === "string" ? parsed.title : "";
-        description = typeof parsed.description === "string" ? parsed.description : "";
-      }
+      const suggestion = validateLlmTicketSuggestion(parsed);
 
-      // 2. Regex fallback — handles single-quoted or partially malformed JSON
-      if (!title) {
-        const m = raw.match(/"title"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        if (m) title = m[1].replace(/\\"/g, '"');
-      }
-      if (!description) {
-        const m = raw.match(/"description"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        if (m) description = m[1].replace(/\\"/g, '"');
-      }
-
-      if (title || description) {
-        if (title) set("title", title);
-        if (description) set("description", description);
+      if (suggestion.title || suggestion.description) {
+        if (suggestion.title) set("title", suggestion.title);
+        if (suggestion.description) set("description", suggestion.description);
         toast.success("EOS improved the form");
       } else {
         toast.error("EOS couldn't parse the response — try again");
@@ -903,7 +903,17 @@ Respond with exactly this structure:
   function addLabel(e: React.KeyboardEvent) {
     if (e.key === "Enter" && labelInput.trim()) {
       e.preventDefault();
-      set("labels", [...(form.labels ?? []), labelInput.trim()]);
+      const normalized = labelInput.trim();
+      const existing = new Set((form.labels ?? []).map((l) => l.toLowerCase()));
+      if (existing.has(normalized.toLowerCase())) {
+        toast.error(`Label "${normalized}" already exists`);
+        return;
+      }
+      if (normalized.length > 50) {
+        toast.error("Label must be under 50 characters");
+        return;
+      }
+      set("labels", [...(form.labels ?? []), normalized]);
       setLabelInput("");
     }
   }
@@ -919,10 +929,8 @@ Respond with exactly this structure:
 
   /* ── Submit ── */
   function handleSubmit() {
-    if (!form.title.trim()) { toast.error("Summary is required"); return; }
-    if (onCreated) { onCreated({ ...form }); onClose(); return; }
     const payload: TicketCreate = {
-      title: form.title,
+      title: form.title.trim(),
       description: form.description,
       reporter: form.reporter || (!isEdit ? user?.name || undefined : undefined),
       issue_type: form.issue_type,
@@ -939,6 +947,14 @@ Respond with exactly this structure:
       fix_version: form.fix_version || undefined,
     };
     if (sprintId) payload.sprint_id = String(sprintId);
+
+    const errors = validateTicketCreate(payload);
+    if (errors.length > 0) {
+      toast.error(errors.map((e) => e.message).join("\n"));
+      return;
+    }
+
+    if (onCreated) { onCreated({ ...form }); onClose(); return; }
     if (isEdit) {
       updateMut.mutate(payload);
     } else {

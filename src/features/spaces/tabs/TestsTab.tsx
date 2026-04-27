@@ -5,7 +5,6 @@ import SideDrawer from "@/components/ui/SideDrawer";
 import {
   fetchTestCases,
   createTestCase,
-  updateTestCase,
   deleteTestCase,
   generateTestCases,
   fetchTestCycles,

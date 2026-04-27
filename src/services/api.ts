@@ -227,7 +227,7 @@ export async function updateTicket(key: string, payload: Partial<TicketCreate>) 
 
 export async function updateTicketStatus(key: string, status: string) {
   if (mock()?.updateTicketStatus) return mock().updateTicketStatus(key, status);
-  const { data } = await api.post(`/tickets/${key}/status`, { status });
+  const { data } = await api.patch(`/tickets/${key}/status`, { status });
   return data;
 }
 
@@ -1141,6 +1141,11 @@ export async function fetchSavedFilters(): Promise<SavedFilter[]> {
 
 export async function createSavedFilter(payload: { name: string; filters: Record<string, any>; is_shared?: boolean }): Promise<SavedFilter> {
   const { data } = await api.post("/filters", payload);
+  return data;
+}
+
+export async function updateSavedFilter(id: string, payload: { name?: string; filters?: Record<string, any>; is_shared?: boolean }): Promise<SavedFilter> {
+  const { data } = await api.put(`/filters/${id}`, payload);
   return data;
 }
 

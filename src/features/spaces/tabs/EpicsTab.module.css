@@ -332,3 +332,134 @@
   padding: 2px 8px;
   border-radius: 100px;
 }
+
+/* ── Date validation ── */
+.inputError { border-color: var(--red) !important; }
+.dateErrorMsg {
+  font-size: 11px;
+  color: var(--red);
+  margin-top: -4px;
+}
+
+/* ── Loading / Error states ── */
+.stateBox {
+  text-align: center;
+  padding: 48px 0;
+  font-size: 13px;
+}
+
+/* ── Delete confirmation ── */
+.deleteConfirm {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+}
+.deleteConfirmText { font-size: 12px; font-weight: 600; color: var(--red); flex: 1; }
+.deleteConfirmYes {
+  background: var(--red); color: #fff; border: none;
+  border-radius: var(--r-sm); padding: 4px 12px;
+  font-size: 11px; font-weight: 700; cursor: pointer;
+}
+.deleteConfirmYes:disabled { opacity: 0.6; cursor: not-allowed; }
+.deleteConfirmNo {
+  background: none; border: none; font-size: 11px; font-weight: 600;
+  color: var(--text-3); cursor: pointer; padding: 4px 6px;
+}
+.deleteConfirmNo:hover { color: var(--text); }
+
+/* ── Drawer section header ── */
+.drawerSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+/* ── Link ticket button ── */
+.linkBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-sm);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.linkBtn:hover { background: var(--accent); color: #fff; }
+
+/* ── Link Ticket Modal ── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-2);
+}
+.modalTitle { font-size: 13px; font-weight: 700; color: var(--text); }
+.modalClose {
+  background: transparent; border: none; color: var(--text-3);
+  cursor: pointer; padding: 4px; border-radius: var(--r-sm);
+}
+.modalClose:hover { color: var(--text); }
+.modalSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border-2);
+}
+.modalInput {
+  flex: 1; background: transparent; border: none; outline: none;
+  font-size: 13px; color: var(--text); font-family: var(--font-sans);
+}
+.modalInput::placeholder { color: var(--text-3); }
+.modalList { overflow-y: auto; flex: 1; padding: 6px; }
+.modalEmpty { font-size: 12px; color: var(--text-3); text-align: center; padding: 20px; }
+.modalRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+.modalRow:hover { background: var(--surface-2); }
+.modalRow:disabled { opacity: 0.5; cursor: not-allowed; }
+.modalKey { font-size: 11px; font-weight: 700; color: var(--accent); white-space: nowrap; flex-shrink: 0; font-family: var(--font-mono); }
+.modalSummary { flex: 1; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

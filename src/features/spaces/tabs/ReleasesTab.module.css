@@ -534,3 +534,36 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* ── Loading / Error states ── */
+.stateBox {
+  text-align: center;
+  padding: 48px 0;
+  font-size: 13px;
+}
+
+/* ── Form validation ── */
+.inputError { border-color: var(--red) !important; }
+.fieldError {
+  font-size: 11px;
+  color: var(--red);
+  margin-top: -6px;
+}
+
+/* ── Inline confirm (release / delete) ── */
+.confirmInline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: rgba(248,113,113,0.07);
+  border: 1px solid rgba(248,113,113,0.22);
+  border-radius: var(--r-sm);
+  padding: 7px 12px;
+}
+.confirmText { font-size: 12px; font-weight: 600; color: var(--text-2); flex: 1; }
+.confirmNo {
+  background: none; border: none; font-size: 11px; font-weight: 600;
+  color: var(--text-3); cursor: pointer; padding: 3px 6px;
+}
+.confirmNo:hover { color: var(--text); }

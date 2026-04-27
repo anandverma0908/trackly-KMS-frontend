@@ -13,7 +13,7 @@ export interface ProjectTask {
   id: string;
   key: string;
   title: string;
-  status: "To Do" | "In Progress" | "In Review" | "Blocked" | "Done";
+  status: string; // allow unmapped statuses from backend
   priority: "Critical" | "High" | "Medium" | "Low";
   type: "Story" | "Bug" | "Task" | "Epic" | "Subtask";
   assignee: string;
@@ -865,14 +865,16 @@ export function getPriorityColor(priority: ProjectTask["priority"]): string {
   }[priority];
 }
 
-export function getTaskStatusColor(status: ProjectTask["status"]): string {
-  return {
-    "To Do": "var(--text-3)",
-    "In Progress": "var(--amber)",
-    "In Review": "var(--purple)",
-    Blocked: "var(--red)",
-    Done: "var(--green)",
-  }[status];
+export function getTaskStatusColor(status: string): string {
+  return (
+    {
+      "To Do": "var(--text-3)",
+      "In Progress": "var(--amber)",
+      "In Review": "var(--purple)",
+      Blocked: "var(--red)",
+      Done: "var(--green)",
+    } as Record<string, string>
+  )[status] ?? "var(--text-3)";
 }
 
 

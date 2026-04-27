@@ -6,11 +6,21 @@ import { novaQuery } from "@/services/api";
 import type { Project, ProjectEpic, ProjectSprint } from "../spacesData";
 import styles from "./RoadmapTab.module.css";
 
-import { RiCalendarLine, RiHistoryLine, RiSparklingLine, RiAlertLine } from "react-icons/ri";
+import {
+  RiCalendarLine,
+  RiHistoryLine,
+  RiSparklingLine,
+  RiAlertLine,
+  RiFlag2Line,
+  RiLoopLeftLine,
+  RiLineChartLine,
+} from "react-icons/ri";
 
-type _ViewMode = "quarter" | "month";
-
-function parseDate(s: string) { return new Date(s); }
+function parseDate(s: string | null | undefined): Date | null {
+  if (!s) return null;
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
 
 function monthsBetween(start: Date, end: Date) {
   return (end.getFullYear() - start.getFullYear()) * 12 +
@@ -21,12 +31,17 @@ function formatMonth(d: Date) {
   return d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
 }
 
+function formatDate(s: string) {
+  const d = parseDate(s);
+  if (!d) return "—";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 function dateToPct(date: Date, start: Date, totalMs: number) {
   return ((date.getTime() - start.getTime()) / totalMs) * 100;
 }
 
 export default function RoadmapTab({ project }: { project: Project }) {
-  const _viewMode: _ViewMode = "quarter"; void _viewMode;
 
   /* ── EOS: detect at-risk epics ── */
   const atRiskEpics = useMemo(() => {
@@ -34,6 +49,7 @@ export default function RoadmapTab({ project }: { project: Project }) {
     return project.epics.filter((e) => {
       const end = parseDate(e.endDate);
       const start = parseDate(e.startDate);
+      if (!end || !start) return false;
       const totalDays = Math.max(1, (end.getTime() - start.getTime()) / 86_400_000);
       const elapsed = (now.getTime() - start.getTime()) / 86_400_000;
       const expectedProgress = Math.min(100, (elapsed / totalDays) * 100);
@@ -42,11 +58,15 @@ export default function RoadmapTab({ project }: { project: Project }) {
   }, [project.epics]);
 
   const overdueEpics = useMemo(() =>
-    project.epics.filter((e) => parseDate(e.endDate) < new Date() && e.progress < 100),
+    project.epics.filter((e) => {
+      const end = parseDate(e.endDate);
+      return end && end < new Date() && e.progress < 100;
+    }),
     [project.epics]
   );
 
-  /* ── EOS narrative ── */
+  /* ── EOS narrative — key includes state summary so stale cache is avoided ── */
+  const narrativeKey = `${project.key}:${atRiskEpics.length}:${overdueEpics.length}:${project.progress}`;
   const narrativePrompt = useMemo(() => {
     const completedSprints = project.sprints.filter((s) => s.status === "completed").length;
     const activeSprint = project.sprints.find((s) => s.status === "active");
@@ -54,7 +74,7 @@ export default function RoadmapTab({ project }: { project: Project }) {
   }, [project, atRiskEpics.length, overdueEpics.length]);
 
   const narrative = useQuery({
-    queryKey: ["roadmap-narrative", project.key],
+    queryKey: ["roadmap-narrative", narrativeKey],
     queryFn: () => novaQuery(narrativePrompt),
     staleTime: 1000 * 60 * 15,
     retry: 1,
@@ -62,26 +82,28 @@ export default function RoadmapTab({ project }: { project: Project }) {
 
   // Timeline bounds: project start → max(epic end, sprint end) + buffer
   const timeStart = useMemo(() => {
-    const d = parseDate(project.startDate);
+    const d = parseDate(project.startDate) ?? new Date();
     d.setDate(1);
     return d;
   }, [project.startDate]);
 
   const timeEnd = useMemo(() => {
-    const dates = [
+    const validDates = [
       ...project.epics.map(e => parseDate(e.endDate)),
       ...project.sprints.map(s => parseDate(s.endDate)),
-    ];
-    const max = dates.reduce((a, b) => (a > b ? a : b), parseDate(project.startDate));
-    max.setMonth(max.getMonth() + 2);
-    max.setDate(1);
-    return max;
+    ].filter((d): d is Date => d !== null);
+
+    const base = parseDate(project.startDate) ?? new Date();
+    const max = validDates.reduce((a, b) => (a > b ? a : b), base);
+    const result = new Date(max);
+    result.setMonth(result.getMonth() + 2);
+    result.setDate(1);
+    return result;
   }, [project]);
 
-  const totalMs    = timeEnd.getTime() - timeStart.getTime();
-  const numMonths  = monthsBetween(timeStart, timeEnd);
+  const totalMs   = timeEnd.getTime() - timeStart.getTime();
+  const numMonths = monthsBetween(timeStart, timeEnd);
 
-  // Build month columns
   const months = useMemo(() => {
     const result: { date: Date; label: string }[] = [];
     const cur = new Date(timeStart);
@@ -92,7 +114,6 @@ export default function RoadmapTab({ project }: { project: Project }) {
     return result;
   }, [timeStart, numMonths]);
 
-  // Today line position
   const todayPct = useMemo(() => {
     const now = new Date();
     if (now < timeStart) return 0;
@@ -100,18 +121,24 @@ export default function RoadmapTab({ project }: { project: Project }) {
     return dateToPct(now, timeStart, totalMs);
   }, [timeStart, timeEnd, totalMs]);
 
-  // Epic bar positions
   function epicBar(epic: ProjectEpic) {
-    const s = Math.max(0, dateToPct(parseDate(epic.startDate), timeStart, totalMs));
-    const e = Math.min(100, dateToPct(parseDate(epic.endDate), timeStart, totalMs));
-    return { left: `${s}%`, width: `${Math.max(e - s, 1)}%` };
+    const s = parseDate(epic.startDate);
+    const e = parseDate(epic.endDate);
+    if (!s || !e) return null;
+    const left = Math.max(0, dateToPct(s, timeStart, totalMs));
+    const right = Math.min(100, dateToPct(e, timeStart, totalMs));
+    if (right <= left) return null;
+    return { left: `${left}%`, width: `${right - left}%` };
   }
 
-  // Sprint bar positions
   function sprintBar(sprint: ProjectSprint) {
-    const s = Math.max(0, dateToPct(parseDate(sprint.startDate), timeStart, totalMs));
-    const e = Math.min(100, dateToPct(parseDate(sprint.endDate), timeStart, totalMs));
-    return { left: `${s}%`, width: `${Math.max(e - s, 1)}%` };
+    const s = parseDate(sprint.startDate);
+    const e = parseDate(sprint.endDate);
+    if (!s || !e) return null;
+    const left = Math.max(0, dateToPct(s, timeStart, totalMs));
+    const right = Math.min(100, dateToPct(e, timeStart, totalMs));
+    if (right <= left) return null;
+    return { left: `${left}%`, width: `${right - left}%` };
   }
 
   const statusColors: Record<ProjectSprint["status"], string> = {
@@ -120,15 +147,32 @@ export default function RoadmapTab({ project }: { project: Project }) {
     completed: "var(--accent)",
   };
 
+  const hasData = project.epics.length > 0 || project.sprints.length > 0;
+
   return (
     <div className={styles.tab}>
 
       {/* ── EOS Narrative Bar ── */}
       <div className={styles.eosBar}>
         <RiSparklingLine size={13} color="var(--accent)" />
-        {narrative.isPending && <span className={styles.eosBarText} style={{ color: "var(--text-3)" }}>EOS is analysing project timeline…</span>}
-        {narrative.data && <span className={styles.eosBarText}>{narrative.data.answer.split("\n")[0]}</span>}
-        {!narrative.isPending && !narrative.data && <span className={styles.eosBarText} style={{ color: "var(--text-3)" }}>EOS timeline intelligence</span>}
+        {narrative.isPending && (
+          <span className={styles.eosBarText} style={{ color: "var(--text-3)" }}>
+            EOS is analysing project timeline…
+          </span>
+        )}
+        {narrative.isError && (
+          <span className={styles.eosBarText} style={{ color: "var(--red)" }}>
+            EOS analysis failed — timeline data may be outdated.
+          </span>
+        )}
+        {narrative.data && (
+          <span className={styles.eosBarText}>{narrative.data.answer.split("\n")[0]}</span>
+        )}
+        {!narrative.isPending && !narrative.isError && !narrative.data && (
+          <span className={styles.eosBarText} style={{ color: "var(--text-3)" }}>
+            EOS timeline intelligence
+          </span>
+        )}
         <span className={styles.eosBadge}><RiSparklingLine size={9} /> EOS</span>
       </div>
 
@@ -178,27 +222,27 @@ export default function RoadmapTab({ project }: { project: Project }) {
           <RiCalendarLine size={14} color="var(--accent)" />
           <div>
             <div className={styles.summaryVal}>
-              {new Date(project.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              {formatDate(project.startDate)}
             </div>
             <div className={styles.summaryLbl}>Start Date</div>
           </div>
         </div>
         <div className={styles.summaryCard}>
-          <span style={{ fontSize: 14 }}>🏁</span>
+          <RiFlag2Line size={14} color="var(--accent)" />
           <div>
             <div className={styles.summaryVal}>{project.epics.length}</div>
             <div className={styles.summaryLbl}>Epics</div>
           </div>
         </div>
         <div className={styles.summaryCard}>
-          <span style={{ fontSize: 14 }}>🔁</span>
+          <RiLoopLeftLine size={14} color="var(--accent)" />
           <div>
             <div className={styles.summaryVal}>{project.sprints.length}</div>
             <div className={styles.summaryLbl}>Sprints</div>
           </div>
         </div>
         <div className={styles.summaryCard}>
-          <span style={{ fontSize: 14 }}>📈</span>
+          <RiLineChartLine size={14} color="var(--accent)" />
           <div>
             <div className={styles.summaryVal}>{project.progress}%</div>
             <div className={styles.summaryLbl}>Overall Progress</div>
@@ -207,198 +251,193 @@ export default function RoadmapTab({ project }: { project: Project }) {
       </div>
 
       {/* ── Gantt chart ── */}
-      <div className={styles.ganttWrap}>
-        {/* Row labels column */}
-        <div className={styles.labelsCol}>
-          <div className={styles.labelsHeader}>Timeline</div>
-          <div className={styles.labelSection}>
-            <div className={styles.sectionLabel}>EPICS</div>
-            {project.epics.map((epic) => (
-              <div key={epic.id} className={styles.rowLabel}>
-                <div className={styles.epicDot} style={{ background: epic.color }} />
-                <span>{epic.title}</span>
-              </div>
-            ))}
-          </div>
-          <div className={styles.labelSection}>
-            <div className={styles.sectionLabel}>SPRINTS</div>
-            {project.sprints.map((sprint) => (
-              <div key={sprint.id} className={styles.rowLabel}>
-                <div className={styles.sprintDot} style={{ background: statusColors[sprint.status] }} />
-                <span>{sprint.name}</span>
-              </div>
-            ))}
-          </div>
+      {!hasData ? (
+        <div className={styles.emptyGantt}>
+          <RiCalendarLine size={28} style={{ opacity: 0.25 }} />
+          <p>No epics or sprints yet. Add some to see the roadmap.</p>
         </div>
-
-        {/* Chart area */}
-        <div className={styles.chartArea}>
-          {/* Month headers */}
-          <div className={styles.monthHeaders}>
-            {months.map((m, i) => (
-              <div
-                key={i}
-                className={styles.monthHeader}
-                style={{ flex: 1 }}
-              >
-                {m.label}
+      ) : (
+        <div className={styles.ganttWrap}>
+          {/* Row labels column */}
+          <div className={styles.labelsCol}>
+            <div className={styles.labelsHeader}>Timeline</div>
+            {project.epics.length > 0 && (
+              <div className={styles.labelSection}>
+                <div className={styles.sectionLabel}>EPICS</div>
+                {project.epics.map((epic) => (
+                  <div key={epic.id} className={styles.rowLabel}>
+                    <div className={styles.epicDot} style={{ background: epic.color }} />
+                    <span>{epic.title}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+            {project.sprints.length > 0 && (
+              <div className={styles.labelSection}>
+                <div className={styles.sectionLabel}>SPRINTS</div>
+                {project.sprints.map((sprint) => (
+                  <div key={sprint.id} className={styles.rowLabel}>
+                    <div className={styles.sprintDot} style={{ background: statusColors[sprint.status] }} />
+                    <span>{sprint.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Grid + bars */}
-          <div className={styles.chartBody}>
-            {/* Vertical month grid lines */}
-            {months.map((_, i) => (
-              <div
-                key={i}
-                className={styles.gridLine}
-                style={{ left: `${(i / numMonths) * 100}%` }}
-              />
-            ))}
-
-            {/* Today line */}
-            <div
-              className={styles.todayLine}
-              style={{ left: `${todayPct}%` }}
-            >
-              <div className={styles.todayLabel}>Today</div>
+          {/* Chart area */}
+          <div className={styles.chartArea}>
+            {/* Month headers */}
+            <div className={styles.monthHeaders}>
+              {months.map((m, i) => (
+                <div key={i} className={styles.monthHeader} style={{ flex: 1 }}>
+                  {m.label}
+                </div>
+              ))}
             </div>
 
-            {/* Epics section */}
-            <div className={styles.chartSection}>
-              <div className={styles.chartSectionLabel}>EPICS</div>
-              {project.epics.map((epic) => {
-                const bar = epicBar(epic);
-                return (
-                  <div key={epic.id} className={styles.chartRow}>
-                    <Tooltip
-                      title={
-                        <div>
-                          <b>{epic.title}</b><br />
-                          {epic.startDate} → {epic.endDate}<br />
-                          {epic.completed}/{epic.tasks} tasks · {epic.progress}% done
-                        </div>
-                      }
-                      arrow
-                    >
-                      <div
-                        className={styles.epicBar}
-                        style={{
-                          left: bar.left,
-                          width: bar.width,
-                          background: epic.color,
-                        }}
-                      >
-                        <div
-                          className={styles.epicBarFill}
-                          style={{
-                            width: `${epic.progress}%`,
-                            background: `${epic.color}cc`,
-                          }}
-                        />
-                        <span className={styles.barLabel}>{epic.title}</span>
-                      </div>
-                    </Tooltip>
-                  </div>
-                );
-              })}
-            </div>
+            {/* Grid + bars */}
+            <div className={styles.chartBody}>
+              {months.map((_, i) => (
+                <div
+                  key={i}
+                  className={styles.gridLine}
+                  style={{ left: `${(i / numMonths) * 100}%` }}
+                />
+              ))}
 
-            {/* Sprints section */}
-            <div className={styles.chartSection}>
-              <div className={styles.chartSectionLabel}>SPRINTS</div>
-              {project.sprints.map((sprint) => {
-                const bar = sprintBar(sprint);
-                const sprintColor = statusColors[sprint.status];
-                const pct = sprint.totalPoints > 0
-                  ? Math.round((sprint.donePoints / sprint.totalPoints) * 100)
-                  : 0;
-                return (
-                  <div key={sprint.id} className={styles.chartRow}>
-                    <Tooltip
-                      title={
-                        <div>
-                          <b>{sprint.name}</b><br />
-                          {sprint.startDate} → {sprint.endDate}<br />
-                          {sprint.donePoints}/{sprint.totalPoints} pts · {pct}% done<br />
-                          Goal: {sprint.goal}
-                        </div>
-                      }
-                      arrow
-                    >
-                      <div
-                        className={styles.sprintBar}
-                        style={{
-                          left: bar.left,
-                          width: bar.width,
-                          borderColor: sprintColor,
-                        }}
-                      >
-                        <div
-                          className={styles.sprintBarFill}
-                          style={{
-                            width: `${pct}%`,
-                            background: `${sprintColor}55`,
-                          }}
-                        />
-                        <span className={styles.barLabel}>{sprint.name}</span>
+              <div className={styles.todayLine} style={{ left: `${todayPct}%` }}>
+                <div className={styles.todayLabel}>Today</div>
+              </div>
+
+              {/* Epics section */}
+              {project.epics.length > 0 && (
+                <div className={styles.chartSection}>
+                  <div className={styles.chartSectionLabel}>EPICS</div>
+                  {project.epics.map((epic) => {
+                    const bar = epicBar(epic);
+                    return (
+                      <div key={epic.id} className={styles.chartRow}>
+                        {bar && (
+                          <Tooltip
+                            title={
+                              <div>
+                                <b>{epic.title}</b><br />
+                                {formatDate(epic.startDate)} → {formatDate(epic.endDate)}<br />
+                                {epic.completed}/{epic.tasks} tasks · {epic.progress}% done
+                              </div>
+                            }
+                            arrow
+                          >
+                            <div
+                              className={styles.epicBar}
+                              style={{ left: bar.left, width: bar.width, background: epic.color }}
+                            >
+                              <div
+                                className={styles.epicBarFill}
+                                style={{ width: `${epic.progress}%`, background: `${epic.color}cc` }}
+                              />
+                              <span className={styles.barLabel}>{epic.title}</span>
+                            </div>
+                          </Tooltip>
+                        )}
                       </div>
-                    </Tooltip>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Sprints section */}
+              {project.sprints.length > 0 && (
+                <div className={styles.chartSection}>
+                  <div className={styles.chartSectionLabel}>SPRINTS</div>
+                  {project.sprints.map((sprint) => {
+                    const bar = sprintBar(sprint);
+                    const sprintColor = statusColors[sprint.status];
+                    const pct = sprint.totalPoints > 0
+                      ? Math.round(((sprint.donePoints ?? 0) / sprint.totalPoints) * 100)
+                      : 0;
+                    return (
+                      <div key={sprint.id} className={styles.chartRow}>
+                        {bar && (
+                          <Tooltip
+                            title={
+                              <div>
+                                <b>{sprint.name}</b><br />
+                                {formatDate(sprint.startDate)} → {formatDate(sprint.endDate)}<br />
+                                {sprint.donePoints ?? 0}/{sprint.totalPoints} pts · {pct}% done
+                                {sprint.goal ? <><br />Goal: {sprint.goal}</> : null}
+                              </div>
+                            }
+                            arrow
+                          >
+                            <div
+                              className={styles.sprintBar}
+                              style={{ left: bar.left, width: bar.width, borderColor: sprintColor }}
+                            >
+                              <div
+                                className={styles.sprintBarFill}
+                                style={{ width: `${pct}%`, background: `${sprintColor}55` }}
+                              />
+                              <span className={styles.barLabel}>{sprint.name}</span>
+                            </div>
+                          </Tooltip>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── Epic detail cards ── */}
-      <div className={styles.epicCards}>
-        <div className={styles.epicCardsTitle}>Epic Breakdown</div>
-        <div className={styles.epicCardGrid}>
-          {project.epics.map((epic) => {
-            const isOverdue = overdueEpics.some((e) => e.id === epic.id);
-            const isAtRisk  = atRiskEpics.some((e) => e.id === epic.id);
-            return (
-            <div key={epic.id} className={`${styles.epicCard} ${isOverdue ? styles.epicCardOverdue : isAtRisk ? styles.epicCardAtRisk : ""}`}>
-              <div className={styles.epicCardTop}>
-                <div className={styles.epicColorBar} style={{ background: epic.color }} />
-                <div className={styles.epicCardInfo}>
-                  <div className={styles.epicCardTitle}>
-                    {epic.title}
-                    {isOverdue && <span className={styles.epicRiskBadge} style={{ color: "var(--red)", borderColor: "var(--red)", background: "var(--red-glow, rgba(248,113,113,0.1))" }}>Overdue</span>}
-                    {!isOverdue && isAtRisk && <span className={styles.epicRiskBadge} style={{ color: "var(--amber)", borderColor: "var(--amber)", background: "rgba(251,191,36,0.1)" }}>At Risk</span>}
+      {project.epics.length > 0 && (
+        <div className={styles.epicCards}>
+          <div className={styles.epicCardsTitle}>Epic Breakdown</div>
+          <div className={styles.epicCardGrid}>
+            {project.epics.map((epic) => {
+              const isOverdue = overdueEpics.some((e) => e.id === epic.id);
+              const isAtRisk  = atRiskEpics.some((e) => e.id === epic.id);
+              return (
+                <div key={epic.id} className={`${styles.epicCard} ${isOverdue ? styles.epicCardOverdue : isAtRisk ? styles.epicCardAtRisk : ""}`}>
+                  <div className={styles.epicCardTop}>
+                    <div className={styles.epicColorBar} style={{ background: epic.color }} />
+                    <div className={styles.epicCardInfo}>
+                      <div className={styles.epicCardTitle}>
+                        {epic.title}
+                        {isOverdue && <span className={styles.epicRiskBadge} style={{ color: "var(--red)", borderColor: "var(--red)", background: "var(--red-glow, rgba(248,113,113,0.1))" }}>Overdue</span>}
+                        {!isOverdue && isAtRisk && <span className={styles.epicRiskBadge} style={{ color: "var(--amber)", borderColor: "var(--amber)", background: "rgba(251,191,36,0.1)" }}>At Risk</span>}
+                      </div>
+                      <div className={styles.epicCardDates}>
+                        {formatDate(epic.startDate)} → {formatDate(epic.endDate)}
+                      </div>
+                    </div>
+                    <div className={styles.epicCardPct} style={{ color: epic.color }}>
+                      {epic.progress}%
+                    </div>
                   </div>
-                  <div className={styles.epicCardDates}>
-                    {epic.startDate} → {epic.endDate}
+                  <LinearProgress
+                    variant="determinate"
+                    value={epic.progress}
+                    sx={{
+                      height: 4,
+                      borderRadius: 100,
+                      backgroundColor: "var(--surface-2)",
+                      "& .MuiLinearProgress-bar": { background: epic.color, borderRadius: 100 },
+                    }}
+                  />
+                  <div className={styles.epicCardStats}>
+                    <span>{epic.completed}/{epic.tasks} tasks done</span>
                   </div>
                 </div>
-                <div className={styles.epicCardPct} style={{ color: epic.color }}>
-                  {epic.progress}%
-                </div>
-              </div>
-              <LinearProgress
-                variant="determinate"
-                value={epic.progress}
-                sx={{
-                  height: 4,
-                  borderRadius: 100,
-                  backgroundColor: "var(--surface-2)",
-                  "& .MuiLinearProgress-bar": {
-                    background: epic.color,
-                    borderRadius: 100,
-                  },
-                }}
-              />
-              <div className={styles.epicCardStats}>
-                <span>{epic.completed}/{epic.tasks} tasks done</span>
-              </div>
-            </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

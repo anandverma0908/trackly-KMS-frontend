@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import SideDrawer from "@/components/ui/SideDrawer";
+import { IssueTypeBadge, StatusBadge } from "@/components/ui/Badge";
 import {
   fetchReleases, createRelease, updateRelease, deleteRelease,
   fetchReleaseTickets, fetchPodTickets, setFixVersion,
@@ -14,30 +15,20 @@ import {
 } from "react-icons/ri";
 
 const PRIORITY_COLOR: Record<string, string> = {
-  Highest: "#ef4444", High: "#f97316", Medium: "#f59e0b",
-  Low: "#3b82f6", Lowest: "#6b7280",
+  Highest: "var(--red)",
+  High:    "var(--amber)",
+  Medium:  "var(--amber)",
+  Low:     "var(--accent)",
+  Lowest:  "var(--text-3)",
 };
+
 const STATUS_DONE = ["Done", "Closed", "Resolved", "Released"];
 
-function StatusBadge({ status }: { status?: string }) {
-  if (!status) return null;
-  const done = STATUS_DONE.some((s) => status.toLowerCase().includes(s.toLowerCase()));
-  return (
-    <span className={`${styles.ticketStatus} ${done ? styles.ticketStatusDone : styles.ticketStatusOpen}`}>
-      {status}
-    </span>
-  );
-}
-
-function IssueTypeTag({ type }: { type?: string }) {
-  if (!type) return null;
-  const t = type.toLowerCase();
-  let cls = styles.typeDefault;
-  if (t.includes("bug")) cls = styles.typeBug;
-  else if (t.includes("story")) cls = styles.typeStory;
-  else if (t.includes("epic")) cls = styles.typeEpic;
-  else if (t.includes("task")) cls = styles.typeTask;
-  return <span className={`${styles.typeTag} ${cls}`}>{type}</span>;
+function fmtDate(s: string | null | undefined) {
+  if (!s) return null;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 function TicketRow({
@@ -49,7 +40,7 @@ function TicketRow({
 }) {
   return (
     <div className={styles.ticketRow}>
-      <IssueTypeTag type={ticket.issue_type} />
+      <IssueTypeBadge type={ticket.issue_type ?? "Task"} />
       <a
         className={styles.ticketKey}
         href={ticket.url ?? "#"}
@@ -65,11 +56,11 @@ function TicketRow({
         {ticket.priority && (
           <span
             className={styles.priorityDot}
-            style={{ background: PRIORITY_COLOR[ticket.priority] ?? "#9ca3af" }}
+            style={{ background: PRIORITY_COLOR[ticket.priority] ?? "var(--text-3)" }}
             title={ticket.priority}
           />
         )}
-        <StatusBadge status={ticket.status} />
+        <StatusBadge status={ticket.status ?? ""} />
         {ticket.assignee && (
           <span className={styles.assigneeChip} title={ticket.assignee}>
             {ticket.assignee.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
@@ -94,16 +85,26 @@ function LinkTicketsModal({
   release,
   linkedKeys,
   onClose,
-  onLinked,
 }: {
   pod: string;
   release: Release;
   linkedKeys: Set<string>;
   onClose: () => void;
-  onLinked: () => void;
 }) {
+  const [searchRaw, setSearchRaw] = useState("");
   const [search, setSearch] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const qc = useQueryClient();
+
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current);
+  }, []);
+
+  function handleSearch(val: string) {
+    setSearchRaw(val);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setSearch(val), 300);
+  }
 
   const { data, isFetching } = useQuery({
     queryKey: ["pod-tickets-search", pod, search],
@@ -117,7 +118,7 @@ function LinkTicketsModal({
       qc.invalidateQueries({ queryKey: ["release-tickets", pod, release.id] });
       qc.invalidateQueries({ queryKey: ["releases", pod] });
       toast.success(`${key} added to ${release.name}`);
-      onLinked();
+      // Keep modal open — user may want to link more tickets
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -135,9 +136,9 @@ function LinkTicketsModal({
           <RiSearchLine size={14} className={styles.searchIcon} />
           <input
             className={styles.searchInput}
-            placeholder="Search tickets..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search tickets…"
+            value={searchRaw}
+            onChange={(e) => handleSearch(e.target.value)}
             autoFocus
           />
         </div>
@@ -155,7 +156,7 @@ function LinkTicketsModal({
               onClick={() => linkMut.mutate(t.key)}
               disabled={linkMut.isPending}
             >
-              <IssueTypeTag type={t.issue_type} />
+              <IssueTypeBadge type={t.issue_type ?? "Task"} />
               <span className={styles.modalTicketKey}>{t.key}</span>
               <span className={styles.modalTicketSummary}>{t.summary}</span>
               {t.assignee && <span className={styles.modalAssignee}>{t.assignee}</span>}
@@ -178,9 +179,12 @@ function ReleaseDrawer({
   pod: string;
   onClose: () => void;
   onMarkReleased: (id: string) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
 }) {
   const [showLink, setShowLink] = useState(false);
+  const [confirmRelease, setConfirmRelease] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const qc = useQueryClient();
 
   const { data: tickets = [], isLoading } = useQuery({
@@ -199,12 +203,23 @@ function ReleaseDrawer({
   });
 
   const linkedKeys = new Set(tickets.map((t) => t.key));
-
   const done = tickets.filter((t) =>
     STATUS_DONE.some((s) => t.status?.toLowerCase().includes(s.toLowerCase()))
   ).length;
   const total = tickets.length;
   const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    try {
+      await onDelete(release.id);
+      onClose();
+    } catch {
+      // error already toasted by parent mutation
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <>
@@ -224,7 +239,10 @@ function ReleaseDrawer({
 
           <div className={styles.drawerMeta}>
             {release.release_date && (
-              <span><RiCalendarLine size={12} style={{ marginRight: 4 }} />{release.release_date}</span>
+              <span>
+                <RiCalendarLine size={12} style={{ marginRight: 4 }} />
+                {fmtDate(release.release_date)}
+              </span>
             )}
           </div>
 
@@ -260,19 +278,40 @@ function ReleaseDrawer({
 
           <div className={styles.drawerActions}>
             {release.status === "unreleased" && (
-              <button
-                className={styles.releaseBtn}
-                onClick={() => onMarkReleased(release.id)}
-              >
-                <RiCheckboxCircleLine size={12} /> Mark as Released
+              confirmRelease ? (
+                <div className={styles.confirmInline}>
+                  <span className={styles.confirmText}>Mark as released?</span>
+                  <button
+                    className={styles.releaseBtn}
+                    onClick={() => { onMarkReleased(release.id); setConfirmRelease(false); }}
+                  >
+                    Confirm
+                  </button>
+                  <button className={styles.confirmNo} onClick={() => setConfirmRelease(false)}>Cancel</button>
+                </div>
+              ) : (
+                <button className={styles.releaseBtn} onClick={() => setConfirmRelease(true)}>
+                  <RiCheckboxCircleLine size={12} /> Mark as Released
+                </button>
+              )
+            )}
+            {confirmDelete ? (
+              <div className={styles.confirmInline}>
+                <span className={styles.confirmText}>Delete this release?</span>
+                <button
+                  className={styles.drawerDangerBtn}
+                  disabled={isDeleting}
+                  onClick={handleDelete}
+                >
+                  {isDeleting ? "Deleting…" : "Delete"}
+                </button>
+                <button className={styles.confirmNo} onClick={() => setConfirmDelete(false)}>Cancel</button>
+              </div>
+            ) : (
+              <button className={styles.drawerDangerBtn} onClick={() => setConfirmDelete(true)}>
+                <RiDeleteBinLine size={12} /> Delete Release
               </button>
             )}
-            <button
-              className={styles.drawerDangerBtn}
-              onClick={() => { onDelete(release.id); onClose(); }}
-            >
-              <RiDeleteBinLine size={12} /> Delete Release
-            </button>
           </div>
         </div>
       </SideDrawer>
@@ -283,7 +322,6 @@ function ReleaseDrawer({
           release={release}
           linkedKeys={linkedKeys}
           onClose={() => setShowLink(false)}
-          onLinked={() => setShowLink(false)}
         />
       )}
     </>
@@ -292,7 +330,7 @@ function ReleaseDrawer({
 
 export default function ReleasesTab({ pod }: { pod: string }) {
   const qc = useQueryClient();
-  const { data: releases = [] } = useQuery({
+  const { data: releases = [], isLoading, isError } = useQuery({
     queryKey: ["releases", pod],
     queryFn: () => fetchReleases(pod),
   });
@@ -302,6 +340,10 @@ export default function ReleasesTab({ pod }: { pod: string }) {
   const [desc, setDesc] = useState("");
   const [date, setDate] = useState("");
   const [drawerRelease, setDrawerRelease] = useState<Release | null>(null);
+
+  const nameExists = name.trim() && releases.some(
+    (r) => r.name.toLowerCase() === name.trim().toLowerCase()
+  );
 
   const createMut = useMutation({
     mutationFn: () => createRelease(pod, { name, description: desc || undefined, release_date: date || undefined }),
@@ -333,6 +375,24 @@ export default function ReleasesTab({ pod }: { pod: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  if (isLoading) {
+    return (
+      <div className={styles.tab}>
+        <div className={styles.stateBox} style={{ color: "var(--text-3)" }}>Loading releases…</div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className={styles.tab}>
+        <div className={styles.stateBox} style={{ color: "var(--red)" }}>
+          Failed to load releases. Please refresh.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.tab}>
       <div className={styles.header}>
@@ -344,11 +404,23 @@ export default function ReleasesTab({ pod }: { pod: string }) {
 
       {showCreate && (
         <div className={styles.form}>
-          <input className={styles.input} placeholder="Version name (e.g. v1.2.0)" value={name} onChange={(e) => setName(e.target.value)} />
+          <input
+            className={`${styles.input} ${nameExists ? styles.inputError : ""}`}
+            placeholder="Version name (e.g. v1.2.0)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          {nameExists && <span className={styles.fieldError}>A release with this name already exists.</span>}
           <input className={styles.input} placeholder="Description" value={desc} onChange={(e) => setDesc(e.target.value)} />
           <input className={styles.input} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           <div className={styles.formActions}>
-            <button className={styles.saveBtn} onClick={() => createMut.mutate()} disabled={!name.trim() || createMut.isPending}>Create</button>
+            <button
+              className={styles.saveBtn}
+              onClick={() => createMut.mutate()}
+              disabled={!name.trim() || !!nameExists || createMut.isPending}
+            >
+              Create
+            </button>
             <button className={styles.cancelBtn} onClick={() => setShowCreate(false)}>Cancel</button>
           </div>
         </div>
@@ -368,7 +440,7 @@ export default function ReleasesTab({ pod }: { pod: string }) {
               <span className={styles.releaseCount}>{r.ticket_count} tickets</span>
               {r.release_date && (
                 <span className={styles.releaseDate}>
-                  <RiCalendarLine size={10} /> {r.release_date}
+                  <RiCalendarLine size={10} /> {fmtDate(r.release_date)}
                 </span>
               )}
             </div>
@@ -391,7 +463,7 @@ export default function ReleasesTab({ pod }: { pod: string }) {
           pod={pod}
           onClose={() => setDrawerRelease(null)}
           onMarkReleased={(id) => releaseMut.mutate(id)}
-          onDelete={(id) => deleteMut.mutate(id)}
+          onDelete={(id) => deleteMut.mutateAsync(id)}
         />
       )}
     </div>
