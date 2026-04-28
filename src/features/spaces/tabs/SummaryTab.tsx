@@ -49,6 +49,24 @@ function EOSBadge() {
   );
 }
 
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className={styles.chartTooltip}>
+      {label && <div className={styles.chartTooltipLabel}>{label}</div>}
+      <div className={styles.chartTooltipRows}>
+        {payload.map((p: any, i: number) => (
+          <div key={i} className={styles.chartTooltipRow}>
+            <span className={styles.chartTooltipDot} style={{ background: p.color ?? p.fill }} />
+            <span className={styles.chartTooltipName}>{p.name}</span>
+            <span className={styles.chartTooltipVal}>{typeof p.value === "number" ? p.value.toLocaleString() : p.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SummaryTab({ project }: { project: Project }) {
   const qc = useQueryClient();
   const [briefDismissed, setBriefDismissed] = useState(false);
@@ -315,15 +333,6 @@ export default function SummaryTab({ project }: { project: Project }) {
         {/* ── Row 1: EOS signals ── */}
         <div className={styles.panelCard}>
           <div className={styles.panelCardHeader}>
-            <div
-              className={styles.panelIcon}
-              style={{
-                background:
-                  "color-mix(in srgb, var(--accent) 12%, transparent)",
-              }}
-            >
-              <RiBarChartBoxLine size={15} color="var(--accent)" />
-            </div>
             <span className={styles.panelCardTitle}>Velocity Signal</span>
           </div>
           <p className={styles.panelCardBody}>
@@ -352,21 +361,6 @@ export default function SummaryTab({ project }: { project: Project }) {
           // }}
         >
           <div className={styles.panelCardHeader}>
-            <div
-              className={styles.panelIcon}
-              style={{
-                background:
-                  kpis.blocked > 0
-                    ? "rgba(248,113,113,0.12)"
-                    : "rgba(52,211,153,0.12)",
-              }}
-            >
-              {kpis.blocked > 0 ? (
-                <RiAlertLine size={15} color="var(--red)" />
-              ) : (
-                <RiCheckLine size={15} color="var(--green)" />
-              )}
-            </div>
             <span className={styles.panelCardTitle}>Risk Signal</span>
           </div>
           <p className={styles.panelCardBody}>
@@ -397,12 +391,6 @@ export default function SummaryTab({ project }: { project: Project }) {
           // style={{ borderLeft: "3px solid var(--accent)" }}
         >
           <div className={styles.panelCardHeader}>
-            <div
-              className={styles.panelIcon}
-              style={{ background: "var(--accent-glow)" }}
-            >
-              <RiLightbulbLine size={15} color="var(--accent)" />
-            </div>
             <span className={styles.panelCardTitle}>Recommendation</span>
           </div>
           <p className={styles.panelCardBody}>
@@ -415,9 +403,13 @@ export default function SummaryTab({ project }: { project: Project }) {
           </p>
           <button
             className={styles.panelRefresh}
-            onClick={() =>
-              qc.invalidateQueries({ queryKey: ["spaces-brief", project.key] })
-            }
+            onClick={() => {
+              qc.setQueryData(["spaces-brief", project.key], undefined);
+              qc.fetchQuery({
+                queryKey: ["spaces-brief", project.key],
+                queryFn: () => fetchSpacesBrief(project.key, true),
+              });
+            }}
           >
             <RiRefreshLine size={12} /> Refresh
           </button>
@@ -427,7 +419,6 @@ export default function SummaryTab({ project }: { project: Project }) {
         <div className={styles.healthCard}>
           <div className={styles.healthCardHeader}>
             <span className={styles.cardLabel}>Project Health</span>
-            <EOSBadge />
           </div>
           <div className={styles.healthScoreBig} style={{ color: healthColor }}>
             {healthScore}
@@ -466,12 +457,6 @@ export default function SummaryTab({ project }: { project: Project }) {
         {/* ── Row 2: Delivery metrics ── */}
         <div className={styles.panelCard}>
           <div className={styles.panelCardHeader}>
-            <div
-              className={styles.panelIcon}
-              style={{ background: `${project.color}18` }}
-            >
-              <RiBarChartBoxLine size={15} color={project.color} />
-            </div>
             <span className={styles.panelCardTitle}>Delivery Trend</span>
           </div>
           <p className={styles.panelCardBody}>
@@ -496,15 +481,7 @@ export default function SummaryTab({ project }: { project: Project }) {
                   domain={[0, 100]}
                   tick={{ fontSize: 8, fill: "var(--text-3)" }}
                 />
-                <ReTooltip
-                  contentStyle={{
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--border-2)",
-                    borderRadius: 6,
-                    fontSize: 11,
-                  }}
-                  formatter={(v: number) => [`${v}%`, "Delivery"]}
-                />
+                <ReTooltip content={<ChartTooltip />} />
                 <Line
                   type="monotone"
                   dataKey="score"
@@ -519,12 +496,6 @@ export default function SummaryTab({ project }: { project: Project }) {
 
         <div className={styles.panelCard}>
           <div className={styles.panelCardHeader}>
-            <div
-              className={styles.panelIcon}
-              style={{ background: "rgba(52,211,153,0.12)" }}
-            >
-              <RiCalendarLine size={15} color="var(--green)" />
-            </div>
             <span className={styles.panelCardTitle}>Delivery Forecast</span>
           </div>
           <p className={styles.panelCardBody}>
@@ -574,12 +545,6 @@ export default function SummaryTab({ project }: { project: Project }) {
 
         <div className={styles.panelCard}>
           <div className={styles.panelCardHeader}>
-            <div
-              className={styles.panelIcon}
-              style={{ background: "rgba(139,92,246,0.12)" }}
-            >
-              <RiTeamLine size={15} color="var(--purple)" />
-            </div>
             <span className={styles.panelCardTitle}>vs All Spaces</span>
           </div>
           <p className={styles.panelCardBody}>
@@ -620,7 +585,6 @@ export default function SummaryTab({ project }: { project: Project }) {
         <div className={styles.chartCard}>
           <div className={styles.chartCardHeader}>
             <span className={styles.cardLabel}>Weekly Activity</span>
-            <RiTimeLine size={13} color="var(--text-3)" />
           </div>
           <ResponsiveContainer width="100%" height={160}>
             <AreaChart
@@ -656,14 +620,7 @@ export default function SummaryTab({ project }: { project: Project }) {
                 tick={{ fontSize: 10, fill: "var(--text-3)" }}
                 allowDecimals={false}
               />
-              <ReTooltip
-                contentStyle={{
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border-2)",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-              />
+              <ReTooltip content={<ChartTooltip />} />
               <Area
                 type="monotone"
                 dataKey="tasks"
@@ -679,7 +636,6 @@ export default function SummaryTab({ project }: { project: Project }) {
         <div className={styles.chartCard}>
           <div className={styles.chartCardHeader}>
             <span className={styles.cardLabel}>Team Workload</span>
-            <RiTeamLine size={13} color="var(--text-3)" />
           </div>
           <ResponsiveContainer width="100%" height={160}>
             <BarChart
@@ -695,14 +651,7 @@ export default function SummaryTab({ project }: { project: Project }) {
                 tick={{ fontSize: 10, fill: "var(--text-3)" }}
                 allowDecimals={false}
               />
-              <ReTooltip
-                contentStyle={{
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border-2)",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-              />
+              <ReTooltip content={<ChartTooltip />} />
               <Bar
                 dataKey="done"
                 fill="var(--green)"
@@ -729,247 +678,207 @@ export default function SummaryTab({ project }: { project: Project }) {
           </ResponsiveContainer>
         </div>
 
-        {/* Risk indicators */}
-        <div className={styles.chartCard}>
+        {/* Sprint Progress */}
+        <div className={`${styles.chartCard} ${styles.chartCardRisk}`}>
           <div className={styles.chartCardHeader}>
-            <span className={styles.cardLabel}>Risk Indicators</span>
-            <EOSBadge />
+            <span className={styles.cardLabel}>Sprint Progress</span>
+            <span className={styles.chartCardSub}>{project.sprints.length} sprints</span>
           </div>
-          <div className={styles.riskList}>
-            {riskFlags.map((r) => {
-              const c =
-                r.risk === "high"
-                  ? "var(--red)"
-                  : r.risk === "medium"
-                    ? "var(--amber)"
-                    : "var(--green)";
-              const pct = r.max > 0 ? Math.round((r.value / r.max) * 100) : 0;
+          <div className={styles.sprintProgressCard}>
+            {project.sprints.map((s) => {
+              const pct = s.totalPoints > 0 ? Math.round((s.donePoints / s.totalPoints) * 100) : 0;
               return (
-                <div key={r.label} className={styles.riskItem}>
-                  <div className={styles.riskItemHeader}>
-                    <span className={styles.riskItemLabel}>{r.label}</span>
+                <div key={s.id} className={styles.sprintRow}>
+                  <div className={styles.sprintRowLeft}>
                     <span
-                      className={styles.riskItemBadge}
-                      style={{ color: c, background: `${c}18` }}
-                    >
-                      {r.risk.toUpperCase()}
-                    </span>
+                      className={styles.sprintStatusDot}
+                      style={{
+                        background:
+                          s.status === "active" ? "var(--accent)" : s.status === "completed" ? "var(--green)" : "var(--amber)",
+                      }}
+                    />
+                    <span className={styles.sprintName}>{s.name}</span>
                   </div>
                   <LinearProgress
                     variant="determinate"
                     value={pct}
                     sx={{
-                      height: 5,
+                      flex: 1,
+                      height: 6,
                       borderRadius: 100,
                       backgroundColor: "var(--surface-2)",
                       "& .MuiLinearProgress-bar": {
-                        background: c,
+                        background: `linear-gradient(90deg, ${project.color}, ${project.color}aa)`,
                         borderRadius: 100,
                       },
                     }}
                   />
-                  <span className={styles.riskItemVal}>
-                    {r.value} / {r.max}
+                  <span className={styles.sprintPct} style={{ color: project.color }}>{pct}%</span>
+                  <span className={styles.sprintPts}>{s.donePoints}/{s.totalPoints}pts</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Row 1: Burndown + Cumulative Flow */}
+      <div className={styles.reportsRow}>
+        <div className={styles.reportCard}>
+          <div className={styles.chartCardHeader}>
+            <span className={styles.cardLabel}>Burndown</span>
+            <span className={styles.chartCardSub}>
+              {burndown?.sprint?.name ?? "Active Sprint"}
+            </span>
+          </div>
+          <div className={styles.reportCardBody}>
+            {burndown && burndown.data.length > 0 ? (
+              <ResponsiveContainer width="100%" height={160}>
+                <AreaChart
+                  data={burndown.data}
+                  margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="bdRemaining" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-3)" }} tickFormatter={(v) => v.slice(5)} />
+                  <YAxis tick={{ fontSize: 10, fill: "var(--text-3)" }} allowDecimals={false} width={28} />
+                  <ReTooltip content={<ChartTooltip />} />
+                  <Area type="monotone" dataKey="remaining" stroke="var(--accent)" strokeWidth={2} fill="url(#bdRemaining)" name="Remaining" dot={{ fill: "var(--accent)", strokeWidth: 0, r: 3 }} />
+                  <Area type="monotone" dataKey="ideal" stroke="var(--text-3)" strokeWidth={1.5} strokeDasharray="4 4" fill="none" name="Ideal" dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className={styles.chartEmpty}>No active sprint data available.</p>
+            )}
+          </div>
+        </div>
+
+        <div className={styles.reportCard}>
+          <div className={styles.chartCardHeader}>
+            <span className={styles.cardLabel}>Cumulative Flow</span>
+            <span className={styles.chartCardSub}>Last 30 days</span>
+          </div>
+          <div className={styles.reportCardBody}>
+            {cfd && cfd.length > 0 ? (
+              <ResponsiveContainer width="100%" height={160}>
+                <AreaChart data={cfd} margin={{ top: 8, right: 16, left: 0, bottom: 0 }} stackOffset="expand">
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-3)" }} tickFormatter={(v) => v.slice(5)} />
+                  <YAxis tick={{ fontSize: 10, fill: "var(--text-3)" }} allowDecimals={false} width={28} />
+                  <ReTooltip content={<ChartTooltip />} />
+                  <Area type="monotone" dataKey="To Do" stackId="1" stroke="var(--text-3)" fill="var(--surface-3)" />
+                  <Area type="monotone" dataKey="In Progress" stackId="1" stroke="var(--amber)" fill="var(--amber)" />
+                  <Area type="monotone" dataKey="In Review" stackId="1" stroke="var(--purple)" fill="var(--purple)" />
+                  <Area type="monotone" dataKey="Blocked" stackId="1" stroke="var(--red)" fill="var(--red)" />
+                  <Area type="monotone" dataKey="Done" stackId="1" stroke="var(--green)" fill="var(--green)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className={styles.chartEmpty}>No flow data available.</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Risk Indicators + Velocity */}
+      <div className={styles.reportsRow}>
+        <div className={styles.reportCard}>
+          <div className={styles.chartCardHeader}>
+            <span className={styles.cardLabel}>Risk Indicators</span>
+          </div>
+
+          {/* Risk flags */}
+          <div className={styles.riskList}>
+            {riskFlags.map((r) => {
+              const c =
+                r.risk === "high" ? "var(--red)" : r.risk === "medium" ? "var(--amber)" : "var(--green)";
+              const pct = r.max > 0 ? Math.round((r.value / r.max) * 100) : 0;
+              return (
+                <div key={r.label} className={styles.riskItem}>
+                  <span className={styles.riskItemLabel}>{r.label}</span>
+                  <div className={styles.riskItemBar}>
+                    <div className={styles.riskItemBarFill} style={{ width: `${pct}%`, background: c }} />
+                  </div>
+                  <span className={styles.riskItemVal}>{r.value}/{r.max}</span>
+                  <span className={styles.riskItemBadge} style={{ color: c, background: `${c}18` }}>
+                    {r.risk.toUpperCase()}
                   </span>
                 </div>
               );
             })}
           </div>
+
+          {/* Divider */}
+          <div className={styles.riskDivider}>
+            <span className={styles.riskDividerLabel}>Team</span>
+            <div className={styles.riskDividerLine} />
+          </div>
+
           {/* Member breakdown */}
           <div className={styles.memberList}>
             {project.members
               .map((m) => {
                 const mTasks = allTasks.filter((t) => t.assignee === m.name);
                 const mDone = mTasks.filter((t) => t.status === "Done").length;
-                const mInProgress = mTasks.filter(
-                  (t) => t.status === "In Progress",
-                ).length;
-                const mPct =
-                  mTasks.length > 0
-                    ? Math.round((mDone / mTasks.length) * 100)
-                    : 0;
+                const mInProgress = mTasks.filter((t) => t.status === "In Progress").length;
+                const mPct = mTasks.length > 0 ? Math.round((mDone / mTasks.length) * 100) : 0;
                 return { m, mTasks, mDone, mInProgress, mPct };
               })
               .sort((a, b) => b.mInProgress - a.mInProgress)
               .slice(0, 4)
               .map(({ m, mTasks, mInProgress, mPct }) => {
                 const isBottleneck = bottleneckMember === m.name;
-                const avgLoad =
-                  allTasks.length / Math.max(project.members.length, 1);
+                const avgLoad = allTasks.length / Math.max(project.members.length, 1);
                 const overloaded = mTasks.length > avgLoad * 1.4;
                 return (
                   <div key={m.id} className={styles.memberRow}>
-                    <div
-                      className={styles.memberAvatar}
-                      style={{ background: m.color }}
-                    >
-                      {m.initials}
-                    </div>
+                    <div className={styles.memberAvatar} style={{ background: m.color }}>{m.initials}</div>
                     <div className={styles.memberInfo}>
-                      <span className={styles.memberName}>
-                        {m.name.split(" ")[0]}
-                      </span>
+                      <span className={styles.memberName}>{m.name.split(" ")[0]}</span>
                       {isBottleneck && (
-                        <span className={styles.bottleneckBadge}>
-                          <RiUserLine size={9} /> Bottleneck
-                        </span>
+                        <span className={styles.bottleneckBadge}><RiUserLine size={8} /> Bottleneck</span>
                       )}
                       {!isBottleneck && overloaded && (
-                        <span className={styles.overloadedBadge}>
-                          <RiAlertLine size={9} /> Overloaded
-                        </span>
+                        <span className={styles.overloadedBadge}><RiAlertLine size={8} /> Overloaded</span>
                       )}
                     </div>
-                    <span className={styles.memberInProgress}>
-                      {mInProgress} WIP
-                    </span>
-                    <span
-                      className={styles.memberPct}
-                      style={{ color: project.color }}
-                    >
-                      {mPct}%
-                    </span>
+                    <span className={styles.memberTasks}>{mInProgress} WIP</span>
+                    <span className={styles.memberPct} style={{ color: project.color }}>{mPct}%</span>
                   </div>
                 );
               })}
           </div>
         </div>
-      </div>
 
-      {/* ── Sprint progress ── */}
-      <div className={styles.sprintProgressCard}>
-        <div className={styles.chartCardHeader}>
-          <span className={styles.cardLabel}>Sprint Progress</span>
-          <span style={{ fontSize: "0.76rem", color: "var(--text-3)" }}>
-            {project.sprints.length} sprints
-          </span>
+        <div className={styles.reportCard}>
+          <div className={styles.chartCardHeader}>
+            <span className={styles.cardLabel}>Velocity</span>
+            <span className={styles.chartCardSub}>Last {velocity?.length ?? 0} sprints</span>
+          </div>
+          <div className={styles.reportCardBody}>
+            {velocity && velocity.length > 0 ? (
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={velocity} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="sprint" tick={{ fontSize: 10, fill: "var(--text-3)" }} />
+                  <YAxis tick={{ fontSize: 10, fill: "var(--text-3)" }} allowDecimals={false} />
+                  <ReTooltip content={<ChartTooltip />} />
+                  <Bar dataKey="committed" fill="var(--surface-3)" maxBarSize={28} name="Committed" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="completed" fill="var(--green)" maxBarSize={28} name="Completed" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className={styles.chartEmpty}>No completed sprint data yet.</p>
+            )}
+          </div>
         </div>
-        {project.sprints.map((s) => {
-          const pct =
-            s.totalPoints > 0
-              ? Math.round((s.donePoints / s.totalPoints) * 100)
-              : 0;
-          return (
-            <div key={s.id} className={styles.sprintRow}>
-              <div className={styles.sprintRowLeft}>
-                <span
-                  className={styles.sprintStatusDot}
-                  style={{
-                    background:
-                      s.status === "active"
-                        ? "var(--accent)"
-                        : s.status === "completed"
-                          ? "var(--green)"
-                          : "var(--amber)",
-                  }}
-                />
-                <span className={styles.sprintName}>{s.name}</span>
-              </div>
-              <LinearProgress
-                variant="determinate"
-                value={pct}
-                sx={{
-                  flex: 1,
-                  height: 6,
-                  borderRadius: 100,
-                  backgroundColor: "var(--surface-2)",
-                  "& .MuiLinearProgress-bar": {
-                    background: `linear-gradient(90deg, ${project.color}, ${project.color}aa)`,
-                    borderRadius: 100,
-                  },
-                }}
-              />
-              <span
-                className={styles.sprintPct}
-                style={{ color: project.color }}
-              >
-                {pct}%
-              </span>
-              <span className={styles.sprintPts}>
-                {s.donePoints}/{s.totalPoints}pts
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── Reports ── */}
-      <div className={styles.reportsSectionTitle}>Reports</div>
-
-      {/* Burndown */}
-      <div className={styles.chartCard}>
-        <div className={styles.chartCardHeader}>
-          <span className={styles.cardLabel}>Burndown</span>
-          <span className={styles.chartCardSub}>{burndown?.sprint?.name ?? "Active Sprint"}</span>
-        </div>
-        {burndown && burndown.data.length > 0 ? (
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={burndown.data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="bdRemaining" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-3)" }} tickFormatter={(v) => v.slice(5)} />
-              <YAxis tick={{ fontSize: 10, fill: "var(--text-3)" }} allowDecimals={false} />
-              <ReTooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }} />
-              <Area type="monotone" dataKey="remaining" stroke="var(--accent)" strokeWidth={2} fill="url(#bdRemaining)" name="Remaining" dot={{ fill: "var(--accent)", strokeWidth: 0, r: 3 }} />
-              <Area type="monotone" dataKey="ideal" stroke="var(--text-3)" strokeWidth={1.5} strokeDasharray="4 4" fill="none" name="Ideal" dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <p className={styles.chartEmpty}>No active sprint data available.</p>
-        )}
-      </div>
-
-      {/* Velocity */}
-      <div className={styles.chartCard}>
-        <div className={styles.chartCardHeader}>
-          <span className={styles.cardLabel}>Velocity</span>
-          <span className={styles.chartCardSub}>Last {velocity?.length ?? 0} sprints</span>
-        </div>
-        {velocity && velocity.length > 0 ? (
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={velocity} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="sprint" tick={{ fontSize: 10, fill: "var(--text-3)" }} />
-              <YAxis tick={{ fontSize: 10, fill: "var(--text-3)" }} allowDecimals={false} />
-              <ReTooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }} />
-              <Bar dataKey="committed" fill="var(--surface-3)" maxBarSize={28} name="Committed" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="completed" fill="var(--green)" maxBarSize={28} name="Completed" radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <p className={styles.chartEmpty}>No completed sprint data yet.</p>
-        )}
-      </div>
-
-      {/* Cumulative Flow */}
-      <div className={styles.chartCard}>
-        <div className={styles.chartCardHeader}>
-          <span className={styles.cardLabel}>Cumulative Flow</span>
-          <span className={styles.chartCardSub}>Last 30 days</span>
-        </div>
-        {cfd && cfd.length > 0 ? (
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={cfd} margin={{ top: 8, right: 16, left: 0, bottom: 0 }} stackOffset="expand">
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-3)" }} tickFormatter={(v) => v.slice(5)} />
-              <YAxis tick={{ fontSize: 10, fill: "var(--text-3)" }} allowDecimals={false} />
-              <ReTooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8, fontSize: 12 }} />
-              <Area type="monotone" dataKey="To Do" stackId="1" stroke="var(--text-3)" fill="var(--surface-3)" />
-              <Area type="monotone" dataKey="In Progress" stackId="1" stroke="var(--amber)" fill="var(--amber)" />
-              <Area type="monotone" dataKey="In Review" stackId="1" stroke="var(--purple)" fill="var(--purple)" />
-              <Area type="monotone" dataKey="Blocked" stackId="1" stroke="var(--red)" fill="var(--red)" />
-              <Area type="monotone" dataKey="Done" stackId="1" stroke="var(--green)" fill="var(--green)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <p className={styles.chartEmpty}>No flow data available.</p>
-        )}
       </div>
     </div>
   );
 }
+

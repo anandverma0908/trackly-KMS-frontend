@@ -1957,20 +1957,6 @@
   overflow: hidden;
 }
 
-.predictiveCard::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(167, 139, 250, 0.4),
-    transparent
-  );
-}
 
 .predictiveHeader {
   display: flex;
@@ -3080,4 +3066,55 @@
 .modalSave:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* ── Shared card top gradient border ── */
+.briefCard,
+.agentCard,
+.insightCard,
+.focusCard,
+.queueCard,
+.riskCard,
+.energyCard,
+.forecastCard,
+.kgCard,
+.proactiveCard,
+.predictiveCard,
+.ambientCard,
+.copilotCard,
+.careerCard,
+.wellbeingCard {
+  position: relative;
+  overflow: hidden;
+}
+
+.briefCard::before,
+.agentCard::before,
+.insightCard::before,
+.focusCard::before,
+.queueCard::before,
+.riskCard::before,
+.energyCard::before,
+.forecastCard::before,
+.kgCard::before,
+.proactiveCard::before,
+.predictiveCard::before,
+.ambientCard::before,
+.copilotCard::before,
+.careerCard::before,
+.wellbeingCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    50deg,
+    transparent,
+    var(--accent-2),
+    transparent
+  );
+  pointer-events: none;
+  z-index: 1;
 }

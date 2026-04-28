@@ -4,7 +4,12 @@ import toast from "react-hot-toast";
 import SideDrawer from "@/components/ui/SideDrawer";
 import { createSpace, fetchOrgUsers } from "@/services/api";
 import styles from "./CreateSpaceDrawer.module.css";
-import { RiUserAddLine, RiCloseLine, RiArrowDownSLine, RiCheckLine } from "react-icons/ri";
+import {
+  RiUserAddLine,
+  RiCloseLine,
+  RiArrowDownSLine,
+  RiCheckLine,
+} from "react-icons/ri";
 
 interface CreateSpaceDrawerProps {
   open: boolean;
@@ -15,11 +20,19 @@ function _makeKey(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return "";
   if (words.length === 1) return words[0].slice(0, 4).toUpperCase();
-  return words.map((w) => w[0]).join("").toUpperCase();
+  return words
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
 }
 
 function _initials(name: string) {
-  return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 const ROLE_LABEL: Record<string, string> = {
@@ -30,7 +43,10 @@ const ROLE_LABEL: Record<string, string> = {
   finance_viewer: "Finance",
 };
 
-export default function CreateSpaceDrawer({ open, onClose }: CreateSpaceDrawerProps) {
+export default function CreateSpaceDrawer({
+  open,
+  onClose,
+}: CreateSpaceDrawerProps) {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
@@ -44,15 +60,24 @@ export default function CreateSpaceDrawer({ open, onClose }: CreateSpaceDrawerPr
 
   useEffect(() => {
     if (!open) {
-      setName(""); setKey(""); setDescription(""); setCategory("");
-      setColor("#4F7EFF"); setSelectedIds([]); setDropdownOpen(false); setSearch("");
+      setName("");
+      setKey("");
+      setDescription("");
+      setCategory("");
+      setColor("#4F7EFF");
+      setSelectedIds([]);
+      setDropdownOpen(false);
+      setSearch("");
     }
   }, [open]);
 
   // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setDropdownOpen(false);
       }
     }
@@ -69,7 +94,8 @@ export default function CreateSpaceDrawer({ open, onClose }: CreateSpaceDrawerPr
   const filteredUsers = useMemo(() => {
     const q = search.toLowerCase();
     return orgUsers.filter(
-      (u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q),
+      (u) =>
+        u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q),
     );
   }, [orgUsers, search]);
 
@@ -98,10 +124,17 @@ export default function CreateSpaceDrawer({ open, onClose }: CreateSpaceDrawerPr
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const k = derivedKey;
-    if (!k || !name) { toast.error("Name and key are required"); return; }
+    if (!k || !name) {
+      toast.error("Name and key are required");
+      return;
+    }
     createMut.mutate({
-      key: k, name: name.trim(), description: description.trim(),
-      category: category.trim() || "Engineering", color, member_ids: selectedIds,
+      key: k,
+      name: name.trim(),
+      description: description.trim(),
+      category: category.trim() || "Engineering",
+      color,
+      member_ids: selectedIds,
     });
   }
 
@@ -111,12 +144,18 @@ export default function CreateSpaceDrawer({ open, onClose }: CreateSpaceDrawerPr
     <SideDrawer
       open={open}
       onClose={onClose}
-      size="md"
+      size="sm"
       title="Create Space"
       subtitle="Set up a new project space and assign team members"
       footer={
         <div className={styles.footer}>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>Cancel</button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
           <button
             type="submit"
             form="create-space-form"
@@ -128,10 +167,15 @@ export default function CreateSpaceDrawer({ open, onClose }: CreateSpaceDrawerPr
         </div>
       }
     >
-      <form id="create-space-form" className={styles.drawerBody} onSubmit={handleSubmit}>
-
+      <form
+        id="create-space-form"
+        className={styles.drawerBody}
+        onSubmit={handleSubmit}
+      >
         <div className={styles.field}>
-          <label className={styles.label}>Space Name <span className={styles.required}>*</span></label>
+          <label className={styles.label}>
+            Space Name <span className={styles.required}>*</span>
+          </label>
           <input
             className={styles.input}
             placeholder="e.g. Platform Engineering"
@@ -178,9 +222,19 @@ export default function CreateSpaceDrawer({ open, onClose }: CreateSpaceDrawerPr
         <div className={styles.field}>
           <label className={styles.label}>Color</label>
           <div className={styles.colorRow}>
-            {["#4F7EFF","#34D399","#FBBF24","#F87171","#A78BFA","#22D3EE","#FB923C","#64748B"].map((c) => (
+            {[
+              "#4F7EFF",
+              "#34D399",
+              "#FBBF24",
+              "#F87171",
+              "#A78BFA",
+              "#22D3EE",
+              "#FB923C",
+              "#64748B",
+            ].map((c) => (
               <button
-                key={c} type="button"
+                key={c}
+                type="button"
                 className={`${styles.colorDot} ${color === c ? styles.colorDotActive : ""}`}
                 onClick={() => setColor(c)}
                 style={{ background: c }}
@@ -196,7 +250,9 @@ export default function CreateSpaceDrawer({ open, onClose }: CreateSpaceDrawerPr
             <RiUserAddLine size={13} />
             Team Members
             {selectedIds.length > 0 && (
-              <span className={styles.memberCount}>{selectedIds.length} selected</span>
+              <span className={styles.memberCount}>
+                {selectedIds.length} selected
+              </span>
             )}
           </label>
 
@@ -241,12 +297,18 @@ export default function CreateSpaceDrawer({ open, onClose }: CreateSpaceDrawerPr
                         className={`${styles.dropdownItem} ${selected ? styles.dropdownItemSelected : ""}`}
                         onClick={() => toggleMember(u.id)}
                       >
-                        <div className={styles.memberAvatar}>{_initials(u.name)}</div>
+                        <div className={styles.memberAvatar}>
+                          {_initials(u.name)}
+                        </div>
                         <div className={styles.memberInfo}>
                           <div className={styles.memberName}>{u.name}</div>
-                          <div className={styles.memberMeta}>{ROLE_LABEL[u.role] ?? u.role} · {u.email}</div>
+                          <div className={styles.memberMeta}>
+                            {ROLE_LABEL[u.role] ?? u.role} · {u.email}
+                          </div>
                         </div>
-                        {selected && <RiCheckLine size={14} className={styles.checkIcon} />}
+                        {selected && (
+                          <RiCheckLine size={14} className={styles.checkIcon} />
+                        )}
                       </button>
                     );
                   })}
@@ -261,7 +323,11 @@ export default function CreateSpaceDrawer({ open, onClose }: CreateSpaceDrawerPr
               {selectedUsers.map((u) => (
                 <span key={u.id} className={styles.chip}>
                   {u.name}
-                  <button type="button" className={styles.chipRemove} onClick={() => toggleMember(u.id)}>
+                  <button
+                    type="button"
+                    className={styles.chipRemove}
+                    onClick={() => toggleMember(u.id)}
+                  >
                     <RiCloseLine size={11} />
                   </button>
                 </span>
@@ -269,7 +335,6 @@ export default function CreateSpaceDrawer({ open, onClose }: CreateSpaceDrawerPr
             </div>
           )}
         </div>
-
       </form>
     </SideDrawer>
   );

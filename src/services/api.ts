@@ -998,8 +998,10 @@ export interface SpacesBriefResult {
   nova_powered: boolean;
 }
 
-export async function fetchSpacesBrief(pod: string): Promise<SpacesBriefResult> {
-  const { data } = await api.post<SpacesBriefResult>(`/nova/spaces-brief/${pod}`);
+export async function fetchSpacesBrief(pod: string, force = false): Promise<SpacesBriefResult> {
+  const { data } = await api.post<SpacesBriefResult>(`/nova/spaces-brief/${pod}`, null, {
+    params: force ? { force: true } : undefined,
+  });
   return data;
 }
 
