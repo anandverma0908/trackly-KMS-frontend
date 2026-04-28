@@ -1,4 +1,3 @@
-import { RiBarChartBoxLine } from "react-icons/ri";
 import styles from "../MyWorkPage.module.css";
 import type { SprintRisk } from "../useMyWork";
 
@@ -20,7 +19,6 @@ export default function SprintRiskWidget({ risk, loading }: Props) {
     return (
       <div className={styles.riskCard}>
         <div className={styles.riskHeader}>
-          <RiBarChartBoxLine size={16} />
           <span>Sprint Risk</span>
         </div>
         <p className={styles.riskEmpty}>No active sprint</p>
@@ -40,7 +38,6 @@ export default function SprintRiskWidget({ risk, loading }: Props) {
       <div>
         <div className={styles.riskHeader}>
           <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
-            <RiBarChartBoxLine size={16} />
             <span>Sprint Risk</span>
           </div>
           <p className={styles.riskCoaching} style={{ color: ringColor }}>

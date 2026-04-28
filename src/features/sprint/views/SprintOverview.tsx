@@ -10,7 +10,7 @@ import {
 import type { Sprint, SprintCapacity, SprintForecast, BurndownPoint, VelocityPoint, SprintBlocker } from "@/types";
 import {
   RiSparklingLine, RiAlertLine, RiCheckLine, RiTimerLine,
-  RiFireLine, RiBrainLine, RiFlashlightLine, RiErrorWarningLine,
+  RiFireLine, RiFlashlightLine, RiErrorWarningLine,
   RiArrowUpLine, RiArrowDownLine,
 } from "react-icons/ri";
 // import styles from "../SprintPage.module.css";
@@ -120,7 +120,6 @@ export default function SprintOverview({
         {/* Forecast Card */}
         <div className={overviewStyles.forecastCard}>
           <div className={overviewStyles.cardHeader}>
-            <RiBrainLine size={14} className={overviewStyles.aiIcon} />
             <span>AI Delivery Forecast</span>
           </div>
           {forecastData ? (

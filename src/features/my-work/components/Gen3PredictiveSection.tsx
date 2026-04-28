@@ -21,7 +21,7 @@ function CognitiveLoadCard({
   return (
     <div className={styles.predictiveCard}>
       <div className={styles.predictiveHeader}>
-        <RiBrainLine size={14} color="#a78bfa" />
+        {/* <RiBrainLine size={14} color="#a78bfa" /> */}
         <span>Cognitive Load</span>
       </div>
       {loading ? (
@@ -84,11 +84,9 @@ function FocusWindowCard() {
   return (
     <div className={styles.predictiveCard}>
       <div className={styles.predictiveHeader}>
-        <RiCalendarLine size={14} color="#a78bfa" />
         <span>Focus Windows</span>
       </div>
       <div className={styles.proactiveEmpty}>
-        <RiCalendarLine size={24} color="var(--text-3)" />
         <p>
           No calendar connected — focus windows need calendar integration to detect your deep
           work blocks.
@@ -127,15 +125,15 @@ function CompletionPredictionCard({
   return (
     <div className={styles.predictiveCard}>
       <div className={styles.predictiveHeader}>
-        <RiRocketLine size={14} color="#a78bfa" />
+        {/* <RiRocketLine size={14} color="#a78bfa" /> */}
         <span>Completion Prediction</span>
       </div>
       {loading ? (
         <div className={styles.proactiveSkeleton} />
       ) : preds.length === 0 ? (
         <div className={styles.proactiveEmpty}>
-          <RiRocketLine size={24} color="var(--text-3)" />
-          <p>No open tickets to predict — queue is clear.</p>
+          {/* <RiRocketLine size={24} color="var(--text-3)" /> */}
+          <p>No open tickets to predict</p>
         </div>
       ) : (
         <div className={styles.completionList}>

@@ -1,4 +1,3 @@
-import { RiEyeLine } from "react-icons/ri";
 import styles from "../MyWorkPage.module.css";
 import type { AmbientEvent } from "../useMyWork";
 
@@ -17,8 +16,6 @@ export default function AmbientAwarenessWidget({ ambientEvents }: Props) {
   return (
     <div className={styles.ambientCard}>
       <div className={styles.ambientHeader}>
-        <div className={styles.ambientPulse} />
-        <RiEyeLine size={14} color="var(--accent)" />
         <span>Ambient Work Awareness</span>
         <span className={styles.ambientLive}>Live</span>
       </div>

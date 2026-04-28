@@ -1,4 +1,3 @@
-import { RiTimeLine } from "react-icons/ri";
 import styles from "../MyWorkPage.module.css";
 import type { TimeEnergy } from "../useMyWork";
 
@@ -21,7 +20,6 @@ export default function TimeEnergyWidget({ energy, loading }: Props) {
   return (
     <div className={styles.energyCard}>
       <div className={styles.energyHeader}>
-        <RiTimeLine size={14} />
         <span>Time & Energy</span>
       </div>
 

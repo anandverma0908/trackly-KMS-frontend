@@ -29,7 +29,6 @@ export default function NovaKnowledgeGaps({ gaps, loading }: Props) {
     return (
       <div className={`${styles.kgCard} fade-up-4`}>
         <div className={styles.kgHeader}>
-          <RiBookOpenLine size={14} />
           <span>Knowledge Gaps</span>
         </div>
         <div className={styles.kgSkeleton}>
@@ -46,7 +45,6 @@ export default function NovaKnowledgeGaps({ gaps, loading }: Props) {
   return (
     <div className={`${styles.kgCard} fade-up-4`}>
       <div className={styles.kgHeader}>
-        <RiBookOpenLine size={14} />
         <span>Knowledge Gaps</span>
         {sorted.length > 0 && (
           <span className={styles.kgCount}>{sorted.length} detected by EOS</span>

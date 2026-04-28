@@ -11,7 +11,6 @@ export default function NovaDeliveryForecast({ risk }: Props) {
     return (
       <div className={styles.forecastCard}>
         <div className={styles.forecastHeader}>
-          <RiRocketLine size={14} />
           <span>Delivery Forecast</span>
         </div>
         <p className={styles.forecastEmpty}>
@@ -49,7 +48,6 @@ export default function NovaDeliveryForecast({ risk }: Props) {
   return (
     <div className={styles.forecastCard}>
       <div className={styles.forecastHeader}>
-        <RiRocketLine size={14} />
         <span>Delivery Forecast</span>
         <span className={styles.forecastLabel} style={{ color: forecastColor }}>
           {forecastLabel}

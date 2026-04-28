@@ -1,7 +1,5 @@
 import { useState } from "react";
 import {
-  RiSparklingLine,
-  RiCheckLine,
   RiArrowRightLine,
   RiAlertLine,
   RiSendPlaneLine,
@@ -23,13 +21,20 @@ interface Props {
 
 function QuickActionIcon({ icon }: { icon: string }) {
   switch (icon) {
-    case "ping":    return <RiSendPlaneLine size={12} />;
-    case "log":     return <RiTimeLine size={12} />;
-    case "draft":   return <RiMessage2Line size={12} />;
-    case "move":    return <RiArrowRightLine size={12} />;
-    case "review":  return <RiEyeLine size={12} />;
-    case "escalate":return <RiArrowUpLine size={12} />;
-    default:        return <RiFlashlightLine size={12} />;
+    case "ping":
+      return <RiSendPlaneLine size={12} />;
+    case "log":
+      return <RiTimeLine size={12} />;
+    case "draft":
+      return <RiMessage2Line size={12} />;
+    case "move":
+      return <RiArrowRightLine size={12} />;
+    case "review":
+      return <RiEyeLine size={12} />;
+    case "escalate":
+      return <RiArrowUpLine size={12} />;
+    default:
+      return <RiFlashlightLine size={12} />;
   }
 }
 
@@ -45,7 +50,11 @@ function QueueStatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function AIPriorityQueue({ tickets, loading, onQuickAction }: Props) {
+export default function AIPriorityQueue({
+  tickets,
+  loading,
+  onQuickAction,
+}: Props) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   function toggleExpand(key: string) {
@@ -56,8 +65,7 @@ export default function AIPriorityQueue({ tickets, loading, onQuickAction }: Pro
     return (
       <div className={styles.queueCard}>
         <div className={styles.queueHeader}>
-          <RiSparklingLine size={16} />
-          <span>AI Priority Queue</span>
+          <span>Priority Queue</span>
         </div>
         <div className={styles.queueSkeleton}>
           {[1, 2, 3, 4].map((i) => (
@@ -72,11 +80,9 @@ export default function AIPriorityQueue({ tickets, loading, onQuickAction }: Pro
     return (
       <div className={styles.queueCard}>
         <div className={styles.queueHeader}>
-          <RiSparklingLine size={16} />
-          <span>AI Priority Queue</span>
+          <span>Priority Queue</span>
         </div>
         <div className={styles.queueEmpty}>
-          <RiCheckLine size={32} color="var(--green)" />
           <span>All clear — no open tickets!</span>
         </div>
       </div>
@@ -86,18 +92,20 @@ export default function AIPriorityQueue({ tickets, loading, onQuickAction }: Pro
   return (
     <div className={styles.queueCard}>
       <div className={styles.queueHeader}>
-        <RiSparklingLine size={16} />
-        <span>AI Priority Queue</span>
+        <span>Priority Queue</span>
         <span className={styles.queueCount}>{tickets.length} tickets</span>
       </div>
       <div className={styles.queueList}>
         {tickets.map((t) => {
           const isExpanded = expandedKey === t.key;
           const priorityIcon =
-            t.priority === "Highest" ? "⬆⬆"
-            : t.priority === "High"  ? "⬆"
-            : t.priority === "Medium"? "▶"
-            : "⬇";
+            t.priority === "Highest"
+              ? "⬆⬆"
+              : t.priority === "High"
+                ? "⬆"
+                : t.priority === "Medium"
+                  ? "▶"
+                  : "⬇";
           const priorityColor =
             t.priority === "Highest" || t.priority === "High"
               ? "var(--red)"
@@ -108,14 +116,19 @@ export default function AIPriorityQueue({ tickets, loading, onQuickAction }: Pro
               key={t.key}
               className={`${styles.queueItem} ${isExpanded ? styles.queueItemExpanded : ""} ${styles[`queueUrgency${t.aiUrgency}`]}`}
             >
-              <button className={styles.queueRow} onClick={() => toggleExpand(t.key)}>
+              <button
+                className={styles.queueRow}
+                onClick={() => toggleExpand(t.key)}
+              >
                 <span
                   className={styles.queueRank}
                   style={{
                     color:
-                      t.aiUrgency === "critical" ? "var(--red)"
-                      : t.aiUrgency === "high"   ? "var(--amber)"
-                      : "var(--text-3)",
+                      t.aiUrgency === "critical"
+                        ? "var(--red)"
+                        : t.aiUrgency === "high"
+                          ? "var(--amber)"
+                          : "var(--text-3)",
                   }}
                 >
                   #{t.aiRank}
@@ -125,10 +138,15 @@ export default function AIPriorityQueue({ tickets, loading, onQuickAction }: Pro
                     <span className={styles.queueKey}>{t.key}</span>
                     <QueueStatusBadge status={t.status} />
                     {t.deadlineRisk && (
-                      <span className={styles.queueRiskBadge}>{t.deadlineRisk}</span>
+                      <span className={styles.queueRiskBadge}>
+                        {t.deadlineRisk}
+                      </span>
                     )}
                     {t.priority && (
-                      <span className={styles.queuePriority} style={{ color: priorityColor }}>
+                      <span
+                        className={styles.queuePriority}
+                        style={{ color: priorityColor }}
+                      >
                         {priorityIcon}
                       </span>
                     )}
@@ -152,7 +170,8 @@ export default function AIPriorityQueue({ tickets, loading, onQuickAction }: Pro
                         ` This ticket is blocking ${t.blockingCount} other ticket${t.blockingCount > 1 ? "s" : ""}.`}
                       {t.daysInStatus > 3 &&
                         ` It has been in ${t.status} for ${t.daysInStatus} days.`}
-                      {t.sprintName && ` Part of active sprint: ${t.sprintName}.`}
+                      {t.sprintName &&
+                        ` Part of active sprint: ${t.sprintName}.`}
                     </p>
                   </div>
 
@@ -160,7 +179,9 @@ export default function AIPriorityQueue({ tickets, loading, onQuickAction }: Pro
                     {t.original_estimate_hours > 0 && (
                       <div className={styles.detailMeta}>
                         <span className={styles.detailMetaLabel}>Est.</span>
-                        <span className={styles.detailMetaVal}>{t.original_estimate_hours}h</span>
+                        <span className={styles.detailMetaVal}>
+                          {t.original_estimate_hours}h
+                        </span>
                       </div>
                     )}
                     {t.hours_spent > 0 && (
@@ -170,7 +191,8 @@ export default function AIPriorityQueue({ tickets, loading, onQuickAction }: Pro
                           className={styles.detailMetaVal}
                           style={{
                             color:
-                              t.hours_spent > (t.original_estimate_hours || 0) * 1.3
+                              t.hours_spent >
+                              (t.original_estimate_hours || 0) * 1.3
                                 ? "var(--amber)"
                                 : "var(--green)",
                           }}
@@ -182,7 +204,9 @@ export default function AIPriorityQueue({ tickets, loading, onQuickAction }: Pro
                     {t.story_points !== undefined && (
                       <div className={styles.detailMeta}>
                         <span className={styles.detailMetaLabel}>Points</span>
-                        <span className={styles.detailMetaVal}>{t.story_points}</span>
+                        <span className={styles.detailMetaVal}>
+                          {t.story_points}
+                        </span>
                       </div>
                     )}
                     {t.due_date && (
@@ -191,7 +215,10 @@ export default function AIPriorityQueue({ tickets, loading, onQuickAction }: Pro
                         <span
                           className={styles.detailMetaVal}
                           style={{
-                            color: new Date(t.due_date) < new Date() ? "var(--red)" : "var(--text-2)",
+                            color:
+                              new Date(t.due_date) < new Date()
+                                ? "var(--red)"
+                                : "var(--text-2)",
                           }}
                         >
                           {t.due_date}
@@ -221,7 +248,9 @@ export default function AIPriorityQueue({ tickets, loading, onQuickAction }: Pro
 
                   {t.quickActions.length > 0 && (
                     <div className={styles.quickActions}>
-                      <span className={styles.quickActionsLabel}>Quick Actions</span>
+                      <span className={styles.quickActionsLabel}>
+                        Quick Actions
+                      </span>
                       <div className={styles.quickActionsRow}>
                         {t.quickActions.map((qa) => (
                           <button

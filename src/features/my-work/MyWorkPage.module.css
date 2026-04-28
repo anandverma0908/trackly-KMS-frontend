@@ -311,8 +311,8 @@
 .insightList {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  padding: 0 12px 12px;
+  gap: 8px;
+  padding: 0 22px 18px;
 }
 
 .insightItem {
@@ -475,15 +475,19 @@
 
 /* ── Smart Focus Block ── */
 .focusCard {
+  display: flex;
+  flex-direction: column;
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.focusBody {
   display: grid;
   grid-template-columns: 1fr 1.2fr;
   gap: 20px;
-  background: var(--bgrnd);
-  border: 1px solid var(--accent-border);
-  border-radius: var(--r-xl);
-  padding: 16px;
   align-items: center;
-  box-sizing: border-box;
 }
 
 .focusLeft {
@@ -534,8 +538,7 @@
   flex-direction: column;
   gap: 10px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   padding: 14px;
 }
 
@@ -549,7 +552,7 @@
   font-size: 10px;
   font-weight: 700;
   font-family: var(--font-mono);
-  color: var(--text-3);
+  color: var(--text-2);
 }
 
 .focusSummary {
@@ -609,13 +612,13 @@
 /* ── AI Priority Queue ── */
 .queueCard {
   background: var(--bgrnd);
-  border: 1px solid var(--border-2);
   border-radius: var(--r-xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   max-height: calc(100vh - 240px);
   min-height: 345px;
+  gap: 10px;
 }
 
 .queueHeader {
@@ -638,17 +641,17 @@
   margin-left: auto;
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-3);
+  color: var(--text-2);
   background: var(--surface-2);
-  border-radius: 10px;
-  padding: 2px 8px;
+  border-radius: var(--r-sm);
+  padding: 5px 10px;
 }
 
 .queueList {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 0 12px 12px;
+  padding: 0 20px 12px;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
@@ -926,7 +929,7 @@
 .quickActionsLabel {
   font-size: 9px;
   font-weight: 700;
-  color: var(--text-3);
+  color: var(--text-2);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -996,11 +999,11 @@
 /* ── Sprint Risk ── */
 .riskCard {
   background: var(--bgrnd);
-  border: 1px solid var(--border-2);
   border-radius: var(--r-xl);
   padding: 16px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 12px;
 }
 
@@ -1034,7 +1037,7 @@
   justify-content: space-between;
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-2);
+  color: var(--text);
   letter-spacing: 0.02em;
 }
 
@@ -1089,7 +1092,7 @@
 
 .riskStatLbl {
   font-size: 10px;
-  color: var(--text-3);
+  color: var(--text-2);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1108,14 +1111,13 @@
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--text-2);
   margin: 0;
 }
 
 /* ── Time & Energy ── */
 .energyCard {
   background: var(--bgrnd);
-  border: 1px solid var(--border-2);
   border-radius: var(--r-xl);
   padding: 16px;
   display: flex;
@@ -1128,9 +1130,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--text-2);
+  color: var(--text);
   letter-spacing: 0.02em;
 }
 
@@ -1161,7 +1163,7 @@
 
 .energyScoreLbl {
   font-size: 10px;
-  color: var(--text-3);
+  color: var(--text-2);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1176,7 +1178,7 @@
 
 .energyPeakLbl {
   font-size: 10px;
-  color: var(--text-3);
+  color: var(--text-2);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1223,7 +1225,7 @@
 .sparkLabel {
   font-size: 9px;
   font-weight: 700;
-  color: var(--text-3);
+  color: var(--text-2);
   text-transform: uppercase;
 }
 
@@ -1244,7 +1246,7 @@
 .energyMetaLbl {
   font-size: 9px;
   font-weight: 700;
-  color: var(--text-3);
+  color: var(--text-2);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -1267,7 +1269,6 @@
 /* ── Nova Delivery Forecast ── */
 .forecastCard {
   background: var(--bgrnd);
-  border: 1px solid var(--border-2);
   border-radius: var(--r-xl);
   padding: 16px;
   display: flex;
@@ -1280,9 +1281,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--text-2);
+  color: var(--text);
   letter-spacing: 0.02em;
 }
 
@@ -1316,7 +1317,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 10px;
-  color: var(--text-3);
+  color: var(--text-2);
   font-weight: 600;
   margin-top: -6px;
 }
@@ -1344,7 +1345,7 @@
 .forecastStatLbl {
   font-size: 9px;
   font-weight: 700;
-  color: var(--text-3);
+  color: var(--text-2);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1365,8 +1366,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  color: var(--text-3);
+  font-size: 11px;
+  color: var(--text-2);
   margin: 0;
   text-align: center;
 }
@@ -1379,8 +1380,8 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  color: var(--text-3);
-  font-size: 13px;
+  color: var(--text-2);
+  font-size: 11px;
   font-weight: 500;
   gap: 6px;
   padding: 16px;
@@ -1389,7 +1390,6 @@
 /* ── Nova Knowledge Gaps ── */
 .kgCard {
   background: var(--bgrnd);
-  border: 1px solid var(--border-2);
   border-radius: var(--r-xl);
   padding: 16px 18px;
   display: flex;
@@ -1402,9 +1402,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--text-2);
+  color: var(--text);
   letter-spacing: 0.02em;
 }
 
@@ -1416,7 +1416,7 @@
   margin-left: auto;
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-3);
+  color: var(--text-2);
   background: var(--surface-2);
   border-radius: 10px;
   padding: 2px 8px;
@@ -1515,7 +1515,7 @@
     grid-template-columns: 1fr;
     grid-template-rows: unset;
   }
-  .focusCard {
+  .focusBody {
     grid-template-columns: 1fr;
   }
   .deliveryRow {
@@ -1647,7 +1647,6 @@
 
 .proactiveCard {
   background: var(--bgrnd);
-  border: 1px solid var(--border-2);
   border-radius: var(--r-xl);
   padding: 16px;
   display: flex;
@@ -1663,10 +1662,10 @@
 .proactiveHeader {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--text-2);
+  color: var(--text);
   letter-spacing: 0.02em;
 }
 
@@ -1703,7 +1702,7 @@
 }
 .proactiveEmpty p {
   font-size: 11px;
-  color: var(--text-3);
+  color: var(--text-2);
   margin: 0;
   line-height: 1.5;
 }
@@ -1871,6 +1870,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding: 0 10px;
 }
 
 .predictionItem {
@@ -1881,7 +1881,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: 2.5px solid var(--amber);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
 }
 
 .predictionTop {
@@ -1895,7 +1895,7 @@
   font-size: 10px;
   font-weight: 700;
   font-family: var(--font-mono);
-  color: var(--text-3);
+  color: var(--text);
   background: var(--surface-3);
   padding: 1px 5px;
   border-radius: 4px;
@@ -1948,7 +1948,6 @@
 
 .predictiveCard {
   background: var(--bgrnd);
-  border: 1px solid var(--border-2);
   border-radius: var(--r-xl);
   padding: 16px;
   display: flex;
@@ -1977,9 +1976,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--text-2);
+  color: var(--text);
   letter-spacing: 0.02em;
 }
 
@@ -2096,7 +2095,7 @@
 .cogItemLbl {
   font-size: 10px;
   font-weight: 600;
-  color: var(--text-3);
+  color: var(--text-2);
 }
 
 .cogItemVal {
@@ -2181,7 +2180,7 @@
   font-size: 10px;
   font-weight: 700;
   font-family: var(--font-mono);
-  color: var(--text-3);
+  color: var(--text);
   background: var(--surface-3);
   padding: 1px 5px;
   border-radius: 4px;
@@ -2362,7 +2361,6 @@
 /* ── Ambient Work Awareness ── */
 .ambientCard {
   background: var(--bgrnd);
-  border: 1px solid var(--border-2);
   border-radius: var(--r-xl);
   padding: 16px;
   display: flex;
@@ -2376,9 +2374,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--text-2);
+  color: var(--text);
 }
 
 .ambientPulse {
@@ -2499,7 +2497,7 @@
 }
 
 .ambientItemTime {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-3);
   font-weight: 600;
 }

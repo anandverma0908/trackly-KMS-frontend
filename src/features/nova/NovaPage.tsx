@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -45,6 +45,7 @@ interface PulseItem {
   title: string; detail: string;
   confidence: number; source: string;
   actions: string[]; age: string;
+  pod?: string;
 }
 
 interface Citation {
@@ -106,6 +107,7 @@ function anomalyToPulse(a: SpaceAnomaly, idx: number): PulseItem {
     source: `Pod health monitor · ${a.pod}`,
     actions: ["View space"],
     age: formatAge(a.detected_at),
+    pod: a.pod,
   };
 }
 
@@ -243,6 +245,14 @@ function useStreamingText(text: string, active: boolean, speed = 11) {
 ══════════════════════════════════════════════════════════ */
 function PulseCard({ item, onDismiss }: { item: PulseItem; onDismiss: () => void }) {
   const [expanded, setExpanded] = useState(false);
+  const navigate = useNavigate();
+
+  function handleAction(action: string) {
+    if (action === "View space" && item.pod) {
+      navigate(`/spaces/${encodeURIComponent(item.pod)}`);
+    }
+  }
+
   return (
     <motion.div
       className={`${styles.pulseCard} ${styles[`pulse_${item.type}`]}`}
@@ -279,7 +289,7 @@ function PulseCard({ item, onDismiss }: { item: PulseItem; onDismiss: () => void
             </div>
             <div className={styles.pulseActions}>
               {item.actions.map(a => (
-                <button key={a} className={styles.pulseAction}>{a}<RiArrowRightLine size={9} /></button>
+                <button key={a} className={styles.pulseAction} onClick={() => handleAction(a)}>{a}<RiArrowRightLine size={9} /></button>
               ))}
             </div>
           </motion.div>
@@ -882,55 +892,29 @@ Input: "${text}"`,
 
   const latestNovaId = [...messages].reverse().find(m => m.role === "nova")?.id;
 
-  /* ── Header stats — from real novaStatus only ── */
-  const novaOnline   = (novaStatus as any)?.available ?? false;
-  const novaProvider = (novaStatus as any)?.provider ?? null;
-
   return (
     <div className={styles.page}>
 
       {/* ── Header ── */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.novaOrb}>
-            <RiBrainLine size={18} />
-            <span className={styles.novaOrbRing} />
+          <div className={styles.novaAvatar}>
+            <RiBrainLine size={15} />
           </div>
           <div className={styles.headerText}>
-            <span className={styles.novaName}>Nova</span>
-            <span className={styles.novaSub}>
-              AI intelligence layer · always on
-              {podContext && (
-                <span className={styles.podBadge}>{podContext}</span>
-              )}
-            </span>
+            <div className={styles.headerTitleRow}>
+              <h1 className={styles.novaName}>Nova</h1>
+              <span className={styles.aiBadge}><RiSparklingLine size={10} />AI Intelligence</span>
+              {podContext && <span className={styles.podBadge}>{podContext}</span>}
+            </div>
+            <p className={styles.novaSub}>Ask anything about your project, team, or sprint</p>
           </div>
         </div>
-        <div className={styles.headerStats}>
-          <div className={styles.stat}>
-            <span className={styles.statVal}>{pulse.length > 0 ? pulse.length : "0"}</span>
-            <span className={styles.statLbl}>active signals</span>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.stat}>
-            <span className={styles.statVal}>{novaProvider ?? "—"}</span>
-            <span className={styles.statLbl}>provider</span>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.stat}>
-            <span
-              className={styles.statVal}
-              style={{ color: novaOnline ? "var(--green)" : "var(--red, #f87171)" }}
-            >
-              {novaStatus ? (novaOnline ? "online" : "offline") : "—"}
-            </span>
-            <span className={styles.statLbl}>Nova status</span>
-          </div>
-          <div className={styles.statDivider} />
+        <div className={styles.headerActions}>
           <button
             className={`${styles.reindexBtn} ${agentMode ? styles.reindexBtnActive : ""}`}
             onClick={() => setAgentMode((m) => !m)}
-            title={agentMode ? "Agent mode ON — Nova uses tools autonomously. Click to switch back to RAG mode." : "Enable agent mode — Nova will reason and use tools to complete multi-step tasks."}
+            title={agentMode ? "Agent mode ON — click to switch back to RAG mode" : "Enable agent mode — Nova reasons and uses tools"}
           >
             <RiFlashlightLine size={13} />
             {agentMode ? "Agent ON" : "Agent mode"}
