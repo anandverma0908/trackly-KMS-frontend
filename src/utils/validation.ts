@@ -2,7 +2,7 @@ import type { TicketCreate } from "@/types";
 
 const ISSUE_TYPES = ["Story", "Bug", "Task", "Epic", "Subtask", "Improvement"];
 const PRIORITIES = ["Highest", "High", "Medium", "Low", "Lowest"];
-const STATUSES = ["To Do", "In Progress", "In Review", "Blocked", "Done"];
+const STATUSES = ["Backlog", "To Do", "In Progress", "In Review", "Blocked", "Done"];
 const FIBONACCI = [1, 2, 3, 5, 8, 13, 21];
 const MAX_TITLE_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 5000;
@@ -50,9 +50,10 @@ export function validateTicketCreate(data: Partial<TicketCreate>): ValidationErr
   }
 
   if (data.due_date) {
-    const d = new Date(data.due_date);
-    if (isNaN(d.getTime())) {
-      errors.push({ field: "due_date", message: "Invalid due date format" });
+    const s = String(data.due_date);
+    const d = new Date(s);
+    if (isNaN(d.getTime()) || !/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      errors.push({ field: "due_date", message: "Due date must be a valid YYYY-MM-DD date" });
     }
   }
 

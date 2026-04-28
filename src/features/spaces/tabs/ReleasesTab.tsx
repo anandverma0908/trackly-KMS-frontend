@@ -11,7 +11,7 @@ import type { Release, ReleaseTicket } from "@/services/api";
 import styles from "./ReleasesTab.module.css";
 import {
   RiAddLine, RiDeleteBinLine, RiCheckboxCircleLine, RiCalendarLine,
-  RiLinkM, RiCloseLine, RiSearchLine, RiExternalLinkLine,
+  RiLinkM, RiCloseLine, RiSearchLine, RiExternalLinkLine, RiFlashlightLine,
 } from "react-icons/ri";
 
 const PRIORITY_COLOR: Record<string, string> = {
@@ -31,13 +31,13 @@ function fmtDate(s: string | null | undefined) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function TicketRow({
-  ticket,
-  onUnlink,
-}: {
-  ticket: ReleaseTicket;
-  onUnlink?: (key: string) => void;
-}) {
+function fmtDateFull(s: string) {
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+}
+
+function TicketRow({ ticket, onUnlink }: { ticket: ReleaseTicket; onUnlink?: (key: string) => void }) {
   return (
     <div className={styles.ticketRow}>
       <IssueTypeBadge type={ticket.issue_type ?? "Task"} />
@@ -54,11 +54,7 @@ function TicketRow({
       <span className={styles.ticketSummary}>{ticket.summary}</span>
       <div className={styles.ticketRight}>
         {ticket.priority && (
-          <span
-            className={styles.priorityDot}
-            style={{ background: PRIORITY_COLOR[ticket.priority] ?? "var(--text-3)" }}
-            title={ticket.priority}
-          />
+          <span className={styles.priorityDot} style={{ background: PRIORITY_COLOR[ticket.priority] ?? "var(--text-3)" }} title={ticket.priority} />
         )}
         <StatusBadge status={ticket.status ?? ""} />
         {ticket.assignee && (
@@ -67,11 +63,7 @@ function TicketRow({
           </span>
         )}
         {onUnlink && (
-          <button
-            className={styles.unlinkBtn}
-            onClick={() => onUnlink(ticket.key)}
-            title="Remove from release"
-          >
+          <button className={styles.unlinkBtn} onClick={() => onUnlink(ticket.key)} title="Remove from release">
             <RiCloseLine size={12} />
           </button>
         )}
@@ -80,25 +72,15 @@ function TicketRow({
   );
 }
 
-function LinkTicketsModal({
-  pod,
-  release,
-  linkedKeys,
-  onClose,
-}: {
-  pod: string;
-  release: Release;
-  linkedKeys: Set<string>;
-  onClose: () => void;
+function LinkTicketsModal({ pod, release, linkedKeys, onClose }: {
+  pod: string; release: Release; linkedKeys: Set<string>; onClose: () => void;
 }) {
   const [searchRaw, setSearchRaw] = useState("");
   const [search, setSearch] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const qc = useQueryClient();
 
-  useEffect(() => {
-    return () => clearTimeout(debounceRef.current);
-  }, []);
+  useEffect(() => { return () => clearTimeout(debounceRef.current); }, []);
 
   function handleSearch(val: string) {
     setSearchRaw(val);
@@ -118,7 +100,6 @@ function LinkTicketsModal({
       qc.invalidateQueries({ queryKey: ["release-tickets", pod, release.id] });
       qc.invalidateQueries({ queryKey: ["releases", pod] });
       toast.success(`${key} added to ${release.name}`);
-      // Keep modal open — user may want to link more tickets
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -143,19 +124,10 @@ function LinkTicketsModal({
           />
         </div>
         <div className={styles.modalList}>
-          {isFetching && available.length === 0 && (
-            <div className={styles.modalEmpty}>Searching…</div>
-          )}
-          {!isFetching && available.length === 0 && (
-            <div className={styles.modalEmpty}>No tickets found.</div>
-          )}
+          {isFetching && available.length === 0 && <div className={styles.modalEmpty}>Searching…</div>}
+          {!isFetching && available.length === 0 && <div className={styles.modalEmpty}>No tickets found.</div>}
           {available.map((t) => (
-            <button
-              key={t.key}
-              className={styles.modalTicketRow}
-              onClick={() => linkMut.mutate(t.key)}
-              disabled={linkMut.isPending}
-            >
+            <button key={t.key} className={styles.modalTicketRow} onClick={() => linkMut.mutate(t.key)} disabled={linkMut.isPending}>
               <IssueTypeBadge type={t.issue_type ?? "Task"} />
               <span className={styles.modalTicketKey}>{t.key}</span>
               <span className={styles.modalTicketSummary}>{t.summary}</span>
@@ -168,18 +140,96 @@ function LinkTicketsModal({
   );
 }
 
-function ReleaseDrawer({
-  release,
-  pod,
-  onClose,
-  onMarkReleased,
-  onDelete,
-}: {
-  release: Release;
-  pod: string;
-  onClose: () => void;
-  onMarkReleased: (id: string) => void;
-  onDelete: (id: string) => Promise<void>;
+/* ── Create Release Drawer ── */
+function CreateReleaseDrawer({ pod, releases, onClose }: { pod: string; releases: Release[]; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [name, setName] = useState("");
+  const [desc, setDesc] = useState("");
+  const [date, setDate] = useState("");
+
+  const nameExists = name.trim() && releases.some(
+    (r) => r.name.toLowerCase() === name.trim().toLowerCase()
+  );
+
+  const createMut = useMutation({
+    mutationFn: () => createRelease(pod, { name: name.trim(), description: desc || undefined, release_date: date || undefined }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["releases", pod] });
+      toast.success("Release created");
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <SideDrawer
+      open
+      onClose={onClose}
+      size="sm"
+      title="Create Release"
+      badge={
+        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--green)", background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.28)", padding: "2px 10px", borderRadius: 99 }}>
+          <RiFlashlightLine size={9} style={{ marginRight: 4 }} />New Release
+        </span>
+      }
+      footer={
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            className={styles.footerSaveBtn}
+            onClick={() => createMut.mutate()}
+            disabled={!name.trim() || !!nameExists || createMut.isPending}
+          >
+            {createMut.isPending ? "Creating…" : "Create Release"}
+          </button>
+          <button className={styles.footerCancelBtn} onClick={onClose}>Cancel</button>
+        </div>
+      }
+    >
+      <div className={styles.drawerForm}>
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}>Version Name *</label>
+          <input
+            className={`${styles.fieldInput} ${nameExists ? styles.fieldInputError : ""}`}
+            placeholder="e.g. v1.2.0"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+          />
+          {nameExists && <span className={styles.fieldErrorMsg}>A release with this name already exists.</span>}
+        </div>
+
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}>Description</label>
+          <textarea
+            className={styles.fieldTextarea}
+            placeholder="What's included in this release?"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            rows={3}
+          />
+        </div>
+
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}><RiCalendarLine size={11} style={{ marginRight: 4 }} />Release Date</label>
+          <input
+            className={styles.fieldInput}
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+          {date && (
+            <span style={{ fontSize: 11, color: "var(--text-3)", marginTop: 2 }}>{fmtDateFull(date)}</span>
+          )}
+        </div>
+      </div>
+    </SideDrawer>
+  );
+}
+
+/* ── Release Detail Drawer ── */
+function ReleaseDrawer({ release, pod, onClose, onMarkReleased, onDelete }: {
+  release: Release; pod: string; onClose: () => void;
+  onMarkReleased: (id: string) => void; onDelete: (id: string) => Promise<void>;
 }) {
   const [showLink, setShowLink] = useState(false);
   const [confirmRelease, setConfirmRelease] = useState(false);
@@ -203,22 +253,15 @@ function ReleaseDrawer({
   });
 
   const linkedKeys = new Set(tickets.map((t) => t.key));
-  const done = tickets.filter((t) =>
-    STATUS_DONE.some((s) => t.status?.toLowerCase().includes(s.toLowerCase()))
-  ).length;
+  const done = tickets.filter((t) => STATUS_DONE.some((s) => t.status?.toLowerCase().includes(s.toLowerCase()))).length;
   const total = tickets.length;
   const progress = total > 0 ? Math.round((done / total) * 100) : 0;
 
   async function handleDelete() {
     setIsDeleting(true);
-    try {
-      await onDelete(release.id);
-      onClose();
-    } catch {
-      // error already toasted by parent mutation
-    } finally {
-      setIsDeleting(false);
-    }
+    try { await onDelete(release.id); onClose(); }
+    catch { /* already toasted */ }
+    finally { setIsDeleting(false); }
   }
 
   return (
@@ -233,25 +276,18 @@ function ReleaseDrawer({
             {release.status}
           </span>
         }
+        stats={total > 0 ? [
+          { label: "Total",   value: String(total) },
+          { label: "Done",    value: String(done) },
+          { label: "% Done",  value: `${progress}%` },
+        ] : undefined}
       >
         <div className={styles.drawerBody}>
           {release.description && <p className={styles.drawerDesc}>{release.description}</p>}
 
-          <div className={styles.drawerMeta}>
-            {release.release_date && (
-              <span>
-                <RiCalendarLine size={12} style={{ marginRight: 4 }} />
-                {fmtDate(release.release_date)}
-              </span>
-            )}
-          </div>
-
-          {total > 0 && (
-            <div className={styles.progressWrap}>
-              <div className={styles.progressBar}>
-                <div className={styles.progressFill} style={{ width: `${progress}%` }} />
-              </div>
-              <span className={styles.progressLabel}>{done}/{total} done</span>
+          {release.release_date && (
+            <div className={styles.drawerMeta}>
+              <span><RiCalendarLine size={12} style={{ marginRight: 4 }} />{fmtDate(release.release_date)}</span>
             </div>
           )}
 
@@ -267,13 +303,7 @@ function ReleaseDrawer({
             {!isLoading && tickets.length === 0 && (
               <div className={styles.ticketsEmpty}>No tickets linked yet. Click "Link Tickets" to add some.</div>
             )}
-            {tickets.map((t) => (
-              <TicketRow
-                key={t.key}
-                ticket={t}
-                onUnlink={(key) => unlinkMut.mutate(key)}
-              />
-            ))}
+            {tickets.map((t) => <TicketRow key={t.key} ticket={t} onUnlink={(key) => unlinkMut.mutate(key)} />)}
           </div>
 
           <div className={styles.drawerActions}>
@@ -281,12 +311,7 @@ function ReleaseDrawer({
               confirmRelease ? (
                 <div className={styles.confirmInline}>
                   <span className={styles.confirmText}>Mark as released?</span>
-                  <button
-                    className={styles.releaseBtn}
-                    onClick={() => { onMarkReleased(release.id); setConfirmRelease(false); }}
-                  >
-                    Confirm
-                  </button>
+                  <button className={styles.releaseBtn} onClick={() => { onMarkReleased(release.id); setConfirmRelease(false); }}>Confirm</button>
                   <button className={styles.confirmNo} onClick={() => setConfirmRelease(false)}>Cancel</button>
                 </div>
               ) : (
@@ -298,11 +323,7 @@ function ReleaseDrawer({
             {confirmDelete ? (
               <div className={styles.confirmInline}>
                 <span className={styles.confirmText}>Delete this release?</span>
-                <button
-                  className={styles.drawerDangerBtn}
-                  disabled={isDeleting}
-                  onClick={handleDelete}
-                >
+                <button className={styles.drawerDangerBtn} disabled={isDeleting} onClick={handleDelete}>
                   {isDeleting ? "Deleting…" : "Delete"}
                 </button>
                 <button className={styles.confirmNo} onClick={() => setConfirmDelete(false)}>Cancel</button>
@@ -317,17 +338,13 @@ function ReleaseDrawer({
       </SideDrawer>
 
       {showLink && (
-        <LinkTicketsModal
-          pod={pod}
-          release={release}
-          linkedKeys={linkedKeys}
-          onClose={() => setShowLink(false)}
-        />
+        <LinkTicketsModal pod={pod} release={release} linkedKeys={linkedKeys} onClose={() => setShowLink(false)} />
       )}
     </>
   );
 }
 
+/* ── Main ── */
 export default function ReleasesTab({ pod }: { pod: string }) {
   const qc = useQueryClient();
   const { data: releases = [], isLoading, isError } = useQuery({
@@ -336,25 +353,7 @@ export default function ReleasesTab({ pod }: { pod: string }) {
   });
 
   const [showCreate, setShowCreate] = useState(false);
-  const [name, setName] = useState("");
-  const [desc, setDesc] = useState("");
-  const [date, setDate] = useState("");
   const [drawerRelease, setDrawerRelease] = useState<Release | null>(null);
-
-  const nameExists = name.trim() && releases.some(
-    (r) => r.name.toLowerCase() === name.trim().toLowerCase()
-  );
-
-  const createMut = useMutation({
-    mutationFn: () => createRelease(pod, { name, description: desc || undefined, release_date: date || undefined }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["releases", pod] });
-      toast.success("Release created");
-      setShowCreate(false);
-      setName(""); setDesc(""); setDate("");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   const releaseMut = useMutation({
     mutationFn: (id: string) => updateRelease(pod, id, { status: "released" }),
@@ -375,56 +374,17 @@ export default function ReleasesTab({ pod }: { pod: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  if (isLoading) {
-    return (
-      <div className={styles.tab}>
-        <div className={styles.stateBox} style={{ color: "var(--text-3)" }}>Loading releases…</div>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className={styles.tab}>
-        <div className={styles.stateBox} style={{ color: "var(--red)" }}>
-          Failed to load releases. Please refresh.
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <div className={styles.tab}><div className={styles.stateBox} style={{ color: "var(--text-3)" }}>Loading releases…</div></div>;
+  if (isError)   return <div className={styles.tab}><div className={styles.stateBox} style={{ color: "var(--red)" }}>Failed to load releases. Please refresh.</div></div>;
 
   return (
     <div className={styles.tab}>
       <div className={styles.header}>
-        <h3 className={styles.title}>Releases</h3>
+        <h3 className={styles.title}>Releases <span style={{ fontWeight: 400, color: "var(--text-3)", fontSize: 13 }}>({releases.length})</span></h3>
         <button className={styles.createBtn} onClick={() => setShowCreate(true)}>
           <RiAddLine size={14} /> Create Release
         </button>
       </div>
-
-      {showCreate && (
-        <div className={styles.form}>
-          <input
-            className={`${styles.input} ${nameExists ? styles.inputError : ""}`}
-            placeholder="Version name (e.g. v1.2.0)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          {nameExists && <span className={styles.fieldError}>A release with this name already exists.</span>}
-          <input className={styles.input} placeholder="Description" value={desc} onChange={(e) => setDesc(e.target.value)} />
-          <input className={styles.input} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          <div className={styles.formActions}>
-            <button
-              className={styles.saveBtn}
-              onClick={() => createMut.mutate()}
-              disabled={!name.trim() || !!nameExists || createMut.isPending}
-            >
-              Create
-            </button>
-            <button className={styles.cancelBtn} onClick={() => setShowCreate(false)}>Cancel</button>
-          </div>
-        </div>
-      )}
 
       <div className={styles.grid}>
         {releases.map((r) => (
@@ -439,16 +399,11 @@ export default function ReleasesTab({ pod }: { pod: string }) {
             <div className={styles.releaseMeta}>
               <span className={styles.releaseCount}>{r.ticket_count} tickets</span>
               {r.release_date && (
-                <span className={styles.releaseDate}>
-                  <RiCalendarLine size={10} /> {fmtDate(r.release_date)}
-                </span>
+                <span className={styles.releaseDate}><RiCalendarLine size={10} /> {fmtDate(r.release_date)}</span>
               )}
             </div>
             {r.status === "unreleased" && (
-              <button
-                className={styles.releaseBtn}
-                onClick={(e) => { e.stopPropagation(); releaseMut.mutate(r.id); }}
-              >
+              <button className={styles.releaseBtn} onClick={(e) => { e.stopPropagation(); releaseMut.mutate(r.id); }}>
                 <RiCheckboxCircleLine size={12} /> Mark as Released
               </button>
             )}
@@ -457,6 +412,10 @@ export default function ReleasesTab({ pod }: { pod: string }) {
         {releases.length === 0 && <div className={styles.empty}>No releases yet.</div>}
       </div>
 
+      {/* ── Create Drawer ── */}
+      {showCreate && <CreateReleaseDrawer pod={pod} releases={releases} onClose={() => setShowCreate(false)} />}
+
+      {/* ── Detail Drawer ── */}
       {drawerRelease && (
         <ReleaseDrawer
           release={drawerRelease}

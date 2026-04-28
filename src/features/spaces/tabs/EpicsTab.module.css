@@ -463,3 +463,148 @@
 .modalRow:disabled { opacity: 0.5; cursor: not-allowed; }
 .modalKey { font-size: 11px; font-weight: 700; color: var(--accent); white-space: nowrap; flex-shrink: 0; font-family: var(--font-mono); }
 .modalSummary { flex: 1; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Create/Edit Drawer Form ── */
+.drawerForm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+
+.fieldInput {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.fieldInput:focus { border-color: var(--accent); }
+.fieldInputError { border-color: var(--red) !important; }
+.fieldErrorMsg { font-size: 11px; color: var(--red); margin-top: 2px; }
+
+.fieldRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.colorSwatches {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.colorSwatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+  outline: none;
+  flex-shrink: 0;
+}
+.colorSwatch:hover { transform: scale(1.18); }
+.colorSwatchActive {
+  border-color: var(--text) !important;
+  box-shadow: 0 0 0 3px var(--bg-2);
+  transform: scale(1.18);
+}
+
+.colorPreview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* ── Drawer footer ── */
+.drawerFooter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footerSaveBtn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: opacity 0.15s;
+}
+.footerSaveBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.footerSaveBtn:not(:disabled):hover { opacity: 0.88; }
+
+.footerCancelBtn {
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all 0.15s;
+}
+.footerCancelBtn:hover { color: var(--text); border-color: var(--border); }
+
+/* ── Edit-in-drawer button ── */
+.editInDrawerBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-sm);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  margin-bottom: 10px;
+}
+.editInDrawerBtn:hover { background: var(--accent-glow); }
+
+/* ── Drawer date row ── */
+.drawerDateRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 18px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}

@@ -117,22 +117,24 @@ export type ReportType = 'monthly' | 'fy'
 
 /* ── Ticket (extended for creation/management) ── */
 export interface TicketCreate {
-  title:        string
-  description:  string
-  reporter?:    string
-  assignee?:    string
-  pod?:         string
-  client?:      string
-  issue_type:   string
-  priority:     string
-  status?:      string
-  story_points?: number
-  sprint_id?:   string
-  labels?:      string[]
-  due_date?:    string
-  parent_key?:  string
-  epic_key?:    string
-  fix_version?: string
+  title:                      string
+  description:                string
+  reporter?:                  string
+  assignee?:                  string
+  pod?:                       string
+  client?:                    string
+  issue_type:                 string
+  priority:                   string
+  status?:                    string
+  story_points?:              number
+  sprint_id?:                 string
+  labels?:                    string[]
+  due_date?:                  string
+  parent_key?:                string
+  epic_key?:                  string
+  fix_version?:               string
+  original_estimate_hours?:   number
+  remaining_estimate_hours?:  number
 }
 
 export interface TicketComment {

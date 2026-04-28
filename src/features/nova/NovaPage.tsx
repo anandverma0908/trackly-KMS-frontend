@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -9,6 +10,7 @@ import {
   RiRobot2Line, RiHistoryLine, RiImageLine, RiRefreshLine,
   RiFlashlightLine, RiCheckLine, RiErrorWarningLine, RiLoader4Line,
   RiAttachmentLine, RiVideoLine, RiMusicLine,
+  RiArrowLeftSLine, RiArrowRightSLine,
 } from "react-icons/ri";
 import { runAgentLoop } from "./agent/agentController";
 import type { AgentStep } from "./agent/agentTypes";
@@ -194,14 +196,25 @@ const PULSE_LABEL: Record<PulseType, string> = {
   risk: "Risk", pattern: "Pattern", suggestion: "Suggestion", signal: "Signal",
 };
 
-const EMPTY_SUGGESTIONS = [
+const GLOBAL_SUGGESTIONS = [
   "What bugs are open right now?",
-  "Is there any login bug in TRKLY?",
   "What's blocking the current sprint?",
   "Which tickets are high priority?",
+  "Which pods are at risk?",
   "What did we decide about auth?",
   "Summarise what's been done this week",
 ];
+
+function podSuggestions(pod: string) {
+  return [
+    `What's blocking the ${pod} team?`,
+    `Show me open bugs in ${pod}`,
+    `What's the sprint status for ${pod}?`,
+    `Which ${pod} tickets are overdue?`,
+    `Summarise ${pod}'s progress this week`,
+    `Who is working on what in ${pod}?`,
+  ];
+}
 
 /* ══════════════════════════════════════════════════════════
    STREAMING TEXT HOOK
@@ -431,6 +444,8 @@ function MessageBubble({ msg, isLatestNova }: { msg: Message; isLatestNova: bool
    NOVA PAGE
 ══════════════════════════════════════════════════════════ */
 export default function NovaPage() {
+  const [searchParams] = useSearchParams();
+  const podContext = searchParams.get("pod") ?? undefined;
   const qc = useQueryClient();
   const [messages,    setMessages]    = useState<Message[]>([]);
   const [loading,     setLoading]     = useState(false);
@@ -450,6 +465,10 @@ export default function NovaPage() {
   const [agentMode,   setAgentMode]   = useState(false);
   /** Live tool-call steps streamed into the loading indicator */
   const [liveSteps,   setLiveSteps]   = useState<AgentStep[]>([]);
+  const [leftOpen,    setLeftOpen]    = useState(true);
+  const [rightOpen,   setRightOpen]   = useState(true);
+
+  const suggestions = podContext ? podSuggestions(podContext) : GLOBAL_SUGGESTIONS;
 
   const textareaRef    = useRef<HTMLTextAreaElement>(null);
   const threadRef      = useRef<HTMLDivElement>(null);
@@ -461,8 +480,8 @@ export default function NovaPage() {
 
   /* ── Data queries ── */
   const { data: anomalies = [] } = useQuery({
-    queryKey: ["nova-anomalies"],
-    queryFn: fetchAnomalies,
+    queryKey: ["nova-anomalies", podContext],
+    queryFn: () => fetchAnomalies(podContext),
     staleTime: 2 * 60 * 1000,
   });
 
@@ -479,14 +498,14 @@ export default function NovaPage() {
   });
 
   const { data: decisionsResp } = useQuery({
-    queryKey: ["decisions"],
-    queryFn: () => fetchDecisions(),
+    queryKey: ["decisions", podContext],
+    queryFn: () => fetchDecisions(podContext ? { space_id: podContext } : undefined),
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: standups = [] } = useQuery({
-    queryKey: ["team-standups"],
-    queryFn: () => fetchTeamStandups(),
+    queryKey: ["team-standups", podContext],
+    queryFn: () => fetchTeamStandups(undefined, podContext),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -756,7 +775,7 @@ Input: "${text}"`,
           setLiveSteps([]);
         } else {
           /* ── Standard RAG query ── */
-          const res = await novaQuery(text);
+          const res = await novaQuery(text, undefined, podContext);
           novaMsg = {
             id: crypto.randomUUID(), role: "nova",
             text: res.answer || "I couldn't find a relevant answer. Try rephrasing your question.",
@@ -879,7 +898,12 @@ Input: "${text}"`,
           </div>
           <div className={styles.headerText}>
             <span className={styles.novaName}>Nova</span>
-            <span className={styles.novaSub}>AI intelligence layer · always on</span>
+            <span className={styles.novaSub}>
+              AI intelligence layer · always on
+              {podContext && (
+                <span className={styles.podBadge}>{podContext}</span>
+              )}
+            </span>
           </div>
         </div>
         <div className={styles.headerStats}>
@@ -924,32 +948,52 @@ Input: "${text}"`,
       </header>
 
       {/* ── 3-column body ── */}
-      <div className={styles.body}>
+      <div
+        className={styles.body}
+        style={{
+          gridTemplateColumns: `${leftOpen ? "272px" : "40px"} 1fr ${rightOpen ? "268px" : "40px"}`,
+        }}
+      >
 
         {/* ══ LEFT — Pulse ══ */}
-        <aside className={styles.pulsePanel}>
+        <aside className={`${styles.pulsePanel} ${leftOpen ? "" : styles.panelCollapsed}`}>
           <div className={styles.panelHead}>
-            <span className={styles.panelTitle}>
-              <span className={styles.liveDot} />Pulse
-            </span>
-            <span className={styles.panelSub}>Nova is watching</span>
-          </div>
-          <div className={styles.pulseFeed}>
-            <AnimatePresence mode="popLayout">
-              {pulse.map(item => (
-                <PulseCard
-                  key={item.id} item={item}
-                  onDismiss={() => setPulse(p => p.filter(x => x.id !== item.id))}
-                />
-              ))}
-            </AnimatePresence>
-            {pulse.length === 0 && (
-              <div className={styles.pulseEmpty}>
-                <RiSparklingLine size={24} />
-                <span>All clear — no anomalies or gaps detected</span>
-              </div>
+            {leftOpen ? (
+              <>
+                <span className={styles.panelTitle}>
+                  <span className={styles.liveDot} />Pulse
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span className={styles.panelSub}>Nova is watching</span>
+                  <button className={styles.collapseBtn} onClick={() => setLeftOpen(false)} title="Collapse">
+                    <RiArrowLeftSLine size={14} />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <button className={styles.collapseBtnFull} onClick={() => setLeftOpen(true)} title="Expand Pulse panel">
+                <RiAlertLine size={14} />
+              </button>
             )}
           </div>
+          {leftOpen && (
+            <div className={styles.pulseFeed}>
+              <AnimatePresence mode="popLayout">
+                {pulse.map(item => (
+                  <PulseCard
+                    key={item.id} item={item}
+                    onDismiss={() => setPulse(p => p.filter(x => x.id !== item.id))}
+                  />
+                ))}
+              </AnimatePresence>
+              {pulse.length === 0 && (
+                <div className={styles.pulseEmpty}>
+                  <RiSparklingLine size={24} />
+                  <span>All clear — no anomalies or gaps detected</span>
+                </div>
+              )}
+            </div>
+          )}
         </aside>
 
         {/* ══ CENTER — Nova ══ */}
@@ -982,7 +1026,7 @@ Input: "${text}"`,
                   Ask anything about your tickets, team, decisions, or sprint — Nova knows your project.
                 </p>
                 <div className={styles.emptySuggestions}>
-                  {EMPTY_SUGGESTIONS.map(s => (
+                  {suggestions.map(s => (
                     <button key={s} className={styles.emptySuggestion} onClick={() => send(s, "ask")}>{s}</button>
                   ))}
                 </div>
@@ -1112,10 +1156,29 @@ Input: "${text}"`,
         </main>
 
         {/* ══ RIGHT — Nova's Desk ══ */}
-        <aside className={styles.desk}>
+        <aside className={`${styles.desk} ${rightOpen ? "" : styles.panelCollapsed}`}>
+          <div className={styles.panelHead} style={{ borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+            {rightOpen ? (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <button className={styles.collapseBtn} onClick={() => setRightOpen(false)} title="Collapse">
+                    <RiArrowRightSLine size={14} />
+                  </button>
+                  <span className={styles.panelSub}>Nova's Desk</span>
+                </div>
+                <span className={styles.panelTitle} style={{ fontSize: "10px" }}>
+                  <RiRobot2Line size={11} />Desk
+                </span>
+              </>
+            ) : (
+              <button className={styles.collapseBtnFull} onClick={() => setRightOpen(true)} title="Expand Desk panel">
+                <RiRobot2Line size={14} />
+              </button>
+            )}
+          </div>
 
           {/* Background agents — only shown when real data backs them */}
-          {agents.length > 0 && (
+          {rightOpen && agents.length > 0 && (
             <div className={styles.deskSection}>
               <div className={styles.deskSectionHead}>
                 <RiRobot2Line size={12} /><span>Monitors</span>
@@ -1141,7 +1204,7 @@ Input: "${text}"`,
           )}
 
           {/* Memory */}
-          <div className={styles.deskSection}>
+          {rightOpen && <div className={styles.deskSection}>
             <div className={styles.deskSectionHead}>
               <RiHistoryLine size={12} /><span>Memory</span>
               <span className={styles.deskSectionSub}>click to surface</span>
@@ -1167,10 +1230,10 @@ Input: "${text}"`,
                 </button>
               ))}
             </div>
-          </div>
+          </div>}
 
           {/* Created by Nova */}
-          <div className={styles.deskSection}>
+          {rightOpen && <div className={styles.deskSection}>
             <div className={styles.deskSectionHead}>
               <RiSparklingLine size={12} /><span>Created by Nova</span>
             </div>
@@ -1191,7 +1254,7 @@ Input: "${text}"`,
                 </div>
               ))}
             </div>
-          </div>
+          </div>}
 
         </aside>
       </div>

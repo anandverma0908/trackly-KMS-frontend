@@ -867,3 +867,285 @@
   color: var(--text-3);
   font-size: 13px;
 }
+
+/* ── Drawer Form Styles ── */
+.drawerForm {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formRow2 {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.fieldLabel {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+
+.fieldInput {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.fieldInput:focus { border-color: var(--accent); }
+
+.fieldTextarea {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+.fieldTextarea:focus { border-color: var(--accent); }
+
+.fieldSelect {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+}
+.fieldSelect:focus { border-color: var(--accent); }
+
+/* ── Steps ── */
+.stepsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.stepsBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stepRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepNum {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+}
+
+.stepInputs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.expectedInput {
+  border-style: dashed;
+  font-size: 12px;
+}
+
+.removeStepBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.removeStepBtn:hover { color: var(--red); background: rgba(239,68,68,0.08); }
+
+/* ── Ticket Picker ── */
+.ticketPickerInput {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  padding: 9px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 40px;
+  transition: border-color 0.15s;
+}
+.ticketPickerInput:hover { border-color: var(--accent); }
+
+.ticketPickerDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+  z-index: 100;
+  max-height: 260px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ticketPickerSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ticketPickerSearchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+.ticketPickerSearchInput::placeholder { color: var(--text-3); }
+
+.ticketPickerList {
+  overflow-y: auto;
+  flex: 1;
+  padding: 4px;
+}
+
+.ticketPickerItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--text);
+  font-family: var(--font-sans);
+  transition: background 0.1s;
+}
+.ticketPickerItem:hover { background: var(--surface-2); }
+
+.ticketPickerEmpty {
+  font-size: 12px;
+  color: var(--text-3);
+  text-align: center;
+  padding: 20px;
+}
+
+/* ── EOS hint box ── */
+.eosHint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+/* ── Drawer footer buttons ── */
+.footerSaveBtn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.footerSaveBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.footerSaveBtn:not(:disabled):hover { opacity: 0.88; }
+
+.footerGenerateBtn {
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.15s;
+}
+.footerGenerateBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.footerGenerateBtn:not(:disabled):hover { opacity: 0.88; }
+
+.footerCancelBtn {
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all 0.15s;
+}
+.footerCancelBtn:hover { color: var(--text); border-color: var(--border); }

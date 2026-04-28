@@ -21,6 +21,8 @@ import {
   RiSearchLine,
   RiCloseLine,
   RiLinkM,
+  RiCalendarLine,
+  RiFlagLine,
 } from "react-icons/ri";
 
 interface Epic {
@@ -44,23 +46,13 @@ function fmtDate(s: string) {
 }
 
 /* ── Link Ticket Modal ── */
-function LinkTicketModal({
-  pod,
-  epicId,
-  onClose,
-}: {
-  pod: string;
-  epicId: string;
-  onClose: () => void;
-}) {
+function LinkTicketModal({ pod, epicId, onClose }: { pod: string; epicId: string; onClose: () => void }) {
   const [searchRaw, setSearchRaw] = useState("");
   const [search, setSearch] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const qc = useQueryClient();
 
-  useEffect(() => {
-    return () => clearTimeout(debounceRef.current);
-  }, []);
+  useEffect(() => { return () => clearTimeout(debounceRef.current); }, []);
 
   function handleSearch(val: string) {
     setSearchRaw(val);
@@ -106,12 +98,7 @@ function LinkTicketModal({
           {isFetching && tickets.length === 0 && <div className={styles.modalEmpty}>Searching…</div>}
           {!isFetching && tickets.length === 0 && <div className={styles.modalEmpty}>No tickets found.</div>}
           {tickets.map((t) => (
-            <button
-              key={t.key}
-              className={styles.modalRow}
-              onClick={() => linkMut.mutate(t.key)}
-              disabled={linkMut.isPending}
-            >
+            <button key={t.key} className={styles.modalRow} onClick={() => linkMut.mutate(t.key)} disabled={linkMut.isPending}>
               <span className={styles.modalKey}>{t.key}</span>
               <span className={styles.modalSummary}>{t.summary}</span>
             </button>
@@ -122,6 +109,115 @@ function LinkTicketModal({
   );
 }
 
+/* ── Create / Edit Epic Drawer ── */
+function EpicFormDrawer({
+  epic,
+  onClose,
+  onCreate,
+  onUpdate,
+  isPending,
+}: {
+  epic: Epic | null;
+  onClose: () => void;
+  onCreate: (payload: { title: string; color: string; start_date?: string; end_date?: string }) => void;
+  onUpdate: (payload: { title: string; color: string; start_date?: string; end_date?: string }) => void;
+  isPending: boolean;
+}) {
+  const isEdit = Boolean(epic);
+  const [title, setTitle] = useState(epic?.title ?? "");
+  const [color, setColor] = useState(epic?.color ?? "#4F7EFF");
+  const [start, setStart] = useState(epic?.startDate ? epic.startDate.slice(0, 10) : "");
+  const [end, setEnd] = useState(epic?.endDate ? epic.endDate.slice(0, 10) : "");
+
+  const dateError = start && end && end < start ? "End date must be on or after start date" : null;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim() || dateError) return;
+    const payload = { title: title.trim(), color, start_date: start || undefined, end_date: end || undefined };
+    if (isEdit) onUpdate(payload);
+    else onCreate(payload);
+  }
+
+  return (
+    <SideDrawer
+      open
+      onClose={onClose}
+      size="sm"
+      title={isEdit ? "Edit Epic" : "Create Epic"}
+      badge={
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: "var(--accent)", background: "var(--accent-glow)", border: "1px solid var(--accent-border)", padding: "2px 10px", borderRadius: 99 }}>
+          <RiFlagLine size={10} /> {isEdit ? "Editing" : "New Epic"}
+        </span>
+      }
+      footer={
+        <div className={styles.drawerFooter}>
+          <button className={styles.footerSaveBtn} onClick={handleSubmit} disabled={!title.trim() || !!dateError || isPending}>
+            {isPending ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Changes" : "Create Epic")}
+          </button>
+          <button className={styles.footerCancelBtn} onClick={onClose}>Cancel</button>
+        </div>
+      }
+    >
+      <form className={styles.drawerForm} onSubmit={handleSubmit}>
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}>Epic Title *</label>
+          <input
+            className={styles.fieldInput}
+            placeholder="e.g. User Authentication"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            autoFocus
+            required
+          />
+        </div>
+
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}>Color</label>
+          <div className={styles.colorSwatches}>
+            {COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={`${styles.colorSwatch} ${color === c ? styles.colorSwatchActive : ""}`}
+                style={{ background: c }}
+                onClick={() => setColor(c)}
+                title={c}
+              />
+            ))}
+          </div>
+          <div className={styles.colorPreview}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-2)" }}>{color}</span>
+          </div>
+        </div>
+
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}><RiCalendarLine size={11} style={{ marginRight: 4 }} />Timeline</label>
+          <div className={styles.fieldRow}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 10, color: "var(--text-3)", marginBottom: 4 }}>Start</div>
+              <input className={styles.fieldInput} type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+            </div>
+            <span style={{ color: "var(--text-3)", fontSize: 14, paddingTop: 22 }}>→</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 10, color: "var(--text-3)", marginBottom: 4 }}>End</div>
+              <input
+                className={`${styles.fieldInput} ${dateError ? styles.fieldInputError : ""}`}
+                type="date"
+                value={end}
+                onChange={(e) => setEnd(e.target.value)}
+              />
+            </div>
+          </div>
+          {dateError && <span className={styles.fieldErrorMsg}>{dateError}</span>}
+        </div>
+      </form>
+    </SideDrawer>
+  );
+}
+
+/* ── Main ── */
 export default function EpicsTab({ pod }: { pod: string }) {
   const qc = useQueryClient();
   const userRole = useAuthStore((s) => s.user?.role);
@@ -135,28 +231,15 @@ export default function EpicsTab({ pod }: { pod: string }) {
   const epics: Epic[] = project?.epics ?? [];
   const allTasks: ProjectTask[] = useMemo(() => {
     if (!project) return [];
-    return [
-      ...(project.backlogTasks ?? []),
-      ...project.sprints.flatMap((s) => s.tasks),
-    ];
+    return [...(project.backlogTasks ?? []), ...project.sprints.flatMap((s) => s.tasks)];
   }, [project]);
 
-  const [drawerEpic, setDrawerEpic] = useState<Epic | null>(null);
-  const [editingEpic, setEditingEpic] = useState<Epic | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
+  const [drawerEpic, setDrawerEpic]   = useState<Epic | null>(null);
+  const [formDrawer, setFormDrawer]   = useState<"create" | "edit" | null>(null);
+  const [editTarget, setEditTarget]   = useState<Epic | null>(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const [formTitle, setFormTitle] = useState("");
-  const [formColor, setFormColor] = useState("#4F7EFF");
-  const [formStart, setFormStart] = useState("");
-  const [formEnd, setFormEnd] = useState("");
-
-  const dateError = formStart && formEnd && formEnd < formStart
-    ? "End date must be on or after start date"
-    : null;
-
-  // Escape key dismisses delete confirm
   useEffect(() => {
     if (!confirmDeleteId) return;
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") setConfirmDeleteId(null); }
@@ -170,8 +253,7 @@ export default function EpicsTab({ pod }: { pod: string }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["space-project", pod] });
       toast.success("Epic created");
-      resetForm();
-      setShowCreate(false);
+      setFormDrawer(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -182,10 +264,9 @@ export default function EpicsTab({ pod }: { pod: string }) {
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ["space-project", pod] });
       toast.success("Epic updated");
-      // Refresh the open drawer with updated data
       if (drawerEpic && updated?.id === drawerEpic.id) setDrawerEpic(updated as Epic);
-      resetForm();
-      setEditingEpic(null);
+      setFormDrawer(null);
+      setEditTarget(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -201,125 +282,27 @@ export default function EpicsTab({ pod }: { pod: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function resetForm() {
-    setFormTitle("");
-    setFormColor("#4F7EFF");
-    setFormStart("");
-    setFormEnd("");
-  }
-
-  function startEdit(epic: Epic) {
-    // Close any open drawer to avoid conflicting state
+  function openEdit(epic: Epic) {
     setDrawerEpic(null);
-    setEditingEpic(epic);
-    setShowCreate(false);
-    setFormTitle(epic.title);
-    setFormColor(epic.color);
-    setFormStart(epic.startDate ? epic.startDate.slice(0, 10) : "");
-    setFormEnd(epic.endDate ? epic.endDate.slice(0, 10) : "");
+    setEditTarget(epic);
+    setFormDrawer("edit");
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!formTitle.trim() || dateError) return;
-    const payload = {
-      title: formTitle.trim(),
-      color: formColor,
-      start_date: formStart || undefined,
-      end_date: formEnd || undefined,
-    };
-    if (editingEpic) {
-      updateMut.mutate({ epicId: editingEpic.id, body: payload });
-    } else {
-      createMut.mutate(payload);
-    }
-  }
+  const epicTasks = drawerEpic ? allTasks.filter((t) => t.epicId === drawerEpic.id) : [];
 
-  const epicTasks = drawerEpic
-    ? allTasks.filter((t) => t.epicId === drawerEpic.id)
-    : [];
-
-  if (isLoading) {
-    return (
-      <div className={styles.tab}>
-        <div className={styles.stateBox} style={{ color: "var(--text-3)" }}>Loading epics…</div>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className={styles.tab}>
-        <div className={styles.stateBox} style={{ color: "var(--red)" }}>
-          Failed to load epics. Please refresh.
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <div className={styles.tab}><div className={styles.stateBox} style={{ color: "var(--text-3)" }}>Loading epics…</div></div>;
+  if (isError)   return <div className={styles.tab}><div className={styles.stateBox} style={{ color: "var(--red)" }}>Failed to load epics. Please refresh.</div></div>;
 
   return (
     <div className={styles.tab}>
       <div className={styles.header}>
-        <h3 className={styles.title}>Epics</h3>
+        <h3 className={styles.title}>Epics <span style={{ fontWeight: 400, color: "var(--text-3)", fontSize: 13 }}>({epics.length})</span></h3>
         {canManage && (
-          <button
-            className={styles.createBtn}
-            onClick={() => { resetForm(); setShowCreate(true); setEditingEpic(null); }}
-          >
+          <button className={styles.createBtn} onClick={() => { setEditTarget(null); setFormDrawer("create"); }}>
             <RiAddLine size={14} /> Create Epic
           </button>
         )}
       </div>
-
-      {(showCreate || editingEpic) && canManage && (
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <input
-            className={styles.input}
-            placeholder="Epic title"
-            value={formTitle}
-            onChange={(e) => setFormTitle(e.target.value)}
-            required
-          />
-          <div className={styles.colorRow}>
-            {COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                className={`${styles.colorDot} ${formColor === c ? styles.colorDotActive : ""}`}
-                style={{ background: c }}
-                onClick={() => setFormColor(c)}
-              />
-            ))}
-          </div>
-          <div className={styles.dateRow}>
-            <input className={styles.input} type="date" value={formStart} onChange={(e) => setFormStart(e.target.value)} />
-            <span className={styles.dateArrow}>→</span>
-            <input
-              className={`${styles.input} ${dateError ? styles.inputError : ""}`}
-              type="date"
-              value={formEnd}
-              onChange={(e) => setFormEnd(e.target.value)}
-            />
-          </div>
-          {dateError && <span className={styles.dateErrorMsg}>{dateError}</span>}
-          <div className={styles.formActions}>
-            <button
-              type="submit"
-              className={styles.saveBtn}
-              disabled={createMut.isPending || updateMut.isPending || !!dateError}
-            >
-              {editingEpic ? "Update Epic" : "Create Epic"}
-            </button>
-            <button
-              type="button"
-              className={styles.cancelBtn}
-              onClick={() => { resetForm(); setShowCreate(false); setEditingEpic(null); }}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
 
       <div className={styles.grid}>
         {epics.map((epic) => (
@@ -329,10 +312,7 @@ export default function EpicsTab({ pod }: { pod: string }) {
               <div className={styles.epicTop}>
                 <span className={styles.epicTitle}>{epic.title}</span>
                 {canManage && (
-                  <button
-                    className={styles.epicEditBtn}
-                    onClick={(e) => { e.stopPropagation(); startEdit(epic); }}
-                  >
+                  <button className={styles.epicEditBtn} onClick={(e) => { e.stopPropagation(); openEdit(epic); }}>
                     <RiEditLine size={12} />
                   </button>
                 )}
@@ -340,9 +320,7 @@ export default function EpicsTab({ pod }: { pod: string }) {
               <div className={styles.epicMeta}>
                 <span>{epic.tasks} ticket{epic.tasks !== 1 ? "s" : ""}</span>
                 {epic.startDate && epic.endDate && (
-                  <span className={styles.epicDates}>
-                    {fmtDate(epic.startDate)} → {fmtDate(epic.endDate)}
-                  </span>
+                  <span className={styles.epicDates}>{fmtDate(epic.startDate)} → {fmtDate(epic.endDate)}</span>
                 )}
               </div>
               <div className={styles.progressWrap}>
@@ -354,10 +332,19 @@ export default function EpicsTab({ pod }: { pod: string }) {
             </div>
           </div>
         ))}
-        {epics.length === 0 && (
-          <div className={styles.empty}>No epics yet. Create one to start tracking.</div>
-        )}
+        {epics.length === 0 && <div className={styles.empty}>No epics yet. Create one to start tracking.</div>}
       </div>
+
+      {/* ── Create / Edit Drawer ── */}
+      {formDrawer && (
+        <EpicFormDrawer
+          epic={formDrawer === "edit" ? editTarget : null}
+          onClose={() => { setFormDrawer(null); setEditTarget(null); }}
+          onCreate={(payload) => createMut.mutate(payload)}
+          onUpdate={(payload) => updateMut.mutate({ epicId: editTarget!.id, body: payload })}
+          isPending={createMut.isPending || updateMut.isPending}
+        />
+      )}
 
       {/* ── Epic Detail Drawer ── */}
       {drawerEpic && (
@@ -367,29 +354,25 @@ export default function EpicsTab({ pod }: { pod: string }) {
           size="md"
           title={drawerEpic.title}
           badge={
-            <span
-              className={styles.epicBadge}
-              style={{ color: drawerEpic.color, background: `${drawerEpic.color}18`, border: `1px solid ${drawerEpic.color}33` }}
-            >
+            <span className={styles.epicBadge} style={{ color: drawerEpic.color, background: `${drawerEpic.color}18`, border: `1px solid ${drawerEpic.color}33` }}>
               {drawerEpic.progress}% complete
             </span>
           }
+          stats={[
+            { label: "Tickets",   value: String(drawerEpic.tasks) },
+            { label: "Done",      value: String(drawerEpic.completed) },
+            { label: "Remaining", value: String(drawerEpic.tasks - drawerEpic.completed) },
+          ]}
         >
           <div className={styles.drawerBody}>
-            <div className={styles.drawerStats}>
-              <div className={styles.drawerStat}>
-                <span className={styles.drawerStatValue}>{drawerEpic.tasks}</span>
-                <span className={styles.drawerStatLabel}>Tickets</span>
+            {(drawerEpic.startDate || drawerEpic.endDate) && (
+              <div className={styles.drawerDateRow}>
+                <RiCalendarLine size={12} style={{ color: "var(--text-3)" }} />
+                <span>{fmtDate(drawerEpic.startDate)}</span>
+                <span style={{ color: "var(--text-3)" }}>→</span>
+                <span>{fmtDate(drawerEpic.endDate)}</span>
               </div>
-              <div className={styles.drawerStat}>
-                <span className={styles.drawerStatValue}>{drawerEpic.completed}</span>
-                <span className={styles.drawerStatLabel}>Done</span>
-              </div>
-              <div className={styles.drawerStat}>
-                <span className={styles.drawerStatValue}>{drawerEpic.tasks - drawerEpic.completed}</span>
-                <span className={styles.drawerStatLabel}>Remaining</span>
-              </div>
-            </div>
+            )}
 
             <div className={styles.drawerSectionHeader}>
               <h4 className={styles.drawerSectionTitle}>Linked Tickets</h4>
@@ -407,32 +390,24 @@ export default function EpicsTab({ pod }: { pod: string }) {
                   <span className={styles.drawerTicketStatus}>{task.status}</span>
                 </div>
               ))}
-              {epicTasks.length === 0 && (
-                <div className={styles.drawerEmpty}>No tickets linked to this epic.</div>
-              )}
+              {epicTasks.length === 0 && <div className={styles.drawerEmpty}>No tickets linked to this epic.</div>}
             </div>
 
             {canManage && (
               <div className={styles.drawerActions}>
+                <button className={styles.editInDrawerBtn} onClick={() => openEdit(drawerEpic)}>
+                  <RiEditLine size={13} /> Edit Epic
+                </button>
                 {confirmDeleteId === drawerEpic.id ? (
                   <div className={styles.deleteConfirm}>
                     <span className={styles.deleteConfirmText}>Delete this epic and unlink all tickets?</span>
-                    <button
-                      className={styles.deleteConfirmYes}
-                      disabled={deleteMut.isPending}
-                      onClick={() => deleteMut.mutate(drawerEpic.id)}
-                    >
+                    <button className={styles.deleteConfirmYes} disabled={deleteMut.isPending} onClick={() => deleteMut.mutate(drawerEpic.id)}>
                       {deleteMut.isPending ? "Deleting…" : "Delete"}
                     </button>
-                    <button className={styles.deleteConfirmNo} onClick={() => setConfirmDeleteId(null)}>
-                      Cancel
-                    </button>
+                    <button className={styles.deleteConfirmNo} onClick={() => setConfirmDeleteId(null)}>Cancel</button>
                   </div>
                 ) : (
-                  <button
-                    className={styles.drawerDangerBtn}
-                    onClick={() => setConfirmDeleteId(drawerEpic.id)}
-                  >
+                  <button className={styles.drawerDangerBtn} onClick={() => setConfirmDeleteId(drawerEpic.id)}>
                     <RiDeleteBinLine size={13} /> Delete Epic
                   </button>
                 )}
@@ -444,11 +419,7 @@ export default function EpicsTab({ pod }: { pod: string }) {
 
       {/* ── Link Ticket Modal ── */}
       {showLinkModal && drawerEpic && (
-        <LinkTicketModal
-          pod={pod}
-          epicId={drawerEpic.id}
-          onClose={() => setShowLinkModal(false)}
-        />
+        <LinkTicketModal pod={pod} epicId={drawerEpic.id} onClose={() => setShowLinkModal(false)} />
       )}
     </div>
   );

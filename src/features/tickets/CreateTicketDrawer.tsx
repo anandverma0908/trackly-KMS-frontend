@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
@@ -143,6 +144,7 @@ const PRIORITIES = [
 ];
 
 const STATUSES = [
+  { value: "Backlog",    label: "Backlog",     color: "#475569" },
   { value: "To Do",      label: "To Do",      color: "#64748B" },
   { value: "In Progress",label: "In Progress", color: "#FBBF24" },
   { value: "In Review",  label: "In Review",   color: "#A78BFA" },
@@ -175,9 +177,13 @@ interface RoutingSuggestion {
 
 function extractJSON(raw: string): Record<string, unknown> | null {
   if (!raw) return null;
-  const clean = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-  try { return JSON.parse(clean); } catch {}
-  const m = clean.match(/\{[\s\S]*\}/);
+  // Try raw first (LLM may return clean JSON)
+  try { return JSON.parse(raw.trim()); } catch {}
+  // Strip only the outermost code fence, not all backticks (avoids corrupting inner content)
+  const stripped = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  try { return JSON.parse(stripped); } catch {}
+  // Regex fallback: find outermost JSON object
+  const m = raw.match(/\{[\s\S]*\}/);
   if (m) { try { return JSON.parse(m[0]); } catch {} }
   return null;
 }
@@ -198,7 +204,7 @@ function buildStoryEstimateFromAnalysis(result: NLAnalysisResult): StoryEstimate
   const suggested = nearestStoryPoint(validatedPoints);
   const index = STORY_POINTS.indexOf(suggested);
   return {
-    min: STORY_POINTS[Math.max(0, index - 1)],
+    min: index > 0 ? STORY_POINTS[index - 1] : suggested,
     max: suggested,
     confidence: validateLlmConfidence(result.confidence),
     basedOn: result.duplicates?.length ?? 0,
@@ -354,6 +360,8 @@ export default function CreateTicketDrawer({
   const [storyEstimate, setStoryEstimate] = useState<StoryEstimate | null>(null);
   const [storyAiLoading, setStoryAiLoading] = useState(false);
   const aiDupeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Incremented each time a new analysis is scheduled; lets us discard stale responses
+  const aiRequestIdRef = useRef(0);
 
   /* Intelligent routing */
   const [routingSuggestion, setRoutingSuggestion] = useState<RoutingSuggestion | null>(null);
@@ -396,6 +404,13 @@ export default function CreateTicketDrawer({
   /* Lightbox */
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!lightboxUrl) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setLightboxUrl(null); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [lightboxUrl]);
+
   /* Track whether this open-session has been initialized */
   const hasInitialized = useRef(false);
 
@@ -421,6 +436,17 @@ export default function CreateTicketDrawer({
     parent_key: undefined,
     fix_version: undefined,
   });
+
+  // Refs for values that the analysis reads at call-time but must NOT trigger re-runs
+  const formRef = useRef(form);
+  const routingDismissedRef = useRef(false);
+  const stableMembersRef = useRef(stableMembers);
+  const filtersDataRef = useRef<typeof filtersData>(undefined);
+
+  // Sync refs every render so the analysis closure always reads the latest values
+  formRef.current = form;
+  routingDismissedRef.current = routingDismissed;
+  stableMembersRef.current = stableMembers;
 
   const isEdit = Boolean(ticketKey);
   const codeCtxTitle = form.title.trim();
@@ -460,7 +486,7 @@ export default function CreateTicketDrawer({
     }
     if (hasInitialized.current) return;
 
-    const hydratedReporter = initialData?.reporter || detailedTicket?.reporter || (isEdit ? "" : user?.name || "");
+    const hydratedReporter = initialData?.reporter || detailedTicket?.reporter || user?.name || "";
 
     if (isEdit && (initialData || detailedTicket)) {
       hasInitialized.current = true;
@@ -549,6 +575,7 @@ export default function CreateTicketDrawer({
     queryKey: QUERY_KEYS.filters(),
     queryFn: fetchFilters,
   });
+  filtersDataRef.current = filtersData;
 
   /* Reset AI suggestion state when the drawer session changes */
   useEffect(() => {
@@ -571,18 +598,11 @@ export default function CreateTicketDrawer({
     setRoutingLoading(false);
   }, [open, ticketKey]);
 
-  /* EOS analysis for duplicates, story points, and assignee suggestions */
+  /* EOS analysis — only title/description/isEdit trigger the debounced API call.
+     All other values (assignee, type, priority, story_points, members, filters)
+     are read from refs at fire-time so changing dropdowns never restarts the scan. */
   useEffect(() => {
-    const availableUsers = uniqueValues([
-      ...stableMembers.map((member) => member.name),
-      ...(filtersData?.users ?? []),
-      form.assignee,
-      detailedTicket?.assignee,
-    ]);
-
     if (isEdit || form.title.length < 4) {
-      // Use functional updates to avoid creating new array references when already empty,
-      // which would otherwise trigger an infinite render loop.
       setLiveDupes((prev) => (prev.length === 0 ? prev : []));
       setDupeScanDone(false);
       setStoryEstimate(null);
@@ -595,46 +615,68 @@ export default function CreateTicketDrawer({
     }
     setAiDupeScanning(true);
     setStoryAiLoading(true);
-    setRoutingLoading(availableUsers.length > 0 && !routingDismissed);
+    setRoutingLoading(true);
     if (aiDupeRef.current) clearTimeout(aiDupeRef.current);
+
+    const requestId = ++aiRequestIdRef.current;
+
     aiDupeRef.current = setTimeout(async () => {
+      // Read live snapshot from refs — avoids stale-closure AND avoids re-triggering effect
+      const f        = formRef.current;
+      const dismissed = routingDismissedRef.current;
+      const members  = stableMembersRef.current;
+      const filters  = filtersDataRef.current;
+
+      const availableUsers = uniqueValues([
+        ...members.map((m) => m.name),
+        ...(filters?.users ?? []),
+        f.assignee,
+        detailedTicket?.assignee,
+      ]);
+
       try {
-        const text = [form.title, form.description].filter(Boolean).join(" ");
+        const text = [f.title, f.description].filter(Boolean).join(" ");
         const r = await analyzeTicketNL(text, availableUsers);
+        // Discard result if a newer request was scheduled while this one was in-flight
+        if (requestId !== aiRequestIdRef.current) return;
         const safeDupes = Array.isArray(r.duplicates)
           ? r.duplicates.filter((d) => d && typeof d.key === "string" && typeof d.summary === "string").map((d) => ({ ...d, ai: true }))
           : [];
         setLiveDupes(safeDupes);
-        if (!form.story_points) {
-          setStoryEstimate(buildStoryEstimateFromAnalysis(r) ?? buildHeuristicStoryEstimate(form));
+        if (!f.story_points) {
+          setStoryEstimate(buildStoryEstimateFromAnalysis(r) ?? buildHeuristicStoryEstimate(f));
         }
-        if (!form.assignee && !routingDismissed) {
+        if (!f.assignee && !dismissed) {
           setRoutingSuggestion(
             buildRoutingSuggestionFromAnalysis(r, availableUsers)
-              ?? buildRoleAwareRoutingSuggestion(form, stableMembers),
+              ?? buildRoleAwareRoutingSuggestion(f, members),
           );
         }
       } catch {
+        if (requestId !== aiRequestIdRef.current) return;
         setLiveDupes((prev) => (prev.length === 0 ? prev : []));
-        if (!form.story_points) setStoryEstimate(buildHeuristicStoryEstimate(form));
-        if (!form.assignee && !routingDismissed) {
-          setRoutingSuggestion(buildRoleAwareRoutingSuggestion(form, stableMembers));
+        if (!f.story_points) setStoryEstimate(buildHeuristicStoryEstimate(f));
+        if (!f.assignee && !dismissed) {
+          setRoutingSuggestion(buildRoleAwareRoutingSuggestion(f, members));
         }
       } finally {
-        setAiDupeScanning(false);
-        setDupeScanDone(true);
-        setStoryAiLoading(false);
-        setRoutingLoading(false);
+        if (requestId === aiRequestIdRef.current) {
+          setAiDupeScanning(false);
+          setDupeScanDone(true);
+          setStoryAiLoading(false);
+          setRoutingLoading(false);
+        }
       }
     }, 600);
     return () => { if (aiDupeRef.current) clearTimeout(aiDupeRef.current); };
-  }, [form.title, form.description, form.issue_type, form.priority, form.story_points, form.assignee, isEdit, stableMembers, routingDismissed, detailedTicket?.assignee]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.title, form.description, isEdit]);
 
-  /* Reset routing when drawer opens/closes */
+  /* Reset routing when drawer opens/closes — don't reset dismissed state in edit mode */
   useEffect(() => {
     setRoutingSuggestion(null);
-    setRoutingDismissed(false);
-  }, [open]);
+    if (!isEdit) setRoutingDismissed(false);
+  }, [open, isEdit]);
 
   /* Link key autocomplete */
   useEffect(() => {
@@ -733,7 +775,10 @@ export default function CreateTicketDrawer({
 
   const deleteCmtMut = useMutation({
     mutationFn: (id: string) => deleteComment(ticketKey!, id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["ticket-comments", ticketKey] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket-comments", ticketKey] });
+      qc.invalidateQueries({ queryKey: ["ticket-activity", ticketKey] });
+    },
   });
 
   const logTimeMut = useMutation({
@@ -792,6 +837,8 @@ export default function CreateTicketDrawer({
     if (isEdit) {
       addLinkMut.mutate({ linkType: newLinkType, targetKey: key });
     } else {
+      const isDuplicate = stagedLinks.some((l) => l.key === key && l.type === newLinkType);
+      if (isDuplicate) { toast.error(`Link "${newLinkType} ${key}" already staged`); return; }
       const suggestion = linkSuggestions.find((s) => s.key === key);
       setStagedLinks((prev) => [...prev, { type: newLinkType, key, summary: suggestion?.summary }]);
       setNewLinkKey("");
@@ -828,7 +875,9 @@ export default function CreateTicketDrawer({
         await Promise.allSettled(form.attachments.map((f) => uploadAttachment(key, f)));
       }
       if (stagedLinks.length > 0 && key) {
-        await Promise.allSettled(stagedLinks.map((lnk) => createTicketLink(key, lnk.type, lnk.key)));
+        const linkResults = await Promise.allSettled(stagedLinks.map((lnk) => createTicketLink(key, lnk.type, lnk.key)));
+        const failed = linkResults.filter((r) => r.status === "rejected").length;
+        if (failed > 0) toast.error(`${failed} link${failed > 1 ? "s" : ""} could not be saved — ticket key may not exist`);
       }
       qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
       qc.invalidateQueries({ queryKey: ["tickets"] });
@@ -931,7 +980,7 @@ Respond with exactly this structure:
   function handleSubmit() {
     const payload: TicketCreate = {
       title: form.title.trim(),
-      description: form.description,
+      description: form.description?.trim(),
       reporter: form.reporter || (!isEdit ? user?.name || undefined : undefined),
       issue_type: form.issue_type,
       priority: form.priority,
@@ -945,6 +994,8 @@ Respond with exactly this structure:
       epic_key: form.epic_key || undefined,
       parent_key: form.parent_key || undefined,
       fix_version: form.fix_version || undefined,
+      original_estimate_hours: form.originalEst ? parseFloat(form.originalEst) || undefined : undefined,
+      remaining_estimate_hours: form.remaining ? parseFloat(form.remaining) || undefined : undefined,
     };
     if (sprintId) payload.sprint_id = String(sprintId);
 
@@ -964,7 +1015,7 @@ Respond with exactly this structure:
 
   const typeConfig = ISSUE_TYPES.find((t) => t.value === form.issue_type) ?? ISSUE_TYPES[2];
   const priorityConfig = PRIORITIES.find((p) => p.value === form.priority) ?? PRIORITIES[2];
-  const statusConfig = STATUSES.find((s) => s.value === form.status) ?? STATUSES[0];
+  const statusConfig = STATUSES.find((s) => s.value === form.status) ?? STATUSES[1];
   const reporterDisplay = form.reporter || (!isEdit ? user?.name || "" : "");
 
   /* ── Footer ── */
@@ -991,11 +1042,11 @@ Respond with exactly this structure:
 
   return (
     <>
-      {/* Lightbox for image/video preview */}
-      {lightboxUrl && (
+      {/* Lightbox — portalled to body so it renders above the drawer's stacking context */}
+      {lightboxUrl && createPortal(
         <div
           style={{
-            position: "fixed", inset: 0, zIndex: 9999,
+            position: "fixed", inset: 0, zIndex: 99999,
             background: "rgba(0,0,0,0.85)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
@@ -1026,7 +1077,8 @@ Respond with exactly this structure:
               padding: "4px 10px",
             }}
           >✕</button>
-        </div>
+        </div>,
+        document.body
       )}
 
       <SideDrawer
@@ -1061,7 +1113,7 @@ Respond with exactly this structure:
               <FormControl size="small" fullWidth disabled={readOnly}>
                 <InputLabel>Priority</InputLabel>
                 <Select label="Priority" value={form.priority} onChange={(e) => set("priority", e.target.value)}
-                  renderValue={(v) => { const p = PRIORITIES.find((x) => x.value === v)!; return <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)" }}><span style={{ color: p?.color, display: "flex" }}>{p?.icon}</span>{p?.label}</span>; }}>
+                  renderValue={(v) => { const p = PRIORITIES.find((x) => x.value === v) ?? PRIORITIES[2]; return <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)" }}><span style={{ color: p.color, display: "flex" }}>{p.icon}</span>{p.label}</span>; }}>
                   {PRIORITIES.map((p) => <MenuItem key={p.value} value={p.value}><span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}><span style={{ color: p?.color, display: "flex" }}>{p.icon}</span>{p.label}</span></MenuItem>)}
                 </Select>
               </FormControl>
@@ -1069,7 +1121,7 @@ Respond with exactly this structure:
               <FormControl size="small" fullWidth disabled={readOnly}>
                 <InputLabel>Status</InputLabel>
                 <Select label="Status" value={form.status} onChange={(e) => set("status", e.target.value)}
-                  renderValue={(v) => { const s = STATUSES.find((x) => x.value === v)!; return <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: s?.color }} />{s?.label}</span>; }}>
+                  renderValue={(v) => { const s = STATUSES.find((x) => x.value === v) ?? STATUSES[1]; return <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color }} />{s.label}</span>; }}>
                   {STATUSES.map((s) => <MenuItem key={s.value} value={s.value}><span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color }} />{s.label}</span></MenuItem>)}
                 </Select>
               </FormControl>
@@ -1103,7 +1155,7 @@ Respond with exactly this structure:
                     color: "var(--accent)", fontSize: 10, fontWeight: 700,
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                   }}>
-                    {(reporterDisplay || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                    {reporterDisplay ? reporterDisplay.split(" ").map((n) => n[0] ?? "").join("").slice(0, 2).toUpperCase() || "?" : "?"}
                   </div>
                   {reporterDisplay || "—"}
                 </div>
@@ -1132,39 +1184,54 @@ Respond with exactly this structure:
 
             </div>
 
-            {/* Hierarchy */}
-            {activePod && (
+            {/* Hierarchy — show when pod is set OR when existing values are present (edit mode) */}
+            {(activePod || (isEdit && !!(form.epic_key || form.parent_key || form.fix_version))) && (
               <div className={styles.sectionCard}>
                 <div className={styles.sectionTitle}>Hierarchy</div>
 
-                {/* Epic */}
-                <Autocomplete
-                  options={podEpics}
-                  getOptionLabel={(o) => typeof o === "string" ? o : `${o.key}: ${o.summary}`}
-                  value={podEpics.find((e) => e.key === form.epic_key) ?? null}
-                  onChange={(_, v) => set("epic_key", v ? v.key : undefined)}
-                  size="small"
-                  fullWidth
-                  disabled={readOnly}
-                  renderInput={(params) => <TextField {...params} label="Epic" placeholder="Link to an Epic" />}
-                  sx={{ "& .MuiOutlinedInput-root": { fontSize: 13 } }}
-                  isOptionEqualToValue={(o, v) => o.key === v.key}
-                />
+                {/* Epic — fall back to a synthetic option so the key always renders */}
+                {(() => {
+                  const foundEpic = podEpics.find((e) => e.key === form.epic_key);
+                  const epicValue = foundEpic ?? (form.epic_key ? { key: form.epic_key, summary: activePod ? "loading…" : "(no pod)" } : null);
+                  const epicOptions = foundEpic || !form.epic_key ? podEpics : [...podEpics, { key: form.epic_key, summary: "loading…" }];
+                  return (
+                    <Autocomplete
+                      options={epicOptions}
+                      getOptionLabel={(o) => typeof o === "string" ? o : `${o.key}: ${o.summary}`}
+                      value={epicValue}
+                      onChange={(_, v) => set("epic_key", v ? v.key : undefined)}
+                      size="small"
+                      fullWidth
+                      disabled={readOnly}
+                      renderInput={(params) => <TextField {...params} label="Epic" placeholder="Link to an Epic" />}
+                      sx={{ "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                      isOptionEqualToValue={(o, v) => o.key === v.key}
+                    />
+                  );
+                })()}
 
-                {/* Parent Story / Task */}
-                <Autocomplete
-                  options={podParents.filter((p) => p.key !== ticketKey)}
-                  getOptionLabel={(o) => typeof o === "string" ? o : `${o.key}: ${o.summary}`}
-                  value={podParents.find((p) => p.key === form.parent_key) ?? null}
-                  onChange={(_, v) => set("parent_key", v ? v.key : undefined)}
-                  onInputChange={(_, val) => setParentSearch(val)}
-                  size="small"
-                  fullWidth
-                  disabled={readOnly}
-                  renderInput={(params) => <TextField {...params} label="Parent" placeholder="Link to a parent ticket" />}
-                  sx={{ "& .MuiOutlinedInput-root": { fontSize: 13 } }}
-                  isOptionEqualToValue={(o, v) => o.key === v.key}
-                />
+                {/* Parent Story / Task — fall back similarly */}
+                {(() => {
+                  const foundParent = podParents.find((p) => p.key === form.parent_key && p.key !== ticketKey);
+                  const parentValue = foundParent ?? (form.parent_key && form.parent_key !== ticketKey ? { key: form.parent_key, summary: activePod ? "loading…" : "(no pod)" } : null);
+                  const parentOptions = podParents.filter((p) => p.key !== ticketKey);
+                  const parentOpts = foundParent || !form.parent_key ? parentOptions : [...parentOptions, { key: form.parent_key, summary: "loading…" }];
+                  return (
+                    <Autocomplete
+                      options={parentOpts}
+                      getOptionLabel={(o) => typeof o === "string" ? o : `${o.key}: ${o.summary}`}
+                      value={parentValue}
+                      onChange={(_, v) => set("parent_key", v ? v.key : undefined)}
+                      onInputChange={(_, val) => setParentSearch(val)}
+                      size="small"
+                      fullWidth
+                      disabled={readOnly}
+                      renderInput={(params) => <TextField {...params} label="Parent" placeholder="Link to a parent ticket" />}
+                      sx={{ "& .MuiOutlinedInput-root": { fontSize: 13 } }}
+                      isOptionEqualToValue={(o, v) => o.key === v.key}
+                    />
+                  );
+                })()}
 
                 {/* Release */}
                 <FormControl size="small" fullWidth disabled={readOnly}>
@@ -1296,7 +1363,7 @@ Respond with exactly this structure:
             {/* EOS Form Button */}
             {!readOnly && (
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button className={styles.eosFormBtn} disabled={eosFormLoading || (!form.title.trim() && !form.description.trim())} onClick={handleEosForm}>
+                <button className={styles.eosFormBtn} disabled={eosFormLoading || (!form.title.trim() && !form.description.trim())} onClick={handleEosForm} title={(!form.title.trim() && !form.description.trim()) ? "Add a title or description first" : "Improve title and description with EOS AI"}>
                   {eosFormLoading ? <svg className={styles.spinner} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg> : <RiSparklingLine size={14} />}
                   EOS Form
                 </button>
@@ -1717,8 +1784,12 @@ Respond with exactly this structure:
                               {editingCommentId !== String(c.id) && (
                                 <>
                                   <button className={styles.commentAction} onClick={() => setReplyTo(String(c.id))}>Reply</button>
-                                  <button className={styles.commentAction} onClick={() => { setEditingCommentId(String(c.id)); setEditingCommentText(c.content); }}>Edit</button>
-                                  <button className={styles.commentAction} style={{ color: "#F87171" }} onClick={() => deleteCmtMut.mutate(String(c.id))}>Delete</button>
+                                  {(c.author_email === user?.email || user?.role === "admin") && (
+                                    <>
+                                      <button className={styles.commentAction} onClick={() => { setEditingCommentId(String(c.id)); setEditingCommentText(c.content); }}>Edit</button>
+                                      <button className={styles.commentAction} style={{ color: "#F87171" }} onClick={() => deleteCmtMut.mutate(String(c.id))}>Delete</button>
+                                    </>
+                                  )}
                                 </>
                               )}
                             </div>
@@ -1755,7 +1826,9 @@ Respond with exactly this structure:
                                   <div className={styles.commentMeta}>
                                     <span className={styles.commentAuthor}>{r.author}</span>
                                     <span className={styles.commentDate}>{formatDate(r.created_at, "MMM d, yyyy · h:mm a")}</span>
-                                    <button className={styles.commentAction} style={{ color: "#F87171" }} onClick={() => deleteCmtMut.mutate(String(r.id))}>Delete</button>
+                                    {(r.author_email === user?.email || user?.role === "admin") && (
+                                      <button className={styles.commentAction} style={{ color: "#F87171" }} onClick={() => deleteCmtMut.mutate(String(r.id))}>Delete</button>
+                                    )}
                                   </div>
                                   <p className={styles.commentText} style={{ whiteSpace: "pre-wrap" }}>{r.content}</p>
                                 </div>
@@ -1776,13 +1849,17 @@ Respond with exactly this structure:
                         className={`${styles.textInput} ${styles.textArea}`}
                         placeholder="Write a comment…"
                         value={commentText}
+                        maxLength={5000}
                         onChange={(e) => setCommentText(e.target.value)}
                         rows={3}
                       />
-                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                        <span style={{ fontSize: 11, color: commentText.length > 4800 ? "#F87171" : "var(--text-3)" }}>
+                          {commentText.length > 0 ? `${commentText.length}/5000` : ""}
+                        </span>
                         <button
                           className={styles.btnPrimary}
-                          disabled={!commentText.trim() || commentMut.isPending}
+                          disabled={!commentText.trim() || commentText.length > 5000 || commentMut.isPending}
                           onClick={() => commentMut.mutate({ content: commentText, parentId: replyTo ?? undefined })}
                           style={{ padding: "7px 16px", fontSize: 12 }}
                         >

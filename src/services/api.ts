@@ -227,7 +227,7 @@ export async function updateTicket(key: string, payload: Partial<TicketCreate>) 
 
 export async function updateTicketStatus(key: string, status: string) {
   if (mock()?.updateTicketStatus) return mock().updateTicketStatus(key, status);
-  const { data } = await api.patch(`/tickets/${key}/status`, { status });
+  const { data } = await api.post(`/tickets/${key}/status`, { status });
   return data;
 }
 
@@ -519,8 +519,8 @@ export async function triggerReindex(): Promise<void> {
   await api.post("/search/reindex");
 }
 
-export async function novaQuery(query: string, scope?: 'all' | 'wiki'): Promise<NovaQueryResponse> {
-  const { data } = await api.post("/nova/query", { query, scope });
+export async function novaQuery(query: string, scope?: 'all' | 'wiki', pod?: string): Promise<NovaQueryResponse> {
+  const { data } = await api.post("/nova/query", { query, scope, pod });
   return {
     answer: data?.answer ?? "",
     query: data?.query ?? query,
@@ -956,8 +956,8 @@ export interface SpaceAnomaly {
   detected_at: string;
 }
 
-export async function fetchAnomalies(): Promise<SpaceAnomaly[]> {
-  const { data } = await api.get<SpaceAnomaly[]>("/spaces/anomalies");
+export async function fetchAnomalies(pod?: string): Promise<SpaceAnomaly[]> {
+  const { data } = await api.get<SpaceAnomaly[]>("/spaces/anomalies", { params: pod ? { pod } : undefined });
   return data ?? [];
 }
 

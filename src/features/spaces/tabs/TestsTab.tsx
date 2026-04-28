@@ -1,53 +1,28 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import SideDrawer from "@/components/ui/SideDrawer";
 import {
-  fetchTestCases,
-  createTestCase,
-  deleteTestCase,
-  generateTestCases,
-  fetchTestCycles,
-  createTestCycle,
-  updateTestCycle,
-  deleteTestCycle,
-  fetchTestExecutions,
-  addTestToCycle,
-  updateTestExecution,
-  fetchTestCoverage,
+  fetchTestCases, createTestCase, deleteTestCase, generateTestCases,
+  fetchTestCycles, createTestCycle, updateTestCycle, deleteTestCycle,
+  fetchTestExecutions, addTestToCycle, updateTestExecution, fetchTestCoverage,
+  fetchPodTickets,
 } from "@/services/api";
 import type { TestCase, TestCycle, TestExecution, TestCoverage } from "@/types";
 import styles from "./TestsTab.module.css";
 
 import {
-  RiAddLine,
-  RiSparklingLine,
-  RiDeleteBinLine,
-  RiCheckLine,
-  RiCloseLine,
-  RiAlertLine,
-  RiSkipForwardLine,
-  RiFlashlightLine,
-  RiTestTubeLine,
-  RiLoopLeftLine,
-  RiShieldCheckLine,
-  RiTimeLine,
-  RiArrowLeftLine,
+  RiAddLine, RiSparklingLine, RiDeleteBinLine, RiCheckLine, RiCloseLine,
+  RiAlertLine, RiSkipForwardLine, RiFlashlightLine, RiTestTubeLine, RiLoopLeftLine,
+  RiShieldCheckLine, RiTimeLine, RiArrowLeftLine, RiSearchLine,
 } from "react-icons/ri";
 
 function EOSBadge() {
-  return (
-    <span className={styles.eosBadge}>
-      <RiSparklingLine size={9} />
-      EOS
-    </span>
-  );
+  return <span className={styles.eosBadge}><RiSparklingLine size={9} />EOS</span>;
 }
 
 const PRIORITY_COLOR: Record<string, string> = {
-  high: "var(--red)",
-  medium: "var(--amber)",
-  low: "var(--green)",
+  high: "var(--red)", medium: "var(--amber)", low: "var(--green)",
 };
 
 const EXEC_STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -60,6 +35,394 @@ const EXEC_STATUS_CONFIG: Record<string, { label: string; color: string; icon: R
 
 type SubTab = "cases" | "cycles" | "coverage";
 
+/* ── Ticket Picker used in Create Test Case drawer ── */
+function TicketPicker({ pod, value, onChange }: { pod: string; value: string; onChange: (key: string, summary: string) => void }) {
+  const [searchRaw, setSearchRaw] = useState("");
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function handleSearch(val: string) {
+    setSearchRaw(val);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setSearch(val), 300);
+  }
+
+  const { data, isFetching } = useQuery({
+    queryKey: ["pod-tickets-test", pod, search],
+    queryFn: () => fetchPodTickets(pod, search || undefined),
+    enabled: open,
+    placeholderData: (prev) => prev,
+  });
+
+  const tickets = data?.tickets ?? [];
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      <div className={styles.ticketPickerInput} onClick={() => setOpen(!open)}>
+        {value ? (
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--accent)", fontWeight: 700 }}>{value}</span>
+        ) : (
+          <span style={{ color: "var(--text-3)", fontSize: 13 }}>Search & select ticket (optional)</span>
+        )}
+        {value && (
+          <button
+            style={{ marginLeft: "auto", background: "none", border: "none", color: "var(--text-3)", cursor: "pointer", display: "flex", alignItems: "center" }}
+            onClick={(e) => { e.stopPropagation(); onChange("", ""); setSearchRaw(""); }}
+          ><RiCloseLine size={13} /></button>
+        )}
+        {!value && <RiSearchLine size={13} style={{ marginLeft: "auto", color: "var(--text-3)" }} />}
+      </div>
+
+      {open && (
+        <div className={styles.ticketPickerDropdown}>
+          <div className={styles.ticketPickerSearch}>
+            <RiSearchLine size={13} style={{ color: "var(--text-3)", flexShrink: 0 }} />
+            <input
+              className={styles.ticketPickerSearchInput}
+              placeholder="Search tickets…"
+              value={searchRaw}
+              onChange={(e) => handleSearch(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className={styles.ticketPickerList}>
+            {isFetching && tickets.length === 0 && <div className={styles.ticketPickerEmpty}>Searching…</div>}
+            {!isFetching && tickets.length === 0 && <div className={styles.ticketPickerEmpty}>No tickets found.</div>}
+            {tickets.map((t) => (
+              <button
+                key={t.key}
+                className={styles.ticketPickerItem}
+                onClick={() => { onChange(t.key, t.summary); setOpen(false); setSearchRaw(""); }}
+              >
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--accent)", fontWeight: 700, flexShrink: 0 }}>{t.key}</span>
+                <span style={{ fontSize: 12, color: "var(--text)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.summary}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Create Test Case Drawer ── */
+function CreateTestCaseDrawer({ pod, onClose }: { pod: string; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [title, setTitle] = useState("");
+  const [desc, setDesc] = useState("");
+  const [pre, setPre] = useState("");
+  const [priority, setPriority] = useState("medium");
+  const [ticketKey, setTicketKey] = useState("");
+  const [steps, setSteps] = useState([{ step: "", expected_result: "" }]);
+
+  const createMut = useMutation({
+    mutationFn: () => createTestCase(pod, {
+      title: title.trim(),
+      description: desc || undefined,
+      preconditions: pre || undefined,
+      steps: steps.filter((s) => s.step.trim()),
+      priority,
+      ticket_key: ticketKey || undefined,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["test-cases", pod] });
+      toast.success("Test case created");
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function addStep() { setSteps([...steps, { step: "", expected_result: "" }]); }
+  function updateStep(idx: number, field: "step" | "expected_result", val: string) {
+    const updated = [...steps]; updated[idx][field] = val; setSteps(updated);
+  }
+  function removeStep(idx: number) { setSteps(steps.filter((_, i) => i !== idx)); }
+
+  return (
+    <SideDrawer
+      open
+      onClose={onClose}
+      size="md"
+      title="New Test Case"
+      badge={
+        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", background: "var(--accent-glow)", border: "1px solid var(--accent-border)", padding: "2px 10px", borderRadius: 99 }}>
+          <RiTestTubeLine size={10} style={{ marginRight: 4 }} />Manual
+        </span>
+      }
+      footer={
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            className={styles.footerSaveBtn}
+            onClick={() => createMut.mutate()}
+            disabled={!title.trim() || createMut.isPending}
+          >
+            {createMut.isPending ? "Creating…" : "Create Test Case"}
+          </button>
+          <button className={styles.footerCancelBtn} onClick={onClose}>Cancel</button>
+        </div>
+      }
+    >
+      <div className={styles.drawerForm}>
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}>Title *</label>
+          <input
+            className={styles.fieldInput}
+            placeholder="e.g. Verify login with valid credentials"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            autoFocus
+          />
+        </div>
+
+        <div className={styles.formRow2}>
+          <div className={styles.formField} style={{ flex: 1 }}>
+            <label className={styles.fieldLabel}>Priority</label>
+            <select className={styles.fieldSelect} value={priority} onChange={(e) => setPriority(e.target.value)}>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div className={styles.formField} style={{ flex: 2 }}>
+            <label className={styles.fieldLabel}>Linked Ticket</label>
+            <TicketPicker pod={pod} value={ticketKey} onChange={(key, _summary) => setTicketKey(key)} />
+          </div>
+        </div>
+
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}>Description</label>
+          <textarea
+            className={styles.fieldTextarea}
+            placeholder="What is this test case verifying?"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            rows={2}
+          />
+        </div>
+
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}>Preconditions</label>
+          <textarea
+            className={styles.fieldTextarea}
+            placeholder="e.g. User must have a valid account"
+            value={pre}
+            onChange={(e) => setPre(e.target.value)}
+            rows={2}
+          />
+        </div>
+
+        <div className={styles.formField}>
+          <div className={styles.stepsHeader}>
+            <label className={styles.fieldLabel} style={{ margin: 0 }}>Steps</label>
+            <button type="button" className={styles.addStepBtn} onClick={addStep}>
+              <RiAddLine size={12} /> Add Step
+            </button>
+          </div>
+          <div className={styles.stepsBody}>
+            {steps.map((s, i) => (
+              <div key={i} className={styles.stepRow}>
+                <span className={styles.stepNum}>{i + 1}</span>
+                <div className={styles.stepInputs}>
+                  <input
+                    className={styles.fieldInput}
+                    placeholder="Action"
+                    value={s.step}
+                    onChange={(e) => updateStep(i, "step", e.target.value)}
+                  />
+                  <input
+                    className={`${styles.fieldInput} ${styles.expectedInput}`}
+                    placeholder="Expected result"
+                    value={s.expected_result}
+                    onChange={(e) => updateStep(i, "expected_result", e.target.value)}
+                  />
+                </div>
+                {steps.length > 1 && (
+                  <button className={styles.removeStepBtn} onClick={() => removeStep(i)}>
+                    <RiCloseLine size={12} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </SideDrawer>
+  );
+}
+
+/* ── Generate with EOS Drawer ── */
+function GenerateTestCasesDrawer({ pod, onClose }: { pod: string; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [ticketKey, setTicketKey] = useState("");
+  const [summary, setSummary] = useState("");
+  const [desc, setDesc] = useState("");
+  const [count, setCount] = useState(5);
+
+  function handleTicketSelect(key: string, ticketSummary: string) {
+    setTicketKey(key);
+    if (ticketSummary && !summary) setSummary(ticketSummary);
+  }
+
+  const generateMut = useMutation({
+    mutationFn: () => generateTestCases(pod, { ticket_key: ticketKey, ticket_summary: summary, ticket_description: desc || undefined, count }),
+    onSuccess: (newCases) => {
+      qc.invalidateQueries({ queryKey: ["test-cases", pod] });
+      toast.success(`${newCases.length} test cases generated by EOS`);
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <SideDrawer
+      open
+      onClose={onClose}
+      size="sm"
+      title="Generate Test Cases"
+      badge={
+        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", background: "var(--accent-glow)", border: "1px solid var(--accent-border)", padding: "2px 10px", borderRadius: 99 }}>
+          <RiSparklingLine size={10} style={{ marginRight: 4 }} />EOS AI
+        </span>
+      }
+      footer={
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            className={styles.footerGenerateBtn}
+            onClick={() => generateMut.mutate()}
+            disabled={!ticketKey.trim() || !summary.trim() || generateMut.isPending}
+          >
+            {generateMut.isPending ? "Generating…" : <><RiSparklingLine size={13} /> Generate</>}
+          </button>
+          <button className={styles.footerCancelBtn} onClick={onClose}>Cancel</button>
+        </div>
+      }
+    >
+      <div className={styles.drawerForm}>
+        <div className={styles.eosHint}>
+          <RiSparklingLine size={12} />
+          EOS will analyse the ticket and auto-generate detailed test cases including edge cases.
+        </div>
+
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}>Ticket *</label>
+          <TicketPicker pod={pod} value={ticketKey} onChange={handleTicketSelect} />
+        </div>
+
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}>Ticket Summary *</label>
+          <input
+            className={styles.fieldInput}
+            placeholder="Brief description of what's being tested"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+          />
+        </div>
+
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}>Ticket Description <span style={{ fontWeight: 400, textTransform: "none", fontSize: 10 }}>(optional — improves quality)</span></label>
+          <textarea
+            className={styles.fieldTextarea}
+            placeholder="Paste the full ticket description for better results…"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            rows={4}
+          />
+        </div>
+
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}>Number of test cases</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <input
+              type="range"
+              min={1} max={10}
+              value={count}
+              onChange={(e) => setCount(Number(e.target.value))}
+              style={{ flex: 1, accentColor: "var(--accent)" }}
+            />
+            <span style={{ minWidth: 24, textAlign: "center", fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 700, color: "var(--accent)" }}>{count}</span>
+          </div>
+        </div>
+      </div>
+    </SideDrawer>
+  );
+}
+
+/* ── Create Cycle Drawer ── */
+function CreateCycleDrawer({ pod, onClose }: { pod: string; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [name, setName] = useState("");
+  const [desc, setDesc] = useState("");
+
+  const createMut = useMutation({
+    mutationFn: () => createTestCycle(pod, { name: name.trim(), description: desc || undefined }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["test-cycles", pod] });
+      toast.success("Test cycle created");
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <SideDrawer
+      open
+      onClose={onClose}
+      size="sm"
+      title="New Test Cycle"
+      badge={
+        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--amber)", background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.28)", padding: "2px 10px", borderRadius: 99 }}>
+          <RiLoopLeftLine size={10} style={{ marginRight: 4 }} />Cycle
+        </span>
+      }
+      footer={
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            className={styles.footerSaveBtn}
+            onClick={() => createMut.mutate()}
+            disabled={!name.trim() || createMut.isPending}
+          >
+            {createMut.isPending ? "Creating…" : "Create Cycle"}
+          </button>
+          <button className={styles.footerCancelBtn} onClick={onClose}>Cancel</button>
+        </div>
+      }
+    >
+      <div className={styles.drawerForm}>
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}>Cycle Name *</label>
+          <input
+            className={styles.fieldInput}
+            placeholder="e.g. Sprint 12 Regression"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <div className={styles.formField}>
+          <label className={styles.fieldLabel}>Description</label>
+          <textarea
+            className={styles.fieldTextarea}
+            placeholder="What does this cycle cover?"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            rows={3}
+          />
+        </div>
+      </div>
+    </SideDrawer>
+  );
+}
+
 // ── Test Cases View ────────────────────────────────────────────────────────────
 
 function TestCasesView({ pod }: { pod: string }) {
@@ -69,40 +432,9 @@ function TestCasesView({ pod }: { pod: string }) {
     queryFn: () => fetchTestCases(pod),
   });
 
-  const [drawerCase, setDrawerCase] = useState<TestCase | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
+  const [drawerCase, setDrawerCase]   = useState<TestCase | null>(null);
+  const [showCreate, setShowCreate]   = useState(false);
   const [showGenerate, setShowGenerate] = useState(false);
-
-  const [formTitle, setFormTitle] = useState("");
-  const [formDesc, setFormDesc] = useState("");
-  const [formPre, setFormPre] = useState("");
-  const [formPriority, setFormPriority] = useState("medium");
-  const [formTicketKey, setFormTicketKey] = useState("");
-  const [formSteps, setFormSteps] = useState([{ step: "", expected_result: "" }]);
-
-  const [genTicketKey, setGenTicketKey] = useState("");
-  const [genSummary, setGenSummary] = useState("");
-  const [genDesc, setGenDesc] = useState("");
-  const [genCount, setGenCount] = useState(5);
-
-  const createMut = useMutation({
-    mutationFn: () =>
-      createTestCase(pod, {
-        title: formTitle,
-        description: formDesc || undefined,
-        preconditions: formPre || undefined,
-        steps: formSteps.filter((s) => s.step.trim()),
-        priority: formPriority,
-        ticket_key: formTicketKey || undefined,
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["test-cases", pod] });
-      toast.success("Test case created");
-      resetForm();
-      setShowCreate(false);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   const deleteMut = useMutation({
     mutationFn: (caseId: string) => deleteTestCase(pod, caseId),
@@ -114,48 +446,6 @@ function TestCasesView({ pod }: { pod: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const generateMut = useMutation({
-    mutationFn: () =>
-      generateTestCases(pod, {
-        ticket_key: genTicketKey,
-        ticket_summary: genSummary,
-        ticket_description: genDesc || undefined,
-        count: genCount,
-      }),
-    onSuccess: (newCases) => {
-      qc.invalidateQueries({ queryKey: ["test-cases", pod] });
-      toast.success(`${newCases.length} test cases generated by EOS`);
-      setShowGenerate(false);
-      setGenTicketKey("");
-      setGenSummary("");
-      setGenDesc("");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  function resetForm() {
-    setFormTitle("");
-    setFormDesc("");
-    setFormPre("");
-    setFormPriority("medium");
-    setFormTicketKey("");
-    setFormSteps([{ step: "", expected_result: "" }]);
-  }
-
-  function addStep() {
-    setFormSteps([...formSteps, { step: "", expected_result: "" }]);
-  }
-
-  function updateStep(idx: number, field: "step" | "expected_result", val: string) {
-    const updated = [...formSteps];
-    updated[idx][field] = val;
-    setFormSteps(updated);
-  }
-
-  function removeStep(idx: number) {
-    setFormSteps(formSteps.filter((_, i) => i !== idx));
-  }
-
   if (isLoading) return <div className={styles.loading}>Loading test cases…</div>;
 
   return (
@@ -166,172 +456,34 @@ function TestCasesView({ pod }: { pod: string }) {
           <button className={styles.generateBtn} onClick={() => setShowGenerate(true)}>
             <RiSparklingLine size={13} /> Generate with EOS
           </button>
-          <button className={styles.createBtn} onClick={() => { resetForm(); setShowCreate(true); }}>
+          <button className={styles.createBtn} onClick={() => setShowCreate(true)}>
             <RiAddLine size={14} /> New Test Case
           </button>
         </div>
       </div>
 
-      {/* AI Generate Form */}
-      {showGenerate && (
-        <div className={styles.form}>
-          <div className={styles.formTitle}>
-            <EOSBadge /> Generate test cases from ticket
-          </div>
-          <div className={styles.formRow}>
-            <input
-              className={styles.input}
-              placeholder="Ticket key (e.g. DPAI-123)"
-              value={genTicketKey}
-              onChange={(e) => setGenTicketKey(e.target.value)}
-            />
-            <input
-              className={styles.input}
-              placeholder="Count"
-              type="number"
-              min={1}
-              max={10}
-              value={genCount}
-              onChange={(e) => setGenCount(Number(e.target.value))}
-              style={{ maxWidth: 80 }}
-            />
-          </div>
-          <input
-            className={styles.input}
-            placeholder="Ticket summary / title"
-            value={genSummary}
-            onChange={(e) => setGenSummary(e.target.value)}
-          />
-          <textarea
-            className={styles.textarea}
-            placeholder="Ticket description (optional — helps EOS generate better cases)"
-            value={genDesc}
-            onChange={(e) => setGenDesc(e.target.value)}
-            rows={3}
-          />
-          <div className={styles.formActions}>
-            <button
-              className={styles.generateBtn}
-              onClick={() => generateMut.mutate()}
-              disabled={!genTicketKey.trim() || !genSummary.trim() || generateMut.isPending}
-            >
-              {generateMut.isPending ? "Generating…" : <><RiSparklingLine size={12} /> Generate</>}
-            </button>
-            <button className={styles.cancelBtn} onClick={() => setShowGenerate(false)}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {/* Manual Create Form */}
-      {showCreate && (
-        <div className={styles.form}>
-          <div className={styles.formTitle}>New Test Case</div>
-          <input
-            className={styles.input}
-            placeholder="Title"
-            value={formTitle}
-            onChange={(e) => setFormTitle(e.target.value)}
-            required
-          />
-          <div className={styles.formRow}>
-            <input
-              className={styles.input}
-              placeholder="Linked ticket key (optional)"
-              value={formTicketKey}
-              onChange={(e) => setFormTicketKey(e.target.value)}
-            />
-            <select
-              className={styles.select}
-              value={formPriority}
-              onChange={(e) => setFormPriority(e.target.value)}
-            >
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
-          </div>
-          <textarea
-            className={styles.textarea}
-            placeholder="Description"
-            value={formDesc}
-            onChange={(e) => setFormDesc(e.target.value)}
-            rows={2}
-          />
-          <textarea
-            className={styles.textarea}
-            placeholder="Preconditions"
-            value={formPre}
-            onChange={(e) => setFormPre(e.target.value)}
-            rows={2}
-          />
-          <div className={styles.stepsSection}>
-            <div className={styles.stepsHeader}>
-              <span className={styles.stepsLabel}>Steps</span>
-              <button type="button" className={styles.addStepBtn} onClick={addStep}>
-                <RiAddLine size={12} /> Add Step
-              </button>
-            </div>
-            {formSteps.map((s, i) => (
-              <div key={i} className={styles.stepRow}>
-                <span className={styles.stepNum}>{i + 1}</span>
-                <input
-                  className={styles.input}
-                  placeholder="Action"
-                  value={s.step}
-                  onChange={(e) => updateStep(i, "step", e.target.value)}
-                />
-                <input
-                  className={styles.input}
-                  placeholder="Expected result"
-                  value={s.expected_result}
-                  onChange={(e) => updateStep(i, "expected_result", e.target.value)}
-                />
-                <button className={styles.removeStepBtn} onClick={() => removeStep(i)}>
-                  <RiCloseLine size={12} />
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className={styles.formActions}>
-            <button
-              className={styles.saveBtn}
-              onClick={() => createMut.mutate()}
-              disabled={!formTitle.trim() || createMut.isPending}
-            >
-              Create
-            </button>
-            <button className={styles.cancelBtn} onClick={() => { resetForm(); setShowCreate(false); }}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {/* Cases List */}
       <div className={styles.caseList}>
         {cases.map((tc) => (
           <div key={tc.id} className={styles.caseRow} onClick={() => setDrawerCase(tc)}>
             <div className={styles.caseLeft}>
-              <span
-                className={styles.priorityDot}
-                style={{ background: PRIORITY_COLOR[tc.priority] }}
-                title={tc.priority}
-              />
+              <span className={styles.priorityDot} style={{ background: PRIORITY_COLOR[tc.priority] }} title={tc.priority} />
               <span className={styles.caseTitle}>{tc.title}</span>
               {tc.ai_generated && <EOSBadge />}
             </div>
             <div className={styles.caseMeta}>
-              {tc.ticket_key && (
-                <span className={styles.ticketKey}>{tc.ticket_key}</span>
-              )}
+              {tc.ticket_key && <span className={styles.ticketKey}>{tc.ticket_key}</span>}
               <span className={styles.stepsCount}>{tc.steps?.length ?? 0} steps</span>
             </div>
           </div>
         ))}
-        {cases.length === 0 && !showCreate && !showGenerate && (
-          <div className={styles.empty}>
-            No test cases yet. Create one manually or generate with EOS.
-          </div>
+        {cases.length === 0 && (
+          <div className={styles.empty}>No test cases yet. Create one manually or generate with EOS.</div>
         )}
       </div>
+
+      {/* Drawers */}
+      {showCreate   && <CreateTestCaseDrawer pod={pod} onClose={() => setShowCreate(false)} />}
+      {showGenerate && <GenerateTestCasesDrawer pod={pod} onClose={() => setShowGenerate(false)} />}
 
       {/* Case Detail Drawer */}
       {drawerCase && (
@@ -340,36 +492,26 @@ function TestCasesView({ pod }: { pod: string }) {
           onClose={() => setDrawerCase(null)}
           size="md"
           title={drawerCase.title}
-          badge={
-            drawerCase.ai_generated ? (
-              <span className={styles.aiGenBadge}><EOSBadge /></span>
-            ) : undefined
-          }
+          badge={drawerCase.ai_generated ? <span className={styles.aiGenBadge}><EOSBadge /></span> : undefined}
+          stats={[
+            { label: "Priority", value: drawerCase.priority },
+            { label: "Steps",    value: String(drawerCase.steps?.length ?? 0) },
+            ...(drawerCase.ticket_key ? [{ label: "Ticket", value: drawerCase.ticket_key }] : []),
+          ]}
         >
           <div className={styles.drawerBody}>
-            <div className={styles.drawerMeta}>
-              <span style={{ color: PRIORITY_COLOR[drawerCase.priority] }}>
-                ● {drawerCase.priority} priority
-              </span>
-              {drawerCase.ticket_key && (
-                <span className={styles.ticketKey}>{drawerCase.ticket_key}</span>
-              )}
-            </div>
-
             {drawerCase.description && (
               <div className={styles.drawerSection}>
                 <div className={styles.drawerSectionTitle}>Description</div>
                 <p className={styles.drawerText}>{drawerCase.description}</p>
               </div>
             )}
-
             {drawerCase.preconditions && (
               <div className={styles.drawerSection}>
                 <div className={styles.drawerSectionTitle}>Preconditions</div>
                 <p className={styles.drawerText}>{drawerCase.preconditions}</p>
               </div>
             )}
-
             {drawerCase.steps && drawerCase.steps.length > 0 && (
               <div className={styles.drawerSection}>
                 <div className={styles.drawerSectionTitle}>Steps</div>
@@ -386,14 +528,9 @@ function TestCasesView({ pod }: { pod: string }) {
                 </div>
               </div>
             )}
-
             <div className={styles.drawerActions}>
-              <button
-                className={styles.drawerDangerBtn}
-                onClick={() => deleteMut.mutate(drawerCase.id)}
-                disabled={deleteMut.isPending}
-              >
-                <RiDeleteBinLine size={13} /> Delete
+              <button className={styles.drawerDangerBtn} onClick={() => deleteMut.mutate(drawerCase.id)} disabled={deleteMut.isPending}>
+                <RiDeleteBinLine size={13} /> {deleteMut.isPending ? "Deleting…" : "Delete"}
               </button>
             </div>
           </div>
@@ -417,38 +554,19 @@ function CyclesView({ pod }: { pod: string }) {
   });
 
   const [activeCycle, setActiveCycle] = useState<TestCycle | null>(null);
-  const [executions, setExecutions] = useState<TestExecution[]>([]);
+  const [executions, setExecutions]   = useState<TestExecution[]>([]);
   const [loadingExecs, setLoadingExecs] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate]   = useState(false);
   const [showAddCase, setShowAddCase] = useState(false);
-  const [formName, setFormName] = useState("");
-  const [formDesc, setFormDesc] = useState("");
-
-  const createMut = useMutation({
-    mutationFn: () => createTestCycle(pod, { name: formName, description: formDesc || undefined }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["test-cycles", pod] });
-      toast.success("Test cycle created");
-      setShowCreate(false);
-      setFormName("");
-      setFormDesc("");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   const deleteMut = useMutation({
     mutationFn: (cycleId: string) => deleteTestCycle(pod, cycleId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["test-cycles", pod] });
-      toast.success("Cycle deleted");
-      setActiveCycle(null);
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["test-cycles", pod] }); toast.success("Cycle deleted"); setActiveCycle(null); },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const statusMut = useMutation({
-    mutationFn: ({ cycleId, status }: { cycleId: string; status: string }) =>
-      updateTestCycle(pod, cycleId, { status }),
+    mutationFn: ({ cycleId, status }: { cycleId: string; status: string }) => updateTestCycle(pod, cycleId, { status }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["test-cycles", pod] }),
     onError: (e: Error) => toast.error(e.message),
   });
@@ -457,10 +575,7 @@ function CyclesView({ pod }: { pod: string }) {
     mutationFn: ({ execId, status, notes }: { execId: string; status: string; notes?: string }) =>
       updateTestExecution(pod, execId, { status, notes }),
     onSuccess: async () => {
-      if (activeCycle) {
-        const updated = await fetchTestExecutions(pod, activeCycle.id);
-        setExecutions(updated);
-      }
+      if (activeCycle) { const updated = await fetchTestExecutions(pod, activeCycle.id); setExecutions(updated); }
       qc.invalidateQueries({ queryKey: ["test-cycles", pod] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -469,12 +584,7 @@ function CyclesView({ pod }: { pod: string }) {
   const addCaseMut = useMutation({
     mutationFn: (testCaseId: string) => addTestToCycle(pod, activeCycle!.id, testCaseId),
     onSuccess: async () => {
-      if (activeCycle) {
-        const updated = await fetchTestExecutions(pod, activeCycle.id);
-        setExecutions(updated);
-        qc.invalidateQueries({ queryKey: ["test-cycles", pod] });
-        toast.success("Test case added to cycle");
-      }
+      if (activeCycle) { const updated = await fetchTestExecutions(pod, activeCycle.id); setExecutions(updated); qc.invalidateQueries({ queryKey: ["test-cycles", pod] }); toast.success("Test case added to cycle"); }
       setShowAddCase(false);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -483,12 +593,8 @@ function CyclesView({ pod }: { pod: string }) {
   async function openCycle(cycle: TestCycle) {
     setActiveCycle(cycle);
     setLoadingExecs(true);
-    try {
-      const execs = await fetchTestExecutions(pod, cycle.id);
-      setExecutions(execs);
-    } finally {
-      setLoadingExecs(false);
-    }
+    try { const execs = await fetchTestExecutions(pod, cycle.id); setExecutions(execs); }
+    finally { setLoadingExecs(false); }
   }
 
   const addedCaseIds = new Set(executions.map((e) => e.test_case_id));
@@ -580,9 +686,7 @@ function CyclesView({ pod }: { pod: string }) {
                     {ex.test_case?.ai_generated && <EOSBadge />}
                   </div>
                   <div className={styles.execRight}>
-                    {ex.test_case?.ticket_key && (
-                      <span className={styles.ticketKey}>{ex.test_case.ticket_key}</span>
-                    )}
+                    {ex.test_case?.ticket_key && <span className={styles.ticketKey}>{ex.test_case.ticket_key}</span>}
                     <div className={styles.execBtns}>
                       {["passed", "failed", "blocked", "skipped"].map((s) => (
                         <button
@@ -617,34 +721,6 @@ function CyclesView({ pod }: { pod: string }) {
         </button>
       </div>
 
-      {showCreate && (
-        <div className={styles.form}>
-          <div className={styles.formTitle}>New Test Cycle</div>
-          <input
-            className={styles.input}
-            placeholder="Cycle name (e.g. Sprint 12 Regression)"
-            value={formName}
-            onChange={(e) => setFormName(e.target.value)}
-          />
-          <input
-            className={styles.input}
-            placeholder="Description (optional)"
-            value={formDesc}
-            onChange={(e) => setFormDesc(e.target.value)}
-          />
-          <div className={styles.formActions}>
-            <button
-              className={styles.saveBtn}
-              onClick={() => createMut.mutate()}
-              disabled={!formName.trim() || createMut.isPending}
-            >
-              Create
-            </button>
-            <button className={styles.cancelBtn} onClick={() => { setShowCreate(false); setFormName(""); setFormDesc(""); }}>Cancel</button>
-          </div>
-        </div>
-      )}
-
       <div className={styles.cycleGrid}>
         {cycles.map((cycle) => {
           const passedPct = cycle.total > 0 ? Math.round((cycle.passed / cycle.total) * 100) : 0;
@@ -653,9 +729,7 @@ function CyclesView({ pod }: { pod: string }) {
             <div key={cycle.id} className={styles.cycleCard} onClick={() => openCycle(cycle)}>
               <div className={styles.cycleCardTop}>
                 <span className={styles.cycleName}>{cycle.name}</span>
-                <span className={styles.cycleStatus} style={{ color: statusColor }}>
-                  {cycle.status}
-                </span>
+                <span className={styles.cycleStatus} style={{ color: statusColor }}>{cycle.status}</span>
               </div>
               {cycle.description && <p className={styles.cycleDesc}>{cycle.description}</p>}
               <div className={styles.cycleBar}>
@@ -670,10 +744,10 @@ function CyclesView({ pod }: { pod: string }) {
             </div>
           );
         })}
-        {cycles.length === 0 && !showCreate && (
-          <div className={styles.empty}>No test cycles yet. Create one to start running tests.</div>
-        )}
+        {cycles.length === 0 && <div className={styles.empty}>No test cycles yet. Create one to start running tests.</div>}
       </div>
+
+      {showCreate && <CreateCycleDrawer pod={pod} onClose={() => setShowCreate(false)} />}
     </div>
   );
 }
@@ -690,7 +764,7 @@ function CoverageView({ pod }: { pod: string }) {
   if (isLoading) return <div className={styles.loading}>EOS analysing coverage…</div>;
   if (!coverage) return <div className={styles.empty}>No coverage data available.</div>;
 
-  const r = (coverage.coverage_pct ?? 0);
+  const r = coverage.coverage_pct ?? 0;
   const color = r >= 80 ? "var(--green)" : r >= 50 ? "var(--amber)" : "var(--red)";
 
   return (
@@ -699,8 +773,7 @@ function CoverageView({ pod }: { pod: string }) {
         <div className={styles.coverageRing}>
           <svg width={80} height={80} style={{ transform: "rotate(-90deg)" }}>
             <circle cx={40} cy={40} r={34} fill="none" stroke="var(--surface-2)" strokeWidth={6} />
-            <circle
-              cx={40} cy={40} r={34} fill="none" stroke={color} strokeWidth={6}
+            <circle cx={40} cy={40} r={34} fill="none" stroke={color} strokeWidth={6}
               strokeDasharray={2 * Math.PI * 34}
               strokeDashoffset={2 * Math.PI * 34 * (1 - r / 100)}
               strokeLinecap="round"
@@ -726,9 +799,7 @@ function CoverageView({ pod }: { pod: string }) {
       </div>
 
       <div className={styles.eosInsight}>
-        <div className={styles.eosInsightHeader}>
-          <EOSBadge /> Coverage Insight
-        </div>
+        <div className={styles.eosInsightHeader}><EOSBadge /> Coverage Insight</div>
         <p className={styles.eosInsightText}>{coverage.eos_insight}</p>
       </div>
 
@@ -740,12 +811,7 @@ function CoverageView({ pod }: { pod: string }) {
               <div key={t.key} className={styles.untestedRow}>
                 <span className={styles.ticketKey}>{t.key}</span>
                 <span className={styles.untestedSummary}>{t.summary}</span>
-                <span
-                  className={styles.priorityChip}
-                  style={{ color: PRIORITY_COLOR[t.priority?.toLowerCase()] ?? "var(--text-3)" }}
-                >
-                  {t.priority}
-                </span>
+                <span className={styles.priorityChip} style={{ color: PRIORITY_COLOR[t.priority?.toLowerCase()] ?? "var(--text-3)" }}>{t.priority}</span>
                 <span className={styles.untestedAssignee}>{t.assignee}</span>
               </div>
             ))}
@@ -773,11 +839,7 @@ export default function TestsTab({ pod }: { pod: string }) {
         <h3 className={styles.title}>Tests</h3>
         <div className={styles.subTabs}>
           {SUB_TABS.map((t) => (
-            <button
-              key={t.id}
-              className={`${styles.subTabBtn} ${subTab === t.id ? styles.subTabBtnActive : ""}`}
-              onClick={() => setSubTab(t.id)}
-            >
+            <button key={t.id} className={`${styles.subTabBtn} ${subTab === t.id ? styles.subTabBtnActive : ""}`} onClick={() => setSubTab(t.id)}>
               {t.icon} {t.label}
             </button>
           ))}
