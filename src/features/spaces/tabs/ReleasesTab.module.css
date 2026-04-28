@@ -1,12 +1,13 @@
 .tab {
-  padding: 20px 0;
+  padding: 20px;
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+  flex-direction: row-reverse;
 }
 
 .title {
@@ -85,28 +86,62 @@
 
 .releaseCard {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 16px;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  position: relative;
   cursor: pointer;
-  transition: box-shadow 0.15s;
+  transition:
+    box-shadow 0.15s,
+    transform 0.1s;
+}
+
+.releaseCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(50deg, transparent, var(--accent-2), transparent);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .releaseCard:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.releaseBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
 }
 
 .releaseTop {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  gap: 7px;
+}
+
+.releaseDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rc, var(--accent));
+  flex-shrink: 0;
 }
 
 .releaseName {
-  font-size: 14px;
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .statusBadge {
@@ -115,6 +150,7 @@
   padding: 2px 8px;
   border-radius: 100px;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 .statusUnreleased {
@@ -129,41 +165,76 @@
   border: 1px solid rgba(52, 211, 153, 0.28);
 }
 
-.releaseDesc {
-  font-size: 12px;
-  color: var(--text-2);
-  margin: 0 0 10px;
-  line-height: 1.4;
-}
-
-.releaseMeta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 11px;
-  color: var(--text-3);
-  margin-bottom: 10px;
-}
-
 .releaseDate {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+}
+
+.releaseCountSection {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.releaseCountNum {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--rc, var(--accent));
+}
+
+.releaseCountLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.releaseDesc {
+  font-size: 11.5px;
+  color: var(--text-2);
+  margin: 0;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.releaseCardFooter {
+  display: flex;
+  flex-direction: row-reverse;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
 }
 
 .releaseBtn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: var(--green);
-  color: #fff;
-  border: none;
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--green);
+  border: 1px solid rgba(52, 211, 153, 0.3);
   border-radius: var(--r-sm);
-  padding: 5px 10px;
+  padding: 5px 11px;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s;
 }
+
+.releaseBtn:hover {
+  background: var(--green);
+  color: #fff;
+}
+
+.releaseCount { font-size: 11px; color: var(--text-3); }
 
 .empty {
   color: var(--text-3);

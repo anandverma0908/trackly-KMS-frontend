@@ -11,7 +11,8 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 5px;
+  padding: 0 10px;
 }
 
 .headerLeft {
@@ -21,7 +22,7 @@
 }
 
 .headerTitle {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -47,35 +48,113 @@
 }
 
 /* ── Summary row ── */
-.summaryRow {
+/* ── KPI cards (mirrors SummaryKPIStrip style) ── */
+.kpiRow {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  gap: 12px;
 }
 
-.summaryCard {
+.kpiCard {
+  background: var(--kpi, var(--surface));
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  min-height: 106px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+  cursor: default;
+}
+
+.kpiCard:hover {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+}
+
+.kpiTopRow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r);
-  padding: 12px 16px;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.summaryVal {
+.kpiLabel {
   font-size: 14px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  color: var(--text-4);
+  letter-spacing: 0.04em;
+  line-height: 1.3;
 }
 
-.summaryLbl {
-  font-size: 10px;
-  font-weight: 700;
+.kpiIconWrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--text-4);
+  flex-shrink: 0;
+}
+
+.kpiValue {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  color: var(--text-4);
+}
+
+.kpiSub {
+  font-size: 12px;
+  color: var(--text-4);
+  margin-top: 4px;
+  opacity: 0.75;
+}
+
+/* ── Risk + Epic side-by-side layout ── */
+.riskEpicRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.riskCard,
+.epicCards {
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  max-height: 360px;
+}
+
+.riskCard::before,
+.epicCards::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(50deg, transparent, var(--accent-2), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.riskEmpty {
+  font-size: 12px;
   color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* ── Gantt wrap ── */
@@ -307,81 +386,86 @@
 }
 
 /* ── Epic detail cards ── */
-.epicCards {
-  background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r);
-  padding: 16px;
-}
-
 .epicCardsTitle {
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin-bottom: 12px;
+  color: var(--text);
+  flex-shrink: 0;
 }
 
 .epicCardGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .epicCard {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px 11px;
   background: var(--surface-2);
-  border: 1px solid var(--border-2);
-  border-radius: 9px;
-  padding: 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid;
+  border-radius: var(--r-sm);
+  font-size: 0.81rem;
+  color: var(--text-2);
+  flex-shrink: 0;
 }
 
 .epicCardTop {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 8px;
+  align-items: center;
+  gap: 6px;
 }
-
-.epicColorBar {
-  width: 3px;
-  height: 30px;
-  border-radius: 100px;
-  flex-shrink: 0;
-}
-
-.epicCardInfo { flex: 1; min-width: 0; }
 
 .epicCardTitle {
-  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
   font-weight: 700;
-  margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.epicCardDates {
-  font-size: 10px;
-  color: var(--text-3);
-  font-family: var(--font-mono);
+  color: var(--text);
 }
 
 .epicCardPct {
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 800;
   font-family: var(--font-mono);
   flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.epicProgressRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.epicProgressBar {
+  flex: 1;
+  min-width: 0;
 }
 
 .epicCardStats {
-  font-size: 10px;
+  font-size: 9.5px;
   color: var(--text-3);
-  margin-top: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 @media (max-width: 900px) {
-  .summaryRow { grid-template-columns: repeat(2, 1fr); }
+  .kpiRow { grid-template-columns: repeat(2, 1fr); }
+  .riskEpicRow { grid-template-columns: 1fr; }
 }
 
 /* ── Empty state ── */
@@ -400,39 +484,86 @@
 }
 
 /* ── EOS AI additions ── */
-.eosBar {
+.briefBar {
+  position: relative;
+  border-radius: var(--r-lg);
+  padding: 14px 24px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.briefGlow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--accent-glow) 0%, transparent 60%);
+  pointer-events: none;
+}
+.briefContent {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: var(--accent-glow);
-  border: 1px solid var(--accent-border);
-  border-radius: var(--r);
-  padding: 10px 14px;
-  font-size: 0.82rem;
+  gap: 12px;
+  padding: 0 4px;
+}
+.briefIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.briefText {
+  flex: 1;
+  font-size: 12px;
   color: var(--text-2);
-  line-height: 1.4;
+  line-height: 1.55;
+}
+.briefLoading {
+  color: var(--text-3);
+  font-style: italic;
+}
+.briefClose {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.briefClose:hover {
+  color: var(--text);
 }
 
-.eosBarText { flex: 1; }
-
 .eosBadge {
-  display: inline-flex; align-items: center; gap: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   background: var(--accent-glow);
   border: 1px solid var(--accent-border);
   color: var(--accent);
-  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em;
-  padding: 2px 7px; border-radius: 99px; flex-shrink: 0;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  border-radius: 99px;
+  flex-shrink: 0;
 }
 
-.riskAlerts { display: flex; flex-direction: column; gap: 6px; }
+.riskAlerts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
 
 .riskAlert {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 9px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--surface-2);
   border-left: 3px solid;
   border-radius: var(--r-sm);
   font-size: 0.81rem;

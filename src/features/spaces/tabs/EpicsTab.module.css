@@ -1,12 +1,13 @@
 .tab {
-  padding: 20px 0;
+  padding: 20px;
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+  flex-direction: row-reverse;
 }
 
 .title {
@@ -126,38 +127,49 @@
 
 .epicCard {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
+  border-radius: var(--r-xl);
   overflow: hidden;
+  position: relative;
   cursor: pointer;
-  transition: box-shadow 0.15s, transform 0.1s;
+  transition:
+    box-shadow 0.15s,
+    transform 0.1s;
 }
 
 .epicCard:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
-}
-
-.epicBar {
-  height: 4px;
-  width: 100%;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
 }
 
 .epicBody {
-  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
 }
 
 .epicTop {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  gap: 7px;
+}
+
+.epicDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .epicTitle {
-  font-size: 14px;
-  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .epicEditBtn {
@@ -165,8 +177,12 @@
   border: none;
   color: var(--text-3);
   cursor: pointer;
-  padding: 2px;
-  border-radius: 4px;
+  padding: 3px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
 }
 
 .epicEditBtn:hover {
@@ -174,29 +190,45 @@
   color: var(--text);
 }
 
-.epicMeta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--text-3);
-  margin-bottom: 10px;
-}
-
 .epicDates {
-  color: var(--text-2);
-}
-
-.progressWrap {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+}
+
+.epicProgressSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.epicProgressHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.epicProgressPct {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.epicProgressLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .progressBar {
-  flex: 1;
-  height: 6px;
-  background: var(--surface-2);
+  height: 5px;
+  background: var(--border);
   border-radius: 100px;
   overflow: hidden;
 }
@@ -207,16 +239,32 @@
   transition: width 0.4s ease;
 }
 
-.progressLabel {
+.epicStats {
+  display: flex;
+  align-items: center;
+  padding-top: 2px;
+  border-top: 1px solid var(--border);
+}
+
+.epicStat {
   font-size: 11px;
-  font-weight: 600;
   color: var(--text-2);
-  min-width: 32px;
-  text-align: right;
+}
+
+.epicStat strong {
+  color: var(--text-2);
+  font-weight: 700;
+}
+
+.epicStatDivider {
+  color: var(--border-2);
+  padding: 0 7px;
+  font-size: 11px;
+  user-select: none;
 }
 
 .empty {
-  color: var(--text-3);
+  color: var(--text-2);
   font-size: 13px;
   text-align: center;
   padding: 40px 0;
@@ -334,7 +382,9 @@
 }
 
 /* ── Date validation ── */
-.inputError { border-color: var(--red) !important; }
+.inputError {
+  border-color: var(--red) !important;
+}
 .dateErrorMsg {
   font-size: 11px;
   color: var(--red);
@@ -359,18 +409,38 @@
   border-radius: var(--r-sm);
   padding: 8px 12px;
 }
-.deleteConfirmText { font-size: 12px; font-weight: 600; color: var(--red); flex: 1; }
+.deleteConfirmText {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--red);
+  flex: 1;
+}
 .deleteConfirmYes {
-  background: var(--red); color: #fff; border: none;
-  border-radius: var(--r-sm); padding: 4px 12px;
-  font-size: 11px; font-weight: 700; cursor: pointer;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
 }
-.deleteConfirmYes:disabled { opacity: 0.6; cursor: not-allowed; }
+.deleteConfirmYes:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .deleteConfirmNo {
-  background: none; border: none; font-size: 11px; font-weight: 600;
-  color: var(--text-3); cursor: pointer; padding: 4px 6px;
+  background: none;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 4px 6px;
 }
-.deleteConfirmNo:hover { color: var(--text); }
+.deleteConfirmNo:hover {
+  color: var(--text);
+}
 
 /* ── Drawer section header ── */
 .drawerSectionHeader {
@@ -395,7 +465,10 @@
   cursor: pointer;
   font-family: var(--font-sans);
 }
-.linkBtn:hover { background: var(--accent); color: #fff; }
+.linkBtn:hover {
+  background: var(--accent);
+  color: #fff;
+}
 
 /* ── Link Ticket Modal ── */
 .modalOverlay {
@@ -416,7 +489,7 @@
   max-height: 60vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 .modalHeader {
   display: flex;
@@ -425,12 +498,22 @@
   padding: 14px 18px;
   border-bottom: 1px solid var(--border-2);
 }
-.modalTitle { font-size: 13px; font-weight: 700; color: var(--text); }
-.modalClose {
-  background: transparent; border: none; color: var(--text-3);
-  cursor: pointer; padding: 4px; border-radius: var(--r-sm);
+.modalTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
 }
-.modalClose:hover { color: var(--text); }
+.modalClose {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--r-sm);
+}
+.modalClose:hover {
+  color: var(--text);
+}
 .modalSearch {
   display: flex;
   align-items: center;
@@ -439,12 +522,28 @@
   border-bottom: 1px solid var(--border-2);
 }
 .modalInput {
-  flex: 1; background: transparent; border: none; outline: none;
-  font-size: 13px; color: var(--text); font-family: var(--font-sans);
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-sans);
 }
-.modalInput::placeholder { color: var(--text-3); }
-.modalList { overflow-y: auto; flex: 1; padding: 6px; }
-.modalEmpty { font-size: 12px; color: var(--text-3); text-align: center; padding: 20px; }
+.modalInput::placeholder {
+  color: var(--text-3);
+}
+.modalList {
+  overflow-y: auto;
+  flex: 1;
+  padding: 6px;
+}
+.modalEmpty {
+  font-size: 12px;
+  color: var(--text-3);
+  text-align: center;
+  padding: 20px;
+}
 .modalRow {
   display: flex;
   align-items: center;
@@ -459,10 +558,28 @@
   color: var(--text);
   font-family: var(--font-sans);
 }
-.modalRow:hover { background: var(--surface-2); }
-.modalRow:disabled { opacity: 0.5; cursor: not-allowed; }
-.modalKey { font-size: 11px; font-weight: 700; color: var(--accent); white-space: nowrap; flex-shrink: 0; font-family: var(--font-mono); }
-.modalSummary { flex: 1; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.modalRow:hover {
+  background: var(--surface-2);
+}
+.modalRow:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.modalKey {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+}
+.modalSummary {
+  flex: 1;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* ── Create/Edit Drawer Form ── */
 .drawerForm {
@@ -500,9 +617,17 @@
   width: 100%;
   box-sizing: border-box;
 }
-.fieldInput:focus { border-color: var(--accent); }
-.fieldInputError { border-color: var(--red) !important; }
-.fieldErrorMsg { font-size: 11px; color: var(--red); margin-top: 2px; }
+.fieldInput:focus {
+  border-color: var(--accent);
+}
+.fieldInputError {
+  border-color: var(--red) !important;
+}
+.fieldErrorMsg {
+  font-size: 11px;
+  color: var(--red);
+  margin-top: 2px;
+}
 
 .fieldRow {
   display: flex;
@@ -523,11 +648,15 @@
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
-  transition: transform 0.12s, box-shadow 0.12s;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s;
   outline: none;
   flex-shrink: 0;
 }
-.colorSwatch:hover { transform: scale(1.18); }
+.colorSwatch:hover {
+  transform: scale(1.18);
+}
 .colorSwatchActive {
   border-color: var(--text) !important;
   box-shadow: 0 0 0 3px var(--bg-2);
@@ -560,8 +689,13 @@
   font-family: var(--font-sans);
   transition: opacity 0.15s;
 }
-.footerSaveBtn:disabled { opacity: 0.45; cursor: not-allowed; }
-.footerSaveBtn:not(:disabled):hover { opacity: 0.88; }
+.footerSaveBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.footerSaveBtn:not(:disabled):hover {
+  opacity: 0.88;
+}
 
 .footerCancelBtn {
   background: var(--surface-2);
@@ -575,7 +709,10 @@
   font-family: var(--font-sans);
   transition: all 0.15s;
 }
-.footerCancelBtn:hover { color: var(--text); border-color: var(--border); }
+.footerCancelBtn:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
 
 /* ── Edit-in-drawer button ── */
 .editInDrawerBtn {
@@ -593,7 +730,9 @@
   font-family: var(--font-sans);
   margin-bottom: 10px;
 }
-.editInDrawerBtn:hover { background: var(--accent-glow); }
+.editInDrawerBtn:hover {
+  background: var(--accent-glow);
+}
 
 /* ── Drawer date row ── */
 .drawerDateRow {
@@ -607,4 +746,16 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
+}
+
+.epicCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(50deg, transparent, var(--accent-2), transparent);
+  pointer-events: none;
+  z-index: 1;
 }

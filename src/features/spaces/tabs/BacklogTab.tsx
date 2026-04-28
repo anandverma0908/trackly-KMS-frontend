@@ -41,8 +41,8 @@ import {
   RiAlertLine,
   RiCloseCircleLine,
   RiFilter3Line,
+  RiArrowDownSLine,
 } from "react-icons/ri";
-
 
 type SortBy = "priority" | "created" | "updated" | "points" | "key";
 const PRIORITY_ORDER = ["Critical", "High", "Medium", "Low"];
@@ -72,7 +72,9 @@ export default function BacklogTab({ project }: { project: Project }) {
   const [showSaveFilter, setShowSaveFilter] = useState(false);
   const [filterName, setFilterName] = useState("");
 
-  const [confirmDeleteSprintId, setConfirmDeleteSprintId] = useState<string | null>(null);
+  const [confirmDeleteSprintId, setConfirmDeleteSprintId] = useState<
+    string | null
+  >(null);
   const [startSprintModal, setStartSprintModal] =
     useState<ProjectSprint | null>(null);
   const [completeSprintModal, setCompleteSprintModal] =
@@ -81,14 +83,18 @@ export default function BacklogTab({ project }: { project: Project }) {
 
   /* ── EOS Plan Sprint ── */
   const [aiPlanLoading, setAiPlanLoading] = useState(false);
-  const [aiPlanResult, setAiPlanResult] = useState<SprintDraftResult | null>(null);
+  const [aiPlanResult, setAiPlanResult] = useState<SprintDraftResult | null>(
+    null,
+  );
   const [aiPlanError, setAiPlanError] = useState(false);
 
   const confirmEosMut = useMutation({
     mutationFn: () => {
       if (!aiPlanResult) throw new Error("No plan to confirm");
       const today = new Date().toISOString().split("T")[0];
-      const twoWeeks = new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0];
+      const twoWeeks = new Date(Date.now() + 14 * 86400000)
+        .toISOString()
+        .split("T")[0];
       return createSprint({
         name: `Sprint ${project.sprints.length + 1}`,
         start_date: today,
@@ -120,7 +126,10 @@ export default function BacklogTab({ project }: { project: Project }) {
 
   // Clear stale delete confirmation if the sprint is no longer visible (BUG-R5)
   useEffect(() => {
-    if (confirmDeleteSprintId && !visibleSprints.some((s) => s.id === confirmDeleteSprintId)) {
+    if (
+      confirmDeleteSprintId &&
+      !visibleSprints.some((s) => s.id === confirmDeleteSprintId)
+    ) {
       setConfirmDeleteSprintId(null);
     }
   }, [visibleSprints, confirmDeleteSprintId]);
@@ -171,7 +180,13 @@ export default function BacklogTab({ project }: { project: Project }) {
 
   /* ── Mutations ── */
   const moveToSprintMut = useMutation({
-    mutationFn: ({ sprintId, ticketKey }: { sprintId: string; ticketKey: string }) => {
+    mutationFn: ({
+      sprintId,
+      ticketKey,
+    }: {
+      sprintId: string;
+      ticketKey: string;
+    }) => {
       setMovingTicketKey(ticketKey);
       return addTicketToSprint(sprintId, ticketKey);
     },
@@ -184,7 +199,13 @@ export default function BacklogTab({ project }: { project: Project }) {
   });
 
   const moveToBacklogMut = useMutation({
-    mutationFn: ({ sprintId, ticketKey }: { sprintId: string; ticketKey: string }) => {
+    mutationFn: ({
+      sprintId,
+      ticketKey,
+    }: {
+      sprintId: string;
+      ticketKey: string;
+    }) => {
       setMovingTicketKey(ticketKey);
       return removeTicketFromSprint(sprintId, ticketKey);
     },
@@ -197,8 +218,18 @@ export default function BacklogTab({ project }: { project: Project }) {
   });
 
   const startSprintMut = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: { name: string; goal: string; start_date: string; end_date: string } }) =>
-      startSprint(id, body),
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: {
+        name: string;
+        goal: string;
+        start_date: string;
+        end_date: string;
+      };
+    }) => startSprint(id, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["space-project", project.key] });
       qc.invalidateQueries({ queryKey: ["sprints"] });
@@ -241,13 +272,19 @@ export default function BacklogTab({ project }: { project: Project }) {
       if (selected.size > 0 && newSprint?.id) {
         const keys = Array.from(selected);
         // Use allSettled so a partial failure doesn't hide the sprint creation (BUG-04)
-        const results = await Promise.allSettled(keys.map((k) => addTicketToSprint(newSprint.id, k)));
+        const results = await Promise.allSettled(
+          keys.map((k) => addTicketToSprint(newSprint.id, k)),
+        );
         const failed = results.filter((r) => r.status === "rejected").length;
         setSelected(new Set());
         if (failed > 0) {
-          toast.error(`Sprint created, but ${failed} ticket${failed > 1 ? "s" : ""} failed to assign`);
+          toast.error(
+            `Sprint created, but ${failed} ticket${failed > 1 ? "s" : ""} failed to assign`,
+          );
         } else {
-          toast.success(`Sprint created with ${keys.length} issue${keys.length > 1 ? "s" : ""}!`);
+          toast.success(
+            `Sprint created with ${keys.length} issue${keys.length > 1 ? "s" : ""}!`,
+          );
         }
       } else {
         toast.success("Sprint created!");
@@ -266,7 +303,9 @@ export default function BacklogTab({ project }: { project: Project }) {
       setShowCreateDrawer(false);
       setCreateForSprint(undefined);
       // Clear optimistic task after re-fetch; .finally ensures cleanup even if re-fetch fails (BUG-R1)
-      qc.invalidateQueries({ queryKey: ["space-project", project.key] }).finally(() => setLocalTasks([]));
+      qc.invalidateQueries({
+        queryKey: ["space-project", project.key],
+      }).finally(() => setLocalTasks([]));
       qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
     },
     onError: (e: Error) => {
@@ -276,10 +315,11 @@ export default function BacklogTab({ project }: { project: Project }) {
   });
 
   const saveFilterMut = useMutation({
-    mutationFn: (name: string) => createSavedFilter({
-      name,
-      filters: { search, sortBy, pod: project.key },
-    }),
+    mutationFn: (name: string) =>
+      createSavedFilter({
+        name,
+        filters: { search, sortBy, pod: project.key },
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["saved-filters"] });
       toast.success("Filter saved");
@@ -309,7 +349,9 @@ export default function BacklogTab({ project }: { project: Project }) {
   async function handleBulkMoveToSprint(sprintId: string) {
     if (!sprintId || selected.size === 0) return;
     const keys = Array.from(selected);
-    const results = await Promise.allSettled(keys.map((k) => addTicketToSprint(sprintId, k)));
+    const results = await Promise.allSettled(
+      keys.map((k) => addTicketToSprint(sprintId, k)),
+    );
     const failed = results.filter((r) => r.status === "rejected").length;
     const ok = keys.length - failed;
     qc.invalidateQueries({ queryKey: ["space-project", project.key] });
@@ -321,7 +363,9 @@ export default function BacklogTab({ project }: { project: Project }) {
   async function handleBulkAssign(assignee: string) {
     if (!assignee || selected.size === 0) return;
     const keys = Array.from(selected);
-    const results = await Promise.allSettled(keys.map((k) => updateTicket(k, { assignee })));
+    const results = await Promise.allSettled(
+      keys.map((k) => updateTicket(k, { assignee })),
+    );
     const failed = results.filter((r) => r.status === "rejected").length;
     const ok = keys.length - failed;
     qc.invalidateQueries({ queryKey: ["space-project", project.key] });
@@ -333,7 +377,9 @@ export default function BacklogTab({ project }: { project: Project }) {
   async function handleBulkPriority(priority: string) {
     if (!priority || selected.size === 0) return;
     const keys = Array.from(selected);
-    const results = await Promise.allSettled(keys.map((k) => updateTicket(k, { priority })));
+    const results = await Promise.allSettled(
+      keys.map((k) => updateTicket(k, { priority })),
+    );
     const failed = results.filter((r) => r.status === "rejected").length;
     const ok = keys.length - failed;
     qc.invalidateQueries({ queryKey: ["space-project", project.key] });
@@ -345,7 +391,9 @@ export default function BacklogTab({ project }: { project: Project }) {
   async function handleBulkTransition(status: string) {
     if (!status || selected.size === 0) return;
     const keys = Array.from(selected);
-    const results = await Promise.allSettled(keys.map((k) => updateTicketStatus(k, status)));
+    const results = await Promise.allSettled(
+      keys.map((k) => updateTicketStatus(k, status)),
+    );
     const failed = results.filter((r) => r.status === "rejected").length;
     const ok = keys.length - failed;
     qc.invalidateQueries({ queryKey: ["space-project", project.key] });
@@ -373,7 +421,9 @@ export default function BacklogTab({ project }: { project: Project }) {
 
   const epicColorMap = useMemo(() => {
     const map: Record<string, string> = {};
-    project?.epics?.forEach((e) => { map[e.id] = e.color; });
+    project?.epics?.forEach((e) => {
+      map[e.id] = e.color;
+    });
     return map;
   }, [project?.epics]);
 
@@ -410,7 +460,7 @@ export default function BacklogTab({ project }: { project: Project }) {
             </select>
           </div>
 
-          {showSaveFilter ? (
+          {/* {showSaveFilter ? (
             <div className={styles.sortWrap}>
               <input
                 className={styles.select}
@@ -418,20 +468,49 @@ export default function BacklogTab({ project }: { project: Project }) {
                 value={filterName}
                 onChange={(e) => setFilterName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && filterName.trim() && !saveFilterMut.isPending) saveFilterMut.mutate(filterName.trim());
-                  if (e.key === "Escape") { setShowSaveFilter(false); setFilterName(""); }
+                  if (
+                    e.key === "Enter" &&
+                    filterName.trim() &&
+                    !saveFilterMut.isPending
+                  )
+                    saveFilterMut.mutate(filterName.trim());
+                  if (e.key === "Escape") {
+                    setShowSaveFilter(false);
+                    setFilterName("");
+                  }
                 }}
                 autoFocus
                 style={{ width: 120 }}
               />
-              <button className={styles.clearBtn} disabled={saveFilterMut.isPending || !filterName.trim()} onClick={() => { if (filterName.trim()) saveFilterMut.mutate(filterName.trim()); }}>Save</button>
-              <button className={styles.clearBtn} onClick={() => { setShowSaveFilter(false); setFilterName(""); }}>Cancel</button>
+              <button
+                className={styles.clearBtn}
+                disabled={saveFilterMut.isPending || !filterName.trim()}
+                onClick={() => {
+                  if (filterName.trim())
+                    saveFilterMut.mutate(filterName.trim());
+                }}
+              >
+                Save
+              </button>
+              <button
+                className={styles.clearBtn}
+                onClick={() => {
+                  setShowSaveFilter(false);
+                  setFilterName("");
+                }}
+              >
+                Cancel
+              </button>
             </div>
           ) : (
-            <button className={styles.clearBtn} onClick={() => setShowSaveFilter(true)} style={{ color: "var(--text-2)", fontWeight: 600 }}>
+            <button
+              className={styles.clearBtn}
+              onClick={() => setShowSaveFilter(true)}
+              style={{ color: "var(--text-2)", fontWeight: 600 }}
+            >
               <RiFilter3Line size={12} /> Save Filter
             </button>
-          )}
+          )} */}
 
           <button
             className={`${styles.eosBtn} ${aiPlanError ? styles.eosBtnError : ""}`}
@@ -483,7 +562,7 @@ export default function BacklogTab({ project }: { project: Project }) {
                         transform: isCollapsed ? "rotate(-90deg)" : "none",
                       }}
                     >
-                      ▾
+                      <RiArrowDownSLine />
                     </span>
                   </button>
                   <div className={styles.sprintHeaderInfo}>
@@ -511,31 +590,9 @@ export default function BacklogTab({ project }: { project: Project }) {
                         {sprint.tasks.length} issue
                         {sprint.tasks.length !== 1 ? "s" : ""}
                       </span>
-                      {(sprint.startDate || sprint.endDate) && (
-                        <>
-                          <span className={styles.metaDivider}>·</span>
-                          <span className={styles.sprintDates}>
-                            <RiCalendarLine size={10} />
-                            {sprint.startDate
-                              ? new Date(sprint.startDate).toLocaleDateString(
-                                  "en-US",
-                                  { month: "short", day: "numeric" },
-                                )
-                              : "—"}
-                            {" – "}
-                            {sprint.endDate
-                              ? new Date(sprint.endDate).toLocaleDateString(
-                                  "en-US",
-                                  { month: "short", day: "numeric" },
-                                )
-                              : "—"}
-                          </span>
-                        </>
-                      )}
                     </div>
                   </div>
                 </div>
-
 
                 {/* Right: action buttons */}
                 <div className={styles.sprintActions}>
@@ -543,13 +600,19 @@ export default function BacklogTab({ project }: { project: Project }) {
                     <>
                       {confirmDeleteSprintId === sprint.id ? (
                         <div className={styles.deleteConfirmInline}>
-                          <span className={styles.deleteConfirmText}>Delete sprint?</span>
+                          <span className={styles.deleteConfirmText}>
+                            Delete sprint?
+                          </span>
                           <button
                             className={styles.deleteConfirmYes}
                             disabled={deleteSprintMut.isPending}
                             onClick={() => deleteSprintMut.mutate(sprint.id)}
                           >
-                            {deleteSprintMut.isPending ? <span className={styles.spinner} /> : "Delete"}
+                            {deleteSprintMut.isPending ? (
+                              <span className={styles.spinner} />
+                            ) : (
+                              "Delete"
+                            )}
                           </button>
                           <button
                             className={styles.deleteConfirmNo}
@@ -616,14 +679,22 @@ export default function BacklogTab({ project }: { project: Project }) {
                           sprints={visibleSprints}
                           currentSprintId={sprint.id}
                           onMoveToSprint={(sid) =>
-                            moveToSprintMut.mutate({ sprintId: sid, ticketKey: task.key })
+                            moveToSprintMut.mutate({
+                              sprintId: sid,
+                              ticketKey: task.key,
+                            })
                           }
                           onMoveToBacklog={() =>
-                            moveToBacklogMut.mutate({ sprintId: sprint.id, ticketKey: task.key })
+                            moveToBacklogMut.mutate({
+                              sprintId: sprint.id,
+                              ticketKey: task.key,
+                            })
                           }
                           onClick={() => setViewingTask(task)}
                           isMoving={movingTicketKey === task.key}
-                          epicColor={task.epicId ? epicColorMap[task.epicId] : undefined}
+                          epicColor={
+                            task.epicId ? epicColorMap[task.epicId] : undefined
+                          }
                         />
                       ))
                     )}
@@ -670,7 +741,7 @@ export default function BacklogTab({ project }: { project: Project }) {
                       : "none",
                   }}
                 >
-                  ▾
+                  <RiArrowDownSLine />
                 </span>
               </button>
               <div className={styles.sprintHeaderInfo}>
@@ -734,12 +805,17 @@ export default function BacklogTab({ project }: { project: Project }) {
                         sprints={visibleSprints}
                         currentSprintId={undefined}
                         onMoveToSprint={(sid) =>
-                          moveToSprintMut.mutate({ sprintId: sid, ticketKey: task.key })
+                          moveToSprintMut.mutate({
+                            sprintId: sid,
+                            ticketKey: task.key,
+                          })
                         }
                         onMoveToBacklog={undefined}
                         onClick={() => setViewingTask(task)}
                         isMoving={movingTicketKey === task.key}
-                        epicColor={task.epicId ? epicColorMap[task.epicId] : undefined}
+                        epicColor={
+                          task.epicId ? epicColorMap[task.epicId] : undefined
+                        }
                       />
                     ))
                   );
@@ -847,8 +923,12 @@ export default function BacklogTab({ project }: { project: Project }) {
             priority: (payload.priority || "Medium") as ProjectTask["priority"],
             type: _normalizeType(payload.issue_type) as ProjectTask["type"],
             assignee: payload.assignee || project.members[0]?.name || "",
-            assigneeInitials: _initials(payload.assignee || project.members[0]?.name),
-            assigneeColor: _hashColor(payload.assignee || project.members[0]?.name || ""),
+            assigneeInitials: _initials(
+              payload.assignee || project.members[0]?.name,
+            ),
+            assigneeColor: _hashColor(
+              payload.assignee || project.members[0]?.name || "",
+            ),
             storyPoints: payload.story_points || 0,
             createdAt: new Date().toISOString().split("T")[0],
             updatedAt: new Date().toISOString().split("T")[0],
@@ -868,24 +948,40 @@ export default function BacklogTab({ project }: { project: Project }) {
           <div className={styles.bulkActions}>
             {visibleSprints.length > 0 && (
               <div className={styles.bulkWrap}>
-                <select className={styles.bulkSelect} value="" onChange={(e) => handleBulkMoveToSprint(e.target.value)}>
+                <select
+                  className={styles.bulkSelect}
+                  value=""
+                  onChange={(e) => handleBulkMoveToSprint(e.target.value)}
+                >
                   <option value="">Move to Sprint</option>
                   {visibleSprints.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
                   ))}
                 </select>
               </div>
             )}
             <div className={styles.bulkWrap}>
-              <select className={styles.bulkSelect} value="" onChange={(e) => handleBulkAssign(e.target.value)}>
+              <select
+                className={styles.bulkSelect}
+                value=""
+                onChange={(e) => handleBulkAssign(e.target.value)}
+              >
                 <option value="">Assign</option>
                 {project.members.map((m) => (
-                  <option key={m.id} value={m.name}>{m.name}</option>
+                  <option key={m.id} value={m.name}>
+                    {m.name}
+                  </option>
                 ))}
               </select>
             </div>
             <div className={styles.bulkWrap}>
-              <select className={styles.bulkSelect} value="" onChange={(e) => handleBulkPriority(e.target.value)}>
+              <select
+                className={styles.bulkSelect}
+                value=""
+                onChange={(e) => handleBulkPriority(e.target.value)}
+              >
                 <option value="">Set Priority</option>
                 <option value="Critical">Critical</option>
                 <option value="High">High</option>
@@ -894,7 +990,11 @@ export default function BacklogTab({ project }: { project: Project }) {
               </select>
             </div>
             <div className={styles.bulkWrap}>
-              <select className={styles.bulkSelect} value="" onChange={(e) => handleBulkTransition(e.target.value)}>
+              <select
+                className={styles.bulkSelect}
+                value=""
+                onChange={(e) => handleBulkTransition(e.target.value)}
+              >
                 <option value="">Transition</option>
                 <option value="To Do">To Do</option>
                 <option value="In Progress">In Progress</option>
@@ -903,7 +1003,10 @@ export default function BacklogTab({ project }: { project: Project }) {
                 <option value="Done">Done</option>
               </select>
             </div>
-            <button className={styles.bulkClear} onClick={() => setSelected(new Set())}>
+            <button
+              className={styles.bulkClear}
+              onClick={() => setSelected(new Set())}
+            >
               <RiCloseCircleLine size={14} />
             </button>
           </div>
@@ -958,8 +1061,20 @@ export default function BacklogTab({ project }: { project: Project }) {
                         title={t.priority}
                       />
                       <span className={styles.eosTicketTitle}>{t.summary}</span>
-                      <span className={styles.eosTicketSP} title="AI suggested points">
-                        {t.suggested_points}pt <span style={{ fontWeight: 400, opacity: 0.55, fontSize: 9 }}>AI</span>
+                      <span
+                        className={styles.eosTicketSP}
+                        title="AI suggested points"
+                      >
+                        {t.suggested_points}pt{" "}
+                        <span
+                          style={{
+                            fontWeight: 400,
+                            opacity: 0.55,
+                            fontSize: 9,
+                          }}
+                        >
+                          AI
+                        </span>
                       </span>
                     </div>
                     {t.rationale && (
@@ -970,7 +1085,12 @@ export default function BacklogTab({ project }: { project: Project }) {
               })}
             </div>
             {canManageSprints && (
-              <div style={{ padding: "12px 12px 4px", borderTop: "1px solid var(--border-2)" }}>
+              <div
+                style={{
+                  padding: "12px 12px 4px",
+                  borderTop: "1px solid var(--border-2)",
+                }}
+              >
                 <button
                   className={styles.eosBtn}
                   style={{ width: "100%", justifyContent: "center" }}
@@ -978,9 +1098,13 @@ export default function BacklogTab({ project }: { project: Project }) {
                   disabled={confirmEosMut.isPending}
                 >
                   {confirmEosMut.isPending ? (
-                    <><span className={styles.spinner} /> Creating Sprint…</>
+                    <>
+                      <span className={styles.spinner} /> Creating Sprint…
+                    </>
                   ) : (
-                    <><RiAddLine size={13} /> Create Sprint from Plan</>
+                    <>
+                      <RiAddLine size={13} /> Create Sprint from Plan
+                    </>
                   )}
                 </button>
               </div>
@@ -1067,7 +1191,9 @@ const TaskRow = React.memo(function TaskRow({
       className={`${styles.row} ${selected ? styles.rowSelected : ""} ${menuOpen ? styles.rowMenuOpen : ""} ${isStale ? styles.rowStale : ""}`}
       style={{ "--priority-color": priorityColor } as React.CSSProperties}
       onClick={(e) => {
-        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+        const rect = (
+          e.currentTarget as HTMLDivElement
+        ).getBoundingClientRect();
         const x = e.clientX - rect.left - 12; // subtract row left padding
         if (x < 40) return; // skip clicks in the checkbox column + gap area
         onClick?.();
@@ -1087,7 +1213,11 @@ const TaskRow = React.memo(function TaskRow({
       <div className={styles.tdTitle}>
         <IssueTypeBadge type={task.type} />
         {epicColor && (
-          <span className={styles.epicDot} style={{ background: epicColor }} title="Epic" />
+          <span
+            className={styles.epicDot}
+            style={{ background: epicColor }}
+            title="Epic"
+          />
         )}
         <span className={styles.titleText}>{task.title}</span>
         {isStale && (
@@ -1162,7 +1292,11 @@ const TaskRow = React.memo(function TaskRow({
           disabled={isMoving}
           title={isMoving ? "Moving…" : undefined}
         >
-          {isMoving ? <span className={styles.spinner} /> : <RiMore2Line size={14} />}
+          {isMoving ? (
+            <span className={styles.spinner} />
+          ) : (
+            <RiMore2Line size={14} />
+          )}
         </button>
         {menuOpen && (
           <div className={styles.actionMenu}>
@@ -1257,10 +1391,7 @@ function QuickCreateRow({
           }}
         />
         {title.trim() && (
-          <button
-            className={styles.quickCreateBtn}
-            onClick={handleConfirm}
-          >
+          <button className={styles.quickCreateBtn} onClick={handleConfirm}>
             Create →
           </button>
         )}
@@ -1298,7 +1429,10 @@ function StartSprintModal({
 }: {
   sprint: ProjectSprint;
   onClose: () => void;
-  onConfirm: (id: string, body: { name: string; goal: string; start_date: string; end_date: string }) => void;
+  onConfirm: (
+    id: string,
+    body: { name: string; goal: string; start_date: string; end_date: string },
+  ) => void;
   isLoading: boolean;
 }) {
   const today = new Date().toISOString().split("T")[0];
@@ -1382,7 +1516,14 @@ function StartSprintModal({
           </button>
           <button
             className={styles.primaryBtn}
-            onClick={() => onConfirm(sprint.id, { name, goal, start_date: startDate, end_date: endDate })}
+            onClick={() =>
+              onConfirm(sprint.id, {
+                name,
+                goal,
+                start_date: startDate,
+                end_date: endDate,
+              })
+            }
             disabled={isLoading || !name.trim() || endDate < startDate}
           >
             {isLoading ? (
@@ -1535,7 +1676,8 @@ function CreateSprintModal({
   const [goal, setGoal] = useState("");
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(twoWeeks);
-  const dateError = endDate < startDate ? "End date must be after start date" : null;
+  const dateError =
+    endDate < startDate ? "End date must be after start date" : null;
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -1587,7 +1729,9 @@ function CreateSprintModal({
             </div>
           </div>
           {dateError && (
-            <p style={{ fontSize: 11, color: "var(--red)", margin: "4px 0 0" }}>{dateError}</p>
+            <p style={{ fontSize: 11, color: "var(--red)", margin: "4px 0 0" }}>
+              {dateError}
+            </p>
           )}
         </div>
 
@@ -1636,7 +1780,7 @@ function _daysSince(dateStr: string | undefined): number {
   const now = new Date();
   const then = new Date(dateStr);
   // Use UTC midnight diff to avoid DST-caused off-by-one (BUG-21)
-  const nowUTC  = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const nowUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   const thenUTC = Date.UTC(then.getFullYear(), then.getMonth(), then.getDate());
   return Math.max(0, Math.floor((nowUTC - thenUTC) / 86_400_000));
 }

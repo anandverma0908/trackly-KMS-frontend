@@ -33,7 +33,9 @@
   font-weight: 600;
   padding: 0;
 }
-.storiesToggle:hover { color: var(--text); }
+.storiesToggle:hover {
+  color: var(--text);
+}
 .storiesCount {
   background: var(--surface-2);
   border-radius: 20px;
@@ -57,7 +59,9 @@
   padding: 0;
   margin-left: auto;
 }
-.storiesClearFocus:hover { opacity: 0.8; }
+.storiesClearFocus:hover {
+  opacity: 0.8;
+}
 .storiesList {
   overflow: hidden;
   border-top: 1px solid var(--border);
@@ -71,13 +75,19 @@
   border-bottom: 1px solid var(--border);
   transition: background 0.12s;
 }
-.storyRow:last-child { border-bottom: none; }
-.storyRow:hover { background: var(--surface-2); }
+.storyRow:last-child {
+  border-bottom: none;
+}
+.storyRow:hover {
+  background: var(--surface-2);
+}
 .storyRowFocused {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   border-left: 2px solid var(--accent);
 }
-.storyRowEverything { opacity: 0.8; }
+.storyRowEverything {
+  opacity: 0.8;
+}
 .storyRowLeft {
   display: flex;
   align-items: center;
@@ -167,7 +177,9 @@
   text-align: center;
   transition: color 0.12s;
 }
-.storyRow:hover .storyZoomBtn { color: var(--accent); }
+.storyRow:hover .storyZoomBtn {
+  color: var(--accent);
+}
 .storiesShowMore {
   width: 100%;
   padding: 7px;
@@ -179,7 +191,10 @@
   cursor: pointer;
   text-align: center;
 }
-.storiesShowMore:hover { color: var(--accent); background: var(--surface-2); }
+.storiesShowMore:hover {
+  color: var(--accent);
+  background: var(--surface-2);
+}
 
 /* ── Zoom breadcrumb ── */
 .zoomBreadcrumb {
@@ -201,7 +216,9 @@
   font-weight: 600;
   padding: 0;
 }
-.zoomBack:hover { opacity: 0.8; }
+.zoomBack:hover {
+  opacity: 0.8;
+}
 .zoomSep {
   color: var(--text-3);
   font-size: 0.75rem;
@@ -269,7 +286,9 @@
   cursor: pointer;
   letter-spacing: -0.01em;
 }
-.sprintDropdown option { background: var(--surface-2); }
+.sprintDropdown option {
+  background: var(--surface-2);
+}
 
 .sprintName {
   font-size: 14px;
@@ -357,7 +376,8 @@
   transform: translateY(-2px);
   z-index: 30 !important;
 }
-.memberChipActive { }
+.memberChipActive {
+}
 
 .memberChipAvatar {
   width: 32px;
@@ -386,7 +406,10 @@
   transition: all 0.15s;
   font-family: var(--font-sans);
 }
-.clearMembersBtn:hover { color: var(--text); border-color: var(--border-3); }
+.clearMembersBtn:hover {
+  color: var(--text);
+  border-color: var(--border-3);
+}
 
 .toolbarRight {
   display: flex;
@@ -407,7 +430,9 @@
   padding: 7px 11px;
   transition: border-color 0.15s;
 }
-.searchWrap:focus-within { border-color: var(--accent-border); }
+.searchWrap:focus-within {
+  border-color: var(--accent-border);
+}
 
 .searchInput {
   background: transparent;
@@ -419,7 +444,9 @@
   font-family: var(--font-sans);
   width: 150px;
 }
-.searchInput::placeholder { color: var(--text-3); }
+.searchInput::placeholder {
+  color: var(--text-3);
+}
 
 .searchClear {
   background: none;
@@ -431,7 +458,9 @@
   font-family: var(--font-sans);
   transition: color 0.12s;
 }
-.searchClear:hover { color: var(--text); }
+.searchClear:hover {
+  color: var(--text);
+}
 
 /* My Tasks */
 .myTasksBtn {
@@ -450,7 +479,10 @@
   font-family: var(--font-sans);
   white-space: nowrap;
 }
-.myTasksBtn:hover { border-color: var(--border-3); color: var(--text); }
+.myTasksBtn:hover {
+  border-color: var(--border-3);
+  color: var(--text);
+}
 .myTasksBtnActive {
   background: var(--accent-glow);
   border-color: var(--accent-border);
@@ -486,7 +518,9 @@
   font-family: var(--font-sans);
   white-space: nowrap;
 }
-.createBtn:hover { opacity: 0.85; }
+.createBtn:hover {
+  opacity: 0.85;
+}
 
 /* AI filters */
 .aiFiltersWrap {
@@ -524,8 +558,13 @@
   font-family: var(--font-sans);
   white-space: nowrap;
 }
-.aiChip:hover { border-color: var(--border-3); color: var(--text-2); }
-.aiChipActive { font-weight: 700; }
+.aiChip:hover {
+  border-color: var(--border-3);
+  color: var(--text-2);
+}
+.aiChipActive {
+  font-weight: 700;
+}
 
 /* Active filters bar */
 .activeFilters {
@@ -630,7 +669,9 @@
   flex-shrink: 0;
 }
 
-.colEmoji { display: none; }
+.colEmoji {
+  display: none;
+}
 
 .colLabel {
   font-size: 0.82rem;
@@ -649,18 +690,31 @@
 }
 
 .colAddBtn {
-  width: 22px; height: 22px;
+  width: 22px;
+  height: 22px;
   border-radius: 6px;
   border: 1px solid var(--border-2);
   background: transparent;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: var(--text-3);
-  transition: all 0.15s; font-family: var(--font-sans);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-3);
+  transition: all 0.15s;
+  font-family: var(--font-sans);
 }
-.colAddBtn:hover { background: var(--surface-3); color: var(--text); border-color: var(--border-3); }
+.colAddBtn:hover {
+  background: var(--surface-3);
+  color: var(--text);
+  border-color: var(--border-3);
+}
 
-.colBar { display: none; }
-.colBarFill { display: none; }
+.colBar {
+  display: none;
+}
+.colBarFill {
+  display: none;
+}
 
 .cardList {
   padding: 8px;
@@ -688,14 +742,18 @@
   transition: all 0.15s;
   user-select: none;
 }
-.kanbanCard:active { cursor: grabbing; }
+.kanbanCard:active {
+  cursor: grabbing;
+}
 .kanbanCard:hover {
   border-color: var(--accent-border);
-  box-shadow: 0 2px 12px rgba(79,126,255,0.1);
+  box-shadow: 0 2px 12px rgba(79, 126, 255, 0.1);
   transform: translateY(-1px);
 }
 
-.cardPriorityBar { display: none; }
+.cardPriorityBar {
+  display: none;
+}
 
 .cardHeader {
   display: flex;
@@ -712,7 +770,9 @@
   font-weight: 600;
 }
 
-.cardTypeIcon { font-size: 14px; }
+.cardTypeIcon {
+  font-size: 14px;
+}
 
 .cardTitle {
   font-size: 0.83rem;
@@ -749,7 +809,9 @@
   gap: 6px;
 }
 
-.cardSpacer { flex: 1; }
+.cardSpacer {
+  flex: 1;
+}
 
 .priorityDot {
   width: 7px;
@@ -771,10 +833,13 @@
 }
 
 .spBubble {
-  width: 20px; height: 20px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: var(--surface-2);
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 0.65rem;
   font-weight: 800;
   color: var(--text-2);
@@ -782,11 +847,14 @@
 }
 
 .assigneeChip {
-  width: 22px; height: 22px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: var(--accent-glow);
   border: 1px solid var(--accent-border);
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 0.62rem;
   font-weight: 700;
   color: var(--accent);
@@ -810,7 +878,7 @@
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
@@ -868,7 +936,10 @@
   transition: all 0.15s;
   font-family: var(--font-sans);
 }
-.modalClose:hover { background: var(--surface-2); color: var(--text); }
+.modalClose:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
 
 .modalBody {
   padding: 18px 20px;
@@ -910,7 +981,9 @@
   outline: none;
   transition: border-color 0.15s;
 }
-.formInput:focus { border-color: var(--accent-border); }
+.formInput:focus {
+  border-color: var(--accent-border);
+}
 
 .formSelect {
   background: var(--surface-2);
@@ -925,8 +998,12 @@
   cursor: pointer;
   transition: border-color 0.15s;
 }
-.formSelect:focus { border-color: var(--accent-border); }
-.formSelect option { background: var(--surface-2); }
+.formSelect:focus {
+  border-color: var(--accent-border);
+}
+.formSelect option {
+  background: var(--surface-2);
+}
 
 .modalActions {
   display: flex;
@@ -946,8 +1023,14 @@
   text-align: center;
   gap: 12px;
 }
-.emptyTitle { font-size: 16px; font-weight: 700; }
-.emptyDesc { font-size: 12px; color: var(--text-3); }
+.emptyTitle {
+  font-size: 16px;
+  font-weight: 700;
+}
+.emptyDesc {
+  font-size: 12px;
+  color: var(--text-3);
+}
 
 .createTaskBtn {
   margin-left: auto;
@@ -961,7 +1044,10 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 .createTaskBtn:hover {
   background: var(--accent);
@@ -1017,10 +1103,20 @@
   color: var(--text-3);
   white-space: nowrap;
 }
-.flowMetricWarn .flowMetricVal { color: var(--amber); }
-.flowMetricWarn .flowMetricLbl { color: var(--amber); opacity: 0.8; }
-.flowMetricDanger .flowMetricVal { color: var(--red); }
-.flowMetricDanger .flowMetricLbl { color: var(--red); opacity: 0.8; }
+.flowMetricWarn .flowMetricVal {
+  color: var(--amber);
+}
+.flowMetricWarn .flowMetricLbl {
+  color: var(--amber);
+  opacity: 0.8;
+}
+.flowMetricDanger .flowMetricVal {
+  color: var(--red);
+}
+.flowMetricDanger .flowMetricLbl {
+  color: var(--red);
+  opacity: 0.8;
+}
 .flowDivider {
   width: 1px;
   height: 24px;
@@ -1037,7 +1133,9 @@
 }
 
 /* ── Card aging states ── */
-.cardAgingAmber { border-left: 3px solid var(--amber) !important; }
+.cardAgingAmber {
+  border-left: 3px solid var(--amber) !important;
+}
 .cardAgingRed {
   border-left: 3px solid var(--red) !important;
   background: color-mix(in srgb, var(--red) 4%, var(--surface)) !important;
@@ -1056,7 +1154,9 @@
   opacity: 0;
   max-height: 0;
   overflow: hidden;
-  transition: opacity 0.15s, max-height 0.15s;
+  transition:
+    opacity 0.15s,
+    max-height 0.15s;
   pointer-events: none;
 }
 .kanbanCard:hover .eosHint {
@@ -1066,7 +1166,9 @@
 
 /* ── Responsive ── */
 @media (max-width: 1100px) {
-  .aiFiltersWrap { display: none; }
+  .aiFiltersWrap {
+    display: none;
+  }
 }
 
 /* ── Create Task Drawer — form helpers ── */
@@ -1093,7 +1195,9 @@
   min-height: 38px;
   transition: border-color 0.15s;
 }
-.labelsWrap:focus-within { border-color: var(--accent-border); }
+.labelsWrap:focus-within {
+  border-color: var(--accent-border);
+}
 
 .labelTag {
   display: flex;
@@ -1120,7 +1224,9 @@
   font-family: var(--font-sans);
   transition: opacity 0.1s;
 }
-.labelRemove:hover { opacity: 1; }
+.labelRemove:hover {
+  opacity: 1;
+}
 
 .labelInput {
   background: none;
@@ -1132,7 +1238,9 @@
   flex: 1;
   min-width: 100px;
 }
-.labelInput::placeholder { color: var(--text-3); }
+.labelInput::placeholder {
+  color: var(--text-3);
+}
 
 /* ── Generate Retro button ── */
 .retroBtn {
@@ -1152,8 +1260,15 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
-.retroBtn:hover { background: var(--accent); color: #fff; }
-.retroBtn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+.retroBtn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+.retroBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 .retroSpinner {
   display: inline-block;
@@ -1164,7 +1279,11 @@
   border-radius: 50%;
   animation: retroSpin 0.7s linear infinite;
 }
-@keyframes retroSpin { to { transform: rotate(360deg); } }
+@keyframes retroSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* ── Retro Modal ── */
 .retroOverlay {
@@ -1221,7 +1340,10 @@
   font-family: var(--font-sans);
   transition: all 0.12s;
 }
-.retroModalClose:hover { color: var(--text); border-color: var(--border-3); }
+.retroModalClose:hover {
+  color: var(--text);
+  border-color: var(--border-3);
+}
 
 .retroContent {
   font-size: 13px;
@@ -1327,8 +1449,13 @@
   font-family: var(--font-sans);
   transition: all 0.12s;
 }
-.aiChip:hover { border-color: var(--accent-border); color: var(--text-2); }
-.aiChipActive { font-weight: 700; }
+.aiChip:hover {
+  border-color: var(--accent-border);
+  color: var(--text-2);
+}
+.aiChipActive {
+  font-weight: 700;
+}
 
 .cardHeaderRight {
   display: flex;

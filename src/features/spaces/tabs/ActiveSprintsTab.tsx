@@ -16,6 +16,8 @@ import {
   RiBookOpenLine,
   RiArrowDownSLine,
   RiCloseLine,
+  RiArrowRightLine,
+  RiArrowRightSLine,
 } from "react-icons/ri";
 
 import type { Project, ProjectTask } from "../spacesData";
@@ -256,7 +258,7 @@ export default function ActiveSprintsTab({
   );
 
   // Stories strip state
-  const [storiesOpen, setStoriesOpen] = useState(true);
+  const [storiesOpen, setStoriesOpen] = useState(false);
   const [focusedStory, setFocusedStory] = useState<StoryItem | null>(null);
   const [showAllStories, setShowAllStories] = useState(false);
   const [drawerStoryKey, setDrawerStoryKey] = useState<string | null>(null);
@@ -277,6 +279,7 @@ export default function ActiveSprintsTab({
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(
     new Set(),
   );
+  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [myTasksActive, setMyTasksActive] = useState(false);
@@ -479,9 +482,6 @@ export default function ActiveSprintsTab({
   }, [filteredTasks, columnsConfig, getTaskColumnId]);
 
   // Drag handlers
-  function handleDragStart(task: ProjectTask) {
-    setDraggedTask(task);
-  }
   function handleDragEnd() {
     setDraggedTask(null);
     setDragOverCol(null);
@@ -493,7 +493,9 @@ export default function ActiveSprintsTab({
   function handleDrop(e: React.DragEvent, colId: string) {
     e.preventDefault();
     if (!draggedTask) return;
-    const newStatus = colId as ProjectTask["status"];
+    const col = columnsConfig.find((c) => c.id === colId);
+    const newStatus = (col?.status_mapping?.[0] ??
+      colId) as ProjectTask["status"];
     if (draggedTask.status === newStatus) {
       setDraggedTask(null);
       setDragOverCol(null);
@@ -659,27 +661,58 @@ export default function ActiveSprintsTab({
             );
           })}
           {overflowMembers.length > 0 && (
-            <Tooltip
-              title={overflowMembers
-                .map((m) => `${m.name} · ${m.role}`)
-                .join("\n")}
-              arrow
-              placement="bottom"
-            >
-              <div
-                className={styles.memberChipAvatar}
-                style={{
-                  background: "var(--surface-2)",
-                  marginLeft: -10,
-                  zIndex: 0,
-                  color: "var(--text-2)",
-                  fontSize: 11,
-                  cursor: "pointer",
-                }}
+            <>
+              <AnimatePresence>
+                {showOverflowMenu && overflowMembers.map((m, idx) => {
+                  const isActive = selectedMembers.has(m.name);
+                  return (
+                    <motion.div
+                      key={m.id}
+                      initial={{ opacity: 0, width: 0, marginLeft: 0 }}
+                      animate={{ opacity: 1, width: 28, marginLeft: -10 }}
+                      exit={{ opacity: 0, width: 0, marginLeft: 0 }}
+                      transition={{ duration: 0.15, delay: idx * 0.04 }}
+                      style={{ zIndex: 20 - idx, flexShrink: 0 }}
+                    >
+                      <Tooltip title={`${m.name} · ${m.role}`} arrow placement="bottom">
+                        <button
+                          className={`${styles.memberChip} ${isActive ? styles.memberChipActive : ""}`}
+                          onClick={() => toggleMember(m.name)}
+                          style={{ padding: 0 }}
+                        >
+                          <div
+                            className={styles.memberChipAvatar}
+                            style={{
+                              background: m.color,
+                              outline: isActive ? `2px solid ${project.color}` : undefined,
+                              outlineOffset: 2,
+                            }}
+                          >
+                            {m.initials}
+                          </div>
+                        </button>
+                      </Tooltip>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+              <button
+                className={styles.memberChip}
+                onClick={() => setShowOverflowMenu((v) => !v)}
+                style={{ marginLeft: -10, zIndex: 10, padding: 0 }}
               >
-                +{overflowMembers.length}
-              </div>
-            </Tooltip>
+                <div
+                  className={styles.memberChipAvatar}
+                  style={{
+                    background: "var(--surface-2)",
+                    color: "var(--text-2)",
+                    fontSize: 11,
+                  }}
+                >
+                  {showOverflowMenu ? "−" : `+${overflowMembers.length}`}
+                </div>
+              </button>
+            </>
           )}
           {selectedMembers.size > 0 && (
             <button
@@ -922,7 +955,11 @@ export default function ActiveSprintsTab({
               <span>Stories</span>
               <span className={styles.storiesCount}>{allStories.length}</span>
               <span className={styles.storiesChevron}>
-                {storiesOpen ? "▾" : "▸"}
+                {storiesOpen ? (
+                  <RiArrowDownSLine size={15} />
+                ) : (
+                  <RiArrowRightSLine size={15} />
+                )}
               </span>
             </button>
             {focusedStory && (
@@ -1149,31 +1186,41 @@ export default function ActiveSprintsTab({
         )}
 
         {/* Undo banner */}
-        {lastMoved && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "6px 12px",
-              background: "var(--accent-glow)",
-              borderRadius: 6,
-              fontSize: 12,
-              marginBottom: 8,
-            }}
-          >
-            <span style={{ color: "var(--text-2)" }}>
-              Moved <strong>{lastMoved.key}</strong> to a new column.
-            </span>
-            <button
-              className={styles.clearAllBtn}
-              onClick={undoLastMove}
-              style={{ fontSize: 12 }}
+        {/* <AnimatePresence>
+          {lastMoved && (
+            <motion.div
+              key="undo-banner"
+              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+              animate={{ opacity: 1, height: "auto", marginBottom: 8 }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              style={{ overflow: "hidden" }}
             >
-              Undo (Ctrl+Z)
-            </button>
-          </div>
-        )}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 12px",
+                  background: "var(--accent-glow)",
+                  borderRadius: 6,
+                  fontSize: 12,
+                }}
+              >
+                <span style={{ color: "var(--text-2)" }}>
+                  Moved <strong>{lastMoved.key}</strong> to a new column.
+                </span>
+                <button
+                  className={styles.clearAllBtn}
+                  onClick={undoLastMove}
+                  style={{ fontSize: 12 }}
+                >
+                  Undo (Ctrl+Z)
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence> */}
 
         {/* Empty state for filtered results */}
         {filteredTasks.length === 0 && allSprintTasks.length > 0 && (
@@ -1254,21 +1301,6 @@ export default function ActiveSprintsTab({
                     >
                       {col.tasks.length}
                     </span>
-                    <button
-                      className={styles.clearAllBtn}
-                      style={{
-                        marginLeft: "auto",
-                        fontSize: 16,
-                        lineHeight: 1,
-                      }}
-                      onClick={() => {
-                        setCreateColumn(col.id);
-                        setShowCreateModal(true);
-                      }}
-                      title={`Create task in ${col.name}`}
-                    >
-                      <RiAddLine size={14} />
-                    </button>
                   </div>
 
                   {/* Progress micro-bar */}
@@ -1292,7 +1324,14 @@ export default function ActiveSprintsTab({
                   {/* Cards */}
                   <div className={styles.cardList}>
                     {swimlaneGroups.map((group) => (
-                      <div key={group.key}>
+                      <div
+                        key={group.key}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "10px",
+                        }}
+                      >
                         {swimlane !== "none" && group.label && (
                           <div
                             style={{
@@ -1315,7 +1354,23 @@ export default function ActiveSprintsTab({
                               key={task.id}
                               task={task}
                               projectColor={project.color}
-                              onDragStart={() => handleDragStart(task)}
+                              isDragging={draggedTask?.id === task.id}
+                              onDragStart={(e) => {
+                                setDraggedTask(task);
+                                const el = e.currentTarget as HTMLElement;
+                                const rect = el.getBoundingClientRect();
+                                const clone = el.cloneNode(true) as HTMLElement;
+                                clone.style.cssText = `position:fixed;top:-9999px;left:-9999px;width:${rect.width}px;opacity:1;pointer-events:none;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.28);`;
+                                document.body.appendChild(clone);
+                                e.dataTransfer.setDragImage(
+                                  clone,
+                                  e.clientX - rect.left,
+                                  e.clientY - rect.top,
+                                );
+                                requestAnimationFrame(() =>
+                                  document.body.removeChild(clone),
+                                );
+                              }}
                               onDragEnd={handleDragEnd}
                               onView={setViewTicket}
                               epicColor={
@@ -1410,6 +1465,7 @@ export default function ActiveSprintsTab({
 /* ── Kanban Card ── */
 function KanbanCard({
   task,
+  isDragging,
   onDragStart,
   onDragEnd,
   onView,
@@ -1417,7 +1473,8 @@ function KanbanCard({
 }: {
   task: ProjectTask;
   projectColor?: string;
-  onDragStart: () => void;
+  isDragging?: boolean;
+  onDragStart: (e: React.DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
   onView?: (task: ProjectTask) => void;
   epicColor?: string;
@@ -1457,90 +1514,94 @@ function KanbanCard({
   })();
 
   return (
-    <motion.div
-      className={`${styles.kanbanCard} ${agingClass}`}
+    <div
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      layout
-      onClick={() => onView?.(task)}
+      style={{ opacity: isDragging ? 0 : 1, transition: "opacity 0.1s" }}
     >
-      {/* Header */}
-      <div className={styles.cardHeader}>
-        <span className={styles.cardKey}>{task.key}</span>
-        <div className={styles.cardHeaderRight}>
-          {epicColor && (
-            <span
-              className={styles.epicDot}
-              style={{ background: epicColor }}
-              title="Epic"
-            />
-          )}
-          <IssueTypeBadge type={task.type} />
-        </div>
-      </div>
-
-      {/* Title */}
-      <p className={styles.cardTitle}>{task.title}</p>
-
-      {/* Labels */}
-      {task.labels && task.labels.length > 0 && (
-        <div className={styles.cardLabels}>
-          {task.labels.map((l) => (
-            <span key={l} className={styles.cardLabel}>
-              {l}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className={styles.cardFooter}>
-        <span
-          className={styles.priorityDot}
-          style={{ background: priorityColor }}
-          title={task.priority}
-        />
-        {task.dueDate && (
-          <span
-            className={styles.dueBadge}
-            style={{
-              color:
-                new Date(task.dueDate) < new Date() && !isDone
-                  ? "var(--red)"
-                  : "var(--text-3)",
-            }}
-          >
-            {new Date(task.dueDate).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}
-          </span>
-        )}
-        {task.storyPoints > 0 && (
-          <span className={styles.spBubble}>{task.storyPoints}</span>
-        )}
-        <div className={styles.cardSpacer} />
-        <Tooltip title={task.assignee || "Unassigned"} arrow>
-          <div className={styles.assigneeChip}>
-            {task.assigneeInitials || "??"}
+      <motion.div
+        className={`${styles.kanbanCard} ${agingClass}`}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+        onClick={() => onView?.(task)}
+      >
+        {/* Header */}
+        <div className={styles.cardHeader}>
+          <span className={styles.cardKey}>{task.key}</span>
+          <div className={styles.cardHeaderRight}>
+            {epicColor && (
+              <span
+                className={styles.epicDot}
+                style={{ background: epicColor }}
+                title="Epic"
+              />
+            )}
+            <IssueTypeBadge type={task.type} />
           </div>
-        </Tooltip>
-      </div>
+        </div>
 
-      {/* Blocked banner */}
-      {task.status === "Blocked" && (
-        <div className={styles.blockedBanner}>Blocked</div>
-      )}
+        {/* Title */}
+        <p className={styles.cardTitle}>{task.title}</p>
 
-      {/* EOS enrichment hint */}
-      <div className={styles.eosHint}>
-        <RiSparklingLine size={9} style={{ flexShrink: 0 }} />
-        {eosHint}
-      </div>
-    </motion.div>
+        {/* Labels */}
+        {task.labels && task.labels.length > 0 && (
+          <div className={styles.cardLabels}>
+            {task.labels.map((l) => (
+              <span key={l} className={styles.cardLabel}>
+                {l}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className={styles.cardFooter}>
+          <span
+            className={styles.priorityDot}
+            style={{ background: priorityColor }}
+            title={task.priority}
+          />
+          {task.dueDate && (
+            <span
+              className={styles.dueBadge}
+              style={{
+                color:
+                  new Date(task.dueDate) < new Date() && !isDone
+                    ? "var(--red)"
+                    : "var(--text-3)",
+              }}
+            >
+              {new Date(task.dueDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+            </span>
+          )}
+          {task.storyPoints > 0 && (
+            <span className={styles.spBubble}>{task.storyPoints}</span>
+          )}
+          <div className={styles.cardSpacer} />
+          <Tooltip title={task.assignee || "Unassigned"} arrow>
+            <div className={styles.assigneeChip}>
+              {task.assigneeInitials || "??"}
+            </div>
+          </Tooltip>
+        </div>
+
+        {/* Blocked banner */}
+        {task.status === "Blocked" && (
+          <div className={styles.blockedBanner}>Blocked</div>
+        )}
+
+        {/* EOS enrichment hint */}
+        <div className={styles.eosHint}>
+          <RiSparklingLine size={9} style={{ flexShrink: 0 }} />
+          {eosHint}
+        </div>
+      </motion.div>
+    </div>
   );
 }

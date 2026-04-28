@@ -35,35 +35,80 @@ import {
   RiTestTubeLine,
 } from "react-icons/ri";
 
-function VelocityRing({ done, total, size = 28 }: { done: number; total: number; size?: number }) {
+function VelocityRing({
+  done,
+  total,
+  size = 28,
+}: {
+  done: number;
+  total: number;
+  size?: number;
+}) {
   const r = (size - 4) / 2;
   const circ = 2 * Math.PI * r;
   const pct = total > 0 ? Math.min(done / total, 1) : 0;
-  const color = pct >= 1 ? "var(--green)" : pct >= 0.5 ? "var(--accent)" : "var(--amber)";
+  const color =
+    pct >= 1 ? "var(--green)" : pct >= 0.5 ? "var(--accent)" : "var(--amber)";
   return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)", flexShrink: 0 }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border-2)" strokeWidth={2.5} />
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={2.5}
-        strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)} strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+    <svg
+      width={size}
+      height={size}
+      style={{ transform: "rotate(-90deg)", flexShrink: 0 }}
+    >
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke="var(--border-2)"
+        strokeWidth={2.5}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth={2.5}
+        strokeDasharray={circ}
+        strokeDashoffset={circ * (1 - pct)}
+        strokeLinecap="round"
+        style={{ transition: "stroke-dashoffset 0.5s ease" }}
+      />
     </svg>
   );
 }
 
-type Tab = "summary" | "backlog" | "board" | "sprints" | "roadmap" | "nova" | "decisions" | "processes" | "settings" | "epics" | "releases" | "tests";
+type Tab =
+  | "summary"
+  | "backlog"
+  | "board"
+  | "sprints"
+  | "roadmap"
+  | "nova"
+  | "decisions"
+  | "processes"
+  | "settings"
+  | "epics"
+  | "releases"
+  | "tests";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: "summary",   label: "Summary",   icon: <RiBarChartBoxLine size={15} /> },
-  { id: "backlog",   label: "Backlog",   icon: <RiTaskLine size={15} /> },
-  { id: "board",     label: "Board",     icon: <RiFlashlightLine size={15} /> },
-  { id: "roadmap",   label: "Roadmap",   icon: <RiRoadMapLine size={15} /> },
-  { id: "epics",     label: "Epics",     icon: <RiStackLine size={15} /> },
-  { id: "releases",  label: "Releases",  icon: <RiPriceTag3Line size={15} /> },
-  { id: "tests",     label: "Tests",     icon: <RiTestTubeLine size={15} /> },
-  { id: "nova",      label: "EOS",       icon: <RiSparklingLine size={15} /> },
+  { id: "summary", label: "Summary", icon: <RiBarChartBoxLine size={15} /> },
+  { id: "backlog", label: "Backlog", icon: <RiTaskLine size={15} /> },
+  { id: "board", label: "Board", icon: <RiFlashlightLine size={15} /> },
+  { id: "roadmap", label: "Roadmap", icon: <RiRoadMapLine size={15} /> },
+  { id: "epics", label: "Epics", icon: <RiStackLine size={15} /> },
+  { id: "releases", label: "Releases", icon: <RiPriceTag3Line size={15} /> },
+  { id: "tests", label: "Tests", icon: <RiTestTubeLine size={15} /> },
+  { id: "nova", label: "EOS", icon: <RiSparklingLine size={15} /> },
   { id: "decisions", label: "Decisions", icon: <RiFileTextLine size={15} /> },
-  { id: "processes", label: "Processes", icon: <RiShieldCheckLine size={15} /> },
-  { id: "settings",  label: "Settings",  icon: <RiSettings3Line size={15} /> },
+  {
+    id: "processes",
+    label: "Processes",
+    icon: <RiShieldCheckLine size={15} />,
+  },
+  { id: "settings", label: "Settings", icon: <RiSettings3Line size={15} /> },
 ];
 
 export default function ProjectDetailPage() {
@@ -83,7 +128,6 @@ export default function ProjectDetailPage() {
   });
 
   const podColor = getPodColor(pod ?? "");
-
 
   if (isLoading) {
     return (
@@ -117,28 +161,56 @@ export default function ProjectDetailPage() {
     const now = new Date();
     const start = new Date(activeSprint.startDate);
     const end = new Date(activeSprint.endDate);
-    const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86_400_000));
-    const daysElapsed = Math.max(1, Math.ceil((now.getTime() - start.getTime()) / 86_400_000));
+    const totalDays = Math.max(
+      1,
+      Math.ceil((end.getTime() - start.getTime()) / 86_400_000),
+    );
+    const daysElapsed = Math.max(
+      1,
+      Math.ceil((now.getTime() - start.getTime()) / 86_400_000),
+    );
     const daysLeft = Math.max(0, totalDays - daysElapsed);
     const done = activeSprint.donePoints;
     const total = activeSprint.totalPoints;
     const remaining = total - done;
     const pace = done / daysElapsed;
-    const neededPace = daysLeft > 0 ? remaining / daysLeft : remaining > 0 ? 0 : pace;
-    const probability = Math.min(100, Math.round((neededPace > 0 ? pace / neededPace : 1) * 100));
-    const status = probability >= 80 ? "on-track" : probability >= 50 ? "at-risk" : "behind";
-    const color = status === "on-track" ? "var(--green)" : status === "at-risk" ? "var(--amber)" : "var(--red)";
-    const blockedCount = activeSprint.tasks.filter((t) => t.status === "Blocked").length;
+    const neededPace =
+      daysLeft > 0 ? remaining / daysLeft : remaining > 0 ? 0 : pace;
+    const probability = Math.min(
+      100,
+      Math.round((neededPace > 0 ? pace / neededPace : 1) * 100),
+    );
+    const status =
+      probability >= 80 ? "on-track" : probability >= 50 ? "at-risk" : "behind";
+    const color =
+      status === "on-track"
+        ? "var(--green)"
+        : status === "at-risk"
+          ? "var(--amber)"
+          : "var(--red)";
+    const blockedCount = activeSprint.tasks.filter(
+      (t) => t.status === "Blocked",
+    ).length;
     const recommendation =
       probability >= 80
         ? "Sprint on track — protect the team from scope additions."
         : probability >= 50
-        ? blockedCount > 0
-          ? `At risk — unblock ${blockedCount} ticket${blockedCount > 1 ? "s" : ""} immediately.`
-          : "At risk — consider moving low-priority items to backlog."
-        : "Behind — escalate blockers and negotiate scope now.";
+          ? blockedCount > 0
+            ? `At risk — unblock ${blockedCount} ticket${blockedCount > 1 ? "s" : ""} immediately.`
+            : "At risk — consider moving low-priority items to backlog."
+          : "Behind — escalate blockers and negotiate scope now.";
     const sprintPct = total > 0 ? Math.round((done / total) * 100) : 0;
-    return { probability, status, color, daysLeft, done, total, blockedCount, recommendation, sprintPct };
+    return {
+      probability,
+      status,
+      color,
+      daysLeft,
+      done,
+      total,
+      blockedCount,
+      recommendation,
+      sprintPct,
+    };
   })();
 
   return (
@@ -184,9 +256,7 @@ export default function ProjectDetailPage() {
                   <span>No active sprint</span>
                 </div>
                 <div className={styles.sprintGoal}>
-                  <span>
-                  Start one from Backlog
-                </span>
+                  <span>Start one from Backlog</span>
                 </div>
               </>
             )}
@@ -198,43 +268,82 @@ export default function ProjectDetailPage() {
             <div className={styles.healthWidget}>
               {/* Row 1: ring + probability + badge + bar + pts + days + blocked */}
               <div className={styles.hwRow1}>
-                <VelocityRing done={sprintHealth.done} total={sprintHealth.total} size={28} />
-                <span className={styles.hwProb} style={{ color: sprintHealth.color }}>
+                <VelocityRing
+                  done={sprintHealth.done}
+                  total={sprintHealth.total}
+                  size={28}
+                />
+                <span
+                  className={styles.hwProb}
+                  style={{ color: sprintHealth.color }}
+                >
                   {sprintHealth.probability}%
                 </span>
                 <span
                   className={styles.hwBadge}
-                  style={{ color: sprintHealth.color, background: `${sprintHealth.color}18`, border: `1px solid ${sprintHealth.color}33` }}
+                  style={{
+                    color: sprintHealth.color,
+                    background: `${sprintHealth.color}18`,
+                    border: `1px solid ${sprintHealth.color}33`,
+                  }}
                 >
-                  {sprintHealth.status === "on-track"
-                    ? <><RiCheckLine size={9} /> On Track</>
-                    : sprintHealth.status === "at-risk"
-                    ? <><RiAlertLine size={9} /> At Risk</>
-                    : <><RiAlertLine size={9} /> Behind</>}
+                  {sprintHealth.status === "on-track" ? (
+                    <>
+                      <RiCheckLine size={9} /> On Track
+                    </>
+                  ) : sprintHealth.status === "at-risk" ? (
+                    <>
+                      <RiAlertLine size={9} /> At Risk
+                    </>
+                  ) : (
+                    <>
+                      <RiAlertLine size={9} /> Behind
+                    </>
+                  )}
                 </span>
                 <div className={styles.hwBar}>
-                  <div className={styles.hwBarFill} style={{ width: `${sprintHealth.sprintPct}%`, background: sprintHealth.color }} />
+                  <div
+                    className={styles.hwBarFill}
+                    style={{
+                      width: `${sprintHealth.sprintPct}%`,
+                      background: sprintHealth.color,
+                    }}
+                  />
                 </div>
-                <span className={styles.hwStats}>{sprintHealth.done}/{sprintHealth.total} pts</span>
+                <span className={styles.hwStats}>
+                  {sprintHealth.done}/{sprintHealth.total} pts
+                </span>
                 <span className={styles.hwDot}>·</span>
-                <span className={styles.hwStats}>{sprintHealth.daysLeft}d left</span>
+                <span className={styles.hwStats}>
+                  {sprintHealth.daysLeft}d left
+                </span>
                 {sprintHealth.blockedCount > 0 && (
                   <>
                     <span className={styles.hwDot}>·</span>
-                    <span className={styles.hwBlocked}>🚫 {sprintHealth.blockedCount}</span>
+                    <span className={styles.hwBlocked}>
+                      🚫 {sprintHealth.blockedCount}
+                    </span>
                   </>
                 )}
               </div>
               {/* Row 2: EOS recommendation */}
               <div className={styles.hwRow2}>
-                <RiSparklingLine size={9} color="var(--accent)" style={{ flexShrink: 0 }} />
-                <span className={styles.hwRec}>{sprintHealth.recommendation}</span>
+                <RiSparklingLine
+                  size={9}
+                  color="var(--accent)"
+                  style={{ flexShrink: 0 }}
+                />
+                <span className={styles.hwRec}>
+                  {sprintHealth.recommendation}
+                </span>
               </div>
             </div>
           ) : activeSprint ? (
             <div className={styles.healthWidget}>
               <div className={styles.hwRow1}>
-                <span className={styles.hwStats}>{activeSprint.donePoints}/{activeSprint.totalPoints} pts</span>
+                <span className={styles.hwStats}>
+                  {activeSprint.donePoints}/{activeSprint.totalPoints} pts
+                </span>
               </div>
             </div>
           ) : null}
@@ -273,10 +382,10 @@ export default function ProjectDetailPage() {
 
         {/* ── Tab Content ── */}
         <div className={styles.tabContent}>
-          {activeTab === "summary"  && <SummaryTab project={project} />}
-          {activeTab === "backlog"  && <BacklogTab project={project} />}
-          {activeTab === "sprints"  && <SprintsTab project={project} />}
-          {activeTab === "roadmap"  && <RoadmapTab project={project} />}
+          {activeTab === "summary" && <SummaryTab project={project} />}
+          {activeTab === "backlog" && <BacklogTab project={project} />}
+          {activeTab === "sprints" && <SprintsTab project={project} />}
+          {activeTab === "roadmap" && <RoadmapTab project={project} />}
           {activeTab === "board" && (
             <ActiveSprintsTab
               project={project}
@@ -285,14 +394,18 @@ export default function ProjectDetailPage() {
             />
           )}
           {activeTab === "nova" && (
-            <EOSTab project={project} activeSprint={activeSprint} pod={pod ?? ""} />
+            <EOSTab
+              project={project}
+              activeSprint={activeSprint}
+              pod={pod ?? ""}
+            />
           )}
           {activeTab === "decisions" && <DecisionsTab pod={pod ?? ""} />}
           {activeTab === "processes" && <ProcessesTab pod={pod ?? ""} />}
           {activeTab === "settings" && <SettingsTab project={project} />}
           {activeTab === "epics" && <EpicsTab pod={pod ?? ""} />}
           {activeTab === "releases" && <ReleasesTab pod={pod ?? ""} />}
-          {activeTab === "tests"    && <TestsTab pod={pod ?? ""} />}
+          {activeTab === "tests" && <TestsTab pod={pod ?? ""} />}
         </div>
       </div>
     </div>

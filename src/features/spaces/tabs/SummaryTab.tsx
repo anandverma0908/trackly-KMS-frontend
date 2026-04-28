@@ -401,18 +401,14 @@ export default function SummaryTab({ project }: { project: Project }) {
               "Keep momentum — protect team focus and avoid mid-sprint scope changes.")
             )}
           </p>
-          <button
+          {/* <button
             className={styles.panelRefresh}
-            onClick={() => {
-              qc.setQueryData(["spaces-brief", project.key], undefined);
-              qc.fetchQuery({
-                queryKey: ["spaces-brief", project.key],
-                queryFn: () => fetchSpacesBrief(project.key, true),
-              });
-            }}
+            onClick={() =>
+              qc.invalidateQueries({ queryKey: ["spaces-brief", project.key] })
+            }
           >
             <RiRefreshLine size={12} /> Refresh
-          </button>
+          </button> */}
         </div>
 
         {/* ── Health card — spans both rows ── */}
@@ -620,7 +616,14 @@ export default function SummaryTab({ project }: { project: Project }) {
                 tick={{ fontSize: 10, fill: "var(--text-3)" }}
                 allowDecimals={false}
               />
-              <ReTooltip content={<ChartTooltip />} />
+              <ReTooltip
+                contentStyle={{
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border-2)",
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+              />
               <Area
                 type="monotone"
                 dataKey="tasks"
@@ -651,7 +654,14 @@ export default function SummaryTab({ project }: { project: Project }) {
                 tick={{ fontSize: 10, fill: "var(--text-3)" }}
                 allowDecimals={false}
               />
-              <ReTooltip content={<ChartTooltip />} />
+              <ReTooltip
+                contentStyle={{
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border-2)",
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+              />
               <Bar
                 dataKey="done"
                 fill="var(--green)"
