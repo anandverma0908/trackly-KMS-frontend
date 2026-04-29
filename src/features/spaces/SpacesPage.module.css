@@ -1,8 +1,11 @@
 .page {
-  padding: 22px 24px;
+  padding: 10px 40px 40px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* ── Header ── */
@@ -23,10 +26,11 @@
 }
 
 .title {
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.05em;
-  margin-bottom: 4px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  margin: 0;
 }
 
 .headerActions {
@@ -314,7 +318,7 @@
   color: var(--amber);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin: 0!important;
+  margin: 0 !important;
 }
 
 /* Sprint outcome predictor pill (Gen 2) */

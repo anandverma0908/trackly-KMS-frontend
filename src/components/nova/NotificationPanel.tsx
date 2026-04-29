@@ -4,10 +4,21 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
 } from "@/services/api";
-import { useNotificationStore } from "@/store";
 import type { Notification } from "@/types";
 import IconButton from "@mui/material/IconButton";
-import { RiCheckboxMultipleLine, RiNotificationOffLine, RiRunLine, RiSunLine, RiFireLine } from "react-icons/ri";
+import {
+  RiCheckboxMultipleLine,
+  RiNotificationOffLine,
+  RiRunLine,
+  RiSunLine,
+  RiFireLine,
+  RiTicketLine,
+  RiChat1Line,
+  RiTimeLine,
+  RiErrorWarningLine,
+  RiFocus3Line,
+  RiAlarmLine,
+} from "react-icons/ri";
 import styles from "./NotificationPanel.module.css";
 
 interface Props {
@@ -15,35 +26,36 @@ interface Props {
 }
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
-  sprint_started: <RiRunLine size={18} />,
-  standup_ready: <RiSunLine size={18} />,
-  burn_rate_warning: <RiFireLine size={18} />,
+  sprint_started:       <RiRunLine size={18} />,
+  standup_ready:        <RiSunLine size={18} />,
+  burn_rate_alert:      <RiFireLine size={18} />,
+  burn_rate_warning:    <RiFireLine size={18} />,
+  ticket_assigned:      <RiTicketLine size={18} />,
+  ticket_commented:     <RiChat1Line size={18} />,
+  time_logged:          <RiTimeLine size={18} />,
+  blocked_ticket:       <RiErrorWarningLine size={18} />,
+  goal_status_changed:  <RiFocus3Line size={18} />,
+  sprint_ending_soon:   <RiAlarmLine size={18} />,
 };
 
 export default function NotificationPanel({ onClose: _onClose }: Props) {
   const qc = useQueryClient();
-  const { clearUnread } = useNotificationStore();
 
-  const { data: raw = [] } = useQuery({
+  const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["notifications"],
     queryFn: fetchNotifications,
-    refetchInterval: 30_000,
   });
 
-  const notifications = raw as Notification[];
   const unread = notifications.filter((n) => !n.read).length;
 
   const readMut = useMutation({
-    mutationFn: (id: number) => markNotificationRead(id),
+    mutationFn: (id: string) => markNotificationRead(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
   const readAllMut = useMutation({
     mutationFn: markAllNotificationsRead,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["notifications"] });
-      clearUnread();
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
   return (

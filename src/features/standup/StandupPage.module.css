@@ -1,10 +1,13 @@
 /* ── Standup Page — Redesigned ── */
 
 .page {
-  padding: 24px 28px;
-  max-width: 1400px;
+  padding: 10px 40px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1440px;
   margin: 0 auto;
-  min-height: 100%;
+  width: 100%;
 }
 
 /* ── Header ── */
@@ -18,16 +21,16 @@
 }
 
 .pageTitle {
-  font-size: 22px;
+  font-size: 15px;
   font-weight: 800;
+  letter-spacing: -0.04em;
   color: var(--text);
-  letter-spacing: -0.03em;
   margin: 0;
 }
 
 .pageSubtitle {
   font-size: 13px;
-  color: var(--text-3);
+  color: var(--text-2);
   margin: 4px 0 0;
 }
 
@@ -37,6 +40,26 @@
   gap: 8px;
   flex-shrink: 0;
   flex-wrap: wrap;
+}
+
+.actionsBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  margin: 0 auto;
+  width: 100%;
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
+  padding: 12px 15px;
+}
+
+.headerControls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: row;
+  gap: 5px;
 }
 
 /* Search */
@@ -61,7 +84,9 @@
   width: 100%;
 }
 
-.headerSearchInput::placeholder { color: var(--text-3); }
+.headerSearchInput::placeholder {
+  color: var(--text-3);
+}
 
 /* Date input */
 .headerDateWrap,
@@ -99,12 +124,19 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
+  transition:
+    opacity 0.15s,
+    transform 0.1s;
   font-family: var(--font-sans);
 }
 
-.btnPrimary:hover { opacity: 0.88; }
-.btnPrimary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btnPrimary:hover {
+  opacity: 0.88;
+}
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .btnSecondary {
   display: inline-flex;
@@ -151,8 +183,9 @@
 
 /* ── Spinner ── */
 .spinner {
-  width: 13px; height: 13px;
-  border: 2px solid rgba(255,255,255,0.25);
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
@@ -160,15 +193,20 @@
 }
 
 .synSpinner {
-  width: 11px; height: 11px;
-  border: 2px solid rgba(255,255,255,0.3);
+  width: 11px;
+  height: 11px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   display: inline-block;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* ── Two-column layout ── */
 .twoColumn {
@@ -182,6 +220,9 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
+  padding: 20px;
 }
 
 .sideCol {
@@ -190,6 +231,10 @@
   gap: 14px;
   position: sticky;
   top: calc(var(--topbar-h) + 16px);
+
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
+  padding: 20px;
 }
 
 /* ── Standup Card (large, engineer) ── */
@@ -346,8 +391,6 @@
 
 /* ── Empty card ── */
 .emptyCard {
-  background: var(--surface);
-  border: 1px dashed var(--border-2);
   border-radius: var(--r-sm);
   padding: 56px 24px;
   display: flex;
@@ -357,7 +400,16 @@
   text-align: center;
 }
 
-.emptyIcon { opacity: 0.5; }
+.emptyCard p {
+  font-size: 12px;
+  color: var(--text-3);
+  margin: 0;
+  max-width: 320px;
+}
+
+.emptyIcon {
+  opacity: 0.5;
+}
 
 .emptyTitle {
   font-size: 16px;
@@ -494,9 +546,14 @@
   transition: background 0.1s;
 }
 
-.insightRow:hover { background: var(--surface-2); }
+.insightRow:hover {
+  background: var(--surface-2);
+}
 
-.insightIcon { flex-shrink: 0; margin-top: 1px; }
+.insightIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
 
 .insightText {
   font-size: 13px;
@@ -543,13 +600,20 @@
 }
 
 .metricCard {
-  background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r-sm);
-  padding: 14px 16px;
+  background: var(--kpi);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  min-height: 106px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.metricCard:hover {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
 }
 
 .metricCardTop {
@@ -559,20 +623,51 @@
   gap: 8px;
 }
 
-.metricCardVal {
+.metricCardBottom {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.metricCardIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 22px;
+  color: var(--text-4);
+  flex-shrink: 0;
+}
+
+.metricCardVal {
+  font-size: 32px;
   font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  color: var(--text-4);
   font-family: var(--font-mono);
-  letter-spacing: -0.02em;
-  color: var(--text);
+  animation: kpiIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .metricCardLbl {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-3);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-4);
+  letter-spacing: 0.07em;
+  line-height: 1.3;
+}
+
+@keyframes kpiIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── Pod group ── */
@@ -613,15 +708,19 @@
 
 .gridCard {
   background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r-sm);
-  padding: 14px;
+  border-radius: var(--r-xl);
+  position: relative;
+  border: none;
+  padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s;
   font-family: var(--font-sans);
 }
 
@@ -686,14 +785,14 @@
   font-size: 0.62rem;
   font-weight: 700;
   color: var(--amber);
-  background: rgba(251, 191, 36, 0.10);
+  background: rgba(251, 191, 36, 0.1);
   border: 1px solid rgba(251, 191, 36, 0.25);
   padding: 2px 5px;
   border-radius: 99px;
 }
 
 .wordBadge {
-  font-size: 0.60rem;
+  font-size: 0.6rem;
   font-weight: 600;
   color: var(--text-3);
   background: var(--surface-2);
@@ -703,7 +802,7 @@
 }
 
 .flyingBadge {
-  font-size: 0.70rem;
+  font-size: 0.7rem;
   line-height: 1;
 }
 
@@ -754,8 +853,7 @@
 /* ── Intelligence card ── */
 .intelligenceCard {
   background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-xl);
   overflow: hidden;
 }
 
@@ -796,8 +894,13 @@
   transition: opacity 0.15s;
 }
 
-.synthesizeBtn:hover { opacity: 0.88; }
-.synthesizeBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.synthesizeBtn:hover {
+  opacity: 0.88;
+}
+.synthesizeBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 .synthesisCard {
   padding: 12px;
@@ -1082,8 +1185,13 @@
 }
 
 @keyframes shimmer {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* ── Responsive ── */
@@ -1102,12 +1210,25 @@
 }
 
 @media (max-width: 640px) {
-  .page { padding: 16px; }
-  .header { flex-direction: column; align-items: flex-start; }
-  .headerActions { width: 100%; }
-  .sideCol { grid-template-columns: 1fr; }
-  .metricsRow { grid-template-columns: repeat(2, 1fr); }
-  .cardGrid { grid-template-columns: 1fr; }
+  .page {
+    padding: 16px;
+  }
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .headerActions {
+    width: 100%;
+  }
+  .sideCol {
+    grid-template-columns: 1fr;
+  }
+  .metricsRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .cardGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── EOS Intelligence Drawer sections ── */
@@ -1142,4 +1263,21 @@
   color: var(--text-2);
   line-height: 1.5;
   margin: 0;
+}
+
+.gridCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    50deg,
+    transparent,
+    var(--accent-2),
+    transparent
+  );
+  pointer-events: none;
+  z-index: 1;
 }

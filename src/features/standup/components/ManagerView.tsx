@@ -25,14 +25,34 @@ import {
 
 function extractThemes(standups: Standup[]): { word: string; count: number }[] {
   const stop = new Set([
-    "the", "and", "for", "with", "was", "have", "had", "this", "that", "been",
-    "from", "will", "work", "working", "worked", "done", "team", "today", "yesterday",
+    "the",
+    "and",
+    "for",
+    "with",
+    "was",
+    "have",
+    "had",
+    "this",
+    "that",
+    "been",
+    "from",
+    "will",
+    "work",
+    "working",
+    "worked",
+    "done",
+    "team",
+    "today",
+    "yesterday",
   ]);
   const freq: Record<string, number> = {};
   standups.forEach((s) => {
-    `${s.yesterday} ${s.today}`.toLowerCase().split(/\W+/).forEach((w) => {
-      if (w.length > 4 && !stop.has(w)) freq[w] = (freq[w] || 0) + 1;
-    });
+    `${s.yesterday} ${s.today}`
+      .toLowerCase()
+      .split(/\W+/)
+      .forEach((w) => {
+        if (w.length > 4 && !stop.has(w)) freq[w] = (freq[w] || 0) + 1;
+      });
   });
   return Object.entries(freq)
     .filter(([, v]) => v >= 2)
@@ -41,7 +61,11 @@ function extractThemes(standups: Standup[]): { word: string; count: number }[] {
     .map(([word, count]) => ({ word, count }));
 }
 
-function healthScore(submitted: number, total: number, blockerCount: number): number {
+function healthScore(
+  submitted: number,
+  total: number,
+  blockerCount: number,
+): number {
   if (total === 0) return 0;
   const rate = submitted / total;
   const penalty = Math.min(blockerCount * 5, 30);
@@ -66,7 +90,9 @@ function getAvatarColor(name: string | undefined | null) {
 }
 
 function hashNum(s: string): number {
-  return s.split("").reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0xfffffff, 0);
+  return s
+    .split("")
+    .reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0xfffffff, 0);
 }
 
 function getStreak(name: string): number {
@@ -82,7 +108,9 @@ function wordCount(s: Standup): number {
 export default function ManagerView() {
   const qc = useQueryClient();
 
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  );
   const [selectedPod, setSelectedPod] = useState("");
   const [search, setSearch] = useState("");
   const [detailStandup, setDetailStandup] = useState<Standup | null>(null);
@@ -117,12 +145,12 @@ export default function ManagerView() {
         .slice(0, 8)
         .map(
           (s) =>
-            `${s.engineer}: Yesterday — ${s.yesterday.slice(0, 80)}. Today — ${s.today.slice(0, 80)}. Blockers — ${s.blockers || "none"}.`
+            `${s.engineer}: Yesterday — ${s.yesterday.slice(0, 80)}. Today — ${s.today.slice(0, 80)}. Blockers — ${s.blockers || "none"}.`,
         )
         .join("\n");
       const resp = await novaQuery(
         `Synthesize these standups into a concise 2-sentence team summary for the engineering manager. Highlight any shared blockers or themes.\n\n${summaries}`,
-        "all"
+        "all",
       );
       setSynthesis(resp.answer ?? "Could not synthesize standups.");
     } catch {
@@ -132,12 +160,28 @@ export default function ManagerView() {
     }
   }
 
-  const allMembers: string[] = useMemo(() => filtersData?.users ?? [], [filtersData]);
-  const submitted = useMemo(() => new Set(teamStandups.map((s) => s.engineer)), [teamStandups]);
-  const missingMembers = useMemo(() => allMembers.filter((m) => !submitted.has(m)), [allMembers, submitted]);
-  const blockers = useMemo(() => teamStandups.filter((s) => s.blockers?.trim()), [teamStandups]);
+  const allMembers: string[] = useMemo(
+    () => filtersData?.users ?? [],
+    [filtersData],
+  );
+  const submitted = useMemo(
+    () => new Set(teamStandups.map((s) => s.engineer)),
+    [teamStandups],
+  );
+  const missingMembers = useMemo(
+    () => allMembers.filter((m) => !submitted.has(m)),
+    [allMembers, submitted],
+  );
+  const blockers = useMemo(
+    () => teamStandups.filter((s) => s.blockers?.trim()),
+    [teamStandups],
+  );
   const themes = useMemo(() => extractThemes(teamStandups), [teamStandups]);
-  const score = healthScore(teamStandups.length, allMembers.length || teamStandups.length, blockers.length);
+  const score = healthScore(
+    teamStandups.length,
+    allMembers.length || teamStandups.length,
+    blockers.length,
+  );
 
   const grouped = useMemo(
     () =>
@@ -147,7 +191,7 @@ export default function ManagerView() {
         acc[pod].push(s);
         return acc;
       }, {}),
-    [teamStandups]
+    [teamStandups],
   );
 
   const filteredGrouped = useMemo(() => {
@@ -160,7 +204,7 @@ export default function ManagerView() {
           s.engineer.toLowerCase().includes(q) ||
           s.yesterday.toLowerCase().includes(q) ||
           s.today.toLowerCase().includes(q) ||
-          (s.blockers ?? "").toLowerCase().includes(q)
+          (s.blockers ?? "").toLowerCase().includes(q),
       );
       if (filtered.length) result[pod] = filtered;
     });
@@ -177,6 +221,61 @@ export default function ManagerView() {
             {formatDate(selectedDate, "EEEE, MMMM d, yyyy")}
           </p>
         </div>
+      </div>
+
+      {/* Metrics */}
+      <div className={styles.metricsRow}>
+        <div className={styles.metricCard}>
+          <div className={styles.metricCardTop}>
+            <span className={styles.metricCardLbl}>Submitted</span>
+            <span className={styles.metricCardIcon}>
+              <RiCheckboxCircleLine />
+            </span>
+          </div>
+          <div className={styles.metricCardBottom}>
+            <span className={styles.metricCardVal}>
+              {teamStandups.length}/{allMembers.length || teamStandups.length}
+            </span>
+          </div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricCardTop}>
+            <span className={styles.metricCardLbl}>Blockers</span>
+            <span className={styles.metricCardIcon}>
+              <RiAlertLine />
+            </span>
+          </div>
+          <div className={styles.metricCardBottom}>
+            <span className={styles.metricCardVal}>{blockers.length}</span>
+          </div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricCardTop}>
+            <span className={styles.metricCardLbl}>Active PODs</span>
+            <span className={styles.metricCardIcon}>
+              <RiTeamLine />
+            </span>
+          </div>
+          <div className={styles.metricCardBottom}>
+            <span className={styles.metricCardVal}>
+              {Object.keys(grouped).length}
+            </span>
+          </div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricCardTop}>
+            <span className={styles.metricCardLbl}>Health Score</span>
+            <span className={styles.metricCardIcon}>
+              <RiBarChartBoxLine />
+            </span>
+          </div>
+          <div className={styles.metricCardBottom}>
+            <span className={styles.metricCardVal}>{score}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.actionsBar}>
         <div className={styles.headerActions}>
           <div className={styles.headerSearch}>
             <RiSearchLine size={13} color="var(--text-3)" />
@@ -188,83 +287,45 @@ export default function ManagerView() {
               className={styles.headerSearchInput}
             />
           </div>
-          <div className={styles.headerDateWrap}>
-            <RiCalendarLine size={13} color="var(--text-3)" />
-            <input
-              type="date"
-              className={styles.headerDateInput}
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
-          </div>
-          <div className={styles.headerSelectWrap}>
-            <RiFilterLine size={13} color="var(--text-3)" />
-            <select
-              className={styles.headerSelect}
-              value={selectedPod}
-              onChange={(e) => setSelectedPod(e.target.value)}
+          <div className={styles.headerControls}>
+            <div className={styles.headerDateWrap}>
+              <RiCalendarLine size={13} color="var(--text-3)" />
+              <input
+                type="date"
+                className={styles.headerDateInput}
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
+            </div>
+            <div className={styles.headerSelectWrap}>
+              <RiFilterLine size={13} color="var(--text-3)" />
+              <select
+                className={styles.headerSelect}
+                value={selectedPod}
+                onChange={(e) => setSelectedPod(e.target.value)}
+              >
+                <option value="">All PODs</option>
+                {(filtersData?.pods ?? []).map((p) => (
+                  <option key={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              className={styles.btnPrimary}
+              onClick={() => generateMut.mutate()}
+              disabled={generateMut.isPending}
             >
-              <option value="">All PODs</option>
-              {(filtersData?.pods ?? []).map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
+              {generateMut.isPending ? (
+                <>
+                  <span className={styles.spinner} /> Generating…
+                </>
+              ) : (
+                <>
+                  <RiSparklingLine size={14} /> Generate
+                </>
+              )}
+            </button>
           </div>
-          <button
-            className={styles.btnPrimary}
-            onClick={() => generateMut.mutate()}
-            disabled={generateMut.isPending}
-          >
-            {generateMut.isPending ? (
-              <><span className={styles.spinner} /> Generating…</>
-            ) : (
-              <><RiSparklingLine size={14} /> Generate</>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Metrics */}
-      <div className={styles.metricsRow}>
-        <div className={styles.metricCard}>
-          <div className={styles.metricCardTop}>
-            <RiCheckboxCircleLine size={16} color={teamStandups.length === allMembers.length ? "var(--green)" : "var(--amber)"} />
-            <span className={styles.metricCardVal}>
-              {teamStandups.length}/{allMembers.length || teamStandups.length}
-            </span>
-          </div>
-          <span className={styles.metricCardLbl}>Submitted</span>
-        </div>
-        <div className={styles.metricCard}>
-          <div className={styles.metricCardTop}>
-            <RiAlertLine size={16} color={blockers.length > 0 ? "var(--red)" : "var(--green)"} />
-            <span className={styles.metricCardVal}>{blockers.length}</span>
-          </div>
-          <span className={styles.metricCardLbl}>Blockers</span>
-        </div>
-        <div className={styles.metricCard}>
-          <div className={styles.metricCardTop}>
-            <RiTeamLine size={16} color="var(--accent)" />
-            <span className={styles.metricCardVal}>{Object.keys(grouped).length}</span>
-          </div>
-          <span className={styles.metricCardLbl}>Active PODs</span>
-        </div>
-        <div className={styles.metricCard}>
-          <div className={styles.metricCardTop}>
-            <RiBarChartBoxLine
-              size={16}
-              color={score >= 75 ? "var(--green)" : score >= 50 ? "var(--amber)" : "var(--red)"}
-            />
-            <span
-              className={styles.metricCardVal}
-              style={{
-                color: score >= 75 ? "var(--green)" : score >= 50 ? "var(--amber)" : "var(--red)",
-              }}
-            >
-              {score}
-            </span>
-          </div>
-          <span className={styles.metricCardLbl}>Health Score</span>
         </div>
       </div>
 
@@ -279,7 +340,6 @@ export default function ManagerView() {
             </div>
           ) : Object.keys(filteredGrouped).length === 0 ? (
             <div className={styles.emptyCard}>
-              <RiSparklingLine size={32} color="var(--text-3)" />
               <p>
                 {search.trim()
                   ? "No standups match your search."
@@ -301,15 +361,23 @@ export default function ManagerView() {
                       onClick={() => setDetailStandup(s)}
                     >
                       <div className={styles.gridCardTop}>
-                        <div className={styles.gridCardAvatar} style={{ background: getAvatarColor(s.engineer) }}>
+                        <div
+                          className={styles.gridCardAvatar}
+                          style={{ background: getAvatarColor(s.engineer) }}
+                        >
                           {initials(s.engineer)}
                         </div>
                         <div className={styles.gridCardMeta}>
-                          <span className={styles.gridCardName}>{s.engineer}</span>
+                          <span className={styles.gridCardName}>
+                            {s.engineer}
+                          </span>
                           <span className={styles.gridCardPod}>{s.pod}</span>
                         </div>
                         <div className={styles.gridCardBadges}>
-                          <span className={styles.streakBadge} title={`${getStreak(s.engineer)}-day streak`}>
+                          <span
+                            className={styles.streakBadge}
+                            title={`${getStreak(s.engineer)}-day streak`}
+                          >
                             <RiFireLine size={9} /> {getStreak(s.engineer)}
                           </span>
                           <span className={styles.wordBadge} title="Word count">
@@ -320,21 +388,32 @@ export default function ManagerView() {
                               <RiAlertLine size={10} />
                             </span>
                           ) : wordCount(s) >= 60 ? (
-                            <span className={styles.flyingBadge} title="Flying — detailed standup">🚀</span>
+                            <span
+                              className={styles.flyingBadge}
+                              title="Flying — detailed standup"
+                            >
+                              🚀
+                            </span>
                           ) : null}
                         </div>
                       </div>
                       <div className={styles.gridCardSections}>
                         <div className={styles.gridCardSection}>
-                          <span className={styles.gridCardSectionLbl}>Yesterday</span>
+                          <span className={styles.gridCardSectionLbl}>
+                            Yesterday
+                          </span>
                           <p className={styles.gridCardSectionText}>
-                            {s.yesterday.slice(0, 90)}{s.yesterday.length > 90 ? "…" : ""}
+                            {s.yesterday.slice(0, 90)}
+                            {s.yesterday.length > 90 ? "…" : ""}
                           </p>
                         </div>
                         <div className={styles.gridCardSection}>
-                          <span className={styles.gridCardSectionLbl}>Today</span>
+                          <span className={styles.gridCardSectionLbl}>
+                            Today
+                          </span>
                           <p className={styles.gridCardSectionText}>
-                            {s.today.slice(0, 90)}{s.today.length > 90 ? "…" : ""}
+                            {s.today.slice(0, 90)}
+                            {s.today.length > 90 ? "…" : ""}
                           </p>
                         </div>
                       </div>
@@ -362,9 +441,13 @@ export default function ManagerView() {
                 disabled={synthesizing || teamStandups.length === 0}
               >
                 {synthesizing ? (
-                  <><span className={styles.synSpinner} /> Synthesizing…</>
+                  <>
+                    <span className={styles.synSpinner} /> Synthesizing…
+                  </>
                 ) : (
-                  <><RiSparklingLine size={12} /> Synthesize team standup</>
+                  <>
+                    <RiSparklingLine size={12} /> Synthesize team standup
+                  </>
                 )}
               </button>
 
@@ -387,7 +470,9 @@ export default function ManagerView() {
                     {blockers.map((s) => (
                       <div key={s.id} className={styles.blockerItem}>
                         <div className={styles.blockerItemHeader}>
-                          <span className={styles.blockerItemName}>{s.engineer}</span>
+                          <span className={styles.blockerItemName}>
+                            {s.engineer}
+                          </span>
                           <span className={styles.blockerItemPod}>{s.pod}</span>
                         </div>
                         <p className={styles.blockerItemText}>{s.blockers}</p>
@@ -405,7 +490,9 @@ export default function ManagerView() {
                   </div>
                   <div className={styles.missingGrid}>
                     {missingMembers.map((m) => (
-                      <span key={m} className={styles.missingTag}>{m}</span>
+                      <span key={m} className={styles.missingTag}>
+                        {m}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -415,7 +502,8 @@ export default function ManagerView() {
               {themes.length > 0 && (
                 <div className={styles.intelSection}>
                   <div className={styles.intelSectionTitle}>
-                    <RiBarChartBoxLine size={12} color="var(--accent)" /> Today&apos;s Themes
+                    <RiBarChartBoxLine size={12} color="var(--accent)" />{" "}
+                    Today&apos;s Themes
                   </div>
                   <div className={styles.themeGrid}>
                     {themes.map((t) => (
@@ -427,12 +515,14 @@ export default function ManagerView() {
                 </div>
               )}
 
-              {blockers.length === 0 && missingMembers.length === 0 && !synthesis && (
-                <div className={styles.allClear}>
-                  <RiCheckboxCircleLine size={24} color="var(--green)" />
-                  <p>All clear — full team submitted, no blockers.</p>
-                </div>
-              )}
+              {blockers.length === 0 &&
+                missingMembers.length === 0 &&
+                !synthesis && (
+                  <div className={styles.allClear}>
+                    <RiCheckboxCircleLine size={24} color="var(--green)" />
+                    <p>All clear — full team submitted, no blockers.</p>
+                  </div>
+                )}
             </div>
           </div>
         </div>

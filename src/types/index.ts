@@ -468,7 +468,7 @@ export interface NovaQueryResponse {
 
 /* ── Notification ── */
 export interface Notification {
-  id:          number
+  id:          string
   type:        string
   title:       string
   message:     string

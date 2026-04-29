@@ -1,12 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Outlet } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import Topbar from "./Topbar";
 import Sidebar from "./Sidebar";
 import OnboardingModal from "@/components/onboarding/OnboardingModal";
 import NotificationPanel from "@/components/nova/NotificationPanel";
 import EosPanel from "@/components/nova/EosPanel";
 import CommandBar from "@/components/CommandBar/CommandBar";
+import { fetchNotifications } from "@/services/api";
+import { useNotificationStore } from "@/store";
+import type { Notification } from "@/types";
 import styles from "./AppShell.module.css";
 
 export default function AppShell() {
@@ -15,6 +20,35 @@ export default function AppShell() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [eosOpen, setEosOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
+
+  const { setUnreadCount } = useNotificationStore();
+  const hasLoadedRef = useRef(false);
+  const prevCountRef = useRef(0);
+
+  const { data: notifications = [] } = useQuery<Notification[]>({
+    queryKey: ["notifications"],
+    queryFn: fetchNotifications,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+    staleTime: 20_000,
+  });
+
+  useEffect(() => {
+    const unread = notifications.filter((n) => !n.read).length;
+    if (hasLoadedRef.current && unread > prevCountRef.current) {
+      const newest = notifications.find((n) => !n.read);
+      if (newest) {
+        toast(newest.title, { icon: "🔔", duration: 5000 });
+      }
+    }
+    hasLoadedRef.current = true;
+    if (unread !== prevCountRef.current) {
+      prevCountRef.current = unread;
+      setUnreadCount(unread);
+    }
+  // setUnreadCount is a stable Zustand action — safe to omit
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notifications]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

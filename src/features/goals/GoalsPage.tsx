@@ -11,7 +11,6 @@ import {
   RiEditLine,
   RiDeleteBinLine,
   RiRefreshLine,
-  RiSparklingLine,
 } from "react-icons/ri";
 import toast from "react-hot-toast";
 import { useGoals, useDeleteGoal } from "./useGoals";
@@ -48,11 +47,13 @@ const statusConfig: Record<
 };
 
 function getStatusConfig(status: string) {
-  return statusConfig[status as GoalStatus] ?? {
-    label: status,
-    className: styles.statusOnTrack,
-    icon: <RiCheckLine size={11} />,
-  };
+  return (
+    statusConfig[status as GoalStatus] ?? {
+      label: status,
+      className: styles.statusOnTrack,
+      icon: <RiCheckLine size={11} />,
+    }
+  );
 }
 
 function KRProgress({ kr }: { kr: KeyResult }) {
@@ -184,10 +185,7 @@ function GoalCard({
       transition={{ delay }}
     >
       {/* Goal header */}
-      <div
-        className={styles.goalHeader}
-        onClick={() => setExpanded(!expanded)}
-      >
+      <div className={styles.goalHeader} onClick={() => setExpanded(!expanded)}>
         <div className={styles.goalLeft}>
           <span className={styles.goalQuarter}>{goal.quarter}</span>
           <h3 className={styles.goalTitle}>{goal.title}</h3>
@@ -233,9 +231,7 @@ function GoalCard({
                 }}
               />
             </svg>
-            <span className={styles.circleLabel}>
-              {goal.overall_progress}%
-            </span>
+            <span className={styles.circleLabel}>{goal.overall_progress}%</span>
           </div>
           <span
             className={`${styles.statusBadge} ${getStatusConfig(goal.status).className}`}
@@ -350,10 +346,9 @@ export default function GoalsPage() {
       <div className={styles.page}>
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            <RiFocus3Line size={22} className={styles.headerIcon} />
             <div>
               <h1 className={styles.title}>Goals</h1>
-              <p className={styles.subtitle}>OKRs · Strategy to sprint</p>
+              {/* <p className={styles.subtitle}>OKRs · Strategy to sprint</p> */}
             </div>
           </div>
         </div>
@@ -370,7 +365,6 @@ export default function GoalsPage() {
     return (
       <div className={styles.page}>
         <div className={styles.emptyState}>
-          <RiAlertLine size={32} color="var(--red)" />
           <p>Failed to load goals</p>
           <button
             className={styles.addBtn}
@@ -387,15 +381,63 @@ export default function GoalsPage() {
     <div className={styles.page}>
       {/* Header */}
       <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <RiFocus3Line size={22} className={styles.headerIcon} />
-          <div>
-            <h1 className={styles.title}>Goals</h1>
-            <p className={styles.subtitle}>
+        <div>
+          <h1 className={styles.title}>Goals</h1>
+          {/* <p className={styles.subtitle}>
               OKRs · Strategy to sprint · AI-tracked progress
-            </p>
+            </p> */}
+        </div>
+      </div>
+
+      {/* Summary strip */}
+
+        <div className={styles.summaryStrip}>
+          <div className={styles.summaryBox}>
+            <div className={styles.summaryTop}>
+              <span className={styles.summaryLabel}>Total Goals</span>
+              <span className={styles.summaryIcon}>
+                <RiFocus3Line />
+              </span>
+            </div>
+            <div className={styles.summaryBottom}>
+              <span className={styles.summaryNum}>{filtered.length}</span>
+            </div>
+          </div>
+          <div className={styles.summaryBox}>
+            <div className={styles.summaryTop}>
+              <span className={styles.summaryLabel}>On Track</span>
+              <span className={styles.summaryIcon}>
+                <RiCheckLine />
+              </span>
+            </div>
+            <div className={styles.summaryBottom}>
+              <span className={styles.summaryNum}>{onTrack}</span>
+            </div>
+          </div>
+          <div className={styles.summaryBox}>
+            <div className={styles.summaryTop}>
+              <span className={styles.summaryLabel}>At Risk</span>
+              <span className={styles.summaryIcon}>
+                <RiAlertLine />
+              </span>
+            </div>
+            <div className={styles.summaryBottom}>
+              <span className={styles.summaryNum}>{atRisk}</span>
+            </div>
+          </div>
+          <div className={styles.summaryBox}>
+            <div className={styles.summaryTop}>
+              <span className={styles.summaryLabel}>Behind</span>
+              <span className={styles.summaryIcon}>
+                <RiBarChartLine />
+              </span>
+            </div>
+            <div className={styles.summaryBottom}>
+              <span className={styles.summaryNum}>{behind}</span>
+            </div>
           </div>
         </div>
+
         <div className={styles.headerRight}>
           {quarters.length > 0 && (
             <div className={styles.quarterPicker}>
@@ -410,85 +452,62 @@ export default function GoalsPage() {
               ))}
             </div>
           )}
-          <button
-            className={styles.refreshBtn}
-            onClick={() => refetch()}
-            title="Refresh goals"
-          >
-            <RiRefreshLine size={15} />
-          </button>
-          <button
-            className={styles.addBtn}
-            onClick={() => {
-              setEditGoal(null);
-              setDrawerOpen(true);
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: "6px",
             }}
           >
-            <RiAddLine size={15} /> Add Goal
-          </button>
-        </div>
-      </div>
-
-      {/* Summary strip */}
-      <div className={styles.summaryStrip}>
-        <div className={styles.summaryBox}>
-          <span className={styles.summaryNum}>{filtered.length}</span>
-          <span className={styles.summaryLabel}>total goals</span>
-        </div>
-        <div className={styles.summaryBox}>
-          <span className={`${styles.summaryNum} ${styles.numGreen}`}>
-            {onTrack}
-          </span>
-          <span className={styles.summaryLabel}>on track</span>
-        </div>
-        <div className={styles.summaryBox}>
-          <span className={`${styles.summaryNum} ${styles.numAmber}`}>
-            {atRisk}
-          </span>
-          <span className={styles.summaryLabel}>at risk</span>
-        </div>
-        <div className={styles.summaryBox}>
-          <span className={`${styles.summaryNum} ${styles.numRed}`}>
-            {behind}
-          </span>
-          <span className={styles.summaryLabel}>behind</span>
-        </div>
-        <div className={styles.summaryBox}>
-          <div className={styles.novaChip}>
-            <RiSparklingLine size={12} />
-            Nova tracking active
+            <button
+              className={styles.refreshBtn}
+              onClick={() => refetch()}
+              title="Refresh goals"
+            >
+              <RiRefreshLine size={15} />
+            </button>
+            <button
+              className={styles.addBtn}
+              onClick={() => {
+                setEditGoal(null);
+                setDrawerOpen(true);
+              }}
+            >
+              <RiAddLine size={15} /> Add Goal
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Goals list */}
-      {filtered.length === 0 ? (
-        <div className={styles.emptyState}>
-          <RiFocus3Line size={40} color="var(--text-3)" />
-          <p>No goals for {activeQuarter}</p>
-          <button
-            className={styles.addBtn}
-            onClick={() => {
-              setEditGoal(null);
-              setDrawerOpen(true);
-            }}
-          >
-            <RiAddLine size={15} /> Create your first goal
-          </button>
-        </div>
-      ) : (
-        <div className={styles.goalsList}>
-          {filtered.map((g, i) => (
-            <GoalCard
-              key={g.id}
-              goal={g}
-              delay={i * 0.1}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
-      )}
+      <div className={styles.content}>
+        {/* Goals list */}
+        {filtered.length === 0 ? (
+          <div className={styles.emptyState}>
+            <RiFocus3Line size={40} color="var(--text-3)" />
+            <p>No goals for {activeQuarter}</p>
+            <button
+              className={styles.addBtn}
+              onClick={() => {
+                setEditGoal(null);
+                setDrawerOpen(true);
+              }}
+            >
+              <RiAddLine size={15} /> Create your first goal
+            </button>
+          </div>
+        ) : (
+          <div className={styles.goalsList}>
+            {filtered.map((g, i) => (
+              <GoalCard
+                key={g.id}
+                goal={g}
+                delay={i * 0.1}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       <GoalDrawer
         open={drawerOpen}

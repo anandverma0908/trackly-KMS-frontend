@@ -1359,10 +1359,15 @@ export async function deleteSpace(pod: string) {
 /* ── Notifications ── */
 export async function fetchNotifications(): Promise<Notification[]> {
   const { data } = await api.get("/notifications");
-  return data?.notifications ?? data ?? [];
+  const raw: any[] = data?.notifications ?? data ?? [];
+  return raw.map((n) => ({
+    ...n,
+    message: n.body ?? n.message ?? "",
+    read: n.is_read ?? n.read ?? false,
+  }));
 }
 
-export async function markNotificationRead(id: number) {
+export async function markNotificationRead(id: string) {
   await api.post(`/notifications/${id}/read`);
 }
 
