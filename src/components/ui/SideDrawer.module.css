@@ -42,7 +42,10 @@
     opacity: 1;
   }
 }
-
+.drawerXs {
+  width: 400px;
+  max-width: 100vw;
+}
 .drawerSm {
   width: 580px;
   max-width: 100vw;

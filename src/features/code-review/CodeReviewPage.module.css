@@ -254,6 +254,7 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 6px 8px 4px;
+  margin-bottom: 10px;
 }
 
 .sidebarEmpty {
@@ -277,7 +278,7 @@
 .repoList {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
 }
 
 .repoTab {
@@ -288,7 +289,7 @@
   padding: 8px 10px;
   border-radius: var(--r-sm);
   border: none;
-  background: transparent;
+  background: var(--surface);
   color: var(--text-2);
   font: inherit;
   font-size: 12px;

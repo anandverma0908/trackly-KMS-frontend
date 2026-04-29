@@ -26,6 +26,7 @@ import {
   RiVideoLine,
   RiMusicLine,
 } from "react-icons/ri";
+import SideDrawer from "@/components/ui/SideDrawer";
 import { runAgentLoop } from "./agent/agentController";
 import type { AgentStep } from "./agent/agentTypes";
 import {
@@ -1210,7 +1211,6 @@ Input: "${text}"`,
             className={`${styles.pulseToggleBtn} ${pulseOpen ? styles.pulseToggleBtnActive : ""}`}
             onClick={() => setPulseOpen((o) => !o)}
           >
-            <RiAlertLine size={13} />
             Pulse
             {pulse.length > 0 && (
               <span className={styles.pulseBtnBadge}>{pulse.length}</span>
@@ -1588,63 +1588,34 @@ Input: "${text}"`,
         </main>
 
         {/* ── Pulse Side Drawer ── */}
-        <AnimatePresence>
-          {pulseOpen && (
-            <>
-              <motion.div
-                className={styles.pulseOverlay}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setPulseOpen(false)}
-              />
-              <motion.aside
-                className={styles.pulseDrawer}
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
-                transition={{ type: "spring", damping: 22, stiffness: 220 }}
-              >
-                <div className={styles.pulseDrawerHead}>
-                  <span className={styles.panelTitle}>
-                    <span className={styles.liveDot} />
-                    Pulse
-                  </span>
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 6 }}
-                  >
-                    <span className={styles.panelSub}>EOS is watching</span>
-                    <button
-                      className={styles.drawerCloseBtn}
-                      onClick={() => setPulseOpen(false)}
-                    >
-                      <RiCloseLine size={14} />
-                    </button>
-                  </div>
-                </div>
-                <div className={styles.pulseFeed}>
-                  <AnimatePresence mode="popLayout">
-                    {pulse.map((item) => (
-                      <PulseCard
-                        key={item.id}
-                        item={item}
-                        onDismiss={() =>
-                          setPulse((p) => p.filter((x) => x.id !== item.id))
-                        }
-                      />
-                    ))}
-                  </AnimatePresence>
-                  {pulse.length === 0 && (
-                    <div className={styles.pulseEmpty}>
-                      <RiSparklingLine size={24} />
-                      <span>All clear — no anomalies or gaps detected</span>
-                    </div>
-                  )}
-                </div>
-              </motion.aside>
-            </>
-          )}
-        </AnimatePresence>
+        <SideDrawer
+          open={pulseOpen}
+          onClose={() => setPulseOpen(false)}
+          size="xs"
+          title="Pulse"
+          subtitle="EOS is watching"
+          avatar={<span className={styles.liveDot} />}
+        >
+          <div className={styles.pulseFeed}>
+            <AnimatePresence mode="popLayout">
+              {pulse.map((item) => (
+                <PulseCard
+                  key={item.id}
+                  item={item}
+                  onDismiss={() =>
+                    setPulse((p) => p.filter((x) => x.id !== item.id))
+                  }
+                />
+              ))}
+            </AnimatePresence>
+            {pulse.length === 0 && (
+              <div className={styles.pulseEmpty}>
+                <RiSparklingLine size={24} />
+                <span>All clear — no anomalies or gaps detected</span>
+              </div>
+            )}
+          </div>
+        </SideDrawer>
       </div>
     </div>
   );

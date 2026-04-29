@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import styles from "./SideDrawer.module.css";
 
-export type DrawerSize = "sm" | "md" | "lg" | "xl";
+export type DrawerSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 interface StatItem {
   label: string;
@@ -33,6 +33,7 @@ interface SideDrawerProps {
 }
 
 const SIZE_MAP: Record<DrawerSize, string> = {
+  xs: styles.drawerXs,
   sm: styles.drawerSm,
   md: styles.drawerMd,
   lg: styles.drawerLg,
