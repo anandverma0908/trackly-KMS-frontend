@@ -53,11 +53,11 @@ export default function ManualEntryPage() {
       {/* ── Page header ── */}
       <div className={`${styles.header} fade-up`}>
         <div>
-          <h1 className={styles.title}>Timelog</h1>
-          <p className={styles.subtitle}>
-            Log your work with AI or review your timesheet history.
-          </p>
+          <h1 className={styles.title}>Time Tracking</h1>
         </div>
+      </div>
+
+      <div className={`${styles.tabBarContainer} fade-up-1`}>
         <div className={`${styles.tabBar} fade-up-1`}>
           <button
             className={`${styles.tab} ${activeTab === "entry" ? styles.tabActive : ""}`}

@@ -252,7 +252,7 @@ export default function Sidebar({
 
           {/* ── TIME ── */}
           {sectionLabel("Time")}
-          {nav(<RiTimeLine size={18} />, "Timesheets", "/timesheets")}
+          {nav(<RiTimeLine size={18} />, "Time Tracking", "/timesheets")}
 
           {/* ── PEOPLE ── */}
           {sectionLabel("People")}

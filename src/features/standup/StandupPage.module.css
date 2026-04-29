@@ -291,8 +291,7 @@
 /* ── Standup Card (large, engineer) ── */
 .standupCardLarge {
   background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-xl);
   padding: 20px;
   display: flex;
   flex-direction: column;

@@ -3,9 +3,7 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 14px;
-  min-height: calc(
-    100vh - 175px
-  ); 
+  min-height: calc(100vh - 175px);
   /* viewport minus topbar minus page padding */
 }
 
@@ -17,14 +15,24 @@
   flex-wrap: wrap;
 }
 
+.topBarContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
+  padding: 12px 15px;
+  margin-top: 10px;
+}
+
 .monthNav {
   display: flex;
   align-items: center;
   gap: 8px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: 4px 6px;
+  border-radius: var(--r);
+  padding: 6px;
   flex-shrink: 0;
 }
 .navBtn {
@@ -125,10 +133,9 @@
 .statsStrip {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
+  gap: 8px;
+  background: var(--kpi);
+  border-radius: var(--r);
   padding: 8px 16px;
   margin-left: auto;
   flex-shrink: 0;
@@ -144,7 +151,7 @@
   font-weight: 800;
   letter-spacing: -0.04em;
   font-family: var(--font-mono);
-  color: var(--text);
+  color: var(--text-4);
   line-height: 1;
 }
 .statLbl {
@@ -152,7 +159,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-3);
+  color: var(--text-4);
 }
 .statDiv {
   width: 1px;
@@ -164,13 +171,14 @@
 .progressWrap {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
+  padding: 0 15px;
 }
 .progressBar {
   flex: 1;
-  height: 4px;
-  background: var(--surface-2);
-  border-radius: 100px;
+  height: 6px;
+  background: var(--surface);
+  border-radius: 200px;
   overflow: hidden;
 }
 .progressFill {
@@ -180,7 +188,7 @@
   transition: width 0.4s ease;
 }
 .progressPct {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-2);
   font-family: var(--font-mono);
@@ -189,17 +197,26 @@
 }
 
 /* ── Calendar grid ── */
+.calendarContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
+  padding: 12px 15px;
+}
 .calendar {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
+  /* padding: 12px 15px; */
 }
 .dayHeader {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-3);
+  color: var(--text-2);
   text-align: center;
   padding: 4px 0 6px;
 }
@@ -235,7 +252,7 @@
   background: transparent;
   border-color: transparent;
   cursor: default;
-  opacity: 0.35;
+  /* opacity: 0.35; */
 }
 
 .dayCell:not(.status_weekend):hover {
@@ -317,17 +334,18 @@
 .legend {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 16px;
   flex-wrap: wrap;
-  padding: 10px 12px;
+  padding: 12px 16px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-lg);
 }
 .legendItem {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   font-size: 11px;
   color: var(--text-2);
   font-weight: 500;

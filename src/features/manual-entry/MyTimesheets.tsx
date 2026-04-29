@@ -19,7 +19,9 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 function getAuthHeader(): Record<string, string> {
   const token = useAuthStore.getState().token;
-  return token ? { Authorization: `Bearer ${token}` } : ({} as Record<string, string>);
+  return token
+    ? { Authorization: `Bearer ${token}` }
+    : ({} as Record<string, string>);
 }
 
 /* ── Types ── */
@@ -141,84 +143,67 @@ export default function MyTimesheets() {
   return (
     <div className={styles.root}>
       {/* ── Top bar ── */}
-      <div className={styles.topBar}>
-        {/* Month nav */}
-        <div className={styles.monthNav}>
-          <button
-            className={styles.navBtn}
-            onClick={() => setMonth((m) => subMonths(m, 1))}
-          >
-            ‹
-          </button>
-          <span className={styles.monthLabel}>
-            {format(month, "MMMM yyyy")}
-          </span>
-          <button
-            className={styles.navBtn}
-            onClick={() => setMonth((m) => addMonths(m, 1))}
-          >
-            ›
-          </button>
+      <div className={styles.topBarContainer}>
+        <div className={styles.topBar}>
+          {/* Month nav */}
+          <div className={styles.monthNav}>
+            <button
+              className={styles.navBtn}
+              onClick={() => setMonth((m) => subMonths(m, 1))}
+            >
+              ‹
+            </button>
+            <span className={styles.monthLabel}>
+              {format(month, "MMMM yyyy")}
+            </span>
+            <button
+              className={styles.navBtn}
+              onClick={() => setMonth((m) => addMonths(m, 1))}
+            >
+              ›
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className={styles.statsStrip}>
+            <div className={styles.stat}>
+              <span className={styles.statVal}>{totalLogged.toFixed(0)}h</span>
+              <span className={styles.statLbl}>Logged</span>
+            </div>
+            <div className={styles.statDiv} />
+            <div className={styles.stat}>
+              <span className={styles.statVal}>{totalTarget}h</span>
+              <span className={styles.statLbl}>Target</span>
+            </div>
+            <div className={styles.statDiv} />
+            <div className={styles.stat}>
+              <span className={styles.statVal}>{fullDays}</span>
+              <span className={styles.statLbl}>Full days</span>
+            </div>
+            <div className={styles.statDiv} />
+            <div className={styles.stat}>
+              <span className={styles.statVal}>{partialDays}</span>
+              <span className={styles.statLbl}>Partial</span>
+            </div>
+          </div>
         </div>
 
-        {/* Manager: team member toggle pills */}
-        {/* {isManager && teamUsers.length > 0 && (
-          <div className={styles.memberToggle}>
-            <button
-              className={`${styles.memberPill} ${isSelf ? styles.memberPillActive : ""}`}
-              onClick={() => setViewingUser(user?.name ?? "")}
-            >
-              Me
-            </button>
-            {teamUsers
-              .filter(
-                (u) => u.name !== user?.name && u.role !== "finance_viewer",
-              )
-              .map((u) => (
-                <button
-                  key={u.name}
-                  className={`${styles.memberPill} ${viewingUser === u.name ? styles.memberPillActive : ""}`}
-                  onClick={() => setViewingUser(u.name)}
-                  title={u.role.replace(/_/g, " ")}
-                >
-                  {u.name
-                    .split(" ")
-                    .map((n: string) => n[0])
-                    .join("")
-                    .slice(0, 2)}
-                  <span className={styles.memberName}>
-                    {u.name.split(" ")[0]}
-                  </span>
-                </button>
-              ))}
+        {/* Progress bar */}
+        <div className={styles.progressWrap}>
+          <div className={styles.progressBar}>
+            <div
+              className={styles.progressFill}
+              style={{
+                width: `${Math.min((totalLogged / totalTarget) * 100, 100)}%`,
+              }}
+            />
           </div>
-        )} */}
-
-        {/* Stats */}
-        <div className={styles.statsStrip}>
-          <div className={styles.stat}>
-            <span className={styles.statVal}>{totalLogged.toFixed(0)}h</span>
-            <span className={styles.statLbl}>Logged</span>
-          </div>
-          <div className={styles.statDiv} />
-          <div className={styles.stat}>
-            <span className={styles.statVal}>{totalTarget}h</span>
-            <span className={styles.statLbl}>Target</span>
-          </div>
-          <div className={styles.statDiv} />
-          <div className={styles.stat}>
-            <span className={styles.statVal} style={{ color: "var(--green)" }}>
-              {fullDays}
-            </span>
-            <span className={styles.statLbl}>Full days</span>
-          </div>
-          <div className={styles.statDiv} />
-          <div className={styles.stat}>
-            <span className={styles.statVal} style={{ color: "#F59E0B" }}>
-              {partialDays}
-            </span>
-            <span className={styles.statLbl}>Partial</span>
-          </div>
+          <span className={styles.progressPct}>
+            {totalTarget > 0
+              ? Math.round((totalLogged / totalTarget) * 100)
+              : 0}
+            %
+          </span>
         </div>
       </div>
 
@@ -237,92 +222,103 @@ export default function MyTimesheets() {
         </div>
       )}
 
-      {/* Progress bar */}
-      <div className={styles.progressWrap}>
-        <div className={styles.progressBar}>
-          <div
-            className={styles.progressFill}
-            style={{
-              width: `${Math.min((totalLogged / totalTarget) * 100, 100)}%`,
-            }}
-          />
-        </div>
-        <span className={styles.progressPct}>
-          {totalTarget > 0 ? Math.round((totalLogged / totalTarget) * 100) : 0}%
-        </span>
-      </div>
-
-      {/* Calendar */}
-      <div className={styles.calendar}>
-        {DAYS.map((d) => (
-          <div key={d} className={styles.dayHeader}>
-            {d}
-          </div>
-        ))}
-
-        {cells.map((day, i) => {
-          if (!day) return <div key={`e-${i}`} className={styles.emptyCell} />;
-
-          const date = new Date(month.getFullYear(), month.getMonth(), day);
-          const weekend = isWeekend(date);
-          const today = isSameDay(date, new Date());
-          const hours = hoursForDay(date);
-          const status = getStatus(hours, weekend);
-          const isSelected = selectedDay && isSameDay(date, selectedDay);
-          const entries = byDate[format(date, "yyyy-MM-dd")] ?? [];
-
-          return (
-            <div
-              key={day}
-              className={[
-                styles.dayCell,
-                styles[`status_${status}`],
-                isSelected ? styles.daySelected : "",
-                today ? styles.dayToday : "",
-              ].join(" ")}
-              onClick={() =>
-                !weekend && setSelectedDay(isSelected ? null : date)
-              }
-            >
-              <div className={styles.dayNumber}>{day}</div>
-
-              {!weekend && (
-                <div className={styles.dayContent}>
-                  {isLoading ? (
-                    <div className={styles.loadingDot} />
-                  ) : hours > 0 ? (
-                    <div
-                      className={styles.hoursLabel}
-                      style={{ color: hours >= 8 ? "var(--green)" : "#F59E0B" }}
-                    >
-                      {hours.toFixed(1)}h
-                    </div>
-                  ) : null}
-
-                  {entries.length > 0 && (
-                    <div className={styles.entryDots}>
-                      {entries.slice(0, 3).map((e, idx) => (
-                        <div
-                          key={idx}
-                          className={styles.entryDot}
-                          style={{
-                            background:
-                              e.source === "ticket" ? "var(--accent)" : "#A78BFA",
-                          }}
-                        />
-                      ))}
-                      {entries.length > 3 && (
-                        <span className={styles.entryDotMore}>
-                          +{entries.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+      <div className={styles.calendarContainer}>
+        {/* Calendar */}
+        <div className={styles.calendar}>
+          {DAYS.map((d) => (
+            <div key={d} className={styles.dayHeader}>
+              {d}
             </div>
-          );
-        })}
+          ))}
+
+          {cells.map((day, i) => {
+            if (!day)
+              return <div key={`e-${i}`} className={styles.emptyCell} />;
+
+            const date = new Date(month.getFullYear(), month.getMonth(), day);
+            const weekend = isWeekend(date);
+            const today = isSameDay(date, new Date());
+            const hours = hoursForDay(date);
+            const status = getStatus(hours, weekend);
+            const isSelected = selectedDay && isSameDay(date, selectedDay);
+            const entries = byDate[format(date, "yyyy-MM-dd")] ?? [];
+
+            return (
+              <div
+                key={day}
+                className={[
+                  styles.dayCell,
+                  styles[`status_${status}`],
+                  isSelected ? styles.daySelected : "",
+                  today ? styles.dayToday : "",
+                ].join(" ")}
+                onClick={() =>
+                  !weekend && setSelectedDay(isSelected ? null : date)
+                }
+              >
+                <div className={styles.dayNumber}>{day}</div>
+
+                {!weekend && (
+                  <div className={styles.dayContent}>
+                    {isLoading ? (
+                      <div className={styles.loadingDot} />
+                    ) : hours > 0 ? (
+                      <div
+                        className={styles.hoursLabel}
+                        style={{
+                          color: hours >= 8 ? "var(--green)" : "#F59E0B",
+                        }}
+                      >
+                        {hours.toFixed(1)}h
+                      </div>
+                    ) : null}
+
+                    {entries.length > 0 && (
+                      <div className={styles.entryDots}>
+                        {entries.slice(0, 3).map((e, idx) => (
+                          <div
+                            key={idx}
+                            className={styles.entryDot}
+                            style={{
+                              background:
+                                e.source === "ticket"
+                                  ? "var(--accent)"
+                                  : "#A78BFA",
+                            }}
+                          />
+                        ))}
+                        {entries.length > 3 && (
+                          <span className={styles.entryDotMore}>
+                            +{entries.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Legend — bottom of page */}
+        <div className={styles.legend} style={{ marginTop: "auto" }}>
+          {[
+            { color: "rgba(52,211,153,0.6)", label: "≥ 8h — Full day" },
+            { color: "rgba(251,191,36,0.6)", label: "1–7h — Partial" },
+            { color: "var(--border-2)", label: "0h — Not logged" },
+            { color: "var(--accent)", label: "Ticket entry" },
+            { color: "#A78BFA", label: "Manual entry" },
+          ].map((l) => (
+            <div key={l.label} className={styles.legendItem}>
+              <span
+                className={styles.legendDot}
+                style={{ background: l.color }}
+              />
+              <span>{l.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Day drawer via Portal */}
@@ -333,25 +329,6 @@ export default function MyTimesheets() {
           onClose={() => setSelectedDay(null)}
         />
       )}
-
-      {/* Legend — bottom of page */}
-      <div className={styles.legend} style={{ marginTop: "auto" }}>
-        {[
-          { color: "rgba(52,211,153,0.6)", label: "≥ 8h — Full day" },
-          { color: "rgba(251,191,36,0.6)", label: "1–7h — Partial" },
-          { color: "var(--border-2)", label: "0h — Not logged" },
-          { color: "var(--accent)", label: "Ticket entry" },
-          { color: "#A78BFA", label: "Manual entry" },
-        ].map((l) => (
-          <div key={l.label} className={styles.legendItem}>
-            <span
-              className={styles.legendDot}
-              style={{ background: l.color }}
-            />
-            <span>{l.label}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

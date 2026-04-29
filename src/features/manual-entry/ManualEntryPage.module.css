@@ -1,23 +1,29 @@
 .page {
-  padding: 22px 24px;
+  padding: 10px 40px 40px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 10px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* ── Header ── */
 .header {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
 }
 
 .title {
-  font-size: 22px;
+  font-size: 15px;
   font-weight: 800;
-  letter-spacing: -0.05em;
-  margin-bottom: 4px;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  margin: 0;
 }
 
 .subtitle {
@@ -834,9 +840,21 @@
   gap: 4px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: 4px;
+  border-radius: var(--r);
+  padding: 6px;
   width: fit-content;
+}
+
+.tabBarContainer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin: 0 auto;
+  width: 100%;
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
+  padding: 12px 15px;
 }
 
 .tab {
@@ -911,7 +929,9 @@
   background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: var(--r-xl);
-  box-shadow: 0 0 40px rgba(79, 126, 255, 0.08), 0 4px 24px rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 0 40px rgba(79, 126, 255, 0.08),
+    0 4px 24px rgba(0, 0, 0, 0.12);
   overflow: hidden;
 }
 
@@ -957,8 +977,15 @@
 }
 
 @keyframes aiIconPulse {
-  0%, 100% { box-shadow: 0 3px 10px var(--accent-glow-2); }
-  50%       { box-shadow: 0 3px 18px var(--accent-glow-2), 0 0 0 4px var(--accent-glow); }
+  0%,
+  100% {
+    box-shadow: 0 3px 10px var(--accent-glow-2);
+  }
+  50% {
+    box-shadow:
+      0 3px 18px var(--accent-glow-2),
+      0 0 0 4px var(--accent-glow);
+  }
 }
 
 .aiEntryHeaderText {
@@ -997,8 +1024,15 @@
 }
 
 @keyframes aiLiveBlink {
-  0%, 100% { opacity: 1; box-shadow: 0 0 5px var(--green); }
-  50%       { opacity: 0.5; box-shadow: 0 0 12px var(--green); }
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 5px var(--green);
+  }
+  50% {
+    opacity: 0.5;
+    box-shadow: 0 0 12px var(--green);
+  }
 }
 
 .aiEntryLiveLabel {
@@ -1021,7 +1055,9 @@
   background: var(--surface-2);
   border: 1px solid var(--border-2);
   border-radius: var(--r);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .aiEntryTextareaWrap:focus-within {
@@ -1166,7 +1202,6 @@
   box-shadow: none;
 }
 
-
 /* ════════════════════════════════════════════════
    STEP PARSING — AI scanning experience
    ════════════════════════════════════════════════ */
@@ -1175,7 +1210,9 @@
   background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: var(--r-xl);
-  box-shadow: 0 0 40px rgba(79, 126, 255, 0.08), 0 4px 24px rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 0 40px rgba(79, 126, 255, 0.08),
+    0 4px 24px rgba(0, 0, 0, 0.12);
   overflow: hidden;
 }
 
@@ -1249,8 +1286,15 @@
 }
 
 @keyframes parseDotPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.4; transform: scale(0.8); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
 }
 
 /* Body: scan zone + right panel */
@@ -1286,10 +1330,21 @@
 }
 
 @keyframes scanBeam {
-  0%   { top: 0;    opacity: 0; }
-  5%   { opacity: 1; }
-  90%  { top: calc(100% - 2px); opacity: 1; }
-  100% { top: calc(100% - 2px); opacity: 0; }
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  90% {
+    top: calc(100% - 2px);
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% - 2px);
+    opacity: 0;
+  }
 }
 
 .parseScanText {
@@ -1361,8 +1416,13 @@
   transition: color 0.3s;
 }
 
-.parseStepDone   { color: var(--green); }
-.parseStepActive { color: var(--text); font-weight: 500; }
+.parseStepDone {
+  color: var(--green);
+}
+.parseStepActive {
+  color: var(--text);
+  font-weight: 500;
+}
 
 .parseStepBullet {
   width: 18px;
@@ -1375,8 +1435,15 @@
   font-size: 10px;
 }
 
-.parseStepDone .parseStepBullet   { background: rgba(52, 211, 153, 0.12); color: var(--green); border: 1px solid rgba(52, 211, 153, 0.3); }
-.parseStepActive .parseStepBullet { background: var(--accent-glow); border: 1px solid var(--accent-border); }
+.parseStepDone .parseStepBullet {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--green);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+.parseStepActive .parseStepBullet {
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+}
 
 .parseStepSpinner {
   width: 8px;
@@ -1435,8 +1502,12 @@
 }
 
 @keyframes shimmerSlide {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .parseShimmerBar {
@@ -1455,7 +1526,6 @@
   flex-shrink: 0;
   margin-left: auto;
 }
-
 
 /* ════════════════════════════════════════════════
    STEP PREVIEW V2 — date-grouped card view
@@ -1477,8 +1547,9 @@
   background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: var(--r-xl);
-  background: linear-gradient(135deg, var(--accent-glow) 0%, transparent 80%),
-              var(--surface);
+  background:
+    linear-gradient(135deg, var(--accent-glow) 0%, transparent 80%),
+    var(--surface);
 }
 
 .pvHeaderLeft {
@@ -1599,7 +1670,9 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  transition: border-color 0.12s, background 0.12s;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
 }
 
 .pvRow:hover {
