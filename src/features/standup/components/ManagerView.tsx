@@ -315,7 +315,9 @@ export default function ManagerView() {
               className={styles.btnPrimary}
               onClick={() => generateMut.mutate()}
               disabled={generateMut.isPending || !isToday}
-              title={!isToday ? "Cannot generate standup for a past date" : undefined}
+              title={
+                !isToday ? "Cannot generate standup for a past date" : undefined
+              }
             >
               {generateMut.isPending ? (
                 <>
