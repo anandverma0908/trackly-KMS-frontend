@@ -122,36 +122,71 @@
 }
 .addBtn:hover { opacity: 0.85; }
 
-/* ── Stats strip ── */
-.statsStrip {
+/* ── KPI cards (matches SpacesKPIStrip / RoadmapTab style) ── */
+.kpiRow {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
 
-.statBox {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 14px 16px;
+.kpiCard {
+  background: var(--kpi);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  min-height: 106px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+  cursor: default;
 }
 
-.statNum {
-  font-size: 24px;
+.kpiCard:hover {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+}
+
+.kpiTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kpiLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-4);
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.kpiIconWrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: var(--text-4);
+  flex-shrink: 0;
+}
+
+.kpiValue {
+  font-size: 28px;
   font-weight: 800;
-  color: var(--text);
-  font-family: var(--font-mono);
+  letter-spacing: -0.045em;
   line-height: 1;
+  color: var(--text-4);
 }
 
-.statWarn { color: var(--amber); }
-
-.statLabel {
-  font-size: 11px;
-  color: var(--text-3);
+.kpiSub {
+  font-size: 12px;
+  color: var(--text-4);
+  margin-top: 4px;
+  opacity: 0.75;
 }
 
 /* ── Filters ── */
@@ -167,16 +202,14 @@
   align-items: center;
   gap: 8px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: 7px 12px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 9px 13px;
   flex: 1;
-  min-width: 200px;
+  max-width: 320px;
   transition: border-color 0.15s;
 }
 .searchWrap:focus-within { border-color: var(--accent-border); }
-
-.searchIcon { color: var(--text-3); }
 
 .searchInput {
   flex: 1;
@@ -184,10 +217,22 @@
   border: none;
   outline: none;
   font-size: 13px;
+  font-weight: 500;
   color: var(--text);
   font-family: var(--font-sans);
 }
 .searchInput::placeholder { color: var(--text-3); }
+
+.searchClear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--text-3);
+  padding: 0;
+  transition: color 0.12s;
+}
+.searchClear:hover { color: var(--text); }
 
 .catFilters {
   display: flex;

@@ -33,6 +33,7 @@ import {
   RiBrainLine,
   RiFlashlightLine,
   RiGitBranchLine,
+  RiSearchLine,
 } from "react-icons/ri";
 
 const AVATAR_COLORS = [
@@ -541,7 +542,7 @@ Keep it direct and actionable.`;
 
       <div className={`${styles.searchHeader} fade-up-3`}>
         <div className={styles.searchWrap}>
-          <span className={styles.searchIcon}>🔍</span>
+          <RiSearchLine size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
           <input
             className={styles.searchInput}
             placeholder="Search by name, title, or POD…"

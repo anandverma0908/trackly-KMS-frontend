@@ -23,8 +23,8 @@
   gap: 8px;
   background: var(--surface);
   border: 1px solid var(--border-2);
-  border-radius: 8px;
-  padding: 7px 12px;
+  border-radius: var(--r);
+  padding: 9px 13px;
   transition: border-color 0.15s;
   flex: 1;
   max-width: 320px;
@@ -35,7 +35,7 @@
   background: transparent;
   border: none;
   outline: none;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text);
   font-family: var(--font-sans);

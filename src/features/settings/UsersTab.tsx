@@ -8,6 +8,7 @@ import styles from "./UsersPage.module.css";
 import { MdModeEdit } from "react-icons/md";
 import { TbKeyFilled } from "react-icons/tb";
 import { TbTrashFilled } from "react-icons/tb";
+import { RiSearchLine } from "react-icons/ri";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -313,7 +314,7 @@ export default function UsersTab() {
       </div>
 
       <div className={styles.searchWrap}>
-        <span className={styles.searchIcon}>🔍</span>
+        <RiSearchLine size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
         <input className={styles.searchInput} placeholder="Search by name or email…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 

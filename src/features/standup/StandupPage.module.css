@@ -37,9 +37,9 @@
 .headerActions {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  flex-shrink: 0;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
 .actionsBar {
@@ -69,9 +69,14 @@
   gap: 8px;
   background: var(--surface);
   border: 1px solid var(--border-2);
-  border-radius: 8px;
-  padding: 7px 12px;
-  min-width: 180px;
+  border-radius: var(--r);
+  padding: 9px 13px;
+  transition: border-color 0.15s;
+  flex: 1;
+  max-width: 320px;
+}
+.headerSearch:focus-within {
+  border-color: var(--accent-border);
 }
 
 .headerSearchInput {
@@ -79,9 +84,10 @@
   border: none;
   outline: none;
   font-size: 13px;
+  font-weight: 500;
   color: var(--text);
   font-family: var(--font-sans);
-  width: 100%;
+  flex: 1;
 }
 
 .headerSearchInput::placeholder {

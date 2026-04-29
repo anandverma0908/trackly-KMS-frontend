@@ -1,204 +1,252 @@
-.page {
+/* ═══════════════════════════════════════════════════════════
+   SETTINGS TAB — matches SummaryTab design language
+   ═══════════════════════════════════════════════════════════ */
+
+.tab {
   padding: 16px 20px;
-}
-
-/* ── Two-panel layout ── */
-.panels {
-  display: grid;
-  grid-template-columns: 1fr 1px 1fr;
-  gap: 0;
-  min-height: 500px;
-}
-
-.divider {
-  background: var(--border-2);
-  width: 1px;
-  margin: 0 28px;
-}
-
-.panel {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-/* ── Panel header ── */
-.panelHeader {
+/* ── Card — same as Summary's panelCard / reportCard ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 16px;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
 }
 
-.panelTitle {
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-2), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Two-column row — same as reportsRow ── */
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+/* ── Card header — same as chartCardHeader ── */
+.cardHeader {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 14px;
+  justify-content: space-between;
+}
+
+.cardLabel {
+  font-size: 13px;
   font-weight: 700;
   color: var(--text);
-  flex: 1;
+  letter-spacing: 0.05em;
 }
 
-.badge {
-  font-size: 11px;
+.cardSub {
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+.countBadge {
+  font-size: 0.68rem;
   font-weight: 700;
-  background: var(--surface-2);
-  color: var(--text-2);
-  border: 1px solid var(--border-2);
-  border-radius: 20px;
-  padding: 2px 9px;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  border-radius: 99px;
+  padding: 1px 8px;
 }
 
-/* ── Search ── */
-.searchBox {
+/* ── Search — standard app style ── */
+.searchWrap {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--surface);
+  background: var(--bgrnd);
   border: 1px solid var(--border-2);
-  border-radius: 8px;
-  padding: 0 12px;
+  border-radius: var(--r);
+  padding: 8px 12px;
   transition: border-color 0.15s;
 }
-
-.searchBox:focus-within {
-  border-color: var(--accent);
+.searchWrap:focus-within {
+  border-color: var(--accent-border);
 }
-
-.searchIcon {
-  color: var(--text-3);
-  flex-shrink: 0;
-}
-
 .searchInput {
   flex: 1;
-  background: none;
+  background: transparent;
   border: none;
   outline: none;
-  padding: 9px 0;
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 500;
   color: var(--text);
   font-family: var(--font-sans);
 }
-
-.searchInput::placeholder {
+.searchInput::placeholder { color: var(--text-3); }
+.searchClear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
   color: var(--text-3);
+  padding: 0;
+  transition: color 0.12s;
 }
+.searchClear:hover { color: var(--text); }
 
-/* ── Member cards ── */
-.memberCards {
+/* ── Member list — same density as Summary ── */
+.memberList {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-2) transparent;
 }
+.memberList::-webkit-scrollbar { width: 3px; }
+.memberList::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
 
 .empty {
-  padding: 40px 20px;
+  padding: 28px 16px;
   text-align: center;
-  font-size: 13px;
+  font-size: 0.79rem;
   color: var(--text-3);
-  background: var(--surface);
-  border: 1px dashed var(--border-2);
-  border-radius: 10px;
+  font-style: italic;
+  line-height: 1.5;
 }
 
-.memberCard {
+/* ── Member row — matches Summary's memberRow ── */
+.memberRow {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: 10px;
-  transition: border-color 0.15s, background 0.15s;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  transition: background 0.12s;
 }
-
-.memberCard:hover {
+.memberRow:hover {
   background: var(--surface-2);
-  border-color: var(--border-3);
 }
 
-/* ── Avatar ── */
+/* ── Avatar — same as Summary memberAvatar but slightly larger ── */
 .avatar {
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  color: #fff;
-  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #fff;
   flex-shrink: 0;
+  letter-spacing: -0.01em;
 }
 
 /* ── Member info ── */
-.memberCardInfo {
+.memberInfo {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
-
-.memberCardName {
-  font-size: 13px;
+.memberName {
+  font-size: 0.79rem;
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.memberCardRole {
-  font-size: 11px;
-  color: var(--text-3);
-  margin-top: 2px;
+.rolePill {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 99px;
+  border: 1px solid;
   white-space: nowrap;
+  flex-shrink: 0;
+}
+.emailText {
+  font-size: 0.68rem;
+  color: var(--text-3);
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 /* ── Action buttons ── */
-.removeBtn,
-.addBtn {
+.removeBtn {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 6px;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
   border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  opacity: 0;
+}
+.memberRow:hover .removeBtn { opacity: 1; }
+.removeBtn:hover {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.08);
+}
+.removeBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  padding: 3px 9px;
+  border-radius: 5px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-glow);
+  color: var(--accent);
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.15s;
   white-space: nowrap;
+  opacity: 0;
+}
+.memberRow:hover .addBtn { opacity: 1; }
+.addBtn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.addBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── Section body (wraps sub-components) ── */
+.sectionBody {
+  margin: -16px;
+  margin-top: 0;
 }
 
-.removeBtn {
-  background: transparent;
-  color: var(--text-3);
-  border-color: var(--border-2);
-}
-
-.removeBtn:hover {
-  color: #F87171;
-  border-color: #F87171;
-  background: rgba(248, 113, 113, 0.08);
-}
-
-.removeBtn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.addBtn {
-  background: var(--accent-glow);
-  color: var(--accent);
-  border-color: var(--accent-border);
-}
-
-.addBtn:hover {
-  background: var(--accent);
-  color: #fff;
-}
-
-.addBtn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+/* ── Responsive ── */
+@media (max-width: 760px) {
+  .twoCol { grid-template-columns: 1fr; }
 }

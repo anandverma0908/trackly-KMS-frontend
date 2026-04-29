@@ -481,7 +481,7 @@ export default function DecisionsPage({
         {/* Filters */}
         <div className={styles.filters}>
           <div className={styles.searchWrap}>
-            <RiSearchLine size={13} className={styles.searchIcon} />
+            <RiSearchLine size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
             <input
               className={styles.searchInput}
               placeholder="Search decisions…"

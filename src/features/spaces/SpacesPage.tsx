@@ -1781,7 +1781,9 @@ function PodCardComponent({
               className={styles.sprintBadge}
               style={{ color: sprintColor, background: `${sprintColor}18` }}
             >
-              {card.hasActiveSprint ?`Active ${card.sprintName?.split("—")[1]}` : "No Sprint"}
+              {card.hasActiveSprint
+                ? `Active ${card.sprintName?.split("—")[1]}`
+                : "No Sprint"}
             </span>
 
             {/* Sprint outcome predictor (Gen 2) */}

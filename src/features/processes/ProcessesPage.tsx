@@ -11,27 +11,40 @@ import {
   RiDeleteBinLine,
   RiGlobalLine,
   RiBuilding2Line,
+  RiListCheck2,
+  RiLoopLeftLine,
+  RiAlertLine,
 } from "react-icons/ri";
 import styles from "./ProcessesPage.module.css";
-import { useProcesses, useCreateProcess, useDeleteProcess } from "./useProcesses";
+import {
+  useProcesses,
+  useCreateProcess,
+  useDeleteProcess,
+} from "./useProcesses";
 import { novaQuery } from "@/services/api";
 import SideDrawer from "@/components/ui/SideDrawer";
 import type { Process, ProcessCategory, ProcessStatus } from "@/types";
 
 /* ── Helpers ── */
-const categoryConfig: Record<ProcessCategory, { label: string; color: string }> = {
-  runbook:    { label: "Runbook",    color: styles.catRunbook },
-  sop:        { label: "SOP",        color: styles.catSop },
+const categoryConfig: Record<
+  ProcessCategory,
+  { label: string; color: string }
+> = {
+  runbook: { label: "Runbook", color: styles.catRunbook },
+  sop: { label: "SOP", color: styles.catSop },
   compliance: { label: "Compliance", color: styles.catCompliance },
-  template:   { label: "Template",   color: styles.catTemplate },
-  workflow:   { label: "Workflow",   color: styles.catWorkflow },
+  template: { label: "Template", color: styles.catTemplate },
+  workflow: { label: "Workflow", color: styles.catWorkflow },
 };
 
-const statusConfig: Record<ProcessStatus, { label: string; className: string }> = {
-  active:     { label: "Active",      className: styles.statusActive },
-  draft:      { label: "Draft",       className: styles.statusDraft },
-  review:     { label: "In Review",   className: styles.statusReview },
-  deprecated: { label: "Deprecated",  className: styles.statusDeprecated },
+const statusConfig: Record<
+  ProcessStatus,
+  { label: string; className: string }
+> = {
+  active: { label: "Active", className: styles.statusActive },
+  draft: { label: "Draft", className: styles.statusDraft },
+  review: { label: "In Review", className: styles.statusReview },
+  deprecated: { label: "Deprecated", className: styles.statusDeprecated },
 };
 
 /* ── Create form ── */
@@ -57,7 +70,13 @@ interface CreateForm {
 }
 
 function emptyStep(): StepDraft {
-  return { title: "", description: "", owner: "", estimatedTime: "", required: true };
+  return {
+    title: "",
+    description: "",
+    owner: "",
+    estimatedTime: "",
+    required: true,
+  };
 }
 
 function CreateProcessForm({
@@ -112,7 +131,10 @@ function CreateProcessForm({
       owner: form.owner.trim(),
       description: form.description.trim(),
       lastUpdated: today,
-      tags: form.tagsText.split(",").map((s) => s.trim()).filter(Boolean),
+      tags: form.tagsText
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
       complianceRequired: form.complianceRequired,
       avgCompletionTime: form.avgCompletionTime.trim() || undefined,
       runCount: 0,
@@ -152,7 +174,9 @@ function CreateProcessForm({
           <select
             className={styles.formSelect}
             value={form.category}
-            onChange={(e) => setField("category", e.target.value as ProcessCategory)}
+            onChange={(e) =>
+              setField("category", e.target.value as ProcessCategory)
+            }
           >
             <option value="runbook">Runbook</option>
             <option value="sop">SOP</option>
@@ -166,7 +190,9 @@ function CreateProcessForm({
           <select
             className={styles.formSelect}
             value={form.status}
-            onChange={(e) => setField("status", e.target.value as ProcessStatus)}
+            onChange={(e) =>
+              setField("status", e.target.value as ProcessStatus)
+            }
           >
             <option value="active">Active</option>
             <option value="draft">Draft</option>
@@ -229,7 +255,14 @@ function CreateProcessForm({
 
       {/* Steps */}
       <div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 8,
+          }}
+        >
           <span className={styles.formLabel}>Steps</span>
           <button type="button" className={styles.addStepBtn} onClick={addStep}>
             <RiAddLine size={11} /> Add Step
@@ -238,7 +271,14 @@ function CreateProcessForm({
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {form.steps.map((step, i) => (
             <div key={i} className={styles.stepDraftCard}>
-              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "center",
+                  marginBottom: 6,
+                }}
+              >
                 <span className={styles.stepDraftNum}>{i + 1}</span>
                 <input
                   className={styles.formInput}
@@ -248,7 +288,13 @@ function CreateProcessForm({
                   onChange={(e) => setStep(i, "title", e.target.value)}
                 />
                 {form.steps.length > 1 && (
-                  <button type="button" className={styles.removeStepBtn} onClick={() => removeStep(i)}>✕</button>
+                  <button
+                    type="button"
+                    className={styles.removeStepBtn}
+                    onClick={() => removeStep(i)}
+                  >
+                    ✕
+                  </button>
                 )}
               </div>
               <textarea
@@ -299,8 +345,14 @@ function CreateProcessForm({
       )}
 
       <div className={styles.formActions}>
-        <button type="button" className={styles.formCancel} onClick={onClose}>Cancel</button>
-        <button type="submit" className={styles.formSubmit} disabled={createMut.isPending}>
+        <button type="button" className={styles.formCancel} onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className={styles.formSubmit}
+          disabled={createMut.isPending}
+        >
           {createMut.isPending ? "Saving…" : "Save Process"}
         </button>
       </div>
@@ -320,22 +372,29 @@ function ProcessDetailBody({ process }: { process: Process }) {
     });
   }
 
-  const pct = process.steps.length > 0
-    ? Math.round((completedSteps.size / process.steps.length) * 100)
-    : 0;
+  const pct =
+    process.steps.length > 0
+      ? Math.round((completedSteps.size / process.steps.length) * 100)
+      : 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div className={styles.detailInfo}>
-        <span className={styles.infoItem}><RiTeamLine size={12} /> {process.owner}</span>
+        <span className={styles.infoItem}>
+          <RiTeamLine size={12} /> {process.owner}
+        </span>
         {process.avgCompletionTime && (
-          <span className={styles.infoItem}><RiTimeLine size={12} /> {process.avgCompletionTime}</span>
+          <span className={styles.infoItem}>
+            <RiTimeLine size={12} /> {process.avgCompletionTime}
+          </span>
         )}
         {(process.runCount ?? 0) > 0 && (
           <span className={styles.infoItem}>Run {process.runCount}×</span>
         )}
         {process.org_level && (
-          <span className={styles.infoItem}><RiGlobalLine size={12} /> Org-wide</span>
+          <span className={styles.infoItem}>
+            <RiGlobalLine size={12} /> Org-wide
+          </span>
         )}
       </div>
 
@@ -344,7 +403,9 @@ function ProcessDetailBody({ process }: { process: Process }) {
       {completedSteps.size > 0 && (
         <div className={styles.progressSection}>
           <div className={styles.progressLabel}>
-            <span>{completedSteps.size}/{process.steps.length} steps complete</span>
+            <span>
+              {completedSteps.size}/{process.steps.length} steps complete
+            </span>
             <span>{pct}%</span>
           </div>
           <div className={styles.progressBar}>
@@ -359,7 +420,12 @@ function ProcessDetailBody({ process }: { process: Process }) {
 
       <div className={styles.stepsHeader}>
         <h3 className={styles.stepsTitle}>Steps</h3>
-        <button className={styles.resetBtn} onClick={() => setCompletedSteps(new Set())}>Reset</button>
+        <button
+          className={styles.resetBtn}
+          onClick={() => setCompletedSteps(new Set())}
+        >
+          Reset
+        </button>
       </div>
 
       <div className={styles.stepsList}>
@@ -373,7 +439,10 @@ function ProcessDetailBody({ process }: { process: Process }) {
             >
               <div className={styles.stepCheck}>
                 {done ? (
-                  <RiCheckboxCircleLine size={18} className={styles.checkDone} />
+                  <RiCheckboxCircleLine
+                    size={18}
+                    className={styles.checkDone}
+                  />
                 ) : (
                   <div className={styles.checkEmpty}>{step.order}</div>
                 )}
@@ -381,11 +450,19 @@ function ProcessDetailBody({ process }: { process: Process }) {
               <div className={styles.stepBody}>
                 <div className={styles.stepTitleRow}>
                   <span className={styles.stepTitle}>{step.title}</span>
-                  {!step.required && <span className={styles.optionalBadge}>optional</span>}
-                  {step.estimatedTime && <span className={styles.stepTime}>{step.estimatedTime}</span>}
+                  {!step.required && (
+                    <span className={styles.optionalBadge}>optional</span>
+                  )}
+                  {step.estimatedTime && (
+                    <span className={styles.stepTime}>
+                      {step.estimatedTime}
+                    </span>
+                  )}
                 </div>
                 <p className={styles.stepDesc}>{step.description}</p>
-                {step.owner && <span className={styles.stepOwner}>Owner: {step.owner}</span>}
+                {step.owner && (
+                  <span className={styles.stepOwner}>Owner: {step.owner}</span>
+                )}
               </div>
             </div>
           );
@@ -410,7 +487,9 @@ export default function ProcessesPage({
   const [includeOrg, setIncludeOrg] = useState(false);
   const [novaQ, setNovaQ] = useState("");
   const [novaAnswer, setNovaAnswer] = useState("");
-  const [novaSources, setNovaSources] = useState<{ title: string; url?: string }[]>([]);
+  const [novaSources, setNovaSources] = useState<
+    { title: string; url?: string }[]
+  >([]);
   const [novaLoading, setNovaLoading] = useState(false);
 
   const queryParams = spaceId
@@ -431,7 +510,12 @@ export default function ProcessesPage({
   });
 
   const categories: ("all" | ProcessCategory)[] = [
-    "all", "runbook", "sop", "compliance", "template", "workflow",
+    "all",
+    "runbook",
+    "sop",
+    "compliance",
+    "template",
+    "workflow",
   ];
 
   async function handleNovaQuery() {
@@ -459,11 +543,22 @@ export default function ProcessesPage({
   }
 
   const detailBadge = selected ? (
-    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-      <span className={`${styles.catBadge} ${categoryConfig[selected.category].color}`}>
+    <div
+      style={{
+        display: "flex",
+        gap: 6,
+        alignItems: "center",
+        flexWrap: "wrap",
+      }}
+    >
+      <span
+        className={`${styles.catBadge} ${categoryConfig[selected.category].color}`}
+      >
         {categoryConfig[selected.category].label}
       </span>
-      <span className={`${styles.statusBadge} ${statusConfig[selected.status].className}`}>
+      <span
+        className={`${styles.statusBadge} ${statusConfig[selected.status].className}`}
+      >
         {statusConfig[selected.status].label}
       </span>
       {selected.complianceRequired && (
@@ -489,6 +584,61 @@ export default function ProcessesPage({
   return (
     <div className={styles.page}>
       <div className={styles.listCol}>
+
+                {/* KPI cards */}
+        <div className={styles.kpiRow}>
+          {[
+            {
+              label: "Total",
+              value: String(processes.length),
+              sub: "Processes documented",
+              icon: <RiListCheck2 />,
+            },
+            {
+              label: "Compliance",
+              value: String(
+                processes.filter((p) => p.complianceRequired).length,
+              ),
+              sub: "Require compliance",
+              icon: <RiShieldCheckLine />,
+            },
+            {
+              label: "Executions",
+              value: String(
+                processes.reduce((a, p) => a + (p.runCount ?? 0), 0),
+              ),
+              sub: "Total runs logged",
+              icon: <RiLoopLeftLine />,
+            },
+            {
+              label: "Stale",
+              value: String(
+                processes.filter((p) => {
+                  if (!p.lastUpdated) return false;
+                  return (
+                    Date.now() - new Date(p.lastUpdated).getTime() >
+                    90 * 24 * 60 * 60 * 1000
+                  );
+                }).length,
+              ),
+              sub: "Not updated in 90d",
+              icon: <RiAlertLine />,
+            },
+          ].map((card) => (
+            <div key={card.label} className={styles.kpiCard}>
+              <div className={styles.kpiTopRow}>
+                <div className={styles.kpiLabel}>{card.label}</div>
+                <span className={styles.kpiIconWrap}>{card.icon}</span>
+              </div>
+              <div>
+                <div className={styles.kpiValue}>{card.value}</div>
+                <div className={styles.kpiSub}>{card.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        
         {/* Header */}
         {!compact ? (
           <div className={styles.header}>
@@ -496,10 +646,15 @@ export default function ProcessesPage({
               <RiShieldCheckLine size={20} className={styles.headerIcon} />
               <div>
                 <h1 className={styles.title}>Processes</h1>
-                <p className={styles.subtitle}>SOPs · Runbooks · Compliance · Templates</p>
+                <p className={styles.subtitle}>
+                  SOPs · Runbooks · Compliance · Templates
+                </p>
               </div>
             </div>
-            <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
+            <button
+              className={styles.addBtn}
+              onClick={() => setShowCreate(true)}
+            >
               <RiAddLine size={15} /> New Process
             </button>
           </div>
@@ -523,7 +678,10 @@ export default function ProcessesPage({
                 </>
               )}
             </div>
-            <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
+            <button
+              className={styles.addBtn}
+              onClick={() => setShowCreate(true)}
+            >
               <RiAddLine size={15} /> New Process
             </button>
           </div>
@@ -540,7 +698,11 @@ export default function ProcessesPage({
               onChange={(e) => setNovaQ(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleNovaQuery()}
             />
-            <button className={styles.novaAsk} onClick={handleNovaQuery} disabled={novaLoading}>
+            <button
+              className={styles.novaAsk}
+              onClick={handleNovaQuery}
+              disabled={novaLoading}
+            >
               {novaLoading ? "…" : "Ask"}
             </button>
           </div>
@@ -553,14 +715,30 @@ export default function ProcessesPage({
                 exit={{ opacity: 0, height: 0 }}
               >
                 <div>
-                  <RiShieldCheckLine size={13} className={styles.novaAnswerIcon} />
+                  <RiShieldCheckLine
+                    size={13}
+                    className={styles.novaAnswerIcon}
+                  />
                   <div style={{ flex: 1 }}>
                     <p>{novaAnswer}</p>
                     {novaSources.length > 0 && (
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 6,
+                          flexWrap: "wrap",
+                          marginTop: 6,
+                        }}
+                      >
                         {novaSources.slice(0, 4).map((s, i) => (
-                          <span key={i} className={styles.filterChip} style={{ cursor: s.url ? "pointer" : "default" }}
-                            onClick={() => s.url && window.open(s.url, "_blank")}>
+                          <span
+                            key={i}
+                            className={styles.filterChip}
+                            style={{ cursor: s.url ? "pointer" : "default" }}
+                            onClick={() =>
+                              s.url && window.open(s.url, "_blank")
+                            }
+                          >
                             {s.title}
                           </span>
                         ))}
@@ -573,35 +751,12 @@ export default function ProcessesPage({
           </AnimatePresence>
         </div>
 
-        {/* Stats strip */}
-        <div className={styles.statsStrip}>
-          <div className={styles.statBox}>
-            <span className={styles.statNum}>{processes.length}</span>
-            <span className={styles.statLabel}>total processes</span>
-          </div>
-          <div className={styles.statBox}>
-            <span className={styles.statNum}>{processes.filter((p) => p.complianceRequired).length}</span>
-            <span className={styles.statLabel}>compliance required</span>
-          </div>
-          <div className={styles.statBox}>
-            <span className={styles.statNum}>{processes.reduce((a, p) => a + (p.runCount ?? 0), 0)}</span>
-            <span className={styles.statLabel}>total executions</span>
-          </div>
-          <div className={styles.statBox}>
-            <span className={`${styles.statNum} ${styles.statWarn}`}>
-              {processes.filter((p) => {
-                if (!p.lastUpdated) return false;
-                return Date.now() - new Date(p.lastUpdated).getTime() > 90 * 24 * 60 * 60 * 1000;
-              }).length}
-            </span>
-            <span className={styles.statLabel}>may be stale (&gt;90d)</span>
-          </div>
-        </div>
+
 
         {/* Filters */}
         <div className={styles.filters}>
           <div className={styles.searchWrap}>
-            <RiSearchLine size={13} className={styles.searchIcon} />
+            <RiSearchLine size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
             <input
               className={styles.searchInput}
               placeholder="Search processes…"
@@ -616,7 +771,9 @@ export default function ProcessesPage({
                 className={`${styles.filterChip} ${filterCat === c ? styles.filterChipActive : ""}`}
                 onClick={() => setFilterCat(c)}
               >
-                {c === "all" ? "All" : categoryConfig[c as ProcessCategory].label}
+                {c === "all"
+                  ? "All"
+                  : categoryConfig[c as ProcessCategory].label}
               </button>
             ))}
           </div>
@@ -635,8 +792,8 @@ export default function ProcessesPage({
               {search || filterCat !== "all"
                 ? "No processes match your filters."
                 : spaceId
-                ? "No processes yet for this space. Add your first runbook or SOP."
-                : "No processes recorded yet. Document your first SOP or runbook."}
+                  ? "No processes yet for this space. Add your first runbook or SOP."
+                  : "No processes recorded yet. Document your first SOP or runbook."}
             </div>
           ) : (
             filtered.map((p, i) => (
@@ -646,36 +803,59 @@ export default function ProcessesPage({
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
-                onClick={() => { setSelected(p); setShowCreate(false); }}
+                onClick={() => {
+                  setSelected(p);
+                  setShowCreate(false);
+                }}
               >
                 <div className={styles.rowLeft}>
-                  <span className={`${styles.catBadge} ${categoryConfig[p.category].color}`}>
+                  <span
+                    className={`${styles.catBadge} ${categoryConfig[p.category].color}`}
+                  >
                     {categoryConfig[p.category].label}
                   </span>
                   {p.complianceRequired && (
-                    <RiShieldCheckLine size={13} className={styles.complianceIcon} title="Compliance required" />
+                    <RiShieldCheckLine
+                      size={13}
+                      className={styles.complianceIcon}
+                      title="Compliance required"
+                    />
                   )}
                   {p.org_level && (
-                    <RiGlobalLine size={12} style={{ color: "var(--text-3)" }} title="Org-wide" />
+                    <RiGlobalLine
+                      size={12}
+                      style={{ color: "var(--text-3)" }}
+                      title="Org-wide"
+                    />
                   )}
                 </div>
                 <div className={styles.rowBody}>
                   <div className={styles.rowTitleRow}>
                     <span className={styles.rowTitle}>{p.title}</span>
-                    <span className={`${styles.statusBadge} ${statusConfig[p.status].className}`}>
+                    <span
+                      className={`${styles.statusBadge} ${statusConfig[p.status].className}`}
+                    >
                       {statusConfig[p.status].label}
                     </span>
                   </div>
                   <div className={styles.rowMeta}>
-                    <span><RiTeamLine size={11} /> {p.owner}</span>
+                    <span>
+                      <RiTeamLine size={11} /> {p.owner}
+                    </span>
                     {p.lastUpdated && (
                       <>
                         <span>·</span>
-                        <span><RiTimeLine size={11} /> Updated {new Date(p.lastUpdated).toLocaleDateString()}</span>
+                        <span>
+                          <RiTimeLine size={11} /> Updated{" "}
+                          {new Date(p.lastUpdated).toLocaleDateString()}
+                        </span>
                       </>
                     )}
                     {(p.runCount ?? 0) > 0 && (
-                      <><span>·</span><span>Run {p.runCount}×</span></>
+                      <>
+                        <span>·</span>
+                        <span>Run {p.runCount}×</span>
+                      </>
                     )}
                   </div>
                   <p className={styles.rowDesc}>{p.description}</p>
@@ -707,7 +887,10 @@ export default function ProcessesPage({
         title="New Process"
         subtitle="Document a runbook, SOP, or workflow"
       >
-        <CreateProcessForm spaceId={spaceId} onClose={() => setShowCreate(false)} />
+        <CreateProcessForm
+          spaceId={spaceId}
+          onClose={() => setShowCreate(false)}
+        />
       </SideDrawer>
     </div>
   );

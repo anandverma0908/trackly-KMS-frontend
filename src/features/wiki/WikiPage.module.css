@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   WIKI PAGE — Futuristic AI-native 3-column layout
+   WIKI PAGE — Nova-style card layout
    ═══════════════════════════════════════════════════════════ */
 
 .page {
@@ -7,119 +7,119 @@
   flex-direction: column;
   height: calc(100vh - var(--topbar-h));
   overflow: hidden;
-  background: var(--bgrnd);
+  padding: 10px 40px 40px;
+  gap: 10px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-/* ── Top bar ── */
-.topbar {
+/* ── Page Header ── */
+.pageHeader {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 16px;
-  height: 46px;
+  justify-content: space-between;
+  gap: 16px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--bgrnd);
 }
 
-.brand {
+.pageHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pageHeaderRight {
   display: flex;
   align-items: center;
   gap: 7px;
+}
+
+.pageTitle {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  margin: 0;
+}
+
+.aiBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  border-radius: 20px;
+  padding: 3px 9px;
+}
+
+.spaceBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  color: var(--text-2);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ── Sub Header ── */
+.pageSubHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
+  padding: 10px 18px;
   flex-shrink: 0;
 }
 
-.brandDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 7px var(--accent);
-  animation: brandPulse 2.8s ease-in-out infinite;
-}
-
-@keyframes brandPulse {
-  0%, 100% { box-shadow: 0 0 5px var(--accent); opacity: 1; }
-  50% { box-shadow: 0 0 14px var(--accent); opacity: 0.7; }
-}
-
-.brandTitle {
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--text);
-}
-
-.brandSpace {
-  font-size: 10.5px;
-  color: var(--text-3);
-  padding: 2px 8px;
-  background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: 20px;
-}
-
 .searchWrap {
-  flex: 1;
-  max-width: 360px;
-  margin: 0 auto;
-  position: relative;
   display: flex;
   align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 9px 13px;
+  transition: border-color 0.15s;
+  flex: 1;
+  max-width: 320px;
 }
-
-.searchIcon {
-  position: absolute;
-  left: 10px;
-  color: var(--text-3);
-  pointer-events: none;
+.searchWrap:focus-within {
+  border-color: var(--accent-border);
 }
 
 .searchInput {
-  width: 100%;
-  height: 30px;
-  padding: 0 38px 0 30px;
-  font-size: 12px;
-  font-family: inherit;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  color: var(--text);
+  background: transparent;
+  border: none;
   outline: none;
-  transition: border-color 0.15s, background 0.15s;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  font-family: inherit;
+  flex: 1;
 }
 .searchInput::placeholder { color: var(--text-3); }
-.searchInput:focus { border-color: var(--accent); background: var(--accent-glow); }
-
-.searchHint {
-  position: absolute;
-  right: 10px;
-  font-size: 9.5px;
-  color: var(--text-3);
-  font-family: var(--font-mono);
-  pointer-events: none;
-}
 
 .searchClear {
-  position: absolute;
-  right: 8px;
   background: none;
   border: none;
   cursor: pointer;
   font-size: 10px;
   color: var(--text-3);
-  line-height: 1;
-  padding: 2px 4px;
+  padding: 0;
+  transition: color 0.12s;
 }
-.searchClear:hover { color: var(--text-1); }
-
-.topbarRight {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-left: auto;
-  flex-shrink: 0;
-}
+.searchClear:hover { color: var(--text); }
 
 .captureBtn {
   display: flex;
@@ -143,21 +143,31 @@
   background: var(--accent-glow);
 }
 
-.iconBtn {
-  display: flex;
+.aiPanelBtn {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: var(--r-sm);
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: inherit;
   color: var(--text-2);
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  padding: 5px 11px;
   cursor: pointer;
   transition: all 0.15s;
 }
-.iconBtn:hover { border-color: var(--border-2); background: var(--surface); color: var(--text); }
-.iconBtnActive { border-color: var(--accent-border); background: var(--accent-glow); color: var(--accent); }
+.aiPanelBtn:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+.aiPanelBtnActive {
+  color: var(--accent) !important;
+  border-color: var(--accent-border) !important;
+  background: var(--accent-glow) !important;
+}
 
 .newPageBtn {
   display: flex;
@@ -177,26 +187,25 @@
 }
 .newPageBtn:hover { opacity: 0.85; }
 
-/* ── Body: grid ── */
+/* ── Body: flex row ── */
 .body {
   flex: 1;
-  display: grid;
-  grid-template-columns: 216px 1fr;
-  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
   min-height: 0;
-}
-
-.bodyWithPanel {
-  grid-template-columns: 216px 1fr 258px;
+  overflow: hidden;
 }
 
 /* ── Sidebar ── */
 .sidebar {
-  border-right: 1px solid var(--border);
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--bgrnd);
 }
 
 .sidebarScroll {
@@ -206,6 +215,8 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-2) transparent;
 }
 
 .sideSection { display: flex; flex-direction: column; gap: 6px; }
@@ -324,15 +335,14 @@
 .treeLeaf { color: var(--text-3); display: flex; align-items: center; justify-content: center; width: 10px; flex-shrink: 0; }
 .emptyTree { font-size: 11px; color: var(--text-3); padding: 8px; margin: 3px; font-style: italic; text-align: center; background: var(--surface); border-radius: var(--r-sm); }
 
-/* ── EOS Quick Actions ── */
+/* ── EOS Quick Actions — pinned sidebar bottom ── */
 .eosActions {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 8px 7px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
+  padding: 8px 9px 10px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 .eosActionsLabel {
   display: flex;
@@ -365,11 +375,13 @@
 
 /* ── Main editor ── */
 .main {
+  flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
   background: var(--bgrnd);
+  border-radius: var(--r-xl);
 }
 
 .mainTopbar {
@@ -1142,7 +1154,7 @@
 
 /* ── Responsive ── */
 @media (max-width: 960px) {
-  .body, .bodyWithPanel { grid-template-columns: 1fr; }
+  .page { padding: 10px 16px 24px; }
   .sidebar { display: none; }
   .aiPanel { display: none; }
 }
