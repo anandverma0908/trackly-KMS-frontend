@@ -304,7 +304,7 @@ export function useMyWork() {
       list.push({
         id: "context-switch", type: "focus", severity: "warning",
         title: "Focus risk",
-        message: `${wip} tickets in progress. Nova recommends focusing on top 2.`,
+        message: `${wip} tickets in progress. EOS recommends focusing on top 2.`,
       });
     }
 

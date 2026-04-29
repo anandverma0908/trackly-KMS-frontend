@@ -108,9 +108,9 @@ function wordCount(s: Standup): number {
 export default function ManagerView() {
   const qc = useQueryClient();
 
-  const [selectedDate, setSelectedDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
-  );
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const isToday = selectedDate === todayStr;
   const [selectedPod, setSelectedPod] = useState("");
   const [search, setSearch] = useState("");
   const [detailStandup, setDetailStandup] = useState<Standup | null>(null);
@@ -294,6 +294,7 @@ export default function ManagerView() {
                 type="date"
                 className={styles.headerDateInput}
                 value={selectedDate}
+                max={todayStr}
                 onChange={(e) => setSelectedDate(e.target.value)}
               />
             </div>
@@ -313,7 +314,8 @@ export default function ManagerView() {
             <button
               className={styles.btnPrimary}
               onClick={() => generateMut.mutate()}
-              disabled={generateMut.isPending}
+              disabled={generateMut.isPending || !isToday}
+              title={!isToday ? "Cannot generate standup for a past date" : undefined}
             >
               {generateMut.isPending ? (
                 <>

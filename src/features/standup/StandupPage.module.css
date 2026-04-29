@@ -208,6 +208,51 @@
   }
 }
 
+/* ── Engineer Brief Bar (Today's Focus, summary-tab style) ── */
+.engBriefBar {
+  position: relative;
+  border-radius: var(--r-xl);
+  padding: 14px 20px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.engBriefGlow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--accent-glow) 0%, transparent 60%);
+  pointer-events: none;
+}
+.engBriefContent {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.engBriefText {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+.engBriefEmpty {
+  color: var(--text-3);
+  font-style: italic;
+}
+.eosBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+
 /* ── Two-column layout ── */
 .twoColumn {
   display: grid;

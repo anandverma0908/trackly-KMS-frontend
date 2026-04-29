@@ -10,7 +10,6 @@ import {
   RiRobot2Line, RiHistoryLine, RiImageLine, RiRefreshLine,
   RiFlashlightLine, RiCheckLine, RiErrorWarningLine, RiLoader4Line,
   RiAttachmentLine, RiVideoLine, RiMusicLine,
-  RiArrowLeftSLine, RiArrowRightSLine,
 } from "react-icons/ri";
 import { runAgentLoop } from "./agent/agentController";
 import type { AgentStep } from "./agent/agentTypes";
@@ -62,7 +61,6 @@ interface Message {
   id: string; role: "user" | "nova";
   text: string; intent?: Intent;
   citations?: Citation[]; created?: CreatedItem;
-  /** Populated when the message was produced by the agent loop */
   agentSteps?: AgentStep[];
   ts: Date;
 }
@@ -154,15 +152,9 @@ function detectIntent(text: string, hasImage: boolean): Intent {
   if (hasImage) return "screenshot";
   const t = text.trim();
   if (!t) return "ask";
-
-  // Long multi-line → meeting transcript
   const lines = t.split("\n").filter(Boolean);
   if (lines.length > 6 && t.length > 400) return "meeting";
-
-  // Only explicit prefixes trigger ticket creation
   if (/^(create ticket:|log bug:|new ticket:|capture:|ticket:)/i.test(t)) return "thought";
-
-  // Everything else is a question — Nova answers it
   return "ask";
 }
 
@@ -172,7 +164,7 @@ function intentLabel(intent: Intent, wordCount: number): string {
     case "meeting":    return `→ structuring meeting doc · ${wordCount} words`;
     case "screenshot": return "→ analyze screenshot";
     case "voice":      return "◉ voice captured";
-    case "ask":        return "";   // no label — just ask naturally
+    case "ask":        return "";
   }
 }
 
@@ -323,8 +315,6 @@ function CreatedItemCard({ item }: { item: CreatedItem }) {
 
 /* ══════════════════════════════════════════════════════════
    AGENT STEP TRACE
-   Shows the tool calls Nova made in agent mode as a compact
-   expandable trace — collapsed by default to keep UI clean.
 ══════════════════════════════════════════════════════════ */
 function AgentStepTrace({ steps }: { steps: AgentStep[] }) {
   const [open, setOpen] = useState(false);
@@ -372,7 +362,7 @@ function AgentStepTrace({ steps }: { steps: AgentStep[] }) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   HIGHLIGHTED TEXT  (citation hover)
+   HIGHLIGHTED TEXT
 ══════════════════════════════════════════════════════════ */
 function HighlightedText({ text, citations, hoveredKey, streaming, done }: {
   text: string; citations?: Citation[];
@@ -451,32 +441,30 @@ function MessageBubble({ msg, isLatestNova }: { msg: Message; isLatestNova: bool
 }
 
 /* ══════════════════════════════════════════════════════════
-   NOVA PAGE
+   EOS PAGE
 ══════════════════════════════════════════════════════════ */
 export default function NovaPage() {
   const [searchParams] = useSearchParams();
   const podContext = searchParams.get("pod") ?? undefined;
   const qc = useQueryClient();
-  const [messages,    setMessages]    = useState<Message[]>([]);
-  const [loading,     setLoading]     = useState(false);
-  const [indexing,    setIndexing]    = useState(false);
-  const [pulse,       setPulse]       = useState<PulseItem[]>([]);
-  const [input,       setInput]       = useState("");
+
+  const [messages,      setMessages]      = useState<Message[]>([]);
+  const [loading,       setLoading]       = useState(false);
+  const [indexing,      setIndexing]      = useState(false);
+  const [pulse,         setPulse]         = useState<PulseItem[]>([]);
+  const [input,         setInput]         = useState("");
   const [recording,     setRecording]     = useState(false);
   const [dragOver,      setDragOver]      = useState(false);
   const [attachedMedia, setAttachedMedia] = useState<{
     name: string;
     mediaType: "image" | "audio" | "video";
-    base64?: string;   // images only
-    file?: File;       // audio / video
+    base64?: string;
+    file?: File;
   } | null>(null);
-  const [recentItems, setRecentItems] = useState<(CreatedItem & { age: string })[]>([]);
-  /** When true, "ask" messages are routed through the multi-step agent loop */
-  const [agentMode,   setAgentMode]   = useState(false);
-  /** Live tool-call steps streamed into the loading indicator */
-  const [liveSteps,   setLiveSteps]   = useState<AgentStep[]>([]);
-  const [leftOpen,    setLeftOpen]    = useState(true);
-  const [rightOpen,   setRightOpen]   = useState(true);
+  const [recentItems,   setRecentItems]   = useState<(CreatedItem & { age: string })[]>([]);
+  const [agentMode,     setAgentMode]     = useState(true);
+  const [liveSteps,     setLiveSteps]     = useState<AgentStep[]>([]);
+  const [pulseOpen,     setPulseOpen]     = useState(false);
 
   const suggestions = podContext ? podSuggestions(podContext) : GLOBAL_SUGGESTIONS;
 
@@ -519,9 +507,9 @@ export default function NovaPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  /* Auto-trigger reindex in background on first load so tickets/wiki get embedded */
+  /* Auto-index on mount — silent, best-effort */
   useEffect(() => {
-    triggerReindex().catch(() => {/* silent — indexing is best-effort */});
+    triggerReindex().catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Build pulse from real data */
@@ -533,21 +521,19 @@ export default function NovaPage() {
     setPulse(items);
   }, [anomalies, gaps]);
 
-  /* Build memory clips from real data */
   const decisions: Decision[] = decisionsResp?.decisions ?? [];
   const memoryClips: MemoryClip[] = [
     ...decisions.slice(0, 2).map(decisionToMemory),
     ...standups.slice(0, 2).map(standupToMemory),
   ];
 
-  /* Agents — derived from real backend results only */
   const agents: Agent[] = [
     ...(anomalies.length > 0 || (novaStatus as any)?.available ? [{
       id: "a1", name: "Anomaly detector",
       status: (anomalies.length > 0 ? "done" : "running") as AgentStatus,
       progress: anomalies.length > 0 ? 100 : 50,
       task: anomalies.length > 0
-        ? `${anomalies.length} anomal${anomalies.length !== 1 ? "ies" : "y"} found across pods`
+        ? `${anomalies.length} anomal${anomalies.length !== 1 ? "ies" : "y"} found`
         : "Scanning pod health signals…",
     }] : []),
     ...(gaps.length > 0 ? [{
@@ -558,12 +544,10 @@ export default function NovaPage() {
     }] : []),
   ];
 
-  /* Scroll to bottom */
   useEffect(() => {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
   }, [messages, loading]);
 
-  /* Auto-resize textarea */
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -571,16 +555,15 @@ export default function NovaPage() {
     el.style.height = Math.min(el.scrollHeight, 140) + "px";
   }, [input]);
 
-  /* ── Send ── */
   async function handleReindex() {
     setIndexing(true);
     try {
       await triggerReindex();
-      toast.success("Project data indexed — Nova now has full context.");
+      toast.success("Project data indexed — EOS now has full context.");
       qc.invalidateQueries({ queryKey: ["nova-anomalies"] });
       qc.invalidateQueries({ queryKey: ["knowledge-gaps"] });
     } catch {
-      toast.error("Indexing failed. Check that Nova is online.");
+      toast.error("Indexing failed. Check that EOS is online.");
     } finally {
       setIndexing(false);
     }
@@ -607,7 +590,6 @@ export default function NovaPage() {
       let novaMsg: Message;
 
       if (finalIntent === "meeting") {
-        /* ── Meeting transcript → structured doc ── */
         const result = await extractMeetingActions(text);
         const structured = typeof result === "string"
           ? result
@@ -626,7 +608,6 @@ export default function NovaPage() {
         };
 
       } else if (finalIntent === "thought" || finalIntent === "voice") {
-        /* ── Thought / voice → structure as ticket, then ASK before creating ── */
         const raw = await novaGenerate(
           `Structure this engineering thought as a ticket. Return ONLY valid JSON, no prose or markdown:
 {"title": "concise action-oriented title", "description": "full description with context", "priority": "Medium", "issue_type": "Task"}
@@ -649,7 +630,6 @@ Input: "${text}"`,
           }
         } catch { /* use defaults */ }
 
-        // Show preview — do NOT create yet. User confirms with "yes" / "create it".
         novaMsg = {
           id: crypto.randomUUID(), role: "nova",
           text: `I'd structure this as a ticket:\n\n**${title}**\n${description.slice(0, 200)}${description.length > 200 ? "…" : ""}\n\n_Priority: ${priority} · ${issue_type}_\n\nShall I create it? Reply "yes" or "create it" to confirm.`,
@@ -658,16 +638,13 @@ Input: "${text}"`,
         } as any;
 
       } else if (finalIntent === "screenshot") {
-        /* ── Screenshot / audio / video → analyze → confirm before filing ── */
         let analysisResult: { title: string; description: string; repro_steps?: string[]; severity?: string; issue_type?: string } | null = null;
         let mediaLabel = "screenshot";
 
         if (capturedMedia?.mediaType === "image" && capturedMedia.base64) {
-          // Real vision analysis via llava
           analysisResult = await analyzeScreenshot(capturedMedia.base64, text);
           mediaLabel = "screenshot";
         } else if (capturedMedia?.mediaType === "audio" || capturedMedia?.mediaType === "video") {
-          // Transcribe and extract bug fields
           mediaLabel = capturedMedia.mediaType;
           const result = await transcribeMedia(capturedMedia.file!);
           const f = result.fields ?? {};
@@ -679,7 +656,6 @@ Input: "${text}"`,
             repro_steps: [],
           };
         } else {
-          // Fallback: text-only description (old behaviour)
           const raw = await novaGenerate(
             `A ${mediaLabel} was shared showing a potential bug. Description: "${text || "No description"}". Describe the likely issue and reproduction steps.`,
             "You are NOVA, a bug triage assistant. Be concise and factual.",
@@ -704,8 +680,6 @@ Input: "${text}"`,
           },
         } as any;
       } else {
-        /* ── Ask anything → novaQuery (RAG) ── */
-        // Check if user is confirming a pending ticket
         const lastNovaMsg = [...messages].reverse().find(m => m.role === "nova");
         const pendingTicket = (lastNovaMsg as any)?._pendingTicket;
         const isConfirm = /^(yes|create it|go ahead|confirm|do it|create|ok|sure|yep|yeah)/i.test(text.trim());
@@ -729,11 +703,8 @@ Input: "${text}"`,
           return;
         }
 
-        // Check if user is confirming a bug/media filing ("file it" also maps to pending ticket)
         const filingConfirm = /^(file it|yes|create it|go ahead|file|create bug|create)/i.test(text.trim());
         if (filingConfirm && pendingTicket) {
-          // handled by the isConfirm + pendingTicket block above — but treat "file it" the same way
-          // mark type as bug so the CreatedItemCard shows correctly
           const { title, description, priority, issue_type } = pendingTicket;
           const created = await createTicket({ title, description, priority, issue_type });
           qc.invalidateQueries({ queryKey: ["tickets"] });
@@ -753,14 +724,12 @@ Input: "${text}"`,
           setLoading(false);
           return;
         }
-        // Short/conversational messages bypass the agent loop even in agent mode —
-        // the backend handles this too, but we skip the round-trip for speed.
+
         const isShortOrConversational =
           text.split(/\s+/).filter(Boolean).length <= 3 ||
           /^(hi|hello|hey|thanks|thank you|ok|okay|cool|bye|yo|sup)\b/i.test(text.trim());
 
         if (agentMode && !isShortOrConversational) {
-          /* ── Agent loop: multi-step tool execution ── */
           setLiveSteps([]);
           const history = messages.slice(-10).map((m) => ({
             role:    (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
@@ -784,7 +753,6 @@ Input: "${text}"`,
           }
           setLiveSteps([]);
         } else {
-          /* ── Standard RAG query ── */
           const res = await novaQuery(text, undefined, podContext);
           novaMsg = {
             id: crypto.randomUUID(), role: "nova",
@@ -806,7 +774,7 @@ Input: "${text}"`,
 
       setMessages(prev => [...prev, novaMsg]);
     } catch (e) {
-      const errMsg = e instanceof Error ? e.message : "Nova is unavailable right now.";
+      const errMsg = e instanceof Error ? e.message : "EOS is unavailable right now.";
       toast.error(errMsg);
       setMessages(prev => [...prev, {
         id: crypto.randomUUID(), role: "nova",
@@ -818,25 +786,21 @@ Input: "${text}"`,
     }
   }, [input, attachedMedia, loading, agentMode, messages, qc]);
 
-  /* ── Voice input (Web Speech API) ── */
   function toggleRecording() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
       toast.error("Voice input is not supported in this browser. Try Chrome.");
       return;
     }
-
     if (recording) {
       recognitionRef.current?.stop();
       setRecording(false);
       return;
     }
-
     const recognition = new SR();
     recognition.lang = "en-US";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-
     recognition.onresult = (e: any) => {
       const transcript = e.results[0][0].transcript;
       setRecording(false);
@@ -847,7 +811,6 @@ Input: "${text}"`,
       toast.error(`Voice input failed: ${e.error ?? "unknown error"}`);
     };
     recognition.onend = () => setRecording(false);
-
     recognitionRef.current = recognition;
     recognition.start();
     setRecording(true);
@@ -892,97 +855,145 @@ Input: "${text}"`,
 
   const latestNovaId = [...messages].reverse().find(m => m.role === "nova")?.id;
 
+  /* ══════════════════════════════════════════════════════════
+     RENDER
+  ══════════════════════════════════════════════════════════ */
   return (
     <div className={styles.page}>
 
       {/* ── Header ── */}
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <div className={styles.novaAvatar}>
-            <RiBrainLine size={15} />
-          </div>
-          <div className={styles.headerText}>
-            <div className={styles.headerTitleRow}>
-              <h1 className={styles.novaName}>Nova</h1>
-              <span className={styles.aiBadge}><RiSparklingLine size={10} />AI Intelligence</span>
-              {podContext && <span className={styles.podBadge}>{podContext}</span>}
-            </div>
-            <p className={styles.novaSub}>Ask anything about your project, team, or sprint</p>
-          </div>
+      <div className={styles.pageHeader}>
+        <div className={styles.pageHeaderLeft}>
+          <h1 className={styles.pageTitle}>EOS</h1>
+          <span className={styles.aiBadge}><RiSparklingLine size={10} />AI Intelligence</span>
+          {podContext && <span className={styles.podBadge}>{podContext}</span>}
         </div>
-        <div className={styles.headerActions}>
+        <div className={styles.pageHeaderRight}>
           <button
-            className={`${styles.reindexBtn} ${agentMode ? styles.reindexBtnActive : ""}`}
-            onClick={() => setAgentMode((m) => !m)}
-            title={agentMode ? "Agent mode ON — click to switch back to RAG mode" : "Enable agent mode — Nova reasons and uses tools"}
+            className={`${styles.agentToggle} ${agentMode ? styles.agentToggleOn : ""}`}
+            onClick={() => setAgentMode(m => !m)}
+            title={agentMode ? "Agent mode ON — click to switch to RAG mode" : "Enable agent mode — EOS reasons and uses tools"}
           >
-            <RiFlashlightLine size={13} />
+            <RiFlashlightLine size={12} />
             {agentMode ? "Agent ON" : "Agent mode"}
           </button>
           <button
-            className={styles.reindexBtn}
-            onClick={handleReindex}
-            disabled={indexing}
-            title="Index all tickets and wiki pages so Nova can answer from real project data"
+            className={`${styles.pulseToggleBtn} ${pulseOpen ? styles.pulseToggleBtnActive : ""}`}
+            onClick={() => setPulseOpen(o => !o)}
           >
-            <RiRefreshLine size={13} className={indexing ? styles.spinning : undefined} />
-            {indexing ? "Indexing…" : "Index data"}
+            <RiAlertLine size={13} />
+            Pulse
+            {pulse.length > 0 && <span className={styles.pulseBtnBadge}>{pulse.length}</span>}
           </button>
         </div>
-      </header>
+      </div>
 
-      {/* ── 3-column body ── */}
-      <div
-        className={styles.body}
-        style={{
-          gridTemplateColumns: `${leftOpen ? "272px" : "40px"} 1fr ${rightOpen ? "268px" : "40px"}`,
-        }}
-      >
+      {/* ── Body ── */}
+      <div className={styles.body}>
 
-        {/* ══ LEFT — Pulse ══ */}
-        <aside className={`${styles.pulsePanel} ${leftOpen ? "" : styles.panelCollapsed}`}>
-          <div className={styles.panelHead}>
-            {leftOpen ? (
-              <>
-                <span className={styles.panelTitle}>
-                  <span className={styles.liveDot} />Pulse
-                </span>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span className={styles.panelSub}>Nova is watching</span>
-                  <button className={styles.collapseBtn} onClick={() => setLeftOpen(false)} title="Collapse">
-                    <RiArrowLeftSLine size={14} />
-                  </button>
-                </div>
-              </>
-            ) : (
-              <button className={styles.collapseBtnFull} onClick={() => setLeftOpen(true)} title="Expand Pulse panel">
-                <RiAlertLine size={14} />
-              </button>
-            )}
+        {/* ── Left: EOS Desk ── */}
+        <aside className={styles.sidebar}>
+          <div className={styles.sidebarHead}>
+            <RiRobot2Line size={13} />
+            <span>EOS Desk</span>
+            <button
+              className={styles.reindexIconBtn}
+              onClick={handleReindex}
+              disabled={indexing}
+              title="Re-index project data"
+              style={{ marginLeft: "auto" }}
+            >
+              <RiRefreshLine size={12} className={indexing ? styles.spinning : undefined} />
+            </button>
           </div>
-          {leftOpen && (
-            <div className={styles.pulseFeed}>
-              <AnimatePresence mode="popLayout">
-                {pulse.map(item => (
-                  <PulseCard
-                    key={item.id} item={item}
-                    onDismiss={() => setPulse(p => p.filter(x => x.id !== item.id))}
-                  />
-                ))}
-              </AnimatePresence>
-              {pulse.length === 0 && (
-                <div className={styles.pulseEmpty}>
-                  <RiSparklingLine size={24} />
-                  <span>All clear — no anomalies or gaps detected</span>
+
+          <div className={styles.sidebarScroll}>
+
+            {/* Monitors */}
+            {agents.length > 0 && (
+              <div className={styles.deskSection}>
+                <div className={styles.deskSectionHead}>
+                  <RiRobot2Line size={12} /><span>Monitors</span>
+                  <span className={styles.deskSectionCount}>
+                    {agents.filter(a => a.status === "running").length} active
+                  </span>
                 </div>
-              )}
+                <div className={styles.agentList}>
+                  {agents.map(a => (
+                    <div key={a.id} className={styles.agentItem}>
+                      <div className={styles.agentRow}>
+                        <span className={`${styles.agentDot} ${styles[`agentDot_${a.status}`]}`} />
+                        <span className={styles.agentName}>{a.name}</span>
+                      </div>
+                      <div className={styles.agentTask}>{a.task}</div>
+                      {a.status === "running" && a.progress < 100 && (
+                        <div className={styles.agentTrack}>
+                          <div className={styles.agentFill} style={{ width: `${a.progress}%` }} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Memory */}
+            <div className={styles.deskSection}>
+              <div className={styles.deskSectionHead}>
+                <RiHistoryLine size={12} /><span>Memory</span>
+                <span className={styles.deskSectionSub}>click to surface</span>
+              </div>
+              <div className={styles.memoryList}>
+                {memoryClips.length === 0 && (
+                  <div className={styles.deskEmpty}>No decisions or standups found.</div>
+                )}
+                {memoryClips.map(m => (
+                  <button
+                    key={m.id}
+                    className={styles.memoryClip}
+                    onClick={() => send(`Tell me more about: ${m.title}`, "ask")}
+                  >
+                    <div className={styles.memoryClipHead}>
+                      <span className={`${styles.memoryType} ${styles[`memType_${m.type}`]}`}>{m.type}</span>
+                      <span className={styles.memoryAge}>{m.age}</span>
+                    </div>
+                    <div className={styles.memoryTitle}>{m.title}</div>
+                    <div className={styles.memorySnippet}>{m.snippet}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
+
+            {/* Created by EOS */}
+            <div className={styles.deskSection}>
+              <div className={styles.deskSectionHead}>
+                <RiSparklingLine size={12} /><span>Created by EOS</span>
+              </div>
+              <div className={styles.createdList}>
+                {recentItems.length === 0 && (
+                  <div className={styles.deskEmpty}>
+                    Nothing created yet — describe a thought or paste a transcript.
+                  </div>
+                )}
+                {recentItems.map((item, i) => (
+                  <div key={i} className={styles.createdListItem} style={{ borderLeftColor: CREATED_COLOR[item.type] }}>
+                    <div className={styles.createdListHead}>
+                      <span className={styles.createdListId} style={{ color: CREATED_COLOR[item.type] }}>{item.id}</span>
+                      <span className={styles.createdListAge}>{item.age}</span>
+                    </div>
+                    <div className={styles.createdListTitle}>{item.title}</div>
+                    <div className={styles.createdListMeta}>{item.meta}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
         </aside>
 
-        {/* ══ CENTER — Nova ══ */}
+        {/* ── Right: EOS Chat ── */}
         <main
-          className={styles.center}
+          className={styles.main}
           onDragOver={e => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false); }}
           onDrop={handleDrop}
@@ -991,7 +1002,7 @@ Input: "${text}"`,
             {dragOver && (
               <motion.div className={styles.dropOverlay} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <RiImageLine size={34} />
-                <span>Drop screenshot, audio, or video — Nova will analyze and file a bug report</span>
+                <span>Drop screenshot, audio, or video — EOS will analyze and file a bug report</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -1001,13 +1012,11 @@ Input: "${text}"`,
             {messages.length === 0 ? (
               <div className={styles.emptyThread}>
                 <div className={styles.emptyOrb}>
-                  <span className={styles.emptyRing} />
-                  <span className={styles.emptyRing2} />
                   <RiBrainLine size={28} className={styles.emptyOrbIcon} />
                 </div>
                 <h2 className={styles.emptyTitle}>Your project brain</h2>
                 <p className={styles.emptyDesc}>
-                  Ask anything about your tickets, team, decisions, or sprint — Nova knows your project.
+                  Ask anything about your tickets, team, decisions, or sprint — EOS knows your project.
                 </p>
                 <div className={styles.emptySuggestions}>
                   {suggestions.map(s => (
@@ -1105,7 +1114,7 @@ Input: "${text}"`,
                 <textarea
                   ref={textareaRef}
                   className={styles.inputTextarea}
-                  placeholder="Ask Nova anything about your project… (prefix 'create ticket:' to log a task)"
+                  placeholder="Ask EOS anything about your project… (prefix 'create ticket:' to log a task)"
                   value={input}
                   rows={1}
                   onChange={e => setInput(e.target.value)}
@@ -1139,108 +1148,56 @@ Input: "${text}"`,
           </div>
         </main>
 
-        {/* ══ RIGHT — Nova's Desk ══ */}
-        <aside className={`${styles.desk} ${rightOpen ? "" : styles.panelCollapsed}`}>
-          <div className={styles.panelHead} style={{ borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-            {rightOpen ? (
-              <>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <button className={styles.collapseBtn} onClick={() => setRightOpen(false)} title="Collapse">
-                    <RiArrowRightSLine size={14} />
-                  </button>
-                  <span className={styles.panelSub}>Nova's Desk</span>
+        {/* ── Pulse Side Drawer ── */}
+        <AnimatePresence>
+          {pulseOpen && (
+            <>
+              <motion.div
+                className={styles.pulseOverlay}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setPulseOpen(false)}
+              />
+              <motion.aside
+                className={styles.pulseDrawer}
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", damping: 22, stiffness: 220 }}
+              >
+                <div className={styles.pulseDrawerHead}>
+                  <span className={styles.panelTitle}>
+                    <span className={styles.liveDot} />Pulse
+                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span className={styles.panelSub}>EOS is watching</span>
+                    <button className={styles.drawerCloseBtn} onClick={() => setPulseOpen(false)}>
+                      <RiCloseLine size={14} />
+                    </button>
+                  </div>
                 </div>
-                <span className={styles.panelTitle} style={{ fontSize: "10px" }}>
-                  <RiRobot2Line size={11} />Desk
-                </span>
-              </>
-            ) : (
-              <button className={styles.collapseBtnFull} onClick={() => setRightOpen(true)} title="Expand Desk panel">
-                <RiRobot2Line size={14} />
-              </button>
-            )}
-          </div>
-
-          {/* Background agents — only shown when real data backs them */}
-          {rightOpen && agents.length > 0 && (
-            <div className={styles.deskSection}>
-              <div className={styles.deskSectionHead}>
-                <RiRobot2Line size={12} /><span>Monitors</span>
-                <span className={styles.deskSectionCount}>{agents.filter(a => a.status === "running").length} active</span>
-              </div>
-              <div className={styles.agentList}>
-                {agents.map(a => (
-                  <div key={a.id} className={styles.agentItem}>
-                    <div className={styles.agentRow}>
-                      <span className={`${styles.agentDot} ${styles[`agentDot_${a.status}`]}`} />
-                      <span className={styles.agentName}>{a.name}</span>
+                <div className={styles.pulseFeed}>
+                  <AnimatePresence mode="popLayout">
+                    {pulse.map(item => (
+                      <PulseCard
+                        key={item.id} item={item}
+                        onDismiss={() => setPulse(p => p.filter(x => x.id !== item.id))}
+                      />
+                    ))}
+                  </AnimatePresence>
+                  {pulse.length === 0 && (
+                    <div className={styles.pulseEmpty}>
+                      <RiSparklingLine size={24} />
+                      <span>All clear — no anomalies or gaps detected</span>
                     </div>
-                    <div className={styles.agentTask}>{a.task}</div>
-                    {a.status === "running" && a.progress < 100 && (
-                      <div className={styles.agentTrack}>
-                        <div className={styles.agentFill} style={{ width: `${a.progress}%` }} />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+                  )}
+                </div>
+              </motion.aside>
+            </>
           )}
+        </AnimatePresence>
 
-          {/* Memory */}
-          {rightOpen && <div className={styles.deskSection}>
-            <div className={styles.deskSectionHead}>
-              <RiHistoryLine size={12} /><span>Memory</span>
-              <span className={styles.deskSectionSub}>click to surface</span>
-            </div>
-            <div className={styles.memoryList}>
-              {memoryClips.length === 0 && (
-                <div style={{ fontSize: "0.72rem", color: "var(--text-3)", padding: "8px 4px" }}>
-                  No decisions or standups found.
-                </div>
-              )}
-              {memoryClips.map(m => (
-                <button
-                  key={m.id}
-                  className={styles.memoryClip}
-                  onClick={() => send(`Tell me more about: ${m.title}`, "ask")}
-                >
-                  <div className={styles.memoryClipHead}>
-                    <span className={`${styles.memoryType} ${styles[`memType_${m.type}`]}`}>{m.type}</span>
-                    <span className={styles.memoryAge}>{m.age}</span>
-                  </div>
-                  <div className={styles.memoryTitle}>{m.title}</div>
-                  <div className={styles.memorySnippet}>{m.snippet}</div>
-                </button>
-              ))}
-            </div>
-          </div>}
-
-          {/* Created by Nova */}
-          {rightOpen && <div className={styles.deskSection}>
-            <div className={styles.deskSectionHead}>
-              <RiSparklingLine size={12} /><span>Created by Nova</span>
-            </div>
-            <div className={styles.createdList}>
-              {recentItems.length === 0 && (
-                <div style={{ fontSize: "0.72rem", color: "var(--text-3)", padding: "8px 4px" }}>
-                  Nothing created yet — describe a thought or paste a transcript.
-                </div>
-              )}
-              {recentItems.map((item, i) => (
-                <div key={i} className={styles.createdListItem} style={{ borderLeftColor: CREATED_COLOR[item.type] }}>
-                  <div className={styles.createdListHead}>
-                    <span className={styles.createdListId} style={{ color: CREATED_COLOR[item.type] }}>{item.id}</span>
-                    <span className={styles.createdListAge}>{item.age}</span>
-                  </div>
-                  <div className={styles.createdListTitle}>{item.title}</div>
-                  <div className={styles.createdListMeta}>{item.meta}</div>
-                </div>
-              ))}
-            </div>
-          </div>}
-
-        </aside>
       </div>
     </div>
   );

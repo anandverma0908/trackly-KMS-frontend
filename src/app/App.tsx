@@ -124,7 +124,7 @@ function AnimatedRoutes() {
                 element={<ProjectDetailPage />}
               />
               <Route path="/my-work" element={<MyWorkPage />} />
-              <Route path="/nova" element={<NovaPage />} />
+              <Route path="/eos" element={<NovaPage />} />
               <Route path="/code-review" element={<CodeReviewPage />} />
               <Route path="/goals" element={<GoalsPage />} />
             </Route>

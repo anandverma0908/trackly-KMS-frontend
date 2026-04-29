@@ -101,7 +101,7 @@
 
 .teamContent {
   padding: 18px 20px;
-  margin: 0 auto;
+  width: 100%;
   background: var(--bgrnd);
   border-radius: var(--r-xl);
 }

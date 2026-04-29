@@ -246,7 +246,7 @@ export default function Sidebar({
 
           {/* ── INTELLIGENCE ── */}
           {sectionLabel("Intelligence")}
-          {nav(<RiBrainLine size={18} />, "Nova", "/nova")}
+          {nav(<RiBrainLine size={18} />, "EOS", "/eos")}
           {nav(<RiBugLine size={18} />, "Code Review", "/code-review")}
           {nav(<RiBarChartLine size={18} />, "Analytics", "/analytics")}
 

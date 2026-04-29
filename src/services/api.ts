@@ -806,13 +806,22 @@ export async function fetchTodayStandup(): Promise<Standup | null> {
   }
 }
 
+export async function fetchMyStandupByDate(date: string): Promise<Standup | null> {
+  try {
+    const { data } = await api.get("/nova/standup/my", { params: { standup_date: date } });
+    return _normalizeStandup(data);
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchTeamStandups(date?: string, pod?: string): Promise<Standup[]> {
   if (mock()?.fetchTeamStandups) {
     const raw = await mock().fetchTeamStandups(date, pod);
     return _normalizeStandups(raw);
   }
   try {
-    const { data } = await api.get("/nova/standup/team", { params: { date, pod } });
+    const { data } = await api.get("/nova/standup/team", { params: { standup_date: date, pod } });
     return _normalizeStandups(data);
   } catch {
     return [];
@@ -2102,5 +2111,33 @@ export async function removeTestFromCycle(pod: string, execId: string): Promise<
 
 export async function fetchTestCoverage(pod: string): Promise<TestCoverage> {
   const { data } = await api.get(`/spaces/${pod}/tests/coverage`);
+  return data;
+}
+
+// ── Code Review Snapshots ──────────────────────────────────────────────────
+
+export interface CodeReviewSnapshotMeta {
+  id: string;
+  github_repo: string;
+  total_count: number;
+  critical_count: number;
+  high_count: number;
+  medium_count: number;
+  scanned_files_count: number;
+  run_at: string;
+}
+
+export interface CodeReviewSnapshotDetail extends CodeReviewSnapshotMeta {
+  findings: Record<string, unknown>[];
+  scanned_files: string[];
+}
+
+export async function fetchCodeReviewHistory(repo: string): Promise<CodeReviewSnapshotMeta[]> {
+  const { data } = await api.get(`/code-review/snapshots?repo=${encodeURIComponent(repo)}`);
+  return data?.snapshots ?? [];
+}
+
+export async function fetchCodeReviewSnapshot(id: string): Promise<CodeReviewSnapshotDetail> {
+  const { data } = await api.get(`/code-review/snapshots/${id}`);
   return data;
 }

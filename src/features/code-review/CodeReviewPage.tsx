@@ -1,16 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   RiBugLine,
-  RiCheckLine,
   RiCloseLine,
   RiCodeBoxLine,
-  RiFileCodeLine,
+  RiGitRepositoryLine,
   RiPlayLine,
-  RiRefreshLine,
   RiShieldCheckLine,
+  RiHistoryLine,
+  RiTimeLine,
 } from "react-icons/ri";
-import { fetchFilters } from "@/services/api";
+import {
+  fetchFilters,
+  fetchCodeReviewHistory,
+  fetchCodeReviewSnapshot,
+} from "@/services/api";
+import type { CodeReviewSnapshotMeta } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
 import styles from "./CodeReviewPage.module.css";
@@ -23,18 +28,47 @@ import {
   type ReviewStatus,
 } from "./codeReviewData";
 
-/* ─── Constants ─────────────────────────────────────────── */
+/* ─── Types ──────────────────────────────────────────────── */
 
-const SCAN_STEPS = [
-  "Connecting to repository",
-  "Indexing source files",
-  "Scanning component trees",
-  "Checking route registrations",
-  "Analyzing data flow",
-  "Validating API contracts",
-  "Cross-referencing dependencies",
-  "Compiling findings",
-];
+type Phase = "idle" | "scanning" | "done";
+type LogLevel =
+  | "CONN"
+  | "INDEX"
+  | "PARSE"
+  | "SCAN"
+  | "XREF"
+  | "COMPILE"
+  | "DONE"
+  | "WARN";
+
+interface LogLine {
+  id: number;
+  ts: string;
+  level: LogLevel;
+  message: string;
+}
+
+interface RepoOption {
+  slug: string;
+  name: string;
+  full_name: string;
+}
+
+/* ─── Constants ──────────────────────────────────────────── */
+
+const SEV_LABEL: Record<ReviewSeverity, string> = {
+  critical: "Critical",
+  high: "High",
+  medium: "Medium",
+};
+
+const STATUS_LABEL: Record<ReviewStatus, string> = {
+  new: "New",
+  reviewing: "Reviewing",
+  approved: "Approved",
+  rejected: "Rejected",
+  ticketed: "Ticketed",
+};
 
 const SCAN_STEPS_PLACEHOLDER = [
   "src/app/App.tsx",
@@ -55,44 +89,75 @@ const SCAN_STEPS_PLACEHOLDER = [
   "src/features/processes/ProcessesPage.tsx",
 ];
 
-type Phase = "idle" | "scanning" | "done";
+// Semantic steps → structured log entries
+const STEP_LOGS: { level: LogLevel; messages: string[] }[] = [
+  {
+    level: "CONN",
+    messages: [
+      "Establishing connection to GitHub...",
+      "Authentication verified via token",
+    ],
+  },
+  {
+    level: "INDEX",
+    messages: ["Fetching repository tree...", "Discovering source files..."],
+  },
+  {
+    level: "PARSE",
+    messages: [
+      "Resolving TypeScript component tree...",
+      "Mapping route registrations",
+    ],
+  },
+  { level: "PARSE", messages: ["Analyzing data flow patterns..."] },
+  { level: "SCAN", messages: ["Starting batch analysis..."] },
+  { level: "XREF", messages: ["Validating API contracts..."] },
+  { level: "XREF", messages: ["Cross-referencing downstream dependencies..."] },
+  { level: "COMPILE", messages: ["Compiling validated findings..."] },
+];
 
-interface RepoOption {
-  slug: string;
-  name: string;
-  full_name: string;
+function fmtTs(startMs: number): string {
+  const elapsed = Date.now() - startMs;
+  const d = new Date(elapsed);
+  const h = String(d.getUTCHours()).padStart(2, "0");
+  const m = String(d.getUTCMinutes()).padStart(2, "0");
+  const s = String(d.getUTCSeconds()).padStart(2, "0");
+  const ms = String(d.getUTCMilliseconds()).padStart(3, "0");
+  return `${h}:${m}:${s}.${ms}`;
 }
 
-const SEV_LABEL: Record<ReviewSeverity, string> = {
-  critical: "Critical",
-  high: "High",
-  medium: "Medium",
-};
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
-const STATUS_LABEL: Record<ReviewStatus, string> = {
-  new: "New",
-  reviewing: "Reviewing",
-  approved: "Approved",
-  rejected: "Rejected",
-  ticketed: "Ticketed",
-};
-
-/* ─── Main Page ─────────────────────────────────────────── */
+/* ─── Main Page ──────────────────────────────────────────── */
 
 export default function CodeReviewPage() {
   const user = useAuthStore((s) => s.user);
 
   const [phase, setPhase] = useState<Phase>("idle");
-  const [scanStep, setScanStep] = useState(0);
-  const [scanFileIdx, setScanFileIdx] = useState(0);
-  const [records, setRecords] = useState<CodeReviewFindingRecord[]>([]);
-  const [snapshotId, setSnapshotId] = useState<string | null>(null);
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-
-  // Repo selector
   const [repos, setRepos] = useState<RepoOption[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
-  const [scannedFiles, setScannedFiles] = useState<string[]>(SCAN_STEPS_PLACEHOLDER);
+  const [records, setRecords] = useState<CodeReviewFindingRecord[]>([]);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [activeSnapshotId, setActiveSnapshotId] = useState<string | null>(null);
+  const [isHistoricalView, setIsHistoricalView] = useState(false);
+
+  // AI terminal state
+  const [logLines, setLogLines] = useState<LogLine[]>([]);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanStepLabel, setScanStepLabel] = useState("");
+  const [scannedFiles, setScannedFiles] = useState<string[]>(
+    SCAN_STEPS_PLACEHOLDER,
+  );
+  const scanStartRef = useRef<number>(0);
+  const logIdRef = useRef(0);
 
   // Drawer state
   const [viewingId, setViewingId] = useState<string | null>(null);
@@ -105,10 +170,19 @@ export default function CodeReviewPage() {
 
   const defaultPod = user?.pod ?? filtersData?.pods?.[0] ?? "DPAI";
 
-  // Load configured repos on mount
+  // Run history for selected repo
+  const { data: history = [], refetch: refetchHistory } = useQuery({
+    queryKey: ["code-review-history", selectedRepo],
+    queryFn: () => fetchCodeReviewHistory(selectedRepo!),
+    enabled: !!selectedRepo,
+  });
+
+  // Load repos on mount
   useEffect(() => {
     const raw = localStorage.getItem("eap-auth");
-    const token: string | null = raw ? (JSON.parse(raw)?.state?.token ?? null) : null;
+    const token: string | null = raw
+      ? (JSON.parse(raw)?.state?.token ?? null)
+      : null;
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
     fetch(`${apiUrl}/api/code-review/repos`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -122,43 +196,65 @@ export default function CodeReviewPage() {
       .catch(() => {});
   }, []);
 
-  // File ticker during scan
-  const fileIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Push a log line
+  const pushLog = useCallback((level: LogLevel, message: string) => {
+    const id = ++logIdRef.current;
+    const ts = fmtTs(scanStartRef.current);
+    setLogLines((prev) => [...prev, { id, ts, level, message }]);
+  }, []);
 
-  useEffect(() => {
-    if (phase !== "scanning") {
-      if (fileIntervalRef.current) clearInterval(fileIntervalRef.current);
-      return;
-    }
-    setScanFileIdx(0);
-    fileIntervalRef.current = setInterval(() => {
-      setScanFileIdx((prev) => {
-        if (prev >= scannedFiles.length - 1) {
-          if (fileIntervalRef.current) clearInterval(fileIntervalRef.current);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, 80);
-    return () => {
-      if (fileIntervalRef.current) clearInterval(fileIntervalRef.current);
-    };
-  }, [phase]);
-
-  // Step ticker + backend call
+  // AI terminal animation
   useEffect(() => {
     if (phase !== "scanning") return;
-    setScanStep(0);
-    setAnalyzeError(null);
+
+    scanStartRef.current = Date.now();
+    setLogLines([]);
+    setScanProgress(0);
+    setScanStepLabel("Initialising...");
+    logIdRef.current = 0;
+
     const timeouts: ReturnType<typeof setTimeout>[] = [];
-    for (let i = 0; i < SCAN_STEPS.length; i++) {
-      const t = setTimeout(() => setScanStep(i), i * 650);
+    let elapsed = 0;
+
+    // Stream semantic step logs
+    STEP_LOGS.forEach((step, stepIdx) => {
+      step.messages.forEach((msg, msgIdx) => {
+        const t = setTimeout(
+          () => {
+            pushLog(step.level, msg);
+            setScanStepLabel(msg);
+            setScanProgress(
+              Math.round(((stepIdx + 1) / STEP_LOGS.length) * 85),
+            );
+          },
+          elapsed + msgIdx * 220,
+        );
+        timeouts.push(t);
+      });
+      elapsed += step.messages.length * 220 + 350;
+    });
+
+    // Stream file scan lines interleaved
+    const fileStart = 900;
+    scannedFiles.forEach((file, i) => {
+      const t = setTimeout(
+        () => {
+          pushLog("SCAN", `${file}`);
+        },
+        fileStart + i * 90,
+      );
       timeouts.push(t);
-    }
-    const finishTimeout = setTimeout(async () => {
+    });
+
+    // Backend call
+    const backendDelay =
+      Math.max(elapsed, fileStart + scannedFiles.length * 90) + 600;
+    const backendTimeout = setTimeout(async () => {
       try {
         const raw = localStorage.getItem("eap-auth");
-        const token: string | null = raw ? (JSON.parse(raw)?.state?.token ?? null) : null;
+        const token: string | null = raw
+          ? (JSON.parse(raw)?.state?.token ?? null)
+          : null;
         const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
         const res = await fetch(`${apiUrl}/api/code-review/analyze`, {
           method: "POST",
@@ -171,51 +267,76 @@ export default function CodeReviewPage() {
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
         const data = await res.json();
         const findings = Array.isArray(data?.findings) ? data.findings : [];
-        const serverFiles: string[] = Array.isArray(data?.scanned_files) ? data.scanned_files : [];
+        const serverFiles: string[] = Array.isArray(data?.scanned_files)
+          ? data.scanned_files
+          : [];
         if (serverFiles.length > 0) setScannedFiles(serverFiles);
-        setSnapshotId(data?.snapshot_id ?? null);
+        setActiveSnapshotId(data?.snapshot_id ?? null);
         setRecords(mergeFindingsWithState(findings));
+        pushLog(
+          "DONE",
+          `Analysis complete — ${findings.length} finding${findings.length !== 1 ? "s" : ""} validated`,
+        );
+        setScanProgress(100);
+        setScanStepLabel("Done");
+        // Refresh history so new run appears
+        refetchHistory();
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Analysis failed";
+        pushLog("WARN", `Analysis failed: ${msg}`);
         setAnalyzeError(msg);
         setRecords([]);
       }
+      setIsHistoricalView(false);
       setPhase("done");
-    }, SCAN_STEPS.length * 650 + 800);
-    timeouts.push(finishTimeout);
+    }, backendDelay);
+    timeouts.push(backendTimeout);
+
     return () => timeouts.forEach(clearTimeout);
   }, [phase]);
-
-  const stats = {
-    critical: records.filter((r) => r.severity === "critical").length,
-    high: records.filter((r) => r.severity === "high").length,
-    medium: records.filter((r) => r.severity === "medium").length,
-    total: records.length,
-  };
-
-  function patchFinding(findingId: string, patch: Partial<CodeReviewFindingState>) {
-    setRecords((prev) => updateFindingState(findingId, patch, prev));
-  }
 
   function handleStart() {
     setPhase("scanning");
     setRecords([]);
-    setSnapshotId(null);
+    setActiveSnapshotId(null);
     setAnalyzeError(null);
+    setIsHistoricalView(false);
     setViewingId(null);
     setTicketFindingId(null);
+    setScannedFiles(SCAN_STEPS_PLACEHOLDER);
   }
 
-  function handleRerun() {
-    setPhase("scanning");
+  async function handleLoadSnapshot(snap: CodeReviewSnapshotMeta) {
+    try {
+      const detail = await fetchCodeReviewSnapshot(snap.id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setRecords(mergeFindingsWithState(detail.findings as any));
+      setActiveSnapshotId(snap.id);
+      setIsHistoricalView(true);
+      setAnalyzeError(null);
+      setPhase("done");
+      setViewingId(null);
+    } catch {
+      // silently ignore
+    }
+  }
+
+  function handleSelectRepo(slug: string) {
+    if (slug === selectedRepo) return;
+    setSelectedRepo(slug);
+    setPhase("idle");
     setRecords([]);
-    setSnapshotId(null);
+    setActiveSnapshotId(null);
     setAnalyzeError(null);
+    setIsHistoricalView(false);
     setViewingId(null);
-    setTicketFindingId(null);
-    setScanStep(0);
-    setScanFileIdx(0);
-    setScannedFiles(SCAN_STEPS_PLACEHOLDER);
+  }
+
+  function patchFinding(
+    findingId: string,
+    patch: Partial<CodeReviewFindingState>,
+  ) {
+    setRecords((prev) => updateFindingState(findingId, patch, prev));
   }
 
   function handleApprove(findingId: string) {
@@ -224,71 +345,218 @@ export default function CodeReviewPage() {
     setTicketFindingId(findingId);
   }
 
+  const stats = {
+    critical: records.filter((r) => r.severity === "critical").length,
+    high: records.filter((r) => r.severity === "high").length,
+    medium: records.filter((r) => r.severity === "medium").length,
+    total: records.length,
+  };
+
   const viewing = records.find((r) => r.id === viewingId) ?? null;
   const ticketFinding = records.find((r) => r.id === ticketFindingId) ?? null;
+  const activeSnap = history.find((h) => h.id === activeSnapshotId);
 
   return (
     <div className={styles.page}>
-      {/* Header */}
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <div className={styles.headerIcon}>
-            <RiCodeBoxLine size={18} color="#fff" />
-          </div>
-          <div>
-            <h1 className={styles.headerTitle}>AI Code Review</h1>
-            <p className={styles.headerSub}>
-              EOS validates bugs with direct code evidence before surfacing them for review
-            </p>
-          </div>
-        </div>
-        {phase === "done" && (
-          <div className={styles.headerRight}>
-            {!analyzeError && <div className={styles.liveDot} />}
-            {snapshotId && <span className={styles.snapshotId}>{snapshotId}</span>}
-            <button className={styles.rerunBtn} onClick={handleRerun}>
-              <RiRefreshLine size={14} />
-              Re-run Analysis
-            </button>
-          </div>
-        )}
-      </header>
+      {/* ── Header ── */}
+      <div>
+        <h1 className={styles.headerTitle}>Code Review</h1>
+      </div>
 
-      {/* Body */}
-      {phase === "idle" && (
-        <IdleScreen
-          repos={repos}
-          selectedRepo={selectedRepo}
-          onSelectRepo={setSelectedRepo}
-          onStart={handleStart}
-        />
-      )}
-
-      {(phase === "scanning" || phase === "done") && (
-        <div className={styles.workspace}>
-          <ScanPanel
-            phase={phase}
-            scanStep={scanStep}
-            visibleFiles={scannedFiles.slice(0, scanFileIdx + 1)}
-            totalFiles={scannedFiles.length}
-            stats={stats}
-            onRerun={handleRerun}
-          />
-          <div className={styles.resultsPane}>
-            {phase === "scanning" ? (
-              <ShimmerGrid />
-            ) : analyzeError ? (
-              <AnalyzeErrorState error={analyzeError} onRetry={handleRerun} />
+      {/* ── Body ── */}
+      <div className={styles.body}>
+        {/* Left Sidebar */}
+        <aside className={styles.sidebar}>
+          <div className={styles.sidebarScroll}>
+            {/* Repositories */}
+            <div className={styles.sidebarSection}>Repositories</div>
+            {repos.length === 0 ? (
+              <div className={styles.sidebarEmpty}>
+                No repos configured.
+                <br />
+                Add <code>GITHUB_REPOS</code> to backend <code>.env</code>
+              </div>
             ) : (
-              <BugGrid
-                records={records}
-                onView={(id) => setViewingId(id)}
-                onApprove={handleApprove}
-              />
+              <div className={styles.repoList}>
+                {repos.map((repo) => {
+                  const lastRun =
+                    history.length > 0 && selectedRepo === repo.slug
+                      ? history[0]
+                      : null;
+                  return (
+                    <button
+                      key={repo.slug}
+                      className={`${styles.repoTab} ${selectedRepo === repo.slug ? styles.repoTabActive : ""}`}
+                      onClick={() => handleSelectRepo(repo.slug)}
+                    >
+                      <div className={styles.repoTabIcon}>
+                        <RiGitRepositoryLine size={13} />
+                      </div>
+                      <div className={styles.repoTabInfo}>
+                        <span className={styles.repoTabName}>{repo.name}</span>
+                        <span className={styles.repoTabFull}>
+                          {repo.full_name}
+                        </span>
+                        {lastRun && (
+                          <div className={styles.repoTabMeta}>
+                            {lastRun.critical_count > 0 && (
+                              <span className={styles.metaPillCritical}>
+                                {lastRun.critical_count}C
+                              </span>
+                            )}
+                            {lastRun.high_count > 0 && (
+                              <span className={styles.metaPillHigh}>
+                                {lastRun.high_count}H
+                              </span>
+                            )}
+                            {lastRun.medium_count > 0 && (
+                              <span className={styles.metaPillMed}>
+                                {lastRun.medium_count}M
+                              </span>
+                            )}
+                            <span className={styles.metaTime}>
+                              {relativeTime(lastRun.run_at)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Run History */}
+            {selectedRepo && (
+              <>
+                <div className={styles.sidebarSection} style={{ marginTop: 8 }}>
+                  <RiHistoryLine size={11} />
+                  Run History
+                </div>
+                {history.length === 0 ? (
+                  <div className={styles.sidebarEmpty}>
+                    No runs yet for this repo.
+                  </div>
+                ) : (
+                  <div className={styles.historyList}>
+                    {history.map((snap, idx) => {
+                      const isActive = snap.id === activeSnapshotId;
+                      return (
+                        <button
+                          key={snap.id}
+                          className={`${styles.historyEntry} ${isActive ? styles.historyEntryActive : ""}`}
+                          onClick={() => handleLoadSnapshot(snap)}
+                        >
+                          <div className={styles.historyEntryTop}>
+                            <span className={styles.historyEntryTime}>
+                              <RiTimeLine size={10} />
+                              {relativeTime(snap.run_at)}
+                            </span>
+                            {idx === 0 && (
+                              <span className={styles.latestBadge}>Latest</span>
+                            )}
+                          </div>
+                          <div className={styles.historyEntryDate}>
+                            {new Date(snap.run_at).toLocaleDateString(
+                              undefined,
+                              {
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )}
+                          </div>
+                          <div className={styles.historyEntryStats}>
+                            {snap.critical_count > 0 && (
+                              <span className={styles.metaPillCritical}>
+                                {snap.critical_count} Critical
+                              </span>
+                            )}
+                            {snap.high_count > 0 && (
+                              <span className={styles.metaPillHigh}>
+                                {snap.high_count} High
+                              </span>
+                            )}
+                            {snap.medium_count > 0 && (
+                              <span className={styles.metaPillMed}>
+                                {snap.medium_count} Med
+                              </span>
+                            )}
+                            {snap.total_count === 0 && (
+                              <span className={styles.metaPillClean}>
+                                Clean
+                              </span>
+                            )}
+                            <span className={styles.historyFileCount}>
+                              {snap.scanned_files_count} files
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
-        </div>
-      )}
+        </aside>
+
+        {/* Main content */}
+        <main className={styles.main}>
+          {/* No repo selected */}
+          {!selectedRepo && (
+            <div className={styles.emptyMain}>
+              <RiGitRepositoryLine size={32} color="var(--text-2)" />
+              <p>Select a repository from the left panel to begin</p>
+            </div>
+          )}
+
+          {/* Run bar — idle phase only */}
+          {selectedRepo && phase === "idle" && (
+            <div className={styles.idleRunBar}>
+              <button className={styles.runBtn} onClick={handleStart}>
+                <RiPlayLine size={13} />
+                Run Analysis
+              </button>
+            </div>
+          )}
+
+          {/* Idle — repo selected */}
+          {selectedRepo && phase === "idle" && (
+            <IdleMain
+              repo={repos.find((r) => r.slug === selectedRepo)!}
+              history={history}
+              onStart={handleStart}
+              onLoadSnapshot={handleLoadSnapshot}
+            />
+          )}
+
+          {/* Scanning — AI terminal */}
+          {phase === "scanning" && (
+            <ScanTerminal
+              repo={selectedRepo!}
+              logLines={logLines}
+              progress={scanProgress}
+              stepLabel={scanStepLabel}
+            />
+          )}
+
+          {/* Done — findings */}
+          {phase === "done" && (
+            <FindingsMain
+              records={records}
+              stats={stats}
+              analyzeError={analyzeError}
+              isHistorical={isHistoricalView}
+              activeSnap={activeSnap}
+              onView={(id) => setViewingId(id)}
+              onApprove={handleApprove}
+              onRerun={handleStart}
+            />
+          )}
+        </main>
+      </div>
 
       {/* Bug Detail Drawer */}
       {viewing && (
@@ -315,8 +583,8 @@ export default function CodeReviewPage() {
               ticketFinding.severity === "critical"
                 ? "Highest"
                 : ticketFinding.severity === "high"
-                ? "High"
-                : "Medium",
+                  ? "High"
+                  : "Medium",
             labels: ticketFinding.ticketDraft.labels,
             pod: ticketFinding.ticketDraft.pod ?? defaultPod,
           }}
@@ -330,254 +598,249 @@ export default function CodeReviewPage() {
   );
 }
 
-/* ─── AnalyzeErrorState ──────────────────────────────────── */
+/* ─── IdleMain ───────────────────────────────────────────── */
 
-function AnalyzeErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
-  return (
-    <div className={styles.emptyBugs}>
-      <RiBugLine size={32} color="var(--text-3)" />
-      <p style={{ color: "var(--text-2)", marginBottom: 4 }}>Analysis failed</p>
-      <p style={{ color: "var(--text-3)", fontSize: 13, marginBottom: 16 }}>{error}</p>
-      <button className={styles.rerunBtn} onClick={onRetry}>
-        <RiRefreshLine size={14} />
-        Retry
-      </button>
-    </div>
-  );
-}
-
-/* ─── IdleScreen ─────────────────────────────────────────── */
-
-function IdleScreen({
-  repos,
-  selectedRepo,
-  onSelectRepo,
+function IdleMain({
+  repo,
+  history,
   onStart,
+  onLoadSnapshot,
 }: {
-  repos: RepoOption[];
-  selectedRepo: string | null;
-  onSelectRepo: (slug: string) => void;
+  repo: RepoOption;
+  history: CodeReviewSnapshotMeta[];
   onStart: () => void;
+  onLoadSnapshot: (snap: CodeReviewSnapshotMeta) => void;
 }) {
+  const lastRun = history[0] ?? null;
   return (
-    <div className={styles.idleScreen}>
-      <div className={styles.idleOrb}>
-        <div className={styles.idleOrbCore}>
-          <RiCodeBoxLine size={36} color="#fff" />
-        </div>
-        <div className={styles.idleOrbRing1} />
-        <div className={styles.idleOrbRing2} />
-        <div className={styles.idleOrbRing3} />
-      </div>
-      <div className={styles.idleTitleWrap}>
-        <h2 className={styles.idleTitle}>AI Code Review</h2>
-        <p className={styles.idleSub}>
-          EOS fetches source files from your GitHub repo, validates bugs with direct evidence,
+    <div className={styles.idleMain}>
+      <div className={styles.idleCard}>
+        <div className={styles.idleCardTitle}>{repo.name}</div>
+        <div className={styles.idleCardFull}>{repo.full_name}</div>
+        {lastRun ? (
+          <div className={styles.idleLastRun}>
+            <span className={styles.idleLastRunLabel}>Last run</span>
+            <span className={styles.idleLastRunTime}>
+              {relativeTime(lastRun.run_at)}
+            </span>
+            <div className={styles.idleLastRunStats}>
+              {lastRun.critical_count > 0 && (
+                <span className={styles.metaPillCritical}>
+                  {lastRun.critical_count} Critical
+                </span>
+              )}
+              {lastRun.high_count > 0 && (
+                <span className={styles.metaPillHigh}>
+                  {lastRun.high_count} High
+                </span>
+              )}
+              {lastRun.medium_count > 0 && (
+                <span className={styles.metaPillMed}>
+                  {lastRun.medium_count} Med
+                </span>
+              )}
+              {lastRun.total_count === 0 && (
+                <span className={styles.metaPillClean}>Clean</span>
+              )}
+            </div>
+            <button
+              className={styles.idleLoadLastBtn}
+              onClick={() => onLoadSnapshot(lastRun)}
+            >
+              View last results
+            </button>
+          </div>
+        ) : (
+          <div className={styles.idleNoHistory}>No previous runs</div>
+        )}
+        <p className={styles.idleHint}>
+          EOS will fetch source files, validate bugs with direct evidence,
           <br />
-          and surfaces only the findings that are real and actionable.
+          and surface only real, actionable findings.
         </p>
       </div>
-
-      {repos.length === 0 ? (
-        <div className={styles.repoEmptyHint}>
-          No repos configured. Add <code>GITHUB_REPOS=org/repo1,org/repo2</code> to your backend <code>.env</code>.
-        </div>
-      ) : (
-        <div className={styles.repoSelector}>
-          <div className={styles.repoSelectorLabel}>Select a repository to analyse</div>
-          <div className={styles.repoList}>
-            {repos.map((repo) => (
-              <button
-                key={repo.slug}
-                className={[
-                  styles.repoChip,
-                  selectedRepo === repo.slug ? styles.repoChipSelected : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                onClick={() => onSelectRepo(repo.slug)}
-              >
-                <RiCodeBoxLine size={13} />
-                <span className={styles.repoChipName}>{repo.name}</span>
-                <span className={styles.repoChipFull}>{repo.full_name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <button
-        className={styles.idleStartBtn}
-        onClick={onStart}
-        disabled={!selectedRepo}
-      >
-        <RiPlayLine size={18} />
-        Start Analysis
-      </button>
-
-      {selectedRepo && (
-        <div className={styles.idleMeta}>
-          Analysing &nbsp;<strong>{selectedRepo}</strong>&nbsp;·&nbsp; Powered by <strong>EOS + NOVA</strong>
-        </div>
-      )}
     </div>
   );
 }
 
-/* ─── ScanPanel ──────────────────────────────────────────── */
+/* ─── ScanTerminal ───────────────────────────────────────── */
 
-function ScanPanel({
-  phase,
-  scanStep,
-  visibleFiles,
-  totalFiles,
-  stats,
-  onRerun,
+const LOG_LEVEL_CLASS: Record<LogLevel, string> = {
+  CONN: "logConn",
+  INDEX: "logIndex",
+  PARSE: "logParse",
+  SCAN: "logScan",
+  XREF: "logXref",
+  COMPILE: "logCompile",
+  DONE: "logDone",
+  WARN: "logWarn",
+};
+
+function ScanTerminal({
+  repo,
+  logLines,
+  progress,
+  stepLabel,
 }: {
-  phase: Phase;
-  scanStep: number;
-  visibleFiles: string[];
-  totalFiles: number;
-  stats: { critical: number; high: number; medium: number; total: number };
-  onRerun: () => void;
+  repo: string;
+  logLines: LogLine[];
+  progress: number;
+  stepLabel: string;
 }) {
-  const batchCount = Math.ceil(totalFiles / 8);
+  const termRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (termRef.current) {
+      termRef.current.scrollTop = termRef.current.scrollHeight;
+    }
+  }, [logLines]);
+
   return (
-    <div className={styles.scanPanel}>
-      {/* Panel head */}
-      <div className={styles.scanPanelHead}>
-        <div className={styles.scanPanelHeadIcon}>
-          <RiFileCodeLine size={14} color="#fff" />
+    <div className={styles.terminal}>
+      <div className={styles.terminalHeader}>
+        <div className={styles.terminalDots}>
+          <span className={styles.termDotRed} />
+          <span className={styles.termDotAmber} />
+          <span className={styles.termDotGreen} />
         </div>
-        <span className={styles.scanPanelHeadTitle}>
-          {phase === "scanning"
-            ? `Scanning ${totalFiles} files across ${batchCount} batch${batchCount !== 1 ? "es" : ""}…`
-            : `Analysed ${totalFiles} files`}
+        <span className={styles.terminalTitle}>
+          EOS · Analyzing <strong>{repo}</strong>
         </span>
-        {phase === "done" && (
-          <button className={styles.scanRerunBtn} onClick={onRerun} title="Re-run">
-            <RiRefreshLine size={12} />
-          </button>
+        <div className={styles.terminalSpinner} />
+      </div>
+
+      <div className={styles.terminalBody} ref={termRef}>
+        {logLines.map((line) => (
+          <div
+            key={line.id}
+            className={`${styles.logLine} ${styles[LOG_LEVEL_CLASS[line.level]]}`}
+          >
+            <span className={styles.logTs}>{line.ts}</span>
+            <span className={styles.logLevel}>{line.level}</span>
+            <span className={styles.logMsg}>{line.message}</span>
+          </div>
+        ))}
+        {logLines.length > 0 && (
+          <div className={`${styles.logLine} ${styles.logCursor}`}>
+            <span className={styles.logTs}>
+              {logLines[logLines.length - 1]?.ts ?? ""}
+            </span>
+            <span className={styles.logLevel}>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            </span>
+            <span className={styles.cursor}>█</span>
+          </div>
         )}
       </div>
 
-      {/* Terminal */}
-      <div className={styles.scanTerminal}>
-        {visibleFiles.map((file, i) => {
-          const isDone = phase === "done" || i < visibleFiles.length - 1;
-          const isActive = !isDone && i === visibleFiles.length - 1;
-          return (
-            <div
-              key={file}
-              className={[
-                styles.termLine,
-                isDone ? styles.termLineDone : "",
-                isActive ? styles.termLineActive : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              <span className={styles.termLinePrefix}>
-                {isDone ? "✓" : "›"}
-              </span>
-              {file}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Progress */}
-      <div className={styles.scanProgress}>
-        <div className={styles.scanProgressBar}>
+      <div className={styles.terminalFooter}>
+        <div className={styles.termProgressBar}>
           <div
-            className={styles.scanProgressFill}
-            style={{
-              width: `${
-                phase === "done"
-                  ? 100
-                  : Math.round(((scanStep + 1) / SCAN_STEPS.length) * 100)
-              }%`,
-            }}
+            className={styles.termProgressFill}
+            style={{ width: `${progress}%` }}
           />
         </div>
-        <div className={styles.scanStepList}>
-          {SCAN_STEPS.map((step, i) => (
-            <div
-              key={step}
-              className={[
-                styles.scanStep,
-                i < scanStep ? styles.scanStepDone : "",
-                i === scanStep && phase === "scanning" ? styles.scanStepActive : "",
-                phase === "done" ? styles.scanStepDone : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              <span className={styles.scanStepDot}>
-                {i < scanStep || phase === "done" ? (
-                  <RiCheckLine size={10} />
-                ) : (
-                  <span />
-                )}
-              </span>
-              {step}
-            </div>
-          ))}
+        <div className={styles.termFooterMeta}>
+          <span className={styles.termStepLabel}>
+            {stepLabel || "Initialising..."}
+          </span>
+          <span className={styles.termPct}>{progress}%</span>
         </div>
       </div>
-
-      {/* Summary (done state) */}
-      {phase === "done" && (
-        <div className={styles.summaryPanel}>
-          <div className={styles.summaryTitle}>
-            <RiShieldCheckLine size={13} />
-            {stats.total} finding{stats.total !== 1 ? "s" : ""} validated
-          </div>
-          <div className={styles.summaryStats}>
-            {stats.critical > 0 && (
-              <div className={`${styles.summaryStat} ${styles.summaryStatCritical}`}>
-                <span className={styles.summaryStatNum}>{stats.critical}</span>
-                <span>Critical</span>
-              </div>
-            )}
-            {stats.high > 0 && (
-              <div className={`${styles.summaryStat} ${styles.summaryStatHigh}`}>
-                <span className={styles.summaryStatNum}>{stats.high}</span>
-                <span>High</span>
-              </div>
-            )}
-            {stats.medium > 0 && (
-              <div className={`${styles.summaryStat} ${styles.summaryStatMedium}`}>
-                <span className={styles.summaryStatNum}>{stats.medium}</span>
-                <span>Medium</span>
-              </div>
-            )}
-          </div>
-          <p className={styles.summaryHint}>
-            Review each finding below, add notes, then approve and file as a bug ticket.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
 
-/* ─── ShimmerGrid ────────────────────────────────────────── */
+/* ─── FindingsMain ───────────────────────────────────────── */
 
-function ShimmerGrid() {
+function FindingsMain({
+  records,
+  stats,
+  analyzeError,
+  isHistorical,
+  activeSnap,
+  onView,
+  onApprove,
+  onRerun,
+}: {
+  records: CodeReviewFindingRecord[];
+  stats: { critical: number; high: number; medium: number; total: number };
+  analyzeError: string | null;
+  isHistorical: boolean;
+  activeSnap?: CodeReviewSnapshotMeta;
+  onView: (id: string) => void;
+  onApprove: (id: string) => void;
+  onRerun: () => void;
+}) {
   return (
-    <div className={styles.bugGrid}>
-      {[0, 1, 2].map((i) => (
-        <div key={i} className={styles.shimmerCard}>
-          <div className={styles.shimmerLine} style={{ width: "30%", height: 16 }} />
-          <div className={styles.shimmerLine} style={{ width: "80%", height: 20, marginTop: 10 }} />
-          <div className={styles.shimmerLine} style={{ width: "60%", height: 14, marginTop: 6 }} />
-          <div className={styles.shimmerLine} style={{ width: "100%", height: 12, marginTop: 14 }} />
-          <div className={styles.shimmerLine} style={{ width: "90%", height: 12, marginTop: 6 }} />
-          <div className={styles.shimmerLine} style={{ width: "70%", height: 12, marginTop: 6 }} />
-          <div className={styles.shimmerLine} style={{ width: "50%", height: 28, marginTop: 18, borderRadius: 8 }} />
+    <div className={styles.findingsMain}>
+      {/* Summary strip */}
+      <div className={styles.summaryStrip}>
+        <div className={styles.summaryLeft}>
+          <RiShieldCheckLine size={14} color="var(--green)" />
+          <span className={styles.summaryTitle}>
+            {analyzeError
+              ? "Analysis failed"
+              : `${stats.total} finding${stats.total !== 1 ? "s" : ""} validated`}
+          </span>
+          {!analyzeError && (
+            <div className={styles.summaryPills}>
+              {stats.critical > 0 && (
+                <span className={`${styles.metaPillCritical}`}>
+                  {stats.critical} Critical
+                </span>
+              )}
+              {stats.high > 0 && (
+                <span className={`${styles.metaPillHigh}`}>
+                  {stats.high} High
+                </span>
+              )}
+              {stats.medium > 0 && (
+                <span className={`${styles.metaPillMed}`}>
+                  {stats.medium} Medium
+                </span>
+              )}
+            </div>
+          )}
         </div>
-      ))}
+        <div className={styles.summaryRight}>
+          {isHistorical && activeSnap && (
+            <span className={styles.historyBadgeSm}>
+              <RiHistoryLine size={10} />
+              {new Date(activeSnap.run_at).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          )}
+          <button className={styles.runBtn} onClick={onRerun}>
+            <RiPlayLine size={13} />
+            {isHistorical ? "Run New" : "Re-run"}
+          </button>
+        </div>
+      </div>
+
+      {/* Bug grid */}
+      <div className={styles.findingsScroll}>
+        {analyzeError ? (
+          <div className={styles.emptyFindings}>
+            <RiBugLine size={28} color="var(--text-3)" />
+            <p style={{ color: "var(--text-2)", margin: 0 }}>Analysis failed</p>
+            <p style={{ color: "var(--text-3)", fontSize: 13, margin: 0 }}>
+              {analyzeError}
+            </p>
+          </div>
+        ) : records.length === 0 ? (
+          <div className={styles.emptyFindings}>
+            <RiShieldCheckLine size={28} color="var(--green)" />
+            <p>No findings — the codebase looks clean!</p>
+          </div>
+        ) : (
+          <BugGrid records={records} onView={onView} onApprove={onApprove} />
+        )}
+      </div>
     </div>
   );
 }
@@ -593,15 +856,6 @@ function BugGrid({
   onView: (id: string) => void;
   onApprove: (id: string) => void;
 }) {
-  if (records.length === 0) {
-    return (
-      <div className={styles.emptyBugs}>
-        <RiBugLine size={32} color="var(--text-3)" />
-        <p>No findings to display.</p>
-      </div>
-    );
-  }
-
   const sorted = [...records].sort((a, b) => {
     const order: ReviewSeverity[] = ["critical", "high", "medium"];
     const delta = order.indexOf(a.severity) - order.indexOf(b.severity);
@@ -634,14 +888,17 @@ function BugCard({
   onApprove: () => void;
 }) {
   return (
-    <div className={styles.bugCard}>
-      <div className={`${styles.bugCardStripe} ${styles[`stripe_${record.severity}`]}`} />
+    <div className={`${styles.bugCard}`}>
       <div className={styles.bugCardBody}>
         <div className={styles.bugCardMeta}>
-          <span className={`${styles.sevBadge} ${styles[`sev_${record.severity}`]}`}>
+          <span
+            className={`${styles.sevBadge} ${styles[`sev_${record.severity}`]}`}
+          >
             {SEV_LABEL[record.severity]}
           </span>
-          <span className={`${styles.statusBadge} ${styles[`status_${record.status}`]}`}>
+          <span
+            className={`${styles.statusBadge} ${styles[`status_${record.status}`]}`}
+          >
             {STATUS_LABEL[record.status]}
           </span>
         </div>
@@ -686,37 +943,41 @@ function BugDrawer({
     <>
       <div className={styles.drawerBackdrop} onClick={onClose} />
       <aside className={styles.drawer}>
-        {/* Drawer Head */}
         <div className={styles.drawerHead}>
           <div className={styles.drawerHeadLeft}>
             <div className={styles.drawerHeadBadges}>
-              <span className={`${styles.sevBadge} ${styles[`sev_${finding.severity}`]}`}>
+              <span
+                className={`${styles.sevBadge} ${styles[`sev_${finding.severity}`]}`}
+              >
                 {SEV_LABEL[finding.severity]}
               </span>
-              <span className={`${styles.statusBadge} ${styles[`status_${finding.status}`]}`}>
+              <span
+                className={`${styles.statusBadge} ${styles[`status_${finding.status}`]}`}
+              >
                 {STATUS_LABEL[finding.status]}
               </span>
               <span className={styles.drawerArea}>{finding.area}</span>
             </div>
             <h2 className={styles.drawerTitle}>{finding.title}</h2>
           </div>
-          <button className={styles.drawerClose} onClick={onClose} aria-label="Close">
+          <button
+            className={styles.drawerClose}
+            onClick={onClose}
+            aria-label="Close"
+          >
             <RiCloseLine size={18} />
           </button>
         </div>
 
-        {/* Drawer Body */}
         <div className={styles.drawerBody}>
           <div className={styles.drawerSection}>
             <div className={styles.drawerSectionTitle}>Why This Is a Bug</div>
             <p className={styles.drawerSectionText}>{finding.whyValid}</p>
           </div>
-
           <div className={styles.drawerSection}>
             <div className={styles.drawerSectionTitle}>User Impact</div>
             <p className={styles.drawerSectionText}>{finding.impact}</p>
           </div>
-
           <div className={styles.drawerSection}>
             <div className={styles.drawerSectionTitle}>Evidence</div>
             <ul className={styles.drawerList}>
@@ -727,7 +988,6 @@ function BugDrawer({
               ))}
             </ul>
           </div>
-
           <div className={styles.drawerSection}>
             <div className={styles.drawerSectionTitle}>Reproduction Steps</div>
             <ol className={styles.drawerListOrdered}>
@@ -738,19 +998,22 @@ function BugDrawer({
               ))}
             </ol>
           </div>
-
           <div className={styles.drawerSection}>
             <div className={styles.drawerSectionTitle}>Affected Files</div>
             <div className={styles.drawerFiles}>
               {finding.files.map((f) => (
-                <div key={`${f.path}-${f.line}`} className={styles.drawerFileRow}>
+                <div
+                  key={`${f.path}-${f.line}`}
+                  className={styles.drawerFileRow}
+                >
                   <span className={styles.drawerFilePath}>{f.path}</span>
-                  {f.line && <span className={styles.drawerFileLine}>:{f.line}</span>}
+                  {f.line && (
+                    <span className={styles.drawerFileLine}>:{f.line}</span>
+                  )}
                 </div>
               ))}
             </div>
           </div>
-
           <div className={styles.drawerSection}>
             <div className={styles.drawerSectionTitle}>Reviewer Notes</div>
             <textarea
@@ -762,7 +1025,6 @@ function BugDrawer({
           </div>
         </div>
 
-        {/* Drawer Footer */}
         <div className={styles.drawerFoot}>
           <button
             className={styles.rejectBtn}

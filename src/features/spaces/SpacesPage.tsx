@@ -1638,7 +1638,7 @@ export default function SpacesPage() {
                     canDelete={canManage}
                     onDelete={() => setConfirmDeletePod(card.pod)}
                     onEOS={() =>
-                      navigate(`/nova?pod=${encodeURIComponent(card.pod)}`)
+                      navigate(`/eos?pod=${encodeURIComponent(card.pod)}`)
                     }
                     onForecast={() => setForecastCard(card)}
                     onCascade={() =>
@@ -1663,7 +1663,7 @@ export default function SpacesPage() {
                     }
                     onRetro={() => setRetroCard(card)}
                     onEOS={() =>
-                      navigate(`/nova?pod=${encodeURIComponent(card.pod)}`)
+                      navigate(`/eos?pod=${encodeURIComponent(card.pod)}`)
                     }
                   />
                 ))}

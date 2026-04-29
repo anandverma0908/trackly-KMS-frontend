@@ -1,12 +1,53 @@
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { fetchWorkload, fetchKnowledgeGaps, detectKnowledgeGaps, createWikiPage, fetchWikiSpaces, fetchVelocity, analyzeTicketNL, fetchBugCost, fetchRecurringProblems, fetchClientHealth, fetchSentimentSignals, fetchBenchmarks, fetchResourceGaps } from "@/services/api";
-import type { BugCostData, RecurringPattern, ClientHealthEntry, SentimentSignalsResponse, BenchmarkEntry, ResourceGapsResponse } from "@/services/api";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  fetchWorkload,
+  fetchKnowledgeGaps,
+  detectKnowledgeGaps,
+  createWikiPage,
+  fetchWikiSpaces,
+  fetchVelocity,
+  analyzeTicketNL,
+  fetchBugCost,
+  fetchRecurringProblems,
+  fetchClientHealth,
+  fetchSentimentSignals,
+  fetchBenchmarks,
+  fetchResourceGaps,
+} from "@/services/api";
+import type {
+  BugCostData,
+  RecurringPattern,
+  ClientHealthEntry,
+  SentimentSignalsResponse,
+  BenchmarkEntry,
+  ResourceGapsResponse,
+} from "@/services/api";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
-import { RiSparklingLine, RiAlertLine, RiFileTextLine, RiHeartPulseLine, RiUserLine, RiGlobalLine, RiTeamLine, RiBarChartLine, RiArrowUpLine, RiArrowDownLine, RiBugLine, RiRepeatLine, RiHeartLine } from "react-icons/ri";
+import {
+  RiSparklingLine,
+  RiAlertLine,
+  RiFileTextLine,
+  RiHeartPulseLine,
+  RiUserLine,
+  RiGlobalLine,
+  RiTeamLine,
+  RiBarChartLine,
+  RiArrowUpLine,
+  RiArrowDownLine,
+  RiBugLine,
+  RiRepeatLine,
+  RiHeartLine,
+} from "react-icons/ri";
 import type { KnowledgeGap } from "@/types";
 import styles from "./AnalyticsPage.module.css";
 
@@ -78,8 +119,8 @@ export default function AnalyticsPage() {
       if (!spaceId) throw new Error("No wiki spaces found");
       return createWikiPage({
         space_id: spaceId,
-        title:    `[Stub] ${gap.topic}`,
-        content:  `# ${gap.topic}\n\n> This page was auto-created from a knowledge gap detection.\n\n## Description\n\n${gap.suggestion ?? ""}\n\n## TODO\n\n- [ ] Add relevant documentation\n- [ ] Link to related tickets\n`,
+        title: `[Stub] ${gap.topic}`,
+        content: `# ${gap.topic}\n\n> This page was auto-created from a knowledge gap detection.\n\n## Description\n\n${gap.suggestion ?? ""}\n\n## TODO\n\n- [ ] Add relevant documentation\n- [ ] Link to related tickets\n`,
       });
     },
     onSuccess: () => {
@@ -95,11 +136,12 @@ export default function AnalyticsPage() {
       if (!spaceId) throw new Error("No wiki spaces found");
       const analysis = await analyzeTicketNL(
         `Write a comprehensive technical wiki article about "${gap.topic}". ` +
-        `Context: ${gap.suggestion ?? gap.topic}. ` +
-        `Include sections: Overview, When This Comes Up, Common Patterns, Best Practices, Troubleshooting. ` +
-        `Based on ${gap.ticket_count} unresolved tickets that needed this knowledge.`
+          `Context: ${gap.suggestion ?? gap.topic}. ` +
+          `Include sections: Overview, When This Comes Up, Common Patterns, Best Practices, Troubleshooting. ` +
+          `Based on ${gap.ticket_count} unresolved tickets that needed this knowledge.`,
       );
-      const body = analysis.description ??
+      const body =
+        analysis.description ??
         `## Overview\n\n${gap.suggestion ?? ""}\n\n## Common Patterns\n\nTODO\n\n## Best Practices\n\nTODO\n\n## Troubleshooting\n\nTODO`;
       return createWikiPage({
         space_id: spaceId,
@@ -114,31 +156,49 @@ export default function AnalyticsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const sortedWorkload = [...workload].sort((a, b) => b.total_hours - a.total_hours).slice(0, 20);
+  const sortedWorkload = [...workload]
+    .sort((a, b) => b.total_hours - a.total_hours)
+    .slice(0, 20);
 
   // Team Health Monitor
   const teamHealth = useMemo(() => {
     if (workload.length === 0) return [];
-    const avg = workload.reduce((s, w) => s + w.total_hours, 0) / workload.length;
-    return workload.map((w) => {
-      const ratio = w.total_hours / Math.max(1, avg);
-      const burnoutRisk = w.total_hours > 50 ? "High" : w.total_hours > 40 ? "Medium" : "Low";
-      const overloaded = ratio > 1.4;
-      return { ...w, avg, ratio, burnoutRisk, overloaded };
-    }).sort((a, b) => b.total_hours - a.total_hours);
+    const avg =
+      workload.reduce((s, w) => s + w.total_hours, 0) / workload.length;
+    return workload
+      .map((w) => {
+        const ratio = w.total_hours / Math.max(1, avg);
+        const burnoutRisk =
+          w.total_hours > 50 ? "High" : w.total_hours > 40 ? "Medium" : "Low";
+        const overloaded = ratio > 1.4;
+        return { ...w, avg, ratio, burnoutRisk, overloaded };
+      })
+      .sort((a, b) => b.total_hours - a.total_hours);
   }, [workload]);
 
   // Velocity anomaly detection
   const velocityAnomalies = useMemo(() => {
     if (velocityData.length < 2) return [];
-    const anomalies: { sprint: string; prevSprint: string; dropPct: number; committed: number; completed: number }[] = [];
+    const anomalies: {
+      sprint: string;
+      prevSprint: string;
+      dropPct: number;
+      committed: number;
+      completed: number;
+    }[] = [];
     for (let i = 1; i < velocityData.length; i++) {
       const prev = velocityData[i - 1];
       const curr = velocityData[i];
       if (prev.completed > 0) {
         const change = (curr.completed - prev.completed) / prev.completed;
         if (change <= -0.2) {
-          anomalies.push({ sprint: curr.sprint, prevSprint: prev.sprint, dropPct: Math.abs(change), committed: curr.committed, completed: curr.completed });
+          anomalies.push({
+            sprint: curr.sprint,
+            prevSprint: prev.sprint,
+            dropPct: Math.abs(change),
+            committed: curr.committed,
+            completed: curr.completed,
+          });
         }
       }
     }
@@ -153,465 +213,737 @@ export default function AnalyticsPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>Analytics</h1>
-        <p className={styles.subtitle}>Workload distribution and knowledge insights</p>
       </div>
 
-      {/* Workload Chart */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <div className={styles.cardTitle}>Workload Distribution</div>
-          <span className={styles.cardSub}>Hours by engineer (top 20)</span>
-        </div>
-        {sortedWorkload.length === 0 ? (
-          <p className={styles.empty}>No workload data available.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={sortedWorkload} layout="vertical" margin={{ left: 100, right: 20, top: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11, fill: "var(--text-2)" }} />
-              <YAxis
-                type="category"
-                dataKey="engineer"
-                tick={{ fontSize: 11, fill: "var(--text-2)" }}
-                width={100}
-              />
-              <Tooltip
-                contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8 }}
-                formatter={(v: number) => [`${v.toFixed(1)}h`, "Hours"]}
-              />
-              <Bar dataKey="total_hours" fill="var(--accent)" radius={[0,4,4,0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-
-      {/* ── Team Health Monitor ── */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <div>
-            <div className={styles.cardTitle}>Team Health Monitor</div>
-            <span className={styles.cardSub}>Workload balance · Burnout risk detection</span>
-          </div>
-          <span className={styles.eosBadge}><RiSparklingLine size={9} /> EOS</span>
-        </div>
-        {teamHealth.length === 0 ? (
-          <p className={styles.empty}>No workload data available.</p>
-        ) : (
-          <div className={styles.healthList}>
-            {teamHealth.slice(0, 8).map((m) => (
-              <div key={m.engineer} className={`${styles.healthRow} ${m.overloaded ? styles.healthRowAlert : ""}`}>
-                <div className={styles.healthAvatar}>
-                  <RiUserLine size={13} />
-                </div>
-                <div className={styles.healthInfo}>
-                  <span className={styles.healthName}>{m.engineer}</span>
-                  <div className={styles.healthBar}>
-                    <div
-                      className={styles.healthBarFill}
-                      style={{
-                        width: `${Math.min(100, (m.total_hours / 60) * 100)}%`,
-                        background: m.burnoutRisk === "High" ? "var(--red)" : m.burnoutRisk === "Medium" ? "var(--amber)" : "var(--green)",
-                      }}
-                    />
-                  </div>
-                </div>
-                <span className={styles.healthHrs}>{m.total_hours.toFixed(0)}h</span>
-                <span className={`${styles.healthBadge} ${
-                  m.burnoutRisk === "High" ? styles.healthBadgeHigh
-                  : m.burnoutRisk === "Medium" ? styles.healthBadgeMed
-                  : styles.healthBadgeLow
-                }`}>
-                  {m.burnoutRisk === "High" ? <><RiAlertLine size={9} /> High Risk</>
-                   : m.burnoutRisk === "Medium" ? <><RiHeartPulseLine size={9} /> Watch</>
-                   : "Healthy"}
-                </span>
+      <div className={styles.content}>
+        {/* Row 1: Workload Distribution + Team Health Monitor */}
+        <div className={styles.cardGrid}>
+          {/* Workload Chart */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <div>
+                <div className={styles.cardTitle}>Workload Distribution</div>
+                {/* <span className={styles.cardSub}>
+                  Hours by engineer (top 20)
+                </span> */}
               </div>
-            ))}
-            {teamHealth.filter((m) => m.burnoutRisk === "High").length > 0 && (
-              <div className={styles.healthRec}>
-                <RiSparklingLine size={11} color="var(--accent)" />
-                <span>EOS detected {teamHealth.filter((m) => m.burnoutRisk === "High").length} team member(s) at high burnout risk. Consider redistributing tasks or reducing sprint scope.</span>
+            </div>
+            {sortedWorkload.length === 0 ? (
+              <p className={styles.empty}>No workload data available.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart
+                  data={sortedWorkload}
+                  layout="vertical"
+                  margin={{ left: 100, right: 20, top: 0, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="var(--border)"
+                    horizontal={false}
+                  />
+                  <XAxis
+                    type="number"
+                    tick={{ fontSize: 11, fill: "var(--text-2)" }}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="engineer"
+                    tick={{ fontSize: 11, fill: "var(--text-2)" }}
+                    width={100}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--surface-2)",
+                      border: "1px solid var(--border-2)",
+                      borderRadius: 8,
+                    }}
+                    formatter={(v: number) => [`${v.toFixed(1)}h`, "Hours"]}
+                  />
+                  <Bar
+                    dataKey="total_hours"
+                    fill="var(--accent)"
+                    radius={[0, 4, 4, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* Team Health Monitor */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <div>
+                <div className={styles.cardTitle}>Team Health Monitor</div>
+                {/* <span className={styles.cardSub}>
+                  Workload balance · Burnout risk detection
+                </span> */}
+              </div>
+            </div>
+            {teamHealth.length === 0 ? (
+              <p className={styles.empty}>No workload data available.</p>
+            ) : (
+              <div className={styles.healthList}>
+                {teamHealth.slice(0, 8).map((m) => (
+                  <div
+                    key={m.engineer}
+                    className={`${styles.healthRow} ${m.overloaded ? styles.healthRowAlert : ""}`}
+                  >
+                    <div className={styles.healthAvatar}>
+                      <RiUserLine size={13} />
+                    </div>
+                    <div className={styles.healthInfo}>
+                      <span className={styles.healthName}>{m.engineer}</span>
+                      <div className={styles.healthBar}>
+                        <div
+                          className={styles.healthBarFill}
+                          style={{
+                            width: `${Math.min(100, (m.total_hours / 60) * 100)}%`,
+                            background:
+                              m.burnoutRisk === "High"
+                                ? "var(--red)"
+                                : m.burnoutRisk === "Medium"
+                                  ? "var(--amber)"
+                                  : "var(--green)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <span className={styles.healthHrs}>
+                      {m.total_hours.toFixed(0)}h
+                    </span>
+                    <span
+                      className={`${styles.healthBadge} ${
+                        m.burnoutRisk === "High"
+                          ? styles.healthBadgeHigh
+                          : m.burnoutRisk === "Medium"
+                            ? styles.healthBadgeMed
+                            : styles.healthBadgeLow
+                      }`}
+                    >
+                      {m.burnoutRisk === "High" ? (
+                        <>
+                          <RiAlertLine size={9} /> High Risk
+                        </>
+                      ) : m.burnoutRisk === "Medium" ? (
+                        <>
+                          <RiHeartPulseLine size={9} /> Watch
+                        </>
+                      ) : (
+                        "Healthy"
+                      )}
+                    </span>
+                  </div>
+                ))}
+                {teamHealth.filter((m) => m.burnoutRisk === "High").length >
+                  0 && (
+                  <div className={styles.healthRec}>
+                    <RiSparklingLine size={11} color="var(--accent)" />
+                    <span>
+                      EOS detected{" "}
+                      {
+                        teamHealth.filter((m) => m.burnoutRisk === "High")
+                          .length
+                      }{" "}
+                      team member(s) at high burnout risk. Consider
+                      redistributing tasks or reducing sprint scope.
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
-
-      {/* ── Velocity Anomaly Detection ── */}
-      <div className={`${styles.card} ${velocityAnomalies.length > 0 ? styles.cardAlert : ""}`}>
-        <div className={styles.cardHeader}>
-          <div>
-            <div className={styles.cardTitle}>Velocity Anomaly Detection</div>
-            <span className={styles.cardSub}>Sprint-over-sprint pattern analysis</span>
-          </div>
-          <span className={styles.eosBadge}><RiSparklingLine size={9} /> EOS</span>
         </div>
 
-        {velocityData.length < 2 ? (
-          <p className={styles.empty}>Need at least 2 completed sprints for anomaly analysis.</p>
-        ) : velocityAnomalies.length === 0 ? (
-          <div className={styles.anomalyHealthy}>
-            <RiSparklingLine size={16} color="var(--green)" />
-            <span>No velocity anomalies detected. Sprint-over-sprint performance looks consistent.</span>
-          </div>
-        ) : (
-          <div className={styles.anomalyList}>
-            {velocityAnomalies.map((a, i) => (
-              <div key={i} className={styles.anomalyItem}>
-                <div className={styles.anomalyTop}>
-                  <RiAlertLine size={13} color="var(--amber)" />
-                  <span className={styles.anomalyTitle}>
-                    {a.sprint} velocity dropped <strong>{Math.round(a.dropPct * 100)}%</strong> from {a.prevSprint}
-                  </span>
-                  <span className={styles.anomalyBadge}>Anomaly</span>
+        {/* Row 2: Velocity Anomaly Detection + Emotion-Aware Work Management */}
+        <div className={styles.cardGrid}>
+          {/* Velocity Anomaly Detection */}
+          <div
+            className={`${styles.card} ${velocityAnomalies.length > 0 ? styles.cardAlert : ""}`}
+          >
+            <div className={styles.cardHeader}>
+              <div>
+                <div className={styles.cardTitle}>
+                  Velocity Anomaly Detection
                 </div>
-                <div className={styles.anomalyMeta}>
-                  <span>Committed: <strong>{a.committed} pts</strong></span>
-                  <span>Completed: <strong style={{ color: "var(--amber)" }}>{a.completed} pts</strong></span>
-                  <span>Shortfall: <strong style={{ color: "var(--red)" }}>{a.committed - a.completed} pts</strong></span>
-                </div>
-                <p className={styles.anomalyRec}>
-                  ✦ EOS recommends reviewing mid-sprint scope changes and team capacity for {a.sprint}. Consider a sprint scope freeze policy.
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Emotion-Aware Work Management ── */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <div>
-            <div className={styles.cardTitle}>Emotion-Aware Work Management</div>
-            <span className={styles.cardSub}>Linguistic signals in comments and ticket updates · Last 72 hours</span>
-          </div>
-          <span className={styles.eosBadge}><RiSparklingLine size={9} /> EOS</span>
-        </div>
-        <div className={styles.sentimentList}>
-          {sentimentSignals.length === 0 && (
-            <div className={styles.anomalyHealthy}>
-              <RiSparklingLine size={16} color="var(--green)" />
-              <span>No emotional friction signals detected in the last 72 hours.</span>
-            </div>
-          )}
-          {sentimentSignals.map((s) => (
-            <div key={s.engineer} className={`${styles.sentimentRow} ${s.severity === "high" ? styles.sentimentRowHigh : styles.sentimentRowMed}`}>
-              <div className={styles.sentimentAvatar}><RiUserLine size={13} /></div>
-              <div className={styles.sentimentInfo}>
-                <div className={styles.sentimentName}>{s.engineer}</div>
-                <div className={styles.sentimentPhrases}>
-                  {s.phrases.map((p) => <span key={p} className={styles.sentimentPhrase}>{p}</span>)}
-                </div>
-              </div>
-              <div className={styles.sentimentMeta}>
-                <span className={`${styles.sentimentBadge} ${s.severity === "high" ? styles.sentimentBadgeHigh : styles.sentimentBadgeMed}`}>{s.signal}</span>
-                <span className={styles.sentimentSprint}>{s.sprint}</span>
+                {/* <span className={styles.cardSub}>
+                  Sprint-over-sprint pattern analysis
+                </span> */}
               </div>
             </div>
-          ))}
-          {sentimentSignals.length > 0 && (
-            <div className={styles.sentimentRec}>
-              <RiSparklingLine size={11} color="var(--accent)" />
-              <span>EOS detected {sentimentSignals.length} emotional friction signal{sentimentSignals.length !== 1 ? "s" : ""} in the last {sentimentData?.window_hours ?? 72}h — not surveillance, care. Consider a team check-in.</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Cross-Organizational Pattern Learning ── */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <div>
-            <div className={styles.cardTitle}>Cross-Organizational Pattern Learning</div>
-            <span className={styles.cardSub}>Anonymized benchmarks · opt-in · similar-stage engineering teams</span>
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span className={styles.privacyBadge}><RiGlobalLine size={9} /> Anonymized</span>
-            <span className={styles.eosBadge}><RiSparklingLine size={9} /> EOS</span>
-          </div>
-        </div>
-        <div className={styles.benchmarkList}>
-          {benchmarks.length === 0 ? (
-            <p className={styles.empty}>Computing benchmarks…</p>
-          ) : benchmarks.map((b) => (
-            <div key={b.metric} className={styles.benchmarkItem}>
-              <div className={styles.benchmarkHeader}>
-                <span className={styles.benchmarkMetric}>{b.metric}</span>
-                <div className={styles.benchmarkValues}>
-                  <span className={styles.benchmarkYours}>You: <strong>{b.your_value}</strong></span>
-                  <span className={styles.benchmarkIndustry}>Industry avg: {b.industry_avg}</span>
-                  <span className={`${styles.benchmarkSimilar} ${b.direction === "up" ? styles.benchmarkUp : styles.benchmarkDown}`}>
-                    {b.direction === "up" ? <RiArrowUpLine size={10} /> : <RiArrowDownLine size={10} />}
-                    Similar teams: {b.similar_teams}
-                  </span>
-                </div>
-              </div>
-              <p className={styles.benchmarkInsight}>{b.insight}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Predictive Resource Planning ── */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <div>
-            <div className={styles.cardTitle}>Predictive Resource Planning</div>
-            <span className={styles.cardSub}>Based on Q3–Q4 roadmap goals · Current team skill profile</span>
-          </div>
-          <span className={styles.eosBadge}><RiSparklingLine size={9} /> EOS</span>
-        </div>
-        <div className={styles.resourceList}>
-          {resourceGaps.length === 0 ? (
-            <p className={styles.empty}>No resource gaps detected from current ticket data.</p>
-          ) : resourceGaps.map((r) => (
-            <div key={r.goal} className={`${styles.resourceItem} ${r.urgency === "high" ? styles.resourceItemHigh : styles.resourceItemMed}`}>
-              <div className={styles.resourceHeader}>
-                <span className={`${styles.resourceUrgency} ${r.urgency === "high" ? styles.resourceUrgencyHigh : styles.resourceUrgencyMed}`}>
-                  {r.urgency === "high" ? "Hire Now" : "Plan Ahead"}
+            {velocityData.length < 2 ? (
+              <p className={styles.empty}>
+                Need at least 2 completed sprints for anomaly analysis.
+              </p>
+            ) : velocityAnomalies.length === 0 ? (
+              <div className={styles.anomalyHealthy}>
+                <RiSparklingLine size={16} color="var(--green)" />
+                <span>
+                  No velocity anomalies detected. Sprint-over-sprint performance
+                  looks consistent.
                 </span>
-                <span className={styles.resourceNeededBy}>Needed by {r.needed_by}</span>
               </div>
-              <div className={styles.resourceSkill}>{r.skill}</div>
-              <div className={styles.resourceGoal}><RiBarChartLine size={10} /> For: {r.goal}</div>
-              <p className={styles.resourceNote}>{r.note}</p>
-            </div>
-          ))}
-          {resourceData?.forecast_note && (
-            <div className={styles.resourceRec}>
-              <RiTeamLine size={11} color="var(--accent)" />
-              <span>{resourceData.forecast_note}</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Real Cost of a Bug ── */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <div>
-            <div className={styles.cardTitle}>Real Cost of a Bug</div>
-            <span className={styles.cardSub}>Engineering hours and estimated spend on bug tickets</span>
-          </div>
-          <span className={styles.eosBadge}><RiBugLine size={9} /> EOS</span>
-        </div>
-        {!bugCost ? (
-          <p className={styles.empty}>Loading bug cost data…</p>
-        ) : (
-          <>
-            <div className={styles.bugCostStats}>
-              <div className={styles.bugCostStat}>
-                <span className={styles.bugCostVal} style={{ color: "var(--red)" }}>{bugCost.total_bugs}</span>
-                <span className={styles.bugCostLbl}>Total Bugs</span>
-              </div>
-              <div className={styles.bugCostStat}>
-                <span className={styles.bugCostVal} style={{ color: "var(--amber)" }}>{bugCost.open_bugs}</span>
-                <span className={styles.bugCostLbl}>Open</span>
-              </div>
-              <div className={styles.bugCostStat}>
-                <span className={styles.bugCostVal}>{bugCost.total_hours}h</span>
-                <span className={styles.bugCostLbl}>Hours Spent</span>
-              </div>
-              <div className={styles.bugCostStat}>
-                <span className={styles.bugCostVal} style={{ color: "var(--red)" }}>${bugCost.total_cost_usd.toLocaleString()}</span>
-                <span className={styles.bugCostLbl}>Est. Cost (USD)</span>
-              </div>
-              <div className={styles.bugCostStat}>
-                <span className={styles.bugCostVal}>{bugCost.avg_hours_per_bug}h</span>
-                <span className={styles.bugCostLbl}>Avg/Bug</span>
-              </div>
-            </div>
-            {bugCost.by_pod.length > 0 && (
-              <div className={styles.bugCostPodList}>
-                <div className={styles.bugCostPodHeader}>
-                  <span>POD</span><span>Bugs</span><span>Hours</span><span>Est. Cost</span>
-                </div>
-                {bugCost.by_pod.slice(0, 5).map((p) => (
-                  <div key={p.pod} className={styles.bugCostPodRow}>
-                    <span className={styles.bugCostPodName}>{p.pod}</span>
-                    <span>{p.count} <span style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>({p.open} open)</span></span>
-                    <span>{p.hours}h</span>
-                    <span style={{ color: "var(--red)", fontWeight: 600 }}>${p.cost_usd.toLocaleString()}</span>
+            ) : (
+              <div className={styles.anomalyList}>
+                {velocityAnomalies.map((a, i) => (
+                  <div key={i} className={styles.anomalyItem}>
+                    <div className={styles.anomalyTop}>
+                      <RiAlertLine size={13} color="var(--amber)" />
+                      <span className={styles.anomalyTitle}>
+                        {a.sprint} velocity dropped{" "}
+                        <strong>{Math.round(a.dropPct * 100)}%</strong> from{" "}
+                        {a.prevSprint}
+                      </span>
+                      <span className={styles.anomalyBadge}>Anomaly</span>
+                    </div>
+                    <div className={styles.anomalyMeta}>
+                      <span>
+                        Committed: <strong>{a.committed} pts</strong>
+                      </span>
+                      <span>
+                        Completed:{" "}
+                        <strong style={{ color: "var(--amber)" }}>
+                          {a.completed} pts
+                        </strong>
+                      </span>
+                      <span>
+                        Shortfall:{" "}
+                        <strong style={{ color: "var(--red)" }}>
+                          {a.committed - a.completed} pts
+                        </strong>
+                      </span>
+                    </div>
+                    <p className={styles.anomalyRec}>
+                      ✦ EOS recommends reviewing mid-sprint scope changes and
+                      team capacity for {a.sprint}. Consider a sprint scope
+                      freeze policy.
+                    </p>
                   </div>
                 ))}
               </div>
             )}
-            <div className={styles.healthRec} style={{ marginTop: 12 }}>
-              <RiSparklingLine size={11} color="var(--accent)" />
-              <span>At ${bugCost.avg_hourly_rate}/h average rate, each unresolved bug costs ~${(bugCost.avg_hours_per_bug * bugCost.avg_hourly_rate).toFixed(0)} in engineering time. Prioritise high-priority open bugs to reclaim capacity.</span>
-            </div>
-          </>
-        )}
-      </div>
+          </div>
 
-      {/* ── Recurring Problem Detector ── */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <div>
-            <div className={styles.cardTitle}>Recurring Problem Detector</div>
-            <span className={styles.cardSub}>Repeated keyword patterns in bug tickets · signals systemic issues</span>
-          </div>
-          <span className={styles.eosBadge}><RiRepeatLine size={9} /> EOS</span>
-        </div>
-        {!recurringData ? (
-          <p className={styles.empty}>Loading pattern analysis…</p>
-        ) : recurringData.patterns.length === 0 ? (
-          <div className={styles.anomalyHealthy}>
-            <RiSparklingLine size={16} color="var(--green)" />
-            <span>No recurring patterns detected in {recurringData.total_bugs_analyzed} bugs — issues appear unique.</span>
-          </div>
-        ) : (
-          <>
-            <p className={styles.cardSub} style={{ marginBottom: 12 }}>
-              Analysed {recurringData.total_bugs_analyzed} bug tickets · {recurringData.patterns.length} recurring pattern{recurringData.patterns.length !== 1 ? "s" : ""} found
-            </p>
-            <div className={styles.patternList}>
-              {recurringData.patterns.map((p: RecurringPattern) => (
-                <div key={p.pattern} className={styles.patternItem}>
-                  <div className={styles.patternTop}>
-                    <span className={styles.patternKeyword}>"{p.pattern}"</span>
-                    <span className={`${styles.patternSev} ${
-                      p.severity === "high" ? styles.patternSevHigh
-                      : p.severity === "medium" ? styles.patternSevMed
-                      : styles.patternSevLow
-                    }`}>{p.severity}</span>
-                    <span className={styles.patternCount}>{p.occurrences}×</span>
+          {/* Emotion-Aware Work Management */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <div>
+                <div className={styles.cardTitle}>
+                  Emotion-Aware Work Management
+                </div>
+                {/* <span className={styles.cardSub}>
+                  Linguistic signals in comments and ticket updates · Last 72
+                  hours
+                </span> */}
+              </div>
+            </div>
+            <div className={styles.sentimentList}>
+              {sentimentSignals.length === 0 && (
+                <div className={styles.anomalyHealthy}>
+                  <RiSparklingLine size={16} color="var(--green)" />
+                  <span>
+                    No emotional friction signals detected in the last 72 hours.
+                  </span>
+                </div>
+              )}
+              {sentimentSignals.map((s) => (
+                <div
+                  key={s.engineer}
+                  className={`${styles.sentimentRow} ${s.severity === "high" ? styles.sentimentRowHigh : styles.sentimentRowMed}`}
+                >
+                  <div className={styles.sentimentAvatar}>
+                    <RiUserLine size={13} />
                   </div>
-                  <div className={styles.patternKeys}>
-                    {p.ticket_keys.map((k) => (
-                      <span key={k} className={styles.patternKey}>{k}</span>
-                    ))}
+                  <div className={styles.sentimentInfo}>
+                    <div className={styles.sentimentName}>{s.engineer}</div>
+                    <div className={styles.sentimentPhrases}>
+                      {s.phrases.map((p) => (
+                        <span key={p} className={styles.sentimentPhrase}>
+                          {p}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className={styles.sentimentMeta}>
+                    <span
+                      className={`${styles.sentimentBadge} ${s.severity === "high" ? styles.sentimentBadgeHigh : styles.sentimentBadgeMed}`}
+                    >
+                      {s.signal}
+                    </span>
+                    <span className={styles.sentimentSprint}>{s.sprint}</span>
                   </div>
                 </div>
               ))}
-            </div>
-            <div className={styles.healthRec} style={{ marginTop: 12 }}>
-              <RiSparklingLine size={11} color="var(--accent)" />
-              <span>High-frequency patterns signal missing safeguards or undocumented tribal knowledge. Consider adding these topics to your wiki and retrospective action items.</span>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* ── Client Health Score ── */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <div>
-            <div className={styles.cardTitle}>Client Health Score</div>
-            <span className={styles.cardSub}>Delivery rate, bug density, blockers, and overdue tickets per client</span>
-          </div>
-          <span className={styles.eosBadge}><RiHeartLine size={9} /> EOS</span>
-        </div>
-        {clientHealth.length === 0 ? (
-          <div className={styles.anomalyHealthy}>
-            <RiSparklingLine size={16} color="var(--green)" />
-            <span>No client data found. Assign tickets to clients to track health scores.</span>
-          </div>
-        ) : (
-          <div className={styles.clientHealthList}>
-            {clientHealth.map((c) => {
-              const color = c.status === "Healthy" ? "var(--green)" : c.status === "At Risk" ? "var(--amber)" : "var(--red)";
-              return (
-                <div key={c.client} className={styles.clientHealthRow}>
-                  <div className={styles.clientHealthLeft}>
-                    <div className={styles.clientHealthName}>{c.client}</div>
-                    <div className={styles.clientHealthMeta}>
-                      <span>{c.total_tickets} tickets</span>
-                      <span>·</span>
-                      <span>{c.delivery_rate}% delivered</span>
-                      <span>·</span>
-                      <span style={{ color: c.bug_rate > 20 ? "var(--red)" : "inherit" }}>{c.bug_rate}% bugs</span>
-                      {c.overdue_tickets > 0 && <><span>·</span><span style={{ color: "var(--red)" }}>{c.overdue_tickets} overdue</span></>}
-                    </div>
-                  </div>
-                  <div className={styles.clientHealthRight}>
-                    <div className={styles.clientHealthBar}>
-                      <div className={styles.clientHealthBarFill} style={{ width: `${c.health_score}%`, background: color }} />
-                    </div>
-                    <span className={styles.clientHealthScore} style={{ color }}>{c.health_score}</span>
-                    <span className={`${styles.clientHealthStatus} ${
-                      c.status === "Healthy" ? styles.clientStatusHealthy
-                      : c.status === "At Risk" ? styles.clientStatusRisk
-                      : styles.clientStatusCritical
-                    }`}>{c.status}</span>
-                  </div>
+              {sentimentSignals.length > 0 && (
+                <div className={styles.sentimentRec}>
+                  <RiSparklingLine size={11} color="var(--accent)" />
+                  <span>
+                    EOS detected {sentimentSignals.length} emotional friction
+                    signal
+                    {sentimentSignals.length !== 1 ? "s" : ""} in the last{" "}
+                    {sentimentData?.window_hours ?? 72}h — not surveillance,
+                    care. Consider a team check-in.
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Knowledge Gaps */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <div>
-            <div className={styles.cardTitle}>Knowledge Gaps</div>
-            <span className={styles.cardSub}>Topics with tickets but no wiki docs</span>
-          </div>
-          <div className={styles.gapActions}>
-            <div className={styles.novaBadge}>
-              <span className={styles.novaGlow} />
-              EOS-powered
+              )}
             </div>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => detectMut.mutate()}
-              disabled={detectMut.isPending}
-            >
-              {detectMut.isPending ? "Detecting…" : "Run Detection"}
-            </button>
           </div>
         </div>
 
-        {loadingGaps ? (
-          <p className={styles.empty}>Loading gaps…</p>
-        ) : gaps.length === 0 ? (
-          <div className={styles.emptyState}>
-            <span className={styles.emptyIcon}>✅</span>
-            <p>No knowledge gaps detected. All topics have wiki coverage!</p>
-          </div>
-        ) : (
-          <div className={styles.gapList}>
-            {gaps.map((gap) => (
-              <div key={gap.id} className={styles.gapItem}>
-                <div className={styles.gapInfo}>
-                  <div className={styles.gapTopic}>{gap.topic}</div>
-                  {gap.suggestion && <div className={styles.gapDesc}>{gap.suggestion}</div>}
-                  <div className={styles.gapMeta}>
-                    <span>{gap.ticket_count} tickets</span>
-                    <span>·</span>
-                    <span>{gap.wiki_coverage}% wiki coverage</span>
-                    <span>·</span>
-                    <span>{gap.detected_at ? new Date(gap.detected_at).toLocaleDateString() : "—"}</span>
-                  </div>
-                </div>
-                <div className={styles.gapBtns}>
-                  <button
-                    className={styles.generateBtn}
-                    onClick={() => generateArticleMut.mutate({ gap })}
-                    disabled={generateArticleMut.isPending}
-                    title="EOS writes a full wiki article from ticket patterns"
-                  >
-                    {generateArticleMut.isPending ? (
-                      <><span className={styles.btnSpinner} /> Writing…</>
-                    ) : (
-                      <><RiSparklingLine size={11} /> Generate Article</>
-                    )}
-                  </button>
-                  <button
-                    className={styles.createStubBtn}
-                    onClick={() => createStubMut.mutate({ gap })}
-                    disabled={createStubMut.isPending}
-                  >
-                    <RiFileTextLine size={11} /> Stub
-                  </button>
-                </div>
+        {/* Row 3: Real Cost of a Bug + Recurring Problem Detector */}
+        <div className={styles.cardGrid}>
+          {/* Real Cost of a Bug */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <div>
+                <div className={styles.cardTitle}>Real Cost of a Bug</div>
+                {/* <span className={styles.cardSub}>
+                  Engineering hours and estimated spend on bug tickets
+                </span> */}
               </div>
-            ))}
+            </div>
+            {!bugCost ? (
+              <p className={styles.empty}>Loading bug cost data…</p>
+            ) : (
+              <>
+                <div className={styles.bugCostStats}>
+                  <div className={styles.bugCostStat}>
+                    <span
+                      className={styles.bugCostVal}
+                      style={{ color: "var(--red)" }}
+                    >
+                      {bugCost.total_bugs}
+                    </span>
+                    <span className={styles.bugCostLbl}>Total Bugs</span>
+                  </div>
+                  <div className={styles.bugCostStat}>
+                    <span
+                      className={styles.bugCostVal}
+                      style={{ color: "var(--amber)" }}
+                    >
+                      {bugCost.open_bugs}
+                    </span>
+                    <span className={styles.bugCostLbl}>Open</span>
+                  </div>
+                  <div className={styles.bugCostStat}>
+                    <span className={styles.bugCostVal}>
+                      {bugCost.total_hours}h
+                    </span>
+                    <span className={styles.bugCostLbl}>Hours Spent</span>
+                  </div>
+                  <div className={styles.bugCostStat}>
+                    <span
+                      className={styles.bugCostVal}
+                      style={{ color: "var(--red)" }}
+                    >
+                      ${bugCost.total_cost_usd.toLocaleString()}
+                    </span>
+                    <span className={styles.bugCostLbl}>Est. Cost (USD)</span>
+                  </div>
+                  <div className={styles.bugCostStat}>
+                    <span className={styles.bugCostVal}>
+                      {bugCost.avg_hours_per_bug}h
+                    </span>
+                    <span className={styles.bugCostLbl}>Avg/Bug</span>
+                  </div>
+                </div>
+                {bugCost.by_pod.length > 0 && (
+                  <div className={styles.bugCostPodList}>
+                    <div className={styles.bugCostPodHeader}>
+                      <span>POD</span>
+                      <span>Bugs</span>
+                      <span>Hours</span>
+                      <span>Est. Cost</span>
+                    </div>
+                    {bugCost.by_pod.slice(0, 5).map((p) => (
+                      <div key={p.pod} className={styles.bugCostPodRow}>
+                        <span className={styles.bugCostPodName}>{p.pod}</span>
+                        <span>
+                          {p.count}{" "}
+                          <span
+                            style={{
+                              color: "var(--text-3)",
+                              fontSize: "0.72rem",
+                            }}
+                          >
+                            ({p.open} open)
+                          </span>
+                        </span>
+                        <span>{p.hours}h</span>
+                        <span style={{ color: "var(--red)", fontWeight: 600 }}>
+                          ${p.cost_usd.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className={styles.healthRec} style={{ marginTop: 4 }}>
+                  <RiSparklingLine size={11} color="var(--accent)" />
+                  <span>
+                    At ${bugCost.avg_hourly_rate}/h average rate, each
+                    unresolved bug costs ~$
+                    {(
+                      bugCost.avg_hours_per_bug * bugCost.avg_hourly_rate
+                    ).toFixed(0)}{" "}
+                    in engineering time. Prioritise high-priority open bugs to
+                    reclaim capacity.
+                  </span>
+                </div>
+              </>
+            )}
           </div>
-        )}
+
+          {/* Recurring Problem Detector */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <div>
+                <div className={styles.cardTitle}>
+                  Recurring Problem Detector
+                </div>
+                {/* <span className={styles.cardSub}>
+                  Repeated keyword patterns in bug tickets · signals systemic
+                  issues
+                </span> */}
+              </div>
+            </div>
+            {!recurringData ? (
+              <p className={styles.empty}>Loading pattern analysis…</p>
+            ) : recurringData.patterns.length === 0 ? (
+              <div className={styles.anomalyHealthy}>
+                <RiSparklingLine size={16} color="var(--green)" />
+                <span>
+                  No recurring patterns detected in{" "}
+                  {recurringData.total_bugs_analyzed} bugs — issues appear
+                  unique.
+                </span>
+              </div>
+            ) : (
+              <>
+                <p className={styles.cardSub} style={{ marginBottom: 12 }}>
+                  Analysed {recurringData.total_bugs_analyzed} bug tickets ·{" "}
+                  {recurringData.patterns.length} recurring pattern
+                  {recurringData.patterns.length !== 1 ? "s" : ""} found
+                </p>
+                <div className={styles.patternList}>
+                  {recurringData.patterns.map((p: RecurringPattern) => (
+                    <div key={p.pattern} className={styles.patternItem}>
+                      <div className={styles.patternTop}>
+                        <span className={styles.patternKeyword}>
+                          "{p.pattern}"
+                        </span>
+                        <span
+                          className={`${styles.patternSev} ${
+                            p.severity === "high"
+                              ? styles.patternSevHigh
+                              : p.severity === "medium"
+                                ? styles.patternSevMed
+                                : styles.patternSevLow
+                          }`}
+                        >
+                          {p.severity}
+                        </span>
+                        <span className={styles.patternCount}>
+                          {p.occurrences}×
+                        </span>
+                      </div>
+                      <div className={styles.patternKeys}>
+                        {p.ticket_keys.map((k) => (
+                          <span key={k} className={styles.patternKey}>
+                            {k}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className={styles.healthRec} style={{ marginTop: 4 }}>
+                  <RiSparklingLine size={11} color="var(--accent)" />
+                  <span>
+                    High-frequency patterns signal missing safeguards or
+                    undocumented tribal knowledge. Consider adding these topics
+                    to your wiki and retrospective action items.
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Row 4: Client Health Score + Knowledge Gaps */}
+        <div className={styles.cardGrid}>
+          {/* Client Health Score */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <div>
+                <div className={styles.cardTitle}>Client Health Score</div>
+                {/* <span className={styles.cardSub}>
+                  Delivery rate, bug density, blockers, and overdue tickets per
+                  client
+                </span> */}
+              </div>
+            </div>
+            {clientHealth.length === 0 ? (
+              <div className={styles.anomalyHealthy}>
+                <RiSparklingLine size={16} color="var(--green)" />
+                <span>
+                  No client data found. Assign tickets to clients to track
+                  health scores.
+                </span>
+              </div>
+            ) : (
+              <div className={styles.clientHealthList}>
+                {clientHealth.map((c) => {
+                  const color =
+                    c.status === "Healthy"
+                      ? "var(--green)"
+                      : c.status === "At Risk"
+                        ? "var(--amber)"
+                        : "var(--red)";
+                  return (
+                    <div key={c.client} className={styles.clientHealthRow}>
+                      <div className={styles.clientHealthLeft}>
+                        <div className={styles.clientHealthName}>
+                          {c.client}
+                        </div>
+                        <div className={styles.clientHealthMeta}>
+                          <span>{c.total_tickets} tickets</span>
+                          <span>·</span>
+                          <span>{c.delivery_rate}% delivered</span>
+                          <span>·</span>
+                          <span
+                            style={{
+                              color: c.bug_rate > 20 ? "var(--red)" : "inherit",
+                            }}
+                          >
+                            {c.bug_rate}% bugs
+                          </span>
+                          {c.overdue_tickets > 0 && (
+                            <>
+                              <span>·</span>
+                              <span style={{ color: "var(--red)" }}>
+                                {c.overdue_tickets} overdue
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className={styles.clientHealthRight}>
+                        <div className={styles.clientHealthBar}>
+                          <div
+                            className={styles.clientHealthBarFill}
+                            style={{
+                              width: `${c.health_score}%`,
+                              background: color,
+                            }}
+                          />
+                        </div>
+                        <span
+                          className={styles.clientHealthScore}
+                          style={{ color }}
+                        >
+                          {c.health_score}
+                        </span>
+                        <span
+                          className={`${styles.clientHealthStatus} ${
+                            c.status === "Healthy"
+                              ? styles.clientStatusHealthy
+                              : c.status === "At Risk"
+                                ? styles.clientStatusRisk
+                                : styles.clientStatusCritical
+                          }`}
+                        >
+                          {c.status}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Knowledge Gaps */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <div>
+                <div className={styles.cardTitle}>Knowledge Gaps</div>
+              </div>
+              <div className={styles.gapActions}>
+                <div className={styles.novaBadge}>
+                  <span className={styles.novaGlow} />
+                  EOS-powered
+                </div>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => detectMut.mutate()}
+                  disabled={detectMut.isPending}
+                >
+                  {detectMut.isPending ? "Detecting…" : "Run Detection"}
+                </button>
+              </div>
+            </div>
+            {loadingGaps ? (
+              <p className={styles.empty}>Loading gaps…</p>
+            ) : gaps.length === 0 ? (
+              <div className={styles.emptyState}>
+                <p>
+                  No knowledge gaps detected. All topics have wiki coverage!
+                </p>
+              </div>
+            ) : (
+              <div className={styles.gapList}>
+                {gaps.map((gap) => (
+                  <div key={gap.id} className={styles.gapItem}>
+                    <div className={styles.gapInfo}>
+                      <div className={styles.gapTopic}>{gap.topic}</div>
+                      {gap.suggestion && (
+                        <div className={styles.gapDesc}>{gap.suggestion}</div>
+                      )}
+                      <div className={styles.gapMeta}>
+                        <span>{gap.ticket_count} tickets</span>
+                        <span>·</span>
+                        <span>{gap.wiki_coverage}% wiki coverage</span>
+                        <span>·</span>
+                        <span>
+                          {gap.detected_at
+                            ? new Date(gap.detected_at).toLocaleDateString()
+                            : "—"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className={styles.gapBtns}>
+                      <button
+                        className={styles.generateBtn}
+                        onClick={() => generateArticleMut.mutate({ gap })}
+                        disabled={generateArticleMut.isPending}
+                        title="EOS writes a full wiki article from ticket patterns"
+                      >
+                        {generateArticleMut.isPending ? (
+                          <>
+                            <span className={styles.btnSpinner} /> Writing…
+                          </>
+                        ) : (
+                          <>
+                            <RiSparklingLine size={11} /> Generate Article
+                          </>
+                        )}
+                      </button>
+                      <button
+                        className={styles.createStubBtn}
+                        onClick={() => createStubMut.mutate({ gap })}
+                        disabled={createStubMut.isPending}
+                      >
+                        <RiFileTextLine size={11} /> Stub
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Row 5: Predictive Resource Planning + Cross-Organizational Pattern Learning */}
+        {/* Predictive Resource Planning */}
+        <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>
+                Predictive Resource Planning
+              </div>
+              {/* <span className={styles.cardSub}>
+                Based on Q3–Q4 roadmap goals · Current team skill profile
+              </span> */}
+            </div>
+          </div>
+          <div className={styles.resourceList}>
+            {resourceGaps.length === 0 ? (
+              <p className={styles.empty}>
+                No resource gaps detected from current ticket data.
+              </p>
+            ) : (
+              resourceGaps.map((r) => (
+                <div
+                  key={r.goal}
+                  className={`${styles.resourceItem} ${r.urgency === "high" ? styles.resourceItemHigh : styles.resourceItemMed}`}
+                >
+                  <div className={styles.resourceHeader}>
+                    <span
+                      className={`${styles.resourceUrgency} ${r.urgency === "high" ? styles.resourceUrgencyHigh : styles.resourceUrgencyMed}`}
+                    >
+                      {r.urgency === "high" ? "Hire Now" : "Plan Ahead"}
+                    </span>
+                    <span className={styles.resourceNeededBy}>
+                      Needed by {r.needed_by}
+                    </span>
+                  </div>
+                  <div className={styles.resourceSkill}>{r.skill}</div>
+                  <div className={styles.resourceGoal}>
+                    <RiBarChartLine size={10} /> For: {r.goal}
+                  </div>
+                  <p className={styles.resourceNote}>{r.note}</p>
+                </div>
+              ))
+            )}
+            {resourceData?.forecast_note && (
+              <div className={styles.resourceRec}>
+                <RiTeamLine size={11} color="var(--accent)" />
+                <span>{resourceData.forecast_note}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Cross-Organizational Pattern Learning */}
+        <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <div>
+              <div className={styles.cardTitle}>
+                Cross-Organizational Pattern Learning
+              </div>
+              {/* <span className={styles.cardSub}>
+                Anonymized benchmarks · opt-in · similar-stage engineering teams
+              </span> */}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span className={styles.privacyBadge}>
+                <RiGlobalLine size={9} /> Anonymized
+              </span>
+            </div>
+          </div>
+          <div className={styles.benchmarkList}>
+            {benchmarks.length === 0 ? (
+              <p className={styles.empty}>Computing benchmarks…</p>
+            ) : (
+              benchmarks.map((b) => (
+                <div key={b.metric} className={styles.benchmarkItem}>
+                  <div className={styles.benchmarkHeader}>
+                    <span className={styles.benchmarkMetric}>{b.metric}</span>
+                    <div className={styles.benchmarkValues}>
+                      <span className={styles.benchmarkYours}>
+                        You: <strong>{b.your_value}</strong>
+                      </span>
+                      <span className={styles.benchmarkIndustry}>
+                        Industry avg: {b.industry_avg}
+                      </span>
+                      <span
+                        className={`${styles.benchmarkSimilar} ${b.direction === "up" ? styles.benchmarkUp : styles.benchmarkDown}`}
+                      >
+                        {b.direction === "up" ? (
+                          <RiArrowUpLine size={10} />
+                        ) : (
+                          <RiArrowDownLine size={10} />
+                        )}
+                        Similar teams: {b.similar_teams}
+                      </span>
+                    </div>
+                  </div>
+                  <p className={styles.benchmarkInsight}>{b.insight}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
