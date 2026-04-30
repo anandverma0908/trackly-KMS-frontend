@@ -607,6 +607,38 @@ export interface ProcessesResponse {
   total: number;
 }
 
+/* ── Compliance Dashboard ── */
+export interface ComplianceDashboard {
+  total_processes: number;
+  compliance_required: number;
+  compliance_score: number;
+  by_status: Record<string, number>;
+  total_runs: number;
+  at_risk: Process[];
+  active_items: Process[];
+  category_breakdown: Record<string, number>;
+}
+
+/* ── Integrations (Slack / Teams / Webhook) ── */
+export type IntegrationType = "slack" | "teams" | "generic_webhook";
+export type IntegrationEvent =
+  | "ticket_created"
+  | "status_changed"
+  | "sprint_started"
+  | "sprint_completed"
+  | "mention"
+  | "comment_added";
+
+export interface Integration {
+  id: string;
+  name: string;
+  type: IntegrationType;
+  webhook_url: string;
+  events: IntegrationEvent[];
+  is_active: boolean;
+  created_at?: string;
+}
+
 /* ── Tests / QA ── */
 export interface TestStep {
   step: string;

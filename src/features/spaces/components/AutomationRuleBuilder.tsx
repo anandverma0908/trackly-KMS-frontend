@@ -48,6 +48,7 @@ const ACTION_OPTIONS: { value: string; label: string }[] = [
   { value: "add_label", label: "Add label" },
   { value: "post_comment", label: "Post comment" },
   { value: "create_subtask", label: "Create subtask" },
+  { value: "notify_slack", label: "Send Slack notification" },
 ];
 
 const PRIORITY_OPTIONS = ["Highest", "High", "Medium", "Low", "Lowest"];
@@ -485,6 +486,25 @@ export default function AutomationRuleBuilder({ pod }: Props) {
                 value={actionConfig.subtask_summary ?? ""}
                 onChange={(e) => setActionConfig({ subtask_summary: e.target.value })}
                 placeholder="e.g. Write tests"
+              />
+            </>
+          )}
+
+          {actionType === "notify_slack" && (
+            <>
+              <label className={styles.fieldLabel}>Slack webhook URL</label>
+              <input
+                className={styles.textInput}
+                value={actionConfig.webhook_url ?? ""}
+                onChange={(e) => setActionConfig({ ...actionConfig, webhook_url: e.target.value })}
+                placeholder="https://hooks.slack.com/services/..."
+              />
+              <label className={styles.fieldLabel}>Message (optional)</label>
+              <input
+                className={styles.textInput}
+                value={actionConfig.message ?? ""}
+                onChange={(e) => setActionConfig({ ...actionConfig, message: e.target.value })}
+                placeholder="e.g. Ticket status updated"
               />
             </>
           )}

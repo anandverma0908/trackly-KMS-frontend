@@ -15,6 +15,7 @@ import {
   extractMeetingActions,
   fetchWikiIntelligence,
   askWikiAssistant,
+  generateWikiTemplate,
 } from "@/services/api";
 import { useWikiStore } from "@/store";
 import type { WikiPage as WikiPageType } from "@/types";
@@ -298,6 +299,7 @@ export default function WikiPage() {
   const [newSpaceName, setNewSpaceName] = useState("");
   const [showVersions, setShowVersions] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [templateGenerating, setTemplateGenerating] = useState<string | null>(null);
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<
     "idle" | "saving" | "saved"
@@ -436,11 +438,26 @@ export default function WikiPage() {
     [activePageId, updatePageMut],
   );
 
-  function handleNewPage(templateContent?: string) {
-    createPageMut.mutate({
-      title: `New Page ${pages.length + 1}`,
-      content: templateContent ?? "",
-    });
+  async function handleNewPage(tpl?: { name: string; content: string }) {
+    if (!tpl) {
+      // Blank page
+      createPageMut.mutate({ title: `New Page ${pages.length + 1}`, content: "" });
+      setShowTemplates(false);
+      return;
+    }
+    // Try AI generation first; fall back to static content on error
+    const typeKey = tpl.name.toLowerCase().replace(/\s+/g, "_");
+    setTemplateGenerating(tpl.name);
+    let content = tpl.content;
+    try {
+      const generated = await generateWikiTemplate(typeKey);
+      if (generated) content = generated;
+    } catch {
+      // silently fall back to static template
+    } finally {
+      setTemplateGenerating(null);
+    }
+    createPageMut.mutate({ title: tpl.name, content });
     setShowTemplates(false);
   }
 
@@ -1412,10 +1429,13 @@ export default function WikiPage() {
                 <div
                   key={tpl.name}
                   className={styles.templateCard}
-                  onClick={() => handleNewPage(tpl.content)}
+                  onClick={() => handleNewPage(tpl)}
+                  style={{ opacity: templateGenerating === tpl.name ? 0.6 : 1, pointerEvents: templateGenerating ? "none" : undefined }}
                 >
-                  <span className={styles.templateIcon}>{tpl.icon}</span>
-                  <span className={styles.templateName}>{tpl.name}</span>
+                  <span className={styles.templateIcon}>{templateGenerating === tpl.name ? "⏳" : tpl.icon}</span>
+                  <span className={styles.templateName}>
+                    {templateGenerating === tpl.name ? "Generating…" : tpl.name}
+                  </span>
                 </div>
               ))}
             </div>

@@ -35,6 +35,10 @@ import type {
   TestCycle,
   TestExecution,
   TestCoverage,
+  ComplianceDashboard,
+  Integration,
+  IntegrationType,
+  IntegrationEvent,
 } from "@/types";
 import type { Project } from "@/features/spaces/spacesData";
 import { getAuthHeader } from "@/features/auth/useAuthStore";
@@ -496,6 +500,14 @@ export async function askWikiAssistant(message: string, pageId?: string | null, 
     ...(spaceId ? { space_id: spaceId } : {}),
   });
   return data;
+}
+
+export async function generateWikiTemplate(templateType: string, context?: string): Promise<string> {
+  const { data } = await api.post("/wiki/ai/generate-template", {
+    template_type: templateType,
+    context: context ?? "",
+  });
+  return data?.content ?? "";
 }
 
 export async function fetchRelatedDocs(type: 'ticket' | 'wiki', id: string | number): Promise<RelatedDoc[]> {
@@ -2139,5 +2151,53 @@ export async function fetchCodeReviewHistory(repo: string): Promise<CodeReviewSn
 
 export async function fetchCodeReviewSnapshot(id: string): Promise<CodeReviewSnapshotDetail> {
   const { data } = await api.get(`/code-review/snapshots/${id}`);
+  return data;
+}
+
+// ── Compliance Dashboard ───────────────────────────────────────────────────
+
+export async function fetchComplianceDashboard(): Promise<ComplianceDashboard> {
+  const { data } = await api.get("/processes/compliance/dashboard");
+  return data;
+}
+
+// ── Integrations (Slack / Teams / Webhooks) ────────────────────────────────
+
+export async function fetchIntegrations(): Promise<Integration[]> {
+  const { data } = await api.get("/integrations");
+  return data;
+}
+
+export async function createIntegration(payload: {
+  name: string;
+  type: IntegrationType;
+  webhook_url: string;
+  events: IntegrationEvent[];
+  is_active?: boolean;
+}): Promise<Integration> {
+  const { data } = await api.post("/integrations", payload);
+  return data;
+}
+
+export async function updateIntegration(
+  id: string,
+  payload: Partial<{
+    name: string;
+    type: IntegrationType;
+    webhook_url: string;
+    events: IntegrationEvent[];
+    is_active: boolean;
+  }>,
+): Promise<Integration> {
+  const { data } = await api.put(`/integrations/${id}`, payload);
+  return data;
+}
+
+export async function deleteIntegration(id: string): Promise<void> {
+  await api.delete(`/integrations/${id}`);
+}
+
+export async function testIntegration(id: string): Promise<{ ok: boolean; message: string }> {
+  const { data } = await api.post(`/integrations/${id}/test`);
   return data;
 }

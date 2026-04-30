@@ -7,6 +7,7 @@ import { ROLE_COLORS } from "@/features/auth/types";
 import LatticeGrid, { Column } from "@/components/ui/LatticeGrid";
 import UsersTab from "./UsersTab";
 import BudgetTab from "./BudgetTab";
+import IntegrationsTab from "./IntegrationsTab";
 import notificationStyles from "./NotificationPrefsPage.module.css";
 import passwordStyles from "./ChangePasswordPage.module.css";
 import styles from "./SettingsPage.module.css";
@@ -19,7 +20,8 @@ type TabKey =
   | "notifications"
   | "password"
   | "users"
-  | "budget";
+  | "budget"
+  | "integrations";
 
 interface TabDef {
   key: TabKey;
@@ -47,6 +49,12 @@ export default function SettingsPage() {
       label: "Budget & Burn Rate",
       icon: "📊",
       guard: () => can("view:summary") || can("manage:settings"),
+    },
+    {
+      key: "integrations",
+      label: "Integrations",
+      icon: "🔗",
+      guard: () => can("manage:settings") || can("manage:users"),
     },
   ];
   const tabs = allTabs.filter((t) => (t.guard ? t.guard() : true));
@@ -85,6 +93,7 @@ export default function SettingsPage() {
           {activeTab === "password" && <PasswordTab />}
           {activeTab === "users" && <UsersTab />}
           {activeTab === "budget" && <BudgetTab />}
+          {activeTab === "integrations" && <IntegrationsTab />}
         </div>
       </div>
     </div>

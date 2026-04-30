@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import CompliancePage from "./CompliancePage";
 import {
   RiShieldCheckLine,
   RiAddLine,
@@ -491,6 +492,7 @@ export default function ProcessesPage({
     { title: string; url?: string }[]
   >([]);
   const [novaLoading, setNovaLoading] = useState(false);
+  const [showCompliance, setShowCompliance] = useState(false);
 
   const queryParams = spaceId
     ? { space_id: spaceId, ...(includeOrg ? { org_level: true } : {}) }
@@ -540,6 +542,10 @@ export default function ProcessesPage({
         if (selected?.id === id) setSelected(null);
       },
     });
+  }
+
+  if (showCompliance) {
+    return <CompliancePage onBack={() => setShowCompliance(false)} />;
   }
 
   const detailBadge = selected ? (
@@ -651,12 +657,20 @@ export default function ProcessesPage({
                 </p>
               </div>
             </div>
-            <button
-              className={styles.addBtn}
-              onClick={() => setShowCreate(true)}
-            >
-              <RiAddLine size={15} /> New Process
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                className={styles.complianceBtn}
+                onClick={() => setShowCompliance(true)}
+              >
+                <RiShieldCheckLine size={14} /> Compliance
+              </button>
+              <button
+                className={styles.addBtn}
+                onClick={() => setShowCreate(true)}
+              >
+                <RiAddLine size={15} /> New Process
+              </button>
+            </div>
           </div>
         ) : (
           <div className={styles.header}>

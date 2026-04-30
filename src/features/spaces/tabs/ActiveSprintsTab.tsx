@@ -317,13 +317,16 @@ export default function ActiveSprintsTab({
       setLastMoved(null);
       qc.invalidateQueries({ queryKey: ["space-project", project.key] });
     },
-    onError: (_err, { key }) => {
+    onError: (err: any, { key }) => {
+      // Roll back the optimistic update
       setLocalStatuses((prev) => {
         const next = { ...prev };
         delete next[key];
         return next;
       });
-      toast.error("Failed to update status");
+      setLastMoved(null);
+      const detail = err?.data?.detail ?? err?.message ?? "Failed to update status";
+      toast.error(detail);
     },
   });
 

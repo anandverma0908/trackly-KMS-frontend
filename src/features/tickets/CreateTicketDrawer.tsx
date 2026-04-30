@@ -26,6 +26,7 @@ import {
   fetchPodEpics,
   fetchPodStories,
   fetchReleases,
+  fetchOrgUsers,
   type CodeContextResult,
 } from "@/services/api";
 import { useNavigate } from "react-router-dom";
@@ -393,6 +394,58 @@ export default function CreateTicketDrawer({
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
 
+  /* @mention autocomplete */
+  const [mentionSuggestions, setMentionSuggestions] = useState<{ id: string; name: string }[]>([]);
+  const [mentionIdx, setMentionIdx] = useState(0);
+  const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const { data: orgUsers = [] } = useQuery({
+    queryKey: ["org-users"],
+    queryFn: fetchOrgUsers,
+    staleTime: 60_000,
+  });
+
+  function handleCommentTextChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const val = e.target.value;
+    setCommentText(val);
+    const cursor = e.target.selectionStart ?? val.length;
+    const match  = val.slice(0, cursor).match(/@([\w.]*)$/);
+    if (match) {
+      const q        = match[1].toLowerCase();
+      const filtered = orgUsers
+        .filter((u) => u.name.toLowerCase().includes(q) || u.name.toLowerCase().replace(" ", ".").includes(q))
+        .slice(0, 6);
+      setMentionSuggestions(filtered);
+      setMentionIdx(0);
+    } else {
+      setMentionSuggestions([]);
+    }
+  }
+
+  function handleCommentKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (mentionSuggestions.length > 0) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setMentionIdx((i) => Math.min(i + 1, mentionSuggestions.length - 1)); return; }
+      if (e.key === "ArrowUp")   { e.preventDefault(); setMentionIdx((i) => Math.max(i - 1, 0)); return; }
+      if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); insertMention(mentionSuggestions[mentionIdx]); return; }
+      if (e.key === "Escape")    { setMentionSuggestions([]); return; }
+    }
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && commentText.trim()) {
+      e.preventDefault();
+      commentMut.mutate({ content: commentText, parentId: replyTo ?? undefined });
+    }
+  }
+
+  function insertMention(user: { name: string }) {
+    const el = commentTextareaRef.current;
+    if (!el) return;
+    const cursor = el.selectionStart ?? commentText.length;
+    const before = commentText.slice(0, cursor).replace(/@[\w.]*$/, `@${user.name.replace(" ", ".")} `);
+    const after  = commentText.slice(cursor);
+    setCommentText(before + after);
+    setMentionSuggestions([]);
+    setTimeout(() => { el.focus(); el.setSelectionRange(before.length, before.length); }, 0);
+  }
+
   /* Worklogs (edit mode only) */
   const [wlHours, setWlHours] = useState("");
   const [wlComment, setWlComment] = useState("");
@@ -652,6 +705,24 @@ export default function CreateTicketDrawer({
               ?? buildRoleAwareRoutingSuggestion(f, members),
           );
         }
+
+        // Auto-fill AI-classified fields the user hasn't touched yet
+        const validTypes = ["Story","Bug","Task","Epic","Subtask","Improvement"];
+        const validPriorities = ["Highest","High","Medium","Low","Lowest"];
+        setForm((prev) => {
+          const patch: Partial<typeof prev> = {};
+          if (r.issue_type && validTypes.includes(r.issue_type) && prev.issue_type === "Task")
+            patch.issue_type = r.issue_type;
+          if (r.priority && validPriorities.includes(r.priority) && prev.priority === "Medium")
+            patch.priority = r.priority;
+          if (r.pod && !prev.pod)
+            patch.pod = r.pod;
+          if (r.client && !prev.client)
+            patch.client = r.client;
+          if (r.labels?.length && (!prev.labels || prev.labels.length === 0))
+            patch.labels = r.labels;
+          return Object.keys(patch).length ? { ...prev, ...patch } : prev;
+        });
       } catch {
         if (requestId !== aiRequestIdRef.current) return;
         setLiveDupes((prev) => (prev.length === 0 ? prev : []));
@@ -769,6 +840,7 @@ export default function CreateTicketDrawer({
       qc.invalidateQueries({ queryKey: ["ticket-activity", ticketKey] });
       setCommentText("");
       setReplyTo(null);
+      setMentionSuggestions([]);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -1815,7 +1887,13 @@ Respond with exactly this structure:
                                 </div>
                               </div>
                             ) : (
-                              <p className={styles.commentText} style={{ whiteSpace: "pre-wrap" }}>{c.content}</p>
+                              <p className={styles.commentText} style={{ whiteSpace: "pre-wrap" }}>
+                                {c.content.split(/(@[\w.]+)/g).map((part, pi) =>
+                                  /^@[\w.]+$/.test(part)
+                                    ? <span key={pi} style={{ color: "var(--accent)", fontWeight: 600 }}>{part}</span>
+                                    : part
+                                )}
+                              </p>
                             )}
                             {repliesFor(String(c.id)).map((r) => (
                               <div key={r.id} className={styles.replyItem}>
@@ -1838,7 +1916,7 @@ Respond with exactly this structure:
                         </div>
                       ))}
                     </div>
-                    <div className={styles.commentCompose}>
+                    <div className={styles.commentCompose} style={{ position: "relative" }}>
                       {replyTo && (
                         <div className={styles.replyIndicator}>
                           Replying to comment
@@ -1846,16 +1924,46 @@ Respond with exactly this structure:
                         </div>
                       )}
                       <textarea
+                        ref={commentTextareaRef}
                         className={`${styles.textInput} ${styles.textArea}`}
-                        placeholder="Write a comment…"
+                        placeholder="Write a comment… Use @name to mention someone"
                         value={commentText}
                         maxLength={5000}
-                        onChange={(e) => setCommentText(e.target.value)}
+                        onChange={handleCommentTextChange}
+                        onKeyDown={handleCommentKeyDown}
                         rows={3}
                       />
+                      {/* @mention autocomplete */}
+                      {mentionSuggestions.length > 0 && (
+                        <div style={{
+                          position: "absolute", bottom: "100%", left: 0, zIndex: 200,
+                          background: "var(--surface)", border: "1px solid var(--border-2)",
+                          borderRadius: 8, boxShadow: "var(--shadow-lg)", minWidth: 200, overflow: "hidden",
+                        }}>
+                          {mentionSuggestions.map((u, i) => (
+                            <button
+                              key={u.id}
+                              onMouseDown={(e) => { e.preventDefault(); insertMention(u); }}
+                              style={{
+                                display: "flex", alignItems: "center", gap: 8, width: "100%",
+                                padding: "7px 12px", fontSize: 13, textAlign: "left",
+                                background: i === mentionIdx ? "var(--surface-2)" : "transparent",
+                                color: "var(--text)", border: "none", cursor: "pointer",
+                              }}
+                            >
+                              <span style={{
+                                width: 24, height: 24, borderRadius: "50%", fontSize: 11, fontWeight: 700,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                background: "var(--accent-glow)", color: "var(--accent)",
+                              }}>{u.name[0]}</span>
+                              {u.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
                         <span style={{ fontSize: 11, color: commentText.length > 4800 ? "#F87171" : "var(--text-3)" }}>
-                          {commentText.length > 0 ? `${commentText.length}/5000` : ""}
+                          {commentText.length > 0 ? `${commentText.length}/5000` : "⌘↵ to post"}
                         </span>
                         <button
                           className={styles.btnPrimary}
