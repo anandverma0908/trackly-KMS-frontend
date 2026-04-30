@@ -1060,7 +1060,9 @@ Respond with exactly this structure:
       assignee: form.assignee,
       pod: form.pod ?? defaultPod,
       client: form.client,
-      story_points: form.story_points,
+      story_points: form.story_points !== undefined && form.story_points !== null
+        ? Number(form.story_points)
+        : undefined,
       labels: form.labels,
       due_date: form.due_date,
       epic_key: form.epic_key || undefined,

@@ -230,7 +230,12 @@ export async function updateTicket(key: string, payload: Partial<TicketCreate>) 
 }
 
 export async function updateTicketStatus(key: string, status: string) {
-  if (mock()?.updateTicketStatus) return mock().updateTicketStatus(key, status);
+  if (mock()?.updateTicketStatus) {
+    // Update local mock state immediately, then also fire the real webhook dispatch
+    const result = await mock().updateTicketStatus(key, status);
+    api.post("/integrations/dispatch", { event_type: "status_changed", ticket_key: key, new_status: status }).catch(() => {});
+    return result;
+  }
   const { data } = await api.post(`/tickets/${key}/status`, { status });
   return data;
 }
@@ -255,6 +260,14 @@ export async function analyzeTicketNL(text: string, availableUsers: string[] = [
 }
 
 export async function fetchTicketComments(key: string): Promise<TicketComment[]> {
+  if (mock()?.fetchTicketComments) {
+    const comments = await mock().fetchTicketComments(key);
+    return (comments as any[]).map((c) => ({
+      ...c,
+      author: c.author_name ?? c.author ?? "Unknown",
+      content: c.body ?? c.content ?? "",
+    }));
+  }
   const { data } = await api.get(`/tickets/${key}/comments`);
   return (data as any[]).map((c) => ({
     ...c,
@@ -264,16 +277,28 @@ export async function fetchTicketComments(key: string): Promise<TicketComment[]>
 }
 
 export async function createComment(key: string, content: string, parentId?: string): Promise<TicketComment> {
+  if (mock()?.createComment) {
+    const c = await mock().createComment(key, content, parentId);
+    return { ...c, author: c.author_name ?? c.author ?? "Unknown", content: c.body ?? c.content ?? "" };
+  }
   const { data } = await api.post(`/tickets/${key}/comments`, { body: content, parent_id: parentId });
   return { ...data, author: data.author_name ?? "Unknown", content: data.body ?? "" };
 }
 
 export async function editComment(key: string, commentId: string, content: string): Promise<TicketComment> {
+  if (mock()?.editComment) {
+    const c = await mock().editComment(key, commentId, content);
+    return { ...c, author: c.author_name ?? c.author ?? "Unknown", content: c.body ?? c.content ?? "" };
+  }
   const { data } = await api.put(`/tickets/${key}/comments/${commentId}`, { body: content });
   return { ...data, author: data.author_name ?? "Unknown", content: data.body ?? "" };
 }
 
 export async function deleteComment(key: string, commentId: string) {
+  if (mock()?.deleteComment) {
+    await mock().deleteComment(key, commentId);
+    return;
+  }
   await api.delete(`/tickets/${key}/comments/${commentId}`);
 }
 

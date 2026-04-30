@@ -7,6 +7,10 @@ import type { Project } from '@/features/spaces/spacesData'
 const delay = (ms = 450) => new Promise(r => setTimeout(r, ms))
 
 let nextTicketId = 8000
+let nextCommentId = 1
+
+/* ── In-memory comment store for mock tickets ── */
+const MOCK_COMMENTS: Map<string, any[]> = new Map()
 
 /* ── helpers for dynamic mock project ── */
 function _normalizeStatus(s: string | null | undefined): string {
@@ -338,6 +342,52 @@ export function enableMocks() {
       const t = DUMMY_TICKETS.tickets.find((x: any) => x.key === ticketKey || x.jira_key === ticketKey)
       if (t && (t as any).sprint_id === sprintId) (t as any).sprint_id = null
       return { sprintId, ticketKey }
+    },
+
+    /* ── Comments (mock — real API uses ticket key lookup which fails for mock tickets) ── */
+    fetchTicketComments: async (key: string) => {
+      await delay(200)
+      return MOCK_COMMENTS.get(key) ?? []
+    },
+
+    createComment: async (key: string, content: string, parentId?: string) => {
+      await delay(250)
+      const user = useAuthStore.getState().user
+      const id = `cmt-${nextCommentId++}`
+      const comment = {
+        id,
+        ticket_id: key,
+        author_id: user?.id ?? 'mock-user',
+        author_name: user?.name ?? 'You',
+        author: user?.name ?? 'You',
+        body: content,
+        content,
+        parent_id: parentId ?? null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_deleted: false,
+      }
+      const existing = MOCK_COMMENTS.get(key) ?? []
+      MOCK_COMMENTS.set(key, [...existing, comment])
+      return comment
+    },
+
+    editComment: async (key: string, commentId: string, content: string) => {
+      await delay(200)
+      const comments = MOCK_COMMENTS.get(key) ?? []
+      const c = comments.find((x) => x.id === commentId)
+      if (c) {
+        c.body = content
+        c.content = content
+        c.updated_at = new Date().toISOString()
+      }
+      return c
+    },
+
+    deleteComment: async (key: string, commentId: string) => {
+      await delay(200)
+      const comments = MOCK_COMMENTS.get(key) ?? []
+      MOCK_COMMENTS.set(key, comments.filter((x) => x.id !== commentId))
     },
 
     /* ── Goals ── */

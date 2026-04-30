@@ -903,7 +903,7 @@ export default function WikiPage() {
                 }}
               >
                 <PageEditor
-                  key={activePage.id}
+                  key={activePage.id + "-" + activePage.updated_at}
                   initialTitle={activePage.title}
                   initialContent={
                     activePage.content_md ?? activePage.content_html ?? ""

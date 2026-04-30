@@ -1411,7 +1411,7 @@ export default function SpacesPage() {
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const canManage =
-    user?.role === "admin" || user?.role === "engineering_manager";
+    user?.role === "admin";
 
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list" | "heatmap">("grid");
