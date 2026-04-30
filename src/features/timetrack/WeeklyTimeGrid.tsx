@@ -43,18 +43,20 @@ export function WeeklyTab() {
   const qc = useQueryClient();
   const { user } = useAuthStore();
 
-  const [weekStart, setWeekStart] = useState<Date>(() => getMondayOf(new Date()));
-  const [grid, setGrid]           = useState<Grid>({});
-  const [saving, setSaving]       = useState(false);
-  const [comment, setComment]     = useState("");
+  const [weekStart, setWeekStart] = useState<Date>(() =>
+    getMondayOf(new Date()),
+  );
+  const [grid, setGrid] = useState<Grid>({});
+  const [saving, setSaving] = useState(false);
+  const [comment, setComment] = useState("");
   const cellRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const weekDates = DAYS.map((_, i) => addDays(weekStart, i));
 
   const { data, isLoading } = useQuery({
     queryKey: ["weekly-grid-tickets", user?.email],
-    queryFn:  () => fetchTickets({ user: user?.name }),
-    enabled:  !!user,
+    queryFn: () => fetchTickets({ user: user?.name }),
+    enabled: !!user,
   });
 
   const tickets: Ticket[] = (data?.tickets ?? [])
@@ -62,8 +64,17 @@ export function WeeklyTab() {
     .slice(0, 40);
 
   const logMut = useMutation({
-    mutationFn: ({ key, date, hours, note }: { key: string; date: string; hours: number; note: string }) =>
-      logTime(key, hours, note, date),
+    mutationFn: ({
+      key,
+      date,
+      hours,
+      note,
+    }: {
+      key: string;
+      date: string;
+      hours: number;
+      note: string;
+    }) => logTime(key, hours, note, date),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -80,7 +91,12 @@ export function WeeklyTab() {
   }
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>, ticketKey: string, dayIdx: number, rowIdx: number) => {
+    (
+      e: React.KeyboardEvent<HTMLInputElement>,
+      ticketKey: string,
+      dayIdx: number,
+      rowIdx: number,
+    ) => {
       if (e.key === "Tab") {
         e.preventDefault();
         const nextDay = e.shiftKey ? dayIdx - 1 : dayIdx + 1;
@@ -89,23 +105,32 @@ export function WeeklyTab() {
         } else if (!e.shiftKey && rowIdx < tickets.length - 1) {
           cellRefs.current[cellKey(tickets[rowIdx + 1].key, 0)]?.focus();
         } else if (e.shiftKey && rowIdx > 0) {
-          cellRefs.current[cellKey(tickets[rowIdx - 1].key, DAYS.length - 1)]?.focus();
+          cellRefs.current[
+            cellKey(tickets[rowIdx - 1].key, DAYS.length - 1)
+          ]?.focus();
         }
       }
       if (e.key === "Enter") {
         const nextDay = dayIdx + 1;
-        if (nextDay < DAYS.length) cellRefs.current[cellKey(ticketKey, nextDay)]?.focus();
+        if (nextDay < DAYS.length)
+          cellRefs.current[cellKey(ticketKey, nextDay)]?.focus();
       }
     },
-    [tickets]
+    [tickets],
   );
 
   function rowTotal(ticketKey: string): number {
-    return DAYS.reduce((sum, _, i) => sum + (parseFloat(grid[ticketKey]?.[i] ?? "0") || 0), 0);
+    return DAYS.reduce(
+      (sum, _, i) => sum + (parseFloat(grid[ticketKey]?.[i] ?? "0") || 0),
+      0,
+    );
   }
 
   function dayTotal(dayIdx: number): number {
-    return tickets.reduce((sum, t) => sum + (parseFloat(grid[t.key]?.[dayIdx] ?? "0") || 0), 0);
+    return tickets.reduce(
+      (sum, t) => sum + (parseFloat(grid[t.key]?.[dayIdx] ?? "0") || 0),
+      0,
+    );
   }
 
   function grandTotal(): number {
@@ -118,7 +143,8 @@ export function WeeklyTab() {
     tickets.forEach((t) => {
       DAYS.forEach((_, i) => {
         const h = parseFloat(grid[t.key]?.[i] ?? "0") || 0;
-        if (h > 0) entries.push({ key: t.key, date: fmtDate(weekDates[i]), hours: h });
+        if (h > 0)
+          entries.push({ key: t.key, date: fmtDate(weekDates[i]), hours: h });
       });
     });
 
@@ -130,12 +156,21 @@ export function WeeklyTab() {
 
     try {
       await Promise.all(
-        entries.map((e) => logMut.mutateAsync({ key: e.key, date: e.date, hours: e.hours, note: comment }))
+        entries.map((e) =>
+          logMut.mutateAsync({
+            key: e.key,
+            date: e.date,
+            hours: e.hours,
+            note: comment,
+          }),
+        ),
       );
       qc.invalidateQueries({ queryKey: ["weekly-grid-tickets"] });
       setGrid({});
       setComment("");
-      toast.success(`Logged ${entries.length} entries (${grandTotal().toFixed(1)}h total)`);
+      toast.success(
+        `Logged ${entries.length} entries (${grandTotal().toFixed(1)}h total)`,
+      );
     } catch {
       // individual errors already toasted
     } finally {
@@ -146,15 +181,31 @@ export function WeeklyTab() {
   return (
     <>
       <div className={styles.weekNav}>
-        <button className="btn btn-ghost btn-sm" onClick={() => setWeekStart(addDays(weekStart, -7))}>← Prev</button>
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={() => setWeekStart(addDays(weekStart, -7))}
+        >
+          ← Prev
+        </button>
         <span className={styles.weekLabel}>
           {fmtDisplay(weekStart)} – {fmtDisplay(addDays(weekStart, 4))}
         </span>
-        <button className="btn btn-ghost btn-sm" onClick={() => setWeekStart(addDays(weekStart, 7))}>Next →</button>
-        <button className="btn btn-ghost btn-sm" onClick={() => setWeekStart(getMondayOf(new Date()))}>Today</button>
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={() => setWeekStart(addDays(weekStart, 7))}
+        >
+          Next →
+        </button>
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={() => setWeekStart(getMondayOf(new Date()))}
+        >
+          Today
+        </button>
       </div>
 
-      <div className={styles.gridWrap}>
+     <div className={styles.content}>
+       <div className={styles.gridWrap}>
         {isLoading ? (
           <div className={styles.empty}>Loading tickets…</div>
         ) : tickets.length === 0 ? (
@@ -167,7 +218,9 @@ export function WeeklyTab() {
                 {DAYS.map((day, i) => (
                   <th key={day} className={styles.thDay}>
                     <div className={styles.dayName}>{day}</div>
-                    <div className={styles.dayDate}>{fmtDisplay(weekDates[i])}</div>
+                    <div className={styles.dayDate}>
+                      {fmtDisplay(weekDates[i])}
+                    </div>
                   </th>
                 ))}
                 <th className={styles.thTotal}>Total</th>
@@ -179,24 +232,34 @@ export function WeeklyTab() {
                   <td className={styles.tdTicket}>
                     <span className={styles.ticketKey}>{ticket.key}</span>
                     <span className={styles.ticketTitle}>{ticket.summary}</span>
-                    <span className={`badge badge-gray ${styles.ticketStatus}`}>{ticket.status}</span>
+                    <span className={`badge badge-gray ${styles.ticketStatus}`}>
+                      {ticket.status}
+                    </span>
                   </td>
                   {DAYS.map((_, dayIdx) => (
                     <td key={dayIdx} className={styles.tdCell}>
                       <input
-                        ref={(el) => { cellRefs.current[cellKey(ticket.key, dayIdx)] = el; }}
+                        ref={(el) => {
+                          cellRefs.current[cellKey(ticket.key, dayIdx)] = el;
+                        }}
                         className={styles.cellInput}
                         type="text"
                         inputMode="decimal"
                         placeholder="—"
                         value={grid[ticket.key]?.[dayIdx] ?? ""}
-                        onChange={(e) => setCell(ticket.key, dayIdx, e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(e, ticket.key, dayIdx, rowIdx)}
+                        onChange={(e) =>
+                          setCell(ticket.key, dayIdx, e.target.value)
+                        }
+                        onKeyDown={(e) =>
+                          handleKeyDown(e, ticket.key, dayIdx, rowIdx)
+                        }
                       />
                     </td>
                   ))}
                   <td className={styles.tdRowTotal}>
-                    {rowTotal(ticket.key) > 0 ? `${rowTotal(ticket.key).toFixed(1)}h` : "—"}
+                    {rowTotal(ticket.key) > 0
+                      ? `${rowTotal(ticket.key).toFixed(1)}h`
+                      : "—"}
                   </td>
                 </tr>
               ))}
@@ -209,7 +272,9 @@ export function WeeklyTab() {
                     {dayTotal(i) > 0 ? `${dayTotal(i).toFixed(1)}h` : "—"}
                   </td>
                 ))}
-                <td className={styles.tdGrandTotal}>{grandTotal().toFixed(1)}h</td>
+                <td className={styles.tdGrandTotal}>
+                  {grandTotal().toFixed(1)}h
+                </td>
               </tr>
             </tfoot>
           </table>
@@ -231,6 +296,7 @@ export function WeeklyTab() {
           {saving ? "Saving…" : `Log ${grandTotal().toFixed(1)}h`}
         </button>
       </div>
+     </div>
     </>
   );
 }
@@ -253,24 +319,26 @@ export function ManualTab() {
     hours: "",
     note: "",
   });
-  const [search, setSearch]   = useState("");
-  const [saving, setSaving]   = useState(false);
-  const [open, setOpen]       = useState(false);
-  const [log, setLog]         = useState<(ManualEntry & { id: number })[]>([]);
+  const [search, setSearch] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [log, setLog] = useState<(ManualEntry & { id: number })[]>([]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["manual-tickets", user?.email],
-    queryFn:  () => fetchTickets({ user: user?.name }),
-    enabled:  !!user,
+    queryFn: () => fetchTickets({ user: user?.name }),
+    enabled: !!user,
   });
 
-  const allTickets: Ticket[] = (data?.tickets ?? []).filter((t) => !t.status.includes("Done"));
+  const allTickets: Ticket[] = (data?.tickets ?? []).filter(
+    (t) => !t.status.includes("Done"),
+  );
 
   const filtered = search.trim()
     ? allTickets.filter(
         (t) =>
           t.key.toLowerCase().includes(search.toLowerCase()) ||
-          t.summary.toLowerCase().includes(search.toLowerCase())
+          t.summary.toLowerCase().includes(search.toLowerCase()),
       )
     : allTickets.slice(0, 8);
 
@@ -286,7 +354,8 @@ export function ManualTab() {
     e.preventDefault();
     const hours = parseFloat(form.hours);
     if (!form.ticketKey) return toast.error("Select a ticket");
-    if (!hours || hours <= 0 || hours > 24) return toast.error("Enter valid hours (0–24)");
+    if (!hours || hours <= 0 || hours > 24)
+      return toast.error("Enter valid hours (0–24)");
 
     setSaving(true);
     try {
@@ -313,7 +382,9 @@ export function ManualTab() {
     <div className={styles.manualWrap}>
       <div className={styles.manualCard}>
         <h2 className={styles.manualCardTitle}>Log Time Entry</h2>
-        <p className={styles.manualCardSub}>Quickly log hours against a single ticket.</p>
+        <p className={styles.manualCardSub}>
+          Quickly log hours against a single ticket.
+        </p>
 
         <form className={styles.manualForm} onSubmit={handleSubmit}>
           {/* Ticket picker */}
@@ -324,16 +395,30 @@ export function ManualTab() {
                 className={`input ${styles.manualInput}`}
                 placeholder="Search by key or title…"
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setOpen(true); setForm((f) => ({ ...f, ticketKey: "" })); }}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setOpen(true);
+                  setForm((f) => ({ ...f, ticketKey: "" }));
+                }}
                 onFocus={() => setOpen(true)}
                 autoComplete="off"
               />
               {open && (
                 <div className={styles.tickerDropdown}>
                   {isLoading ? (
-                    <div className={styles.tickerDropItem} style={{ color: "var(--text-3)" }}>Loading…</div>
+                    <div
+                      className={styles.tickerDropItem}
+                      style={{ color: "var(--text-3)" }}
+                    >
+                      Loading…
+                    </div>
                   ) : filtered.length === 0 ? (
-                    <div className={styles.tickerDropItem} style={{ color: "var(--text-3)" }}>No tickets found</div>
+                    <div
+                      className={styles.tickerDropItem}
+                      style={{ color: "var(--text-3)" }}
+                    >
+                      No tickets found
+                    </div>
                   ) : (
                     filtered.map((t) => (
                       <button
@@ -343,8 +428,14 @@ export function ManualTab() {
                         onMouseDown={() => selectTicket(t)}
                       >
                         <span className={styles.tickerDropKey}>{t.key}</span>
-                        <span className={styles.tickerDropTitle}>{t.summary}</span>
-                        <span className={`badge badge-gray ${styles.tickerDropStatus}`}>{t.status}</span>
+                        <span className={styles.tickerDropTitle}>
+                          {t.summary}
+                        </span>
+                        <span
+                          className={`badge badge-gray ${styles.tickerDropStatus}`}
+                        >
+                          {t.status}
+                        </span>
                       </button>
                     ))
                   )}
@@ -354,7 +445,9 @@ export function ManualTab() {
             {selectedTicket && (
               <div className={styles.selectedTicketBadge}>
                 <span className={styles.ticketKey}>{selectedTicket.key}</span>
-                <span className={styles.ticketTitle}>{selectedTicket.summary}</span>
+                <span className={styles.ticketTitle}>
+                  {selectedTicket.summary}
+                </span>
               </div>
             )}
           </div>
@@ -367,7 +460,9 @@ export function ManualTab() {
                 className={`input ${styles.manualInput}`}
                 type="date"
                 value={form.date}
-                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, date: e.target.value }))
+                }
                 max={todayStr()}
                 required
               />
@@ -384,7 +479,9 @@ export function ManualTab() {
                 max="24"
                 placeholder="e.g. 2.5"
                 value={form.hours}
-                onChange={(e) => setForm((f) => ({ ...f, hours: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, hours: e.target.value }))
+                }
                 required
               />
             </div>
@@ -392,7 +489,9 @@ export function ManualTab() {
 
           {/* Note */}
           <div className={styles.manualField}>
-            <label className={styles.manualLabel}>Note <span className={styles.optional}>(optional)</span></label>
+            <label className={styles.manualLabel}>
+              Note <span className={styles.optional}>(optional)</span>
+            </label>
             <input
               className={`input ${styles.manualInput}`}
               placeholder="What did you work on?"
@@ -419,9 +518,13 @@ export function ManualTab() {
             {log.map((entry) => (
               <div key={entry.id} className={styles.recentLogItem}>
                 <span className={styles.ticketKey}>{entry.ticketKey}</span>
-                <span className={styles.recentLogHours}>{parseFloat(entry.hours).toFixed(1)}h</span>
+                <span className={styles.recentLogHours}>
+                  {parseFloat(entry.hours).toFixed(1)}h
+                </span>
                 <span className={styles.recentLogDate}>{entry.date}</span>
-                {entry.note && <span className={styles.recentLogNote}>{entry.note}</span>}
+                {entry.note && (
+                  <span className={styles.recentLogNote}>{entry.note}</span>
+                )}
               </div>
             ))}
           </div>
@@ -430,5 +533,3 @@ export function ManualTab() {
     </div>
   );
 }
-
-

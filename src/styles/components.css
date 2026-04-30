@@ -190,7 +190,7 @@
    INPUT / SELECT
    ───────────────────────────────────────────── */
 .input, .select {
-  background: var(--surface-2);
+  background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: var(--r-sm);
   padding: 8px 11px;

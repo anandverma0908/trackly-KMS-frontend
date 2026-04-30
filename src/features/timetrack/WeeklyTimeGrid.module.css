@@ -34,14 +34,18 @@
   border: none;
   border-radius: calc(var(--r-sm) - 2px);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
-.tab:hover { color: var(--text); }
+.tab:hover {
+  color: var(--text);
+}
 .tabActive {
   background: var(--surface);
   color: var(--text);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .title {
@@ -66,11 +70,26 @@
 }
 
 /* Week navigation */
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: var(--bgrnd);
+  padding: 12px 15px;
+  border-radius: var(--r-xl);
+}
 .weekNav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   flex-shrink: 0;
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
+  padding: 12px 15px;
+  margin-bottom: 10px;
+  margin-top: 15px;
+
 }
 
 .weekLabel {
@@ -90,7 +109,8 @@
   max-height: 480px;
 }
 
-.loading, .empty {
+.loading,
+.empty {
   padding: 48px;
   text-align: center;
   color: var(--text-3);
@@ -154,8 +174,12 @@
   border-bottom: 1px solid var(--border);
   transition: background 0.1s;
 }
-.row:last-child { border-bottom: none; }
-.row:hover      { background: var(--surface-2); }
+.row:last-child {
+  border-bottom: none;
+}
+.row:hover {
+  background: var(--surface-2);
+}
 
 .tdTicket {
   padding: 10px 16px;
@@ -202,7 +226,9 @@
   font-size: 0.85rem;
   text-align: center;
   padding: 5px 6px;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
   font-family: var(--font-mono);
 }
 .cellInput:focus {
@@ -211,7 +237,9 @@
   background: var(--surface);
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
-.cellInput::placeholder { color: var(--text-3); }
+.cellInput::placeholder {
+  color: var(--text-3);
+}
 
 /* Row total */
 .tdRowTotal {
@@ -263,7 +291,9 @@
   gap: 12px;
 }
 
-.commentInput { flex: 1; }
+.commentInput {
+  flex: 1;
+}
 
 /* ── Manual Entry ─────────────────────────────────────────────────────── */
 .manualWrap {
@@ -329,7 +359,9 @@
 }
 
 /* Ticket picker dropdown */
-.ticketPicker { position: relative; }
+.ticketPicker {
+  position: relative;
+}
 
 .tickerDropdown {
   position: absolute;
@@ -339,7 +371,7 @@
   background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: var(--r-sm);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   z-index: 50;
   max-height: 240px;
   overflow-y: auto;
@@ -361,8 +393,12 @@
   font-size: 0.82rem;
   color: var(--text);
 }
-.tickerDropItem:hover { background: var(--surface-2); }
-.tickerDropItemActive { background: var(--surface-2); }
+.tickerDropItem:hover {
+  background: var(--surface-2);
+}
+.tickerDropItemActive {
+  background: var(--surface-2);
+}
 
 .tickerDropKey {
   font-family: var(--font-mono);
@@ -453,8 +489,16 @@
 }
 
 @media (max-width: 768px) {
-  .page      { padding: 16px; }
-  .header    { flex-direction: column; }
-  .gridWrap  { overflow-x: auto; }
-  .manualRow { grid-template-columns: 1fr; }
+  .page {
+    padding: 16px;
+  }
+  .header {
+    flex-direction: column;
+  }
+  .gridWrap {
+    overflow-x: auto;
+  }
+  .manualRow {
+    grid-template-columns: 1fr;
+  }
 }
