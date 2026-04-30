@@ -66,6 +66,7 @@ export default function Topbar({
   const [mode, setMode] = useState<SearchMode>("semantic");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [novaAnswer, setNovaAnswer] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selIdx, setSelIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -102,9 +103,11 @@ export default function Topbar({
     if (!q.trim()) {
       setResults([]);
       setNovaAnswer(null);
+      setSearchError(false);
       return;
     }
     setLoading(true);
+    setSearchError(false);
     try {
       if (m === "nova") {
         const res = await novaQuery(q);
@@ -118,6 +121,7 @@ export default function Topbar({
       setSelIdx(0);
     } catch {
       setResults([]);
+      setSearchError(true);
     } finally {
       setLoading(false);
     }
@@ -170,6 +174,7 @@ export default function Topbar({
     setQuery("");
     setResults([]);
     setNovaAnswer(null);
+    setSearchError(false);
     inputRef.current?.focus();
   }
 
@@ -350,10 +355,12 @@ export default function Topbar({
               </div>
             )}
 
-            {/* Empty state */}
+            {/* Empty / error state */}
             {!loading && query && results.length === 0 && (
               <div className={styles.emptyState}>
-                No results for "<strong>{query}</strong>"
+                {searchError
+                  ? "Search temporarily unavailable — try again"
+                  : <>No results for "<strong>{query}</strong>"</>}
               </div>
             )}
 
