@@ -1389,6 +1389,45 @@
   background: var(--accent-glow);
 }
 
+/* ── AI Option Block ── */
+.aiOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.aiOptionBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 7px 13px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.13s;
+  min-width: 90px;
+}
+
+.aiOptionBtn:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
+}
+
+.aiOptionLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.aiOptionMeta {
+  font-size: 10px;
+  color: var(--text-3);
+}
+
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .sidebar {

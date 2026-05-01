@@ -14,8 +14,6 @@ import {
   RiFileTextLine,
   RiArrowRightLine,
   RiLightbulbLine,
-  RiRobot2Line,
-  RiHistoryLine,
   RiImageLine,
   RiRefreshLine,
   RiFlashlightLine,
@@ -25,6 +23,7 @@ import {
   RiAttachmentLine,
   RiVideoLine,
   RiMusicLine,
+  RiLayoutGridLine,
 } from "react-icons/ri";
 import SideDrawer from "@/components/ui/SideDrawer";
 import { runAgentLoop } from "./agent/agentController";
@@ -39,12 +38,14 @@ import {
   fetchTeamStandups,
   extractMeetingActions,
   createTicket,
+  addTicketToSprint,
+  fetchSprints,
   triggerReindex,
   analyzeScreenshot,
   transcribeMedia,
   type SpaceAnomaly,
 } from "@/services/api";
-import type { KnowledgeGap, Decision, Standup } from "@/types";
+import type { KnowledgeGap, Decision, Standup, Sprint } from "@/types";
 import styles from "./NovaPage.module.css";
 
 /* ══════════════════════════════════════════════════════════
@@ -54,6 +55,24 @@ type PulseType = "risk" | "pattern" | "suggestion" | "signal";
 type Intent = "ask" | "thought" | "meeting" | "screenshot" | "voice";
 type CreatedType = "ticket" | "doc" | "bug";
 type AgentStatus = "running" | "done" | "waiting";
+
+interface PendingTicket {
+  title: string;
+  description: string;
+  priority: string;
+  issue_type: string;
+  assignee?: string;
+  story_points?: number;
+  labels?: string[];
+  due_date?: string;
+  sprint_id?: string;
+}
+
+interface AIOption {
+  label: string;
+  value: string;
+  meta?: string;
+}
 
 interface PulseItem {
   id: string;
@@ -89,6 +108,8 @@ interface Message {
   citations?: Citation[];
   created?: CreatedItem;
   agentSteps?: AgentStep[];
+  options?: AIOption[];
+  pendingTicket?: PendingTicket;
   ts: Date;
 }
 
@@ -392,6 +413,16 @@ function PulseCard({
    CREATED ITEM CARD
 ══════════════════════════════════════════════════════════ */
 function CreatedItemCard({ item }: { item: CreatedItem }) {
+  const navigate = useNavigate();
+
+  function openTicket() {
+    navigate(`/tickets?key=${encodeURIComponent(item.id)}`);
+  }
+
+  function viewOnBoard() {
+    navigate(`/tickets?key=${encodeURIComponent(item.id)}&view=board`);
+  }
+
   return (
     <div
       className={styles.createdCard}
@@ -414,10 +445,15 @@ function CreatedItemCard({ item }: { item: CreatedItem }) {
       <div className={styles.createdCardTitle}>{item.title}</div>
       <div className={styles.createdCardMeta}>{item.meta}</div>
       <div className={styles.createdCardActions}>
-        <button className={styles.createdCardOpen}>
+        <button className={styles.createdCardOpen} onClick={openTicket}>
           Open <RiArrowRightLine size={10} />
         </button>
-        <button className={styles.createdCardGhost}>Edit</button>
+        <button className={styles.createdCardGhost} onClick={viewOnBoard}>
+          <RiLayoutGridLine size={10} /> Board
+        </button>
+        <button className={styles.createdCardGhost} onClick={openTicket}>
+          Edit
+        </button>
       </div>
     </div>
   );
@@ -493,6 +529,32 @@ function AgentStepTrace({ steps }: { steps: AgentStep[] }) {
 }
 
 /* ══════════════════════════════════════════════════════════
+   AI OPTION BLOCK — interactive follow-up choices
+══════════════════════════════════════════════════════════ */
+function AIOptionBlock({
+  options,
+  onSelect,
+}: {
+  options: AIOption[];
+  onSelect: (value: string, label: string) => void;
+}) {
+  return (
+    <div className={styles.aiOptions}>
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          className={styles.aiOptionBtn}
+          onClick={() => onSelect(opt.value, opt.label)}
+        >
+          <span className={styles.aiOptionLabel}>{opt.label}</span>
+          {opt.meta && <span className={styles.aiOptionMeta}>{opt.meta}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
    HIGHLIGHTED TEXT
 ══════════════════════════════════════════════════════════ */
 function HighlightedText({
@@ -546,9 +608,11 @@ function HighlightedText({
 function MessageBubble({
   msg,
   isLatestNova,
+  onOptionSelect,
 }: {
   msg: Message;
   isLatestNova: boolean;
+  onOptionSelect?: (value: string, label: string) => void;
 }) {
   const [hoveredCitation, setHoveredCitation] = useState<string | null>(null);
   const streaming = msg.role === "nova" && isLatestNova;
@@ -573,6 +637,8 @@ function MessageBubble({
     );
   }
 
+  const showExtras = streaming ? done : true;
+
   return (
     <motion.div
       className={styles.novaMsg}
@@ -592,35 +658,34 @@ function MessageBubble({
             done={done}
           />
         </p>
-        {msg.citations &&
-          msg.citations.length > 0 &&
-          (streaming ? done : true) && (
-            <div className={styles.citations}>
-              {msg.citations.map((c) => (
-                <button
-                  key={c.key}
-                  className={`${styles.citation} ${hoveredCitation === c.key ? styles.citationActive : ""}`}
-                  style={{
-                    borderColor: CITATION_COLOR[c.type] ?? "var(--border-2)",
-                    color: CITATION_COLOR[c.type] ?? "var(--text-3)",
-                  }}
-                  onMouseEnter={() => setHoveredCitation(c.key)}
-                  onMouseLeave={() => setHoveredCitation(null)}
-                >
-                  <span className={styles.citationKey}>{c.key}</span>
-                  <span className={styles.citationTitle}>{c.title}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        {msg.created && (streaming ? done : true) && (
+        {msg.citations && msg.citations.length > 0 && showExtras && (
+          <div className={styles.citations}>
+            {msg.citations.map((c) => (
+              <button
+                key={c.key}
+                className={`${styles.citation} ${hoveredCitation === c.key ? styles.citationActive : ""}`}
+                style={{
+                  borderColor: CITATION_COLOR[c.type] ?? "var(--border-2)",
+                  color: CITATION_COLOR[c.type] ?? "var(--text-3)",
+                }}
+                onMouseEnter={() => setHoveredCitation(c.key)}
+                onMouseLeave={() => setHoveredCitation(null)}
+              >
+                <span className={styles.citationKey}>{c.key}</span>
+                <span className={styles.citationTitle}>{c.title}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {msg.options && msg.options.length > 0 && showExtras && onOptionSelect && (
+          <AIOptionBlock options={msg.options} onSelect={onOptionSelect} />
+        )}
+        {msg.created && showExtras && (
           <CreatedItemCard item={msg.created} />
         )}
-        {msg.agentSteps &&
-          msg.agentSteps.length > 0 &&
-          (streaming ? done : true) && (
-            <AgentStepTrace steps={msg.agentSteps} />
-          )}
+        {msg.agentSteps && msg.agentSteps.length > 0 && showExtras && (
+          <AgentStepTrace steps={msg.agentSteps} />
+        )}
       </div>
     </motion.div>
   );
@@ -698,6 +763,16 @@ export default function NovaPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: allSprints = [] } = useQuery({
+    queryKey: ["sprints"],
+    queryFn: fetchSprints,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const activeSprint: Sprint | undefined = allSprints.find(
+    (s: Sprint) => s.status === "active",
+  );
+
   /* Auto-index on mount — silent, best-effort */
   useEffect(() => {
     triggerReindex().catch(() => {});
@@ -772,6 +847,48 @@ export default function NovaPage() {
     }
   }
 
+  /* ── Shared ticket creation pipeline ── */
+  const executeTicketCreate = useCallback(
+    async (ticket: PendingTicket): Promise<{ key: string } | null> => {
+      console.log("[EOS] Creating ticket payload:", ticket);
+
+      const payload: Parameters<typeof createTicket>[0] = {
+        title: ticket.title,
+        description: ticket.description,
+        priority: ticket.priority,
+        issue_type: ticket.issue_type,
+        ...(ticket.assignee && { assignee: ticket.assignee }),
+        ...(ticket.story_points && { story_points: ticket.story_points }),
+        ...(ticket.labels?.length && { labels: ticket.labels }),
+        ...(ticket.due_date && { due_date: ticket.due_date }),
+        ...(ticket.sprint_id && { sprint_id: ticket.sprint_id }),
+      };
+
+      const created = await createTicket(payload);
+      console.log("[EOS] Ticket created:", created);
+
+      const ticketKey = created?.key ?? null;
+
+      // Auto-assign to active sprint if not already assigned
+      if (ticketKey && activeSprint && !ticket.sprint_id) {
+        try {
+          console.log("[EOS] Assigning ticket to sprint:", activeSprint.id);
+          await addTicketToSprint(activeSprint.id, ticketKey);
+          console.log("[EOS] Sprint assignment successful");
+        } catch (sprintErr) {
+          console.warn("[EOS] Sprint assignment failed:", sprintErr);
+        }
+      }
+
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+      qc.invalidateQueries({ queryKey: ["sprints"] });
+
+      return created ? { key: ticketKey! } : null;
+    },
+    [activeSprint, qc],
+  );
+
   const send = useCallback(
     async (overrideText?: string, overrideIntent?: Intent) => {
       const text = (overrideText ?? input).trim();
@@ -787,7 +904,7 @@ export default function NovaPage() {
       const userMsg: Message = {
         id: crypto.randomUUID(),
         role: "user",
-        text: text || "[screenshot attached]",
+        text: text || "[media attached]",
         intent: finalIntent,
         ts: new Date(),
       };
@@ -797,6 +914,7 @@ export default function NovaPage() {
       try {
         let novaMsg: Message;
 
+        /* ── Meeting transcript ── */
         if (finalIntent === "meeting") {
           const result = await extractMeetingActions(text);
           const structured =
@@ -816,38 +934,71 @@ export default function NovaPage() {
             },
             ts: new Date(),
           };
+
+        /* ── Thought / Voice → ticket suggestion ── */
         } else if (finalIntent === "thought" || finalIntent === "voice") {
+          console.log(`[EOS] ${finalIntent} intent — extracting ticket fields`);
+          const sprintCtx = activeSprint
+            ? `Active sprint: "${activeSprint.name}" (id: ${activeSprint.id}).`
+            : "No active sprint.";
           const raw = await novaGenerate(
-            `Structure this engineering thought as a ticket. Return ONLY valid JSON, no prose or markdown:
-{"title": "concise action-oriented title", "description": "full description with context", "priority": "Medium", "issue_type": "Task"}
+            `Structure this engineering input as a ticket. ${sprintCtx}
+Return ONLY valid JSON, no prose or markdown fences:
+{
+  "title": "concise action-oriented title",
+  "description": "full description with context",
+  "priority": "High|Medium|Low",
+  "issue_type": "Bug|Task|Story|Improvement",
+  "story_points": 3,
+  "labels": [],
+  "due_date": null
+}
 Input: "${text}"`,
-            "You are EOS, an engineering assistant. Return ONLY a valid JSON object with keys: title, description, priority (High/Medium/Low), issue_type (Bug/Task/Story). No prose, no markdown fences.",
+            "You are EOS, an engineering assistant. Return ONLY a valid JSON object. No prose, no markdown fences.",
             0.2,
           );
-          let title = text.slice(0, 72);
-          let description = text;
-          let priority = "Medium";
-          let issue_type = "Task";
+
+          let ticket: PendingTicket = {
+            title: text.slice(0, 72),
+            description: text,
+            priority: "Medium",
+            issue_type: "Task",
+          };
           try {
             const m = raw.match(/\{[\s\S]*?\}/);
             if (m) {
               const parsed = JSON.parse(m[0]);
-              if (parsed.title) title = parsed.title;
-              if (parsed.description) description = parsed.description;
-              if (parsed.priority) priority = parsed.priority;
-              if (parsed.issue_type) issue_type = parsed.issue_type;
+              ticket = {
+                title: parsed.title || ticket.title,
+                description: parsed.description || ticket.description,
+                priority: parsed.priority || ticket.priority,
+                issue_type: parsed.issue_type || ticket.issue_type,
+                story_points: parsed.story_points || undefined,
+                labels: parsed.labels?.length ? parsed.labels : undefined,
+                due_date: parsed.due_date || undefined,
+              };
             }
           } catch {
-            /* use defaults */
+            console.warn("[EOS] Failed to parse ticket JSON, using defaults");
           }
+          console.log("[EOS] Extracted ticket fields:", ticket);
 
+          const sprintLabel = activeSprint
+            ? ` · Sprint: ${activeSprint.name}`
+            : "";
           novaMsg = {
             id: crypto.randomUUID(),
             role: "nova",
-            text: `I'd structure this as a ticket:\n\n**${title}**\n${description.slice(0, 200)}${description.length > 200 ? "…" : ""}\n\n_Priority: ${priority} · ${issue_type}_\n\nShall I create it? Reply "yes" or "create it" to confirm.`,
+            text: `I'd structure this as a ticket:\n\n**${ticket.title}**\n${ticket.description.slice(0, 200)}${ticket.description.length > 200 ? "…" : ""}\n\n_Priority: ${ticket.priority} · ${ticket.issue_type}${ticket.story_points ? ` · ${ticket.story_points} pts` : ""}${sprintLabel}_\n\nShall I create it?`,
+            pendingTicket: ticket,
+            options: [
+              { label: "Yes, create it", value: "confirm" },
+              { label: "No, cancel", value: "cancel" },
+            ],
             ts: new Date(),
-            _pendingTicket: { title, description, priority, issue_type } as any,
-          } as any;
+          };
+
+        /* ── Screenshot / Audio / Video ── */
         } else if (finalIntent === "screenshot") {
           let analysisResult: {
             title: string;
@@ -855,157 +1006,145 @@ Input: "${text}"`,
             repro_steps?: string[];
             severity?: string;
             issue_type?: string;
+            story_points?: number;
           } | null = null;
-          let mediaLabel = "screenshot";
+          let mediaLabel = "media";
 
           if (capturedMedia?.mediaType === "image" && capturedMedia.base64) {
-            analysisResult = await analyzeScreenshot(
-              capturedMedia.base64,
-              text,
-            );
             mediaLabel = "screenshot";
+            console.log("[EOS] Analyzing screenshot via vision model");
+            try {
+              analysisResult = await analyzeScreenshot(capturedMedia.base64, text);
+              console.log("[EOS] Screenshot analysis result:", analysisResult);
+            } catch (visionErr) {
+              console.warn("[EOS] Vision model unavailable, falling back to text analysis:", visionErr);
+              // Fallback: text-based analysis when LLaVA / vision model is offline
+              const raw = await novaGenerate(
+                `A screenshot was uploaded${text ? ` with context: "${text}"` : ""}. Based on the description, extract bug/issue details.
+Return ONLY valid JSON:
+{"title": string, "description": string, "repro_steps": [string], "severity": "critical|high|medium|low", "issue_type": "Bug|Task", "story_points": 2}`,
+                "You are EOS, a bug triage assistant. Return ONLY valid JSON.",
+                0.3,
+              );
+              try {
+                const m = raw.match(/\{[\s\S]*?\}/);
+                if (m) {
+                  analysisResult = JSON.parse(m[0]);
+                }
+              } catch {
+                /* ignore */
+              }
+              analysisResult = analysisResult ?? {
+                title: text.slice(0, 72) || "Bug from screenshot",
+                description: text || "Issue captured from screenshot",
+                severity: "medium",
+                issue_type: "Bug",
+              };
+            }
           } else if (
             capturedMedia?.mediaType === "audio" ||
             capturedMedia?.mediaType === "video"
           ) {
             mediaLabel = capturedMedia.mediaType;
+            console.log(`[EOS] Transcribing ${mediaLabel} file:`, capturedMedia.name);
             const result = await transcribeMedia(capturedMedia.file!);
+            console.log("[EOS] Transcription result:", result);
             const f = result.fields ?? {};
             analysisResult = {
-              title: f.title ?? "Issue from " + mediaLabel,
+              title: f.title ?? `Issue from ${mediaLabel}`,
               description: f.description ?? result.transcript,
               issue_type: f.issue_type ?? "Bug",
               severity: (f.priority ?? "medium").toLowerCase(),
               repro_steps: [],
             };
           } else {
+            // No file attached but screenshot intent — use text context
+            console.log("[EOS] No media file found, using text context");
             const raw = await novaGenerate(
-              `A ${mediaLabel} was shared showing a potential bug. Description: "${text || "No description"}". Describe the likely issue and reproduction steps.`,
-              "You are NOVA, a bug triage assistant. Be concise and factual.",
+              `A ${mediaLabel} was shared showing a potential issue. Description: "${text || "No description"}". Describe the likely bug and reproduction steps.
+Return ONLY valid JSON:
+{"title": string, "description": string, "repro_steps": [string], "severity": "medium", "issue_type": "Bug"}`,
+              "You are NOVA, a bug triage assistant. Return ONLY valid JSON.",
               0.3,
             );
-            analysisResult = {
-              title: text.slice(0, 72) || "Bug from " + mediaLabel,
+            try {
+              const m = raw.match(/\{[\s\S]*?\}/);
+              analysisResult = m ? JSON.parse(m[0]) : null;
+            } catch { /* ignore */ }
+            analysisResult = analysisResult ?? {
+              title: text.slice(0, 72) || "Bug from media",
               description: raw || text,
               severity: "medium",
               issue_type: "Bug",
             };
           }
 
+          if (!analysisResult) {
+            throw new Error("Could not extract issue details from the uploaded media. Please add a description and try again.");
+          }
+
           const steps = analysisResult.repro_steps?.length
             ? "\n\n**Steps to reproduce:**\n" +
-              analysisResult.repro_steps
-                .map((s, i) => `${i + 1}. ${s}`)
-                .join("\n")
+              analysisResult.repro_steps.map((s, i) => `${i + 1}. ${s}`).join("\n")
             : "";
 
+          const priority =
+            analysisResult.severity === "critical" ? "Highest"
+            : analysisResult.severity === "high" ? "High"
+            : "Medium";
+
+          const ticket: PendingTicket = {
+            title: analysisResult.title,
+            description: analysisResult.description + (steps ? "\n" + steps : ""),
+            priority,
+            issue_type: analysisResult.issue_type ?? "Bug",
+            story_points: analysisResult.story_points,
+          };
+          console.log("[EOS] Screenshot ticket payload ready:", ticket);
+
+          const sprintLabel = activeSprint ? ` · Sprint: ${activeSprint.name}` : "";
           novaMsg = {
             id: crypto.randomUUID(),
             role: "nova",
-            text: `Analysed ${mediaLabel}:\n\n**${analysisResult.title}**\n${analysisResult.description}${steps}\n\n_Severity: ${analysisResult.severity ?? "medium"} · ${analysisResult.issue_type ?? "Bug"}_\n\nShall I file this as a bug? Reply "file it" to confirm.`,
+            text: `Analysed ${mediaLabel}:\n\n**${ticket.title}**\n${analysisResult.description}${steps}\n\n_Severity: ${analysisResult.severity ?? "medium"} · ${ticket.issue_type}${sprintLabel}_\n\nShall I file this?`,
+            pendingTicket: ticket,
+            options: [
+              { label: "Yes, file it", value: "confirm" },
+              { label: "No, cancel", value: "cancel" },
+            ],
             ts: new Date(),
-            _pendingTicket: {
-              title: analysisResult.title,
-              description:
-                analysisResult.description + (steps ? "\n" + steps : ""),
-              priority:
-                analysisResult.severity === "critical"
-                  ? "Highest"
-                  : analysisResult.severity === "high"
-                    ? "High"
-                    : "Medium",
-              issue_type: analysisResult.issue_type ?? "Bug",
-            },
-          } as any;
-        } else {
-          const lastNovaMsg = [...messages]
-            .reverse()
-            .find((m) => m.role === "nova");
-          const pendingTicket = (lastNovaMsg as any)?._pendingTicket;
-          const isConfirm =
-            /^(yes|create it|go ahead|confirm|do it|create|ok|sure|yep|yeah)/i.test(
-              text.trim(),
-            );
-          if (isConfirm && pendingTicket) {
-            const { title, description, priority, issue_type } = pendingTicket;
-            const created = await createTicket({
-              title,
-              description,
-              priority,
-              issue_type,
-            });
-            qc.invalidateQueries({ queryKey: ["tickets"] });
-            qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
-            novaMsg = {
-              id: crypto.randomUUID(),
-              role: "nova",
-              text: "Ticket created.",
-              created: {
-                type: "ticket",
-                id: created?.key ?? "TRK-???",
-                title,
-                meta: `Priority: ${priority} · ${issue_type} · Unassigned`,
-              },
-              ts: new Date(),
-            };
-            setRecentItems((prev) =>
-              [
-                {
-                  type: "ticket" as CreatedType,
-                  id: created?.key ?? "TRK-???",
-                  title,
-                  meta: `Priority: ${priority}`,
-                  age: "just now",
-                },
-                ...prev,
-              ].slice(0, 6),
-            );
-            setMessages((prev) => [...prev, novaMsg!]);
-            setLoading(false);
-            return;
-          }
+          };
 
-          const filingConfirm =
-            /^(file it|yes|create it|go ahead|file|create bug|create)/i.test(
-              text.trim(),
-            );
-          if (filingConfirm && pendingTicket) {
-            const { title, description, priority, issue_type } = pendingTicket;
-            const created = await createTicket({
-              title,
-              description,
-              priority,
-              issue_type,
-            });
-            qc.invalidateQueries({ queryKey: ["tickets"] });
-            qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+        /* ── Conversational / Ask ── */
+        } else {
+          // Check if user is confirming a pending ticket from previous message
+          const lastNovaMsg = [...messages].reverse().find((m) => m.role === "nova");
+          const pendingTicket = lastNovaMsg?.pendingTicket;
+          const isConfirm = /^(yes|create it|go ahead|confirm|do it|create|ok|sure|yep|yeah|file it|file)/i.test(text.trim());
+
+          if (isConfirm && pendingTicket) {
+            console.log("[EOS] User confirmed ticket creation:", pendingTicket);
+            const created = await executeTicketCreate(pendingTicket);
+            const ticketKey = created?.key ?? "TRK-???";
             const createdType: CreatedType =
-              issue_type === "Bug" || issue_type === "UI Bug"
-                ? "bug"
-                : "ticket";
+              pendingTicket.issue_type === "Bug" || pendingTicket.issue_type === "UI Bug" ? "bug" : "ticket";
+
+            toast.success(`${createdType === "bug" ? "Bug" : "Ticket"} ${ticketKey} created!`);
+
             novaMsg = {
               id: crypto.randomUUID(),
               role: "nova",
-              text: createdType === "bug" ? "Bug filed." : "Ticket created.",
+              text: `${createdType === "bug" ? "Bug" : "Ticket"} ${ticketKey} created successfully.${activeSprint ? ` Added to sprint: ${activeSprint.name}.` : ""}`,
               created: {
                 type: createdType,
-                id: created?.key ?? "TRK-???",
-                title,
-                meta: `Priority: ${priority} · ${issue_type} · Unassigned`,
+                id: ticketKey,
+                title: pendingTicket.title,
+                meta: `Priority: ${pendingTicket.priority} · ${pendingTicket.issue_type}${pendingTicket.assignee ? ` · ${pendingTicket.assignee}` : " · Unassigned"}`,
               },
               ts: new Date(),
             };
             setRecentItems((prev) =>
-              [
-                {
-                  type: createdType,
-                  id: created?.key ?? "TRK-???",
-                  title,
-                  meta: `Priority: ${priority}`,
-                  age: "just now",
-                },
-                ...prev,
-              ].slice(0, 6),
+              [{ type: createdType, id: ticketKey, title: pendingTicket.title, meta: `Priority: ${pendingTicket.priority}`, age: "just now" }, ...prev].slice(0, 6),
             );
             setMessages((prev) => [...prev, novaMsg!]);
             setLoading(false);
@@ -1014,21 +1153,19 @@ Input: "${text}"`,
 
           const isShortOrConversational =
             text.split(/\s+/).filter(Boolean).length <= 3 ||
-            /^(hi|hello|hey|thanks|thank you|ok|okay|cool|bye|yo|sup)\b/i.test(
-              text.trim(),
-            );
+            /^(hi|hello|hey|thanks|thank you|ok|okay|cool|bye|yo|sup)\b/i.test(text.trim());
 
           if (agentMode && !isShortOrConversational) {
             setLiveSteps([]);
             const history = messages.slice(-10).map((m) => ({
-              role: (m.role === "user" ? "user" : "assistant") as
-                | "user"
-                | "assistant",
+              role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
               content: m.text,
             }));
+            console.log("[EOS] Running agent loop for:", text);
             const result = await runAgentLoop(text, history, (step) => {
               setLiveSteps((prev) => [...prev, step]);
             });
+            console.log("[EOS] Agent loop result:", result);
             novaMsg = {
               id: crypto.randomUUID(),
               role: "nova",
@@ -1047,16 +1184,7 @@ Input: "${text}"`,
               qc.invalidateQueries({ queryKey: ["tickets"] });
               qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
               setRecentItems((prev) =>
-                [
-                  {
-                    type: "ticket" as CreatedType,
-                    id,
-                    title,
-                    meta: `Priority: ${priority}`,
-                    age: "just now",
-                  },
-                  ...prev,
-                ].slice(0, 6),
+                [{ type: "ticket" as CreatedType, id, title, meta: `Priority: ${priority}`, age: "just now" }, ...prev].slice(0, 6),
               );
             }
             setLiveSteps([]);
@@ -1065,19 +1193,13 @@ Input: "${text}"`,
             novaMsg = {
               id: crypto.randomUUID(),
               role: "nova",
-              text:
-                res.answer ||
-                "I couldn't find a relevant answer. Try rephrasing your question.",
+              text: res.answer || "I couldn't find a relevant answer. Try rephrasing your question.",
               citations: res.citations
                 .filter((c) => c.title)
                 .map((c) => ({
                   key: String(c.key ?? c.id),
                   title: c.title,
-                  type: (["ticket", "decision", "wiki", "standup"].includes(
-                    c.type,
-                  )
-                    ? c.type
-                    : "ticket") as Citation["type"],
+                  type: (["ticket", "decision", "wiki", "standup"].includes(c.type) ? c.type : "ticket") as Citation["type"],
                   quote: c.snippet || undefined,
                 })),
               ts: new Date(),
@@ -1087,15 +1209,15 @@ Input: "${text}"`,
 
         setMessages((prev) => [...prev, novaMsg]);
       } catch (e) {
-        const errMsg =
-          e instanceof Error ? e.message : "EOS is unavailable right now.";
+        const errMsg = e instanceof Error ? e.message : "EOS is unavailable right now.";
+        console.error("[EOS] send() error:", e);
         toast.error(errMsg);
         setMessages((prev) => [
           ...prev,
           {
             id: crypto.randomUUID(),
-            role: "nova",
-            text: "I'm having trouble connecting right now. Please try again in a moment.",
+            role: "nova" as const,
+            text: `I ran into an issue: ${errMsg}`,
             ts: new Date(),
           },
         ]);
@@ -1103,7 +1225,29 @@ Input: "${text}"`,
         setLoading(false);
       }
     },
-    [input, attachedMedia, loading, agentMode, messages, qc],
+    [input, attachedMedia, loading, agentMode, messages, qc, activeSprint, executeTicketCreate, podContext],
+  );
+
+  /* ── Handle interactive option selections from AIOptionBlock ── */
+  const handleOptionSelect = useCallback(
+    (value: string, _label: string) => {
+      if (value === "confirm") {
+        send("yes", "ask");
+      } else if (value === "cancel") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: "nova" as const,
+            text: "No problem — ticket creation cancelled.",
+            ts: new Date(),
+          },
+        ]);
+      } else {
+        send(value, "ask");
+      }
+    },
+    [send],
   );
 
   function toggleRecording() {
@@ -1422,6 +1566,7 @@ Input: "${text}"`,
                     key={msg.id}
                     msg={msg}
                     isLatestNova={msg.id === latestNovaId}
+                    onOptionSelect={handleOptionSelect}
                   />
                 ))}
                 {loading && (
