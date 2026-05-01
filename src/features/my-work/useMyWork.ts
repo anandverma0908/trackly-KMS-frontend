@@ -190,7 +190,7 @@ export function useMyWork() {
     queryKey: ["my-work", user?.name],
     queryFn:  fetchMyWork,
     enabled:  !!user,
-    staleTime: 1000 * 60 * 60 * 4,
+    staleTime: 1000 * 60 * 5,
     retry: 2,
   });
 

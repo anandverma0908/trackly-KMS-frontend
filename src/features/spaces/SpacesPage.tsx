@@ -1445,9 +1445,9 @@ export default function SpacesPage() {
   });
 
   // Hoist anomalies query here so badge and panel always show the same count
-  const { data: anomalies = [], isLoading: loadingAnomalies } = useQuery({
+  const { data: anomalies = [], isLoading: loadingAnomalies } = useQuery<SpaceAnomaly[]>({
     queryKey: ["space-anomalies"],
-    queryFn: fetchAnomalies,
+    queryFn: () => fetchAnomalies(),
     staleTime: 1000 * 60 * 5,
   });
 

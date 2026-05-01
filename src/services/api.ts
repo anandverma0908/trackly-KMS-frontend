@@ -1277,8 +1277,8 @@ export async function fetchPodTickets(pod: string, search?: string): Promise<{ t
 }
 
 export async function fetchPodEpics(pod: string): Promise<{ key: string; summary: string }[]> {
-  const { data } = await api.get("/tickets", { params: { pod, issue_type: "Epic", limit: 100 } });
-  return (data.tickets ?? []).map((t: any) => ({ key: t.key ?? t.jira_key, summary: t.summary }));
+  const { data } = await api.get(`/spaces/${pod}/epics`);
+  return (data ?? []).map((e: any) => ({ key: e.id, summary: e.title }));
 }
 
 export async function fetchPodStories(pod: string, search?: string): Promise<{ key: string; summary: string }[]> {
@@ -1593,6 +1593,32 @@ export async function fetchOrgMembers() {
   return members as import("@/types").OrgMember[];
 }
 
+export interface ActivityEntry {
+  id: string;
+  source: "ticket" | "manual";
+  date: string;
+  activity: string;
+  hours: number;
+  pod: string | null;
+  client: string | null;
+  entry_type: string | null;
+  ticket_key: string | null;
+  ticket_summary?: string | null;
+  notes: string | null;
+  user_name: string;
+}
+
+export async function fetchUserActivity(params: {
+  user: string;
+  dateFrom: string;
+  dateTo: string;
+}): Promise<ActivityEntry[]> {
+  const { data } = await api.get<ActivityEntry[]>("/activity", {
+    params: { user: params.user, date_from: params.dateFrom, date_to: params.dateTo },
+  });
+  return data ?? [];
+}
+
 export async function fetchNovaStatus() {
   const { data } = await api.get("/nova/status");
   return data;
@@ -1665,6 +1691,7 @@ export interface MyWorkResponse {
 }
 
 export async function fetchMyWork(): Promise<MyWorkResponse> {
+  if (mock()?.fetchMyWork) return mock().fetchMyWork();
   const { data } = await api.get("/nova/my-work");
   return data;
 }

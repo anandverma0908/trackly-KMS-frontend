@@ -1,6 +1,5 @@
 import { DUMMY_SUMMARY, DUMMY_TICKETS, DUMMY_FILTERS, DUMMY_SPRINTS, DUMMY_ORG_MEMBERS, DUMMY_STANDUPS } from '@/utils/dummyData'
 import { useAuthStore } from '@/features/auth/useAuthStore'
-import { MOCK_PROJECTS } from '@/features/spaces/spacesData'
 import type { FilterState, TicketCreate, Goal, GoalsResponse } from '@/types'
 import type { Project } from '@/features/spaces/spacesData'
 
@@ -114,7 +113,25 @@ const DUMMY_GOALS: Goal[] = [
 ];
 
 function _buildMockProject(pod: string): Project {
-  const base = (MOCK_PROJECTS as any[]).find((p) => p.key === pod) || MOCK_PROJECTS[0]
+  const base: Partial<Project> = {
+    id: pod.toLowerCase(),
+    key: pod,
+    name: pod,
+    description: `${pod} project`,
+    status: 'active',
+    category: 'Engineering',
+    color: '#4F7EFF',
+    lead: 'Team Lead',
+    leadInitials: 'TL',
+    leadColor: 'linear-gradient(135deg,#4F7EFF,#818CF8)',
+    members: [],
+    epics: [],
+    startDate: '2025-01-01',
+    priority: 'medium',
+    tags: [],
+    weeklyActivity: [2, 3, 4, 3, 5, 2, 1],
+    roles: ['admin', 'engineering_manager', 'tech_lead', 'engineer'],
+  }
   const podTickets = (DUMMY_TICKETS.tickets as any[]).filter((t) => t.pod === pod)
   const podSprints = (DUMMY_SPRINTS as any[]).filter((s) => s.pod === pod)
 
@@ -454,6 +471,106 @@ export function enableMocks() {
     fetchOrgMembers: async () => {
       await delay(300)
       return DUMMY_ORG_MEMBERS
+    },
+
+    /* ── My Work (built from DUMMY_TICKETS so it works without real DB tickets) ── */
+    fetchMyWork: async () => {
+      await delay(600)
+      const user = useAuthStore.getState().user
+      const allT = DUMMY_TICKETS.tickets as any[]
+      const DONE_SET = new Set(['Done', 'Closed', 'Resolved'])
+      const myTickets = allT.filter((t) => t.assignee === user?.name || t.assignee === user?.email)
+      const myOpen    = myTickets.filter((t) => !DONE_SET.has(t.status))
+      // If the user has no open tickets, show the org-wide open tickets so the page is always populated
+      const open = myOpen.length > 0
+        ? myOpen
+        : allT.filter((t) => !DONE_SET.has(t.status)).slice(0, 8)
+      const wip = open.filter((t) => t.status === 'In Progress')
+      const blocked = open.filter((t) => t.status === 'Blocked')
+
+      const URGENCY_MAP: Record<string, 'critical' | 'high' | 'medium' | 'low'> = {
+        Highest: 'critical', High: 'high', Medium: 'medium', Low: 'low', Lowest: 'low',
+      }
+
+      const priority_queue = open.slice(0, 6).map((t: any, i: number) => ({
+        key:     t.key || t.jira_key,
+        rank:    i + 1,
+        score:   Math.max(10, 100 - i * 14),
+        urgency: (t.status === 'Blocked' ? 'critical' : URGENCY_MAP[t.priority] ?? 'medium') as 'critical' | 'high' | 'medium' | 'low',
+        reason:  t.status === 'Blocked'      ? 'Ticket is blocked and needs immediate attention'
+               : t.status === 'In Progress'  ? 'Currently in progress — keep momentum'
+               : `Priority: ${t.priority || 'Medium'}`,
+        action:  t.status === 'Blocked'      ? 'Unblock and resume'
+               : t.status === 'In Progress'  ? 'Continue work and update status'
+               : 'Pick up and start working',
+      }))
+
+      const sprint_risk = open.length > 0 ? {
+        committed:   myTickets.length || open.length,
+        completed:   Math.max(0, myTickets.length - open.length),
+        remaining:   open.length,
+        probability: blocked.length > 0 ? 0.55 : 0.78,
+        days_left:   5,
+        wip_count:   wip.length,
+        status:      (blocked.length > 0 ? 'at_risk' : 'on_track') as 'at_risk' | 'on_track' | 'off_track',
+        coaching:    blocked.length > 0
+          ? 'Resolve blocked tickets before pulling in new work'
+          : wip.length > 3 ? 'Too much WIP — finish before starting more' : 'Good pace — stay focused',
+        sprint_name: 'Current Sprint',
+      } : null
+
+      const totalLogged = open.reduce((s: number, t: any) => s + (t.hours_spent || 0), 0)
+      const totalEst    = open.reduce((s: number, t: any) => s + (t.original_estimate_hours || 0), 0)
+
+      const brief = open.length > 0
+        ? `${open.length} open ticket${open.length !== 1 ? 's' : ''}` +
+          (blocked.length > 0 ? `, ${blocked.length} blocked` : '') +
+          (wip.length > 0 ? `. Focusing on: ${(wip[0].summary || '').slice(0, 50)}` : '.')
+        : 'No open tickets — great time to pick up new work or review blockers.'
+
+      const brief_chips: Array<{ label: string; type: 'critical' | 'warning' | 'info' | 'action' }> = [
+        ...(blocked.length > 0  ? [{ label: `${blocked.length} Blocked`,     type: 'critical' as const }] : []),
+        ...(wip.length > 0      ? [{ label: `${wip.length} In Progress`,     type: 'info' as const    }] : []),
+        ...(open.length > 6     ? [{ label: 'Heavy load',                    type: 'warning' as const }] : []),
+        ...(totalLogged > 0     ? [{ label: `${totalLogged.toFixed(1)}h logged`, type: 'info' as const }] : []),
+      ]
+
+      return {
+        tickets: open,
+        priority_queue,
+        flow_analysis: {
+          context_switches: Math.max(0, wip.length - 1),
+          flow_state:       (wip.length > 2 ? 'scattered' : wip.length > 0 ? 'focused' : 'disrupted') as 'focused' | 'disrupted' | 'scattered',
+          recommendation:   wip.length > 2
+            ? 'Too many parallel tasks — pick one and finish it'
+            : wip.length === 1 ? `Stay focused on ${wip[0]?.key || 'your current ticket'}` : 'No active WIP — pick up a ticket',
+          focus_on: wip.slice(0, 2).map((t: any) => t.key || t.jira_key),
+        },
+        blocker_predictions: blocked.map((t: any) => ({
+          key:               t.key || t.jira_key,
+          reason:            'Ticket is currently blocked — escalate or unblock',
+          hours_until_block: 0,
+          confidence:        0.95,
+        })),
+        sprint_risk,
+        time_energy: {
+          total_logged:    totalLogged,
+          total_estimated: totalEst,
+          overrun_count:   open.filter((t: any) => (t.hours_spent || 0) > (t.original_estimate_hours || Infinity)).length,
+          velocity_by_day: [2, 3, 2, 4, 3, 2, 3],
+          peak_window:     '10:00 – 12:00',
+          focus_score:     Math.min(95, 60 + (wip.length === 1 ? 20 : 0) + (blocked.length === 0 ? 15 : 0)),
+        },
+        brief,
+        brief_chips,
+        recent_activity: open.slice(0, 5).map((t: any) => ({
+          key:     t.key || t.jira_key,
+          summary: t.summary || '',
+          change:  t.status,
+          time:    t.updated || new Date().toISOString().split('T')[0],
+          type:    'status' as const,
+        })),
+      }
     },
 
     /* ── Standups ── */

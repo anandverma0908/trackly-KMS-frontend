@@ -1065,7 +1065,7 @@ Respond with exactly this structure:
         : undefined,
       labels: form.labels,
       due_date: form.due_date,
-      epic_key: form.epic_key || undefined,
+      epic_id: form.epic_key || undefined,
       parent_key: form.parent_key || undefined,
       fix_version: form.fix_version || undefined,
       original_estimate_hours: form.originalEst ? parseFloat(form.originalEst) || undefined : undefined,

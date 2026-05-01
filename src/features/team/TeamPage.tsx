@@ -4,12 +4,14 @@ import { useFilterStore } from "@/store";
 import {
   fetchSummary,
   fetchOrgMembers,
+  fetchUserActivity,
   novaQuery,
   fetchCognitiveLoad,
   fetchTeamChemistry,
   fetchMemoryGraph,
 } from "@/services/api";
 import type {
+  ActivityEntry,
   CognitiveLoadMember,
   PodBalance,
   ExpertiseMember,
@@ -113,6 +115,11 @@ function getStatus(hours: number) {
 }
 
 /* ── Timesheet Drawer ── */
+const SOURCE_STYLE: Record<string, { bg: string; color: string }> = {
+  ticket: { bg: "rgba(79,126,255,0.12)", color: "#4F7EFF" },
+  manual: { bg: "rgba(52,211,153,0.12)", color: "#34D399" },
+};
+
 function TimesheetDrawer({
   member,
   summary,
@@ -131,19 +138,47 @@ function TimesheetDrawer({
   const [aiLoading, setAiLoading] = useState(false);
   const [aiBrief, setAiBrief] = useState<string | null>(null);
 
+  const { data: activityData = [], isLoading: activityLoading } = useQuery<ActivityEntry[]>({
+    queryKey: ["user-activity", member?.name, dateFrom, dateTo],
+    queryFn: () => fetchUserActivity({ user: member!.name, dateFrom, dateTo }),
+    enabled: open && !!member?.name,
+    staleTime: 2 * 60_000,
+  });
+
+  const groupedByDate = useMemo(() => {
+    const map = new Map<string, ActivityEntry[]>();
+    for (const entry of activityData) {
+      const list = map.get(entry.date) ?? [];
+      list.push(entry);
+      map.set(entry.date, list);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => b.localeCompare(a));
+  }, [activityData]);
+
+  const ticketCount = activityData.filter((e) => e.source === "ticket").length;
+  const manualCount = activityData.filter((e) => e.source === "manual").length;
+  const activeDays = groupedByDate.length;
+  const totalHours = activityData.reduce((s, e) => s + e.hours, 0);
+
   if (!member) return null;
   const displayMember = member;
 
   async function generateBrief() {
     setAiLoading(true);
     try {
+      const top5 = activityData.slice(0, 5).map((e) =>
+        `- ${e.date}: ${e.activity} (${e.hours}h${e.ticket_key ? `, ${e.ticket_key}` : ""})`
+      ).join("\n");
       const prompt = `You are EOS, an engineering team lead reviewing a team member's timesheet.
 
 Name: ${displayMember.name}
 Role: ${displayMember.title || displayMember.role}
 Period: ${formatDate(dateFrom, "MMM d")} – ${formatDate(dateTo, "MMM d, yyyy")}
-Hours logged: ${summary?.hours ?? 0}
-Tickets resolved: ${summary?.tickets ?? 0}
+Hours logged: ${totalHours.toFixed(1)}
+Ticket logs: ${ticketCount}, Manual entries: ${manualCount}, Active days: ${activeDays}
+
+Recent activity:
+${top5 || "No entries found."}
 
 Write a concise 2-sentence performance brief. One sentence on productivity, one on any concern or praise. Keep it friendly and constructive.`;
       const res = await novaQuery(prompt);
@@ -207,23 +242,24 @@ Write a concise 2-sentence performance brief. One sentence on productivity, one 
           <div className={styles.drawerStat}>
             <RiTimeLine size={16} color="var(--accent)" />
             <span className={styles.drawerStatVal}>
-              {formatNumber(Math.round(summary?.hours ?? 0))}h
+              {totalHours > 0 ? `${totalHours.toFixed(1)}h` : `${formatNumber(Math.round(summary?.hours ?? 0))}h`}
             </span>
             <span className={styles.drawerStatLbl}>Logged</span>
           </div>
           <div className={styles.drawerStat}>
             <RiTicketLine size={16} color="var(--accent)" />
-            <span className={styles.drawerStatVal}>
-              {summary?.tickets ?? 0}
-            </span>
-            <span className={styles.drawerStatLbl}>Tickets</span>
+            <span className={styles.drawerStatVal}>{ticketCount}</span>
+            <span className={styles.drawerStatLbl}>Ticket Logs</span>
           </div>
           <div className={styles.drawerStat}>
             <RiCalendarLine size={16} color="var(--accent)" />
-            <span className={styles.drawerStatVal}>
-              {displayMember.pod || "-"}
-            </span>
-            <span className={styles.drawerStatLbl}>POD</span>
+            <span className={styles.drawerStatVal}>{activeDays}</span>
+            <span className={styles.drawerStatLbl}>Active Days</span>
+          </div>
+          <div className={styles.drawerStat}>
+            <RiEyeLine size={16} color="var(--accent)" />
+            <span className={styles.drawerStatVal}>{manualCount}</span>
+            <span className={styles.drawerStatLbl}>Manual</span>
           </div>
         </div>
 
@@ -249,15 +285,99 @@ Write a concise 2-sentence performance brief. One sentence on productivity, one 
           {aiBrief && <div className={styles.aiBriefText}>{aiBrief}</div>}
         </div>
 
-        {/* Activity placeholder — in production this would fetch real activity */}
+        {/* Activity Feed */}
         <div className={styles.sectionTitle}>Activity</div>
-        <div className={styles.activityNote}>
-          <RiEyeLine size={14} color="var(--text-3)" />
-          <span>
-            Detailed ticket and manual-entry activity would appear here from the
-            backend.
-          </span>
-        </div>
+
+        {activityLoading && (
+          <div className={styles.activityNote}>
+            <span style={{ color: "var(--text-3)", fontSize: 13 }}>Loading entries…</span>
+          </div>
+        )}
+
+        {!activityLoading && activityData.length === 0 && (
+          <div className={styles.activityNote}>
+            <RiEyeLine size={14} color="var(--text-3)" />
+            <span>No time entries found for this period.</span>
+          </div>
+        )}
+
+        {!activityLoading && groupedByDate.map(([date, entries]) => {
+          const dayTotal = entries.reduce((s, e) => s + e.hours, 0);
+          return (
+            <div key={date} style={{ marginBottom: 16 }}>
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 6,
+                paddingBottom: 4,
+                borderBottom: "1px solid var(--border)",
+              }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)" }}>
+                  {formatDate(date, "EEE, MMM d")}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>
+                  {dayTotal.toFixed(1)}h
+                </span>
+              </div>
+              {entries.map((entry) => {
+                const src = SOURCE_STYLE[entry.source] ?? SOURCE_STYLE.manual;
+                return (
+                  <div key={entry.id} style={{
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "flex-start",
+                    padding: "8px 0",
+                    borderBottom: "1px solid var(--border-subtle, rgba(255,255,255,0.04))",
+                  }}>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      padding: "2px 7px",
+                      borderRadius: 4,
+                      background: src.bg,
+                      color: src.color,
+                      whiteSpace: "nowrap",
+                      marginTop: 1,
+                      flexShrink: 0,
+                    }}>
+                      {entry.ticket_key ?? "Manual"}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: "var(--text-1)", lineHeight: 1.4, marginBottom: 2 }}>
+                        {entry.activity}
+                      </div>
+                      {entry.notes && (
+                        <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 2 }}>
+                          {entry.notes}
+                        </div>
+                      )}
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {entry.pod && (
+                          <span style={{ fontSize: 11, color: "var(--text-3)" }}>{entry.pod}</span>
+                        )}
+                        {entry.client && (
+                          <span style={{ fontSize: 11, color: "var(--text-3)" }}>· {entry.client}</span>
+                        )}
+                        {entry.entry_type && (
+                          <span style={{ fontSize: 11, color: "var(--text-3)" }}>· {entry.entry_type}</span>
+                        )}
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "var(--text-1)",
+                      flexShrink: 0,
+                    }}>
+                      {entry.hours}h
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     </SideDrawer>
   );

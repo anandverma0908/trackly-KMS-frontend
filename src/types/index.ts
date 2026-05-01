@@ -132,6 +132,7 @@ export interface TicketCreate {
   due_date?:                  string
   parent_key?:                string
   epic_key?:                  string
+  epic_id?:                   string
   fix_version?:               string
   original_estimate_hours?:   number
   remaining_estimate_hours?:  number

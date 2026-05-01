@@ -25,6 +25,7 @@ import {
   RiExternalLinkLine,
   RiFlashlightLine,
 } from "react-icons/ri";
+import { useAuthStore } from "@/features/auth/useAuthStore";
 
 const PRIORITY_COLOR: Record<string, string> = {
   Highest: "var(--red)",
@@ -161,7 +162,10 @@ function LinkTicketsModal({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const available = (data?.tickets ?? []).filter((t) => !linkedKeys.has(t.key));
+  const LINKABLE_TO_RELEASE = ["Story", "Task", "Bug", "Improvement"];
+  const available = (data?.tickets ?? []).filter(
+    (t) => !linkedKeys.has(t.key) && LINKABLE_TO_RELEASE.includes(t.issue_type ?? "Task"),
+  );
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -342,12 +346,14 @@ function ReleaseDrawer({
   onClose,
   onMarkReleased,
   onDelete,
+  canManage,
 }: {
   release: Release;
   pod: string;
   onClose: () => void;
   onMarkReleased: (id: string) => void;
   onDelete: (id: string) => Promise<void>;
+  canManage: boolean;
 }) {
   const [showLink, setShowLink] = useState(false);
   const [confirmRelease, setConfirmRelease] = useState(false);
@@ -432,19 +438,19 @@ function ReleaseDrawer({
               <span className={styles.ticketsSectionTitle}>
                 Linked Tickets ({total})
               </span>
-              <button
-                className={styles.linkBtn}
-                onClick={() => setShowLink(true)}
-              >
-                <RiLinkM size={12} /> Link Tickets
-              </button>
+              {canManage && (
+                <button
+                  className={styles.linkBtn}
+                  onClick={() => setShowLink(true)}
+                >
+                  <RiLinkM size={12} /> Link Tickets
+                </button>
+              )}
             </div>
 
             {isLoading && <div className={styles.ticketsLoading}>Loading…</div>}
             {!isLoading && tickets.length === 0 && (
-              <div className={styles.ticketsEmpty}>
-                No tickets linked yet. Click "Link Tickets" to add some.
-              </div>
+              <div className={styles.ticketsEmpty}>No tickets linked yet.</div>
             )}
             {tickets.map((t) => (
               <TicketRow
@@ -455,61 +461,67 @@ function ReleaseDrawer({
             ))}
           </div>
 
-          <div className={styles.drawerActions}>
-            {release.status === "unreleased" &&
-              (confirmRelease ? (
-                <div className={styles.confirmInline}>
-                  <span className={styles.confirmText}>Mark as released?</span>
+          {canManage && (
+            <div className={styles.drawerActions}>
+              {release.status === "unreleased" &&
+                (confirmRelease ? (
+                  <div className={styles.confirmInline}>
+                    <span className={styles.confirmText}>
+                      Mark as released?
+                    </span>
+                    <button
+                      className={styles.releaseBtn}
+                      onClick={() => {
+                        onMarkReleased(release.id);
+                        setConfirmRelease(false);
+                      }}
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      className={styles.confirmNo}
+                      onClick={() => setConfirmRelease(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
                   <button
                     className={styles.releaseBtn}
-                    onClick={() => {
-                      onMarkReleased(release.id);
-                      setConfirmRelease(false);
-                    }}
+                    onClick={() => setConfirmRelease(true)}
                   >
-                    Confirm
+                    <RiCheckboxCircleLine size={12} /> Mark as Released
+                  </button>
+                ))}
+              {confirmDelete ? (
+                <div className={styles.confirmInline}>
+                  <span className={styles.confirmText}>
+                    Delete this release?
+                  </span>
+                  <button
+                    className={styles.drawerDangerBtn}
+                    disabled={isDeleting}
+                    onClick={handleDelete}
+                  >
+                    {isDeleting ? "Deleting…" : "Delete"}
                   </button>
                   <button
                     className={styles.confirmNo}
-                    onClick={() => setConfirmRelease(false)}
+                    onClick={() => setConfirmDelete(false)}
                   >
                     Cancel
                   </button>
                 </div>
               ) : (
                 <button
-                  className={styles.releaseBtn}
-                  onClick={() => setConfirmRelease(true)}
-                >
-                  <RiCheckboxCircleLine size={12} /> Mark as Released
-                </button>
-              ))}
-            {confirmDelete ? (
-              <div className={styles.confirmInline}>
-                <span className={styles.confirmText}>Delete this release?</span>
-                <button
                   className={styles.drawerDangerBtn}
-                  disabled={isDeleting}
-                  onClick={handleDelete}
+                  onClick={() => setConfirmDelete(true)}
                 >
-                  {isDeleting ? "Deleting…" : "Delete"}
+                  <RiDeleteBinLine size={12} /> Delete Release
                 </button>
-                <button
-                  className={styles.confirmNo}
-                  onClick={() => setConfirmDelete(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                className={styles.drawerDangerBtn}
-                onClick={() => setConfirmDelete(true)}
-              >
-                <RiDeleteBinLine size={12} /> Delete Release
-              </button>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </SideDrawer>
 
@@ -558,6 +570,11 @@ export default function ReleasesTab({ pod }: { pod: string }) {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const userRole = useAuthStore((s) => s.user?.role);
+  const canManage =
+    userRole === "admin" ||
+    userRole === "engineering_manager" ||
+    userRole === "tech_lead";
 
   if (isLoading)
     return (
@@ -578,14 +595,16 @@ export default function ReleasesTab({ pod }: { pod: string }) {
 
   return (
     <div className={styles.tab}>
-      <div className={styles.header}>
-        <button
-          className={styles.createBtn}
-          onClick={() => setShowCreate(true)}
-        >
-          <RiAddLine size={14} /> Create Release
-        </button>
-      </div>
+      {canManage && (
+        <div className={styles.header}>
+          <button
+            className={styles.createBtn}
+            onClick={() => setShowCreate(true)}
+          >
+            <RiAddLine size={14} /> Create Release
+          </button>
+        </div>
+      )}
 
       <div className={styles.grid}>
         {releases.map((r) => {
@@ -623,7 +642,7 @@ export default function ReleasesTab({ pod }: { pod: string }) {
                   <p className={styles.releaseDesc}>{r.description}</p>
                 )}
 
-                {r.status === "unreleased" && (
+                {r.status === "unreleased" && canManage && (
                   <div className={styles.releaseCardFooter}>
                     <button
                       className={styles.releaseBtn}
@@ -657,6 +676,7 @@ export default function ReleasesTab({ pod }: { pod: string }) {
       {/* ── Detail Drawer ── */}
       {drawerRelease && (
         <ReleaseDrawer
+          canManage={canManage}
           release={drawerRelease}
           pod={pod}
           onClose={() => setDrawerRelease(null)}

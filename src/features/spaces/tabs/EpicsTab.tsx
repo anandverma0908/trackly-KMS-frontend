@@ -105,7 +105,10 @@ function LinkTicketModal({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const tickets = data?.tickets ?? [];
+  const LINKABLE_TO_EPIC = ["Story", "Task", "Bug", "Improvement", "Subtask"];
+  const tickets = (data?.tickets ?? []).filter(
+    (t: any) => LINKABLE_TO_EPIC.includes(t.issue_type ?? "Task"),
+  );
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
