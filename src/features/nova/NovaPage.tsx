@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,6 +24,7 @@ import {
   RiVideoLine,
   RiMusicLine,
   RiLayoutGridLine,
+  RiHistoryLine,
 } from "react-icons/ri";
 import SideDrawer from "@/components/ui/SideDrawer";
 import { runAgentLoop } from "./agent/agentController";
@@ -40,6 +41,8 @@ import {
   createTicket,
   addTicketToSprint,
   fetchSprints,
+  fetchOrgUsers,
+  fetchSpacesList,
   triggerReindex,
   analyzeScreenshot,
   transcribeMedia,
@@ -66,6 +69,7 @@ interface PendingTicket {
   labels?: string[];
   due_date?: string;
   sprint_id?: string;
+  pod?: string;
 }
 
 interface AIOption {
@@ -109,8 +113,25 @@ interface Message {
   created?: CreatedItem;
   agentSteps?: AgentStep[];
   options?: AIOption[];
-  pendingTicket?: PendingTicket;
+  pendingTicket?: PendingTicket & { pod?: string };
+  imagePreview?: string;
   ts: Date;
+}
+
+interface WizardState {
+  ticket: PendingTicket & { pod?: string };
+  stage: 'space' | 'sprint' | 'assignee' | 'points' | 'confirm';
+  pod?: string;
+  sprintId?: string;
+  sprintName?: string;
+  assignee?: string;
+}
+
+interface ConversationRecord {
+  id: string;
+  startedAt: string;
+  preview: string;
+  messages: Array<Message & { ts: string }>;
 }
 
 interface Agent {
@@ -127,6 +148,83 @@ interface MemoryClip {
   title: string;
   snippet: string;
   age: string;
+}
+
+/* ══════════════════════════════════════════════════════════
+   WIZARD CONSTANTS & HELPERS
+══════════════════════════════════════════════════════════ */
+const STORY_POINT_OPTIONS: AIOption[] = [1, 2, 3, 5, 8, 13].map(n => ({
+  label: `${n} pt${n === 1 ? '' : 's'}`,
+  value: `points:${n}`,
+}));
+STORY_POINT_OPTIONS.push({ label: '? / Skip', value: 'points:0' });
+
+function buildSpaceOptions(pods: string[], sprints: Sprint[]): AIOption[] {
+  // Prefer pods from the filters API; fall back to unique pods from sprints
+  const sources = pods.length
+    ? pods
+    : ([...new Set(sprints.map(s => s.pod).filter(Boolean))] as string[]);
+  if (sources.length === 0) return [{ label: 'Default Project', value: 'space:NOVA' }];
+  return sources.map(pod => ({ label: pod, value: `space:${pod}` }));
+}
+
+function buildSprintOptions(sprints: Sprint[], pod: string): AIOption[] {
+  const podSprints = sprints
+    .filter(s => s.pod === pod)
+    .sort((a, _b) => (a.status === 'active' ? -1 : 1));
+  const opts: AIOption[] = podSprints.map(s => ({
+    label: s.name,
+    value: `sprint:${s.id}`,
+    meta: s.status === 'active' ? 'Active' : s.status,
+  }));
+  opts.push({ label: 'Backlog', value: 'sprint:backlog', meta: 'No sprint' });
+  return opts;
+}
+
+function buildAssigneeOptions(
+  orgUsers: { name: string }[],
+  standups: Standup[],
+): AIOption[] {
+  const names = orgUsers.length
+    ? orgUsers.map(u => u.name)
+    : [...new Set(standups.map(s => s.engineer).filter(Boolean))];
+  const opts: AIOption[] = names.slice(0, 8).map(name => ({
+    label: name,
+    value: `assignee:${name}`,
+  }));
+  opts.push({ label: 'Unassigned', value: 'assignee:unassigned' });
+  return opts;
+}
+
+const CHAT_HISTORY_KEY = 'eos-chat-history';
+
+function loadChatHistory(): ConversationRecord[] {
+  try {
+    return JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || '[]');
+  } catch { return []; }
+}
+
+function saveConversation(messages: Message[]) {
+  if (messages.length < 2) return;
+  const record: ConversationRecord = {
+    id: crypto.randomUUID(),
+    startedAt: new Date().toISOString(),
+    preview: messages.find(m => m.role === 'user')?.text?.slice(0, 80) || 'Conversation',
+    // Strip large fields (base64 images, agent step traces) so we don't blow the ~5MB localStorage limit
+    messages: messages.map(m => ({
+      ...m,
+      imagePreview: undefined,
+      agentSteps: undefined,
+      ts: m.ts instanceof Date ? m.ts.toISOString() : String(m.ts),
+    })) as Array<Message & { ts: string }>,
+  };
+  try {
+    const existing: ConversationRecord[] = JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || '[]');
+    const updated = [record, ...existing].slice(0, 20);
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.warn('[EOS] Failed to save conversation to localStorage:', e);
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -315,6 +413,190 @@ function useStreamingText(text: string, active: boolean, speed = 11) {
   }, [text, active, speed]);
 
   return { displayed, done };
+}
+
+/* ══════════════════════════════════════════════════════════
+   FORMATTED TEXT
+══════════════════════════════════════════════════════════ */
+function FormattedText({ text, cursor }: { text: string; cursor?: React.ReactNode }) {
+  const paragraphs = text.split(/\n{2,}/);
+
+  function renderInline(str: string): React.ReactNode {
+    const parts: React.ReactNode[] = [];
+    let remaining = str;
+    let key = 0;
+    while (remaining) {
+      const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+      const codeMatch = remaining.match(/`(.+?)`/);
+      const firstBold = boldMatch?.index ?? Infinity;
+      const firstCode = codeMatch?.index ?? Infinity;
+      if (firstBold === Infinity && firstCode === Infinity) {
+        parts.push(remaining);
+        break;
+      }
+      if (firstBold <= firstCode && boldMatch) {
+        parts.push(remaining.slice(0, boldMatch.index));
+        parts.push(<strong key={key++}>{boldMatch[1]}</strong>);
+        remaining = remaining.slice(boldMatch.index! + boldMatch[0].length);
+      } else if (codeMatch) {
+        parts.push(remaining.slice(0, codeMatch.index));
+        parts.push(<code key={key++} style={{ background: 'var(--surface-3)', padding: '1px 5px', borderRadius: 4, fontSize: '0.85em', fontFamily: 'monospace' }}>{codeMatch[1]}</code>);
+        remaining = remaining.slice(codeMatch.index! + codeMatch[0].length);
+      }
+    }
+    return parts;
+  }
+
+  const nodes: React.ReactNode[] = [];
+  paragraphs.forEach((para, pi) => {
+    const lines = para.split('\n');
+    const isList = lines.every(l => l.match(/^[-•*]\s/));
+    if (isList) {
+      nodes.push(
+        <ul key={`ul-${pi}`} style={{ margin: '6px 0 6px 12px', padding: 0, listStyle: 'none' }}>
+          {lines.map((l, li) => (
+            <li key={li} style={{ display: 'flex', gap: 6, alignItems: 'flex-start', marginBottom: 3, fontSize: '0.88rem', color: 'var(--text)' }}>
+              <span style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }}>›</span>
+              <span>{renderInline(l.replace(/^[-•*]\s/, ''))}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    } else {
+      nodes.push(
+        <p key={`p-${pi}`} style={{ margin: '0 0 8px', lineHeight: 1.6, fontSize: '0.88rem', color: 'var(--text)' }}>
+          {lines.map((l, li) => (
+            <span key={li}>
+              {renderInline(l)}
+              {li < lines.length - 1 && <br />}
+            </span>
+          ))}
+        </p>
+      );
+    }
+  });
+  if (nodes.length) {
+    const last = nodes[nodes.length - 1] as React.ReactElement;
+    nodes[nodes.length - 1] = React.cloneElement(last, {}, ...(last.props.children ?? []), cursor);
+  }
+  return <div style={{ marginBottom: 4 }}>{nodes}</div>;
+}
+
+/* ══════════════════════════════════════════════════════════
+   TICKET PREVIEW CARD
+══════════════════════════════════════════════════════════ */
+const PRIORITY_COLOR: Record<string, string> = {
+  Highest: 'var(--red)',
+  High: 'var(--red)',
+  Medium: 'var(--amber)',
+  Low: 'var(--green)',
+  Lowest: 'var(--green)',
+};
+
+function TicketPreviewCard({ ticket }: { ticket: PendingTicket & { pod?: string; sprintName?: string } }) {
+  const color = PRIORITY_COLOR[ticket.priority] ?? 'var(--accent)';
+  return (
+    <div className={styles.ticketPreviewCard} style={{ borderLeftColor: color }}>
+      <div className={styles.tpcHeader}>
+        <span className={styles.tpcType}>{ticket.issue_type}</span>
+        <span className={styles.tpcPriority} style={{ color }}>{ticket.priority}</span>
+        {ticket.story_points ? <span className={styles.tpcPoints}>{ticket.story_points} pts</span> : null}
+      </div>
+      <div className={styles.tpcTitle}>{ticket.title}</div>
+      {ticket.description && (
+        <p className={styles.tpcDesc}>{ticket.description.slice(0, 140)}{ticket.description.length > 140 ? '…' : ''}</p>
+      )}
+      <div className={styles.tpcMeta}>
+        {ticket.pod && <span><strong>Space:</strong> {ticket.pod}</span>}
+        {ticket.sprintName && <span><strong>Sprint:</strong> {ticket.sprintName}</span>}
+        {ticket.assignee && <span><strong>Assignee:</strong> {ticket.assignee}</span>}
+        {ticket.labels?.length ? <span><strong>Labels:</strong> {ticket.labels.join(', ')}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   CHAT HISTORY PANEL
+══════════════════════════════════════════════════════════ */
+function ChatHistoryPanel({
+  open,
+  history,
+  onLoad,
+  onClear,
+  onClose,
+}: {
+  open: boolean;
+  history: ConversationRecord[];
+  onLoad: (messages: Message[]) => void;
+  onClear: () => void;
+  onClose: () => void;
+}) {
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  // Reset confirm state when panel closes
+  useEffect(() => {
+    if (!open) setConfirmClear(false);
+  }, [open]);
+
+  return (
+    <SideDrawer open={open} onClose={onClose} size="sm" title="Chat History" subtitle={`${history.length} conversation${history.length !== 1 ? 's' : ''}`}>
+      <div style={{ padding: '8px 0' }}>
+        {history.length === 0 && (
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-3)', fontSize: '0.84rem' }}>
+            No past conversations yet.
+          </div>
+        )}
+        <AnimatePresence mode="popLayout">
+          {history.map(conv => (
+            <motion.button
+              key={conv.id}
+              className={styles.historyItem}
+              layout
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20, transition: { duration: 0.15 } }}
+              onClick={() => {
+                const msgs: Message[] = conv.messages.map(m => ({ ...m, ts: new Date(m.ts as string) }));
+                onLoad(msgs);
+                onClose();
+              }}
+            >
+              <div className={styles.historyItemPreview}>{conv.preview}</div>
+              <div className={styles.historyItemMeta}>{new Date(conv.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+            </motion.button>
+          ))}
+        </AnimatePresence>
+        {history.length > 0 && (
+          <div style={{ padding: '12px 16px 4px', borderTop: '1px solid var(--border)' }}>
+            {confirmClear ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className={styles.historyClearConfirm}
+                  onClick={() => {
+                    onClear();
+                    setConfirmClear(false);
+                  }}
+                >
+                  Yes, clear all
+                </button>
+                <button
+                  className={styles.historyClearCancel}
+                  onClick={() => setConfirmClear(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button className={styles.historyClear} onClick={() => setConfirmClear(true)}>
+                Clear all history
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </SideDrawer>
+  );
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -555,54 +837,6 @@ function AIOptionBlock({
 }
 
 /* ══════════════════════════════════════════════════════════
-   HIGHLIGHTED TEXT
-══════════════════════════════════════════════════════════ */
-function HighlightedText({
-  text,
-  citations,
-  hoveredKey,
-  streaming,
-  done,
-}: {
-  text: string;
-  citations?: Citation[];
-  hoveredKey: string | null;
-  streaming: boolean;
-  done: boolean;
-}) {
-  const quote = hoveredKey
-    ? citations?.find((c) => c.key === hoveredKey)?.quote
-    : undefined;
-  const cursor =
-    streaming && !done ? <span className={styles.streamCursor}>▋</span> : null;
-  if (!quote)
-    return (
-      <>
-        {text}
-        {cursor}
-      </>
-    );
-  const idx = text.indexOf(quote);
-  if (idx === -1)
-    return (
-      <>
-        {text}
-        {cursor}
-      </>
-    );
-  return (
-    <>
-      {text.slice(0, idx)}
-      <mark className={styles.citedMark}>
-        {text.slice(idx, idx + quote.length)}
-      </mark>
-      {text.slice(idx + quote.length)}
-      {cursor}
-    </>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
    MESSAGE BUBBLE
 ══════════════════════════════════════════════════════════ */
 function MessageBubble({
@@ -632,6 +866,11 @@ function MessageBubble({
             {intentLabel(msg.intent, msg.text.split(/\s+/).length)}
           </span>
         )}
+        {msg.imagePreview && (
+          <div className={styles.msgImageWrap}>
+            <img src={msg.imagePreview} alt="uploaded screenshot" className={styles.msgImage} />
+          </div>
+        )}
         <div className={styles.userBubble}>{msg.text}</div>
       </motion.div>
     );
@@ -649,15 +888,15 @@ function MessageBubble({
         <RiBrainLine size={13} />
       </div>
       <div className={styles.novaContent}>
-        <p className={styles.novaText}>
-          <HighlightedText
+        <div className={styles.novaText}>
+          <FormattedText
             text={text}
-            citations={msg.citations}
-            hoveredKey={hoveredCitation}
-            streaming={streaming}
-            done={done}
+            cursor={streaming && !done ? <span className={styles.streamCursor}>▋</span> : undefined}
           />
-        </p>
+        </div>
+        {msg.pendingTicket && showExtras && (
+          <TicketPreviewCard ticket={msg.pendingTicket} />
+        )}
         {msg.citations && msg.citations.length > 0 && showExtras && (
           <div className={styles.citations}>
             {msg.citations.map((c) => (
@@ -702,7 +941,7 @@ export default function NovaPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [indexing, setIndexing] = useState(false);
-  const [pulse, setPulse] = useState<PulseItem[]>([]);
+  const [dismissedPulseIds, setDismissedPulseIds] = useState<Set<string>>(new Set());
   const [input, setInput] = useState("");
   const [recording, setRecording] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -718,6 +957,9 @@ export default function NovaPage() {
   const [agentMode, setAgentMode] = useState(true);
   const [liveSteps, setLiveSteps] = useState<AgentStep[]>([]);
   const [pulseOpen, setPulseOpen] = useState(false);
+  const [wizardState, setWizardState] = useState<WizardState | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [chatHistory, setChatHistory] = useState<ConversationRecord[]>(() => loadChatHistory());
 
   const suggestions = podContext
     ? podSuggestions(podContext)
@@ -769,23 +1011,34 @@ export default function NovaPage() {
     staleTime: 2 * 60 * 1000,
   });
 
+  const { data: orgUsers = [] } = useQuery({
+    queryKey: ['org-users'],
+    queryFn: fetchOrgUsers,
+    staleTime: 10 * 60 * 1000,
+  });
+
   const activeSprint: Sprint | undefined = allSprints.find(
     (s: Sprint) => s.status === "active",
   );
+
+  const { data: spacesList = [] } = useQuery({
+    queryKey: ['spaces-list'],
+    queryFn: fetchSpacesList,
+    staleTime: 10 * 60 * 1000,
+  });
+  const availablePods: string[] = spacesList.map(s => s.pod).filter(Boolean);
 
   /* Auto-index on mount — silent, best-effort */
   useEffect(() => {
     triggerReindex().catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* Build pulse from real data */
-  useEffect(() => {
-    const items: PulseItem[] = [
-      ...anomalies.map(anomalyToPulse),
-      ...gaps.slice(0, 3).map(gapToPulse),
-    ];
-    setPulse(items);
-  }, [anomalies, gaps]);
+  const pulse = React.useMemo(
+    () =>
+      [...anomalies.map(anomalyToPulse), ...gaps.slice(0, 3).map(gapToPulse)]
+        .filter(item => !dismissedPulseIds.has(item.id)),
+    [anomalies, gaps, dismissedPulseIds],
+  );
 
   const decisions: Decision[] = decisionsResp?.decisions ?? [];
   const memoryClips: MemoryClip[] = [
@@ -833,6 +1086,15 @@ export default function NovaPage() {
     el.style.height = Math.min(el.scrollHeight, 140) + "px";
   }, [input]);
 
+  // Auto-save conversation when navigating away
+  useEffect(() => {
+    const handleUnload = () => {
+      if (messages.length >= 2) saveConversation(messages);
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [messages]);
+
   async function handleReindex() {
     setIndexing(true);
     try {
@@ -848,15 +1110,23 @@ export default function NovaPage() {
   }
 
   /* ── Shared ticket creation pipeline ── */
+  const VALID_ISSUE_TYPES = new Set(['Bug', 'Task', 'Story', 'Epic', 'Subtask', 'Improvement']);
+  const VALID_PRIORITIES  = new Set(['Highest', 'High', 'Medium', 'Low', 'Lowest']);
+
   const executeTicketCreate = useCallback(
     async (ticket: PendingTicket): Promise<{ key: string } | null> => {
-      console.log("[EOS] Creating ticket payload:", ticket);
+      // Sanitize AI-generated values against backend's enum whitelist
+      const safeIssueType = VALID_ISSUE_TYPES.has(ticket.issue_type) ? ticket.issue_type : 'Task';
+      const safePriority  = VALID_PRIORITIES.has(ticket.priority)   ? ticket.priority  : 'Medium';
+
+      console.log("[EOS] Creating ticket payload:", { ...ticket, issue_type: safeIssueType, priority: safePriority });
 
       const payload: Parameters<typeof createTicket>[0] = {
         title: ticket.title,
         description: ticket.description,
-        priority: ticket.priority,
-        issue_type: ticket.issue_type,
+        priority: safePriority,
+        issue_type: safeIssueType,
+        ...(ticket.pod && { pod: ticket.pod }),
         ...(ticket.assignee && { assignee: ticket.assignee }),
         ...(ticket.story_points && { story_points: ticket.story_points }),
         ...(ticket.labels?.length && { labels: ticket.labels }),
@@ -906,6 +1176,9 @@ export default function NovaPage() {
         role: "user",
         text: text || "[media attached]",
         intent: finalIntent,
+        imagePreview: capturedMedia?.mediaType === 'image' && capturedMedia.base64
+          ? `data:image/png;base64,${capturedMedia.base64}`
+          : undefined,
         ts: new Date(),
       };
       setMessages((prev) => [...prev, userMsg]);
@@ -983,18 +1256,17 @@ Input: "${text}"`,
           }
           console.log("[EOS] Extracted ticket fields:", ticket);
 
-          const sprintLabel = activeSprint
-            ? ` · Sprint: ${activeSprint.name}`
-            : "";
+          // Start wizard — ask which space first
+          const spaceOptions = buildSpaceOptions(availablePods, allSprints);
+          setWizardState({ ticket, stage: 'space' });
           novaMsg = {
             id: crypto.randomUUID(),
             role: "nova",
-            text: `I'd structure this as a ticket:\n\n**${ticket.title}**\n${ticket.description.slice(0, 200)}${ticket.description.length > 200 ? "…" : ""}\n\n_Priority: ${ticket.priority} · ${ticket.issue_type}${ticket.story_points ? ` · ${ticket.story_points} pts` : ""}${sprintLabel}_\n\nShall I create it?`,
+            text: 'Which **project** should this ticket go to?',
             pendingTicket: ticket,
-            options: [
-              { label: "Yes, create it", value: "confirm" },
-              { label: "No, cancel", value: "cancel" },
-            ],
+            options: spaceOptions.length > 0
+              ? spaceOptions
+              : [{ label: 'Default Project', value: 'space:default' }],
             ts: new Date(),
           };
 
@@ -1102,16 +1374,17 @@ Return ONLY valid JSON:
           };
           console.log("[EOS] Screenshot ticket payload ready:", ticket);
 
-          const sprintLabel = activeSprint ? ` · Sprint: ${activeSprint.name}` : "";
+          // Start wizard — ask which space first
+          const spaceOptions = buildSpaceOptions(availablePods, allSprints);
+          setWizardState({ ticket, stage: 'space' });
           novaMsg = {
             id: crypto.randomUUID(),
             role: "nova",
-            text: `Analysed ${mediaLabel}:\n\n**${ticket.title}**\n${analysisResult.description}${steps}\n\n_Severity: ${analysisResult.severity ?? "medium"} · ${ticket.issue_type}${sprintLabel}_\n\nShall I file this?`,
+            text: 'Which **project** should this ticket go to?',
             pendingTicket: ticket,
-            options: [
-              { label: "Yes, file it", value: "confirm" },
-              { label: "No, cancel", value: "cancel" },
-            ],
+            options: spaceOptions.length > 0
+              ? spaceOptions
+              : [{ label: 'Default Project', value: 'space:default' }],
             ts: new Date(),
           };
 
@@ -1225,29 +1498,126 @@ Return ONLY valid JSON:
         setLoading(false);
       }
     },
-    [input, attachedMedia, loading, agentMode, messages, qc, activeSprint, executeTicketCreate, podContext],
+    [input, attachedMedia, loading, agentMode, messages, qc, activeSprint, allSprints, availablePods, executeTicketCreate, podContext, setWizardState],
   );
 
   /* ── Handle interactive option selections from AIOptionBlock ── */
   const handleOptionSelect = useCallback(
     (value: string, _label: string) => {
-      if (value === "confirm") {
-        send("yes", "ask");
-      } else if (value === "cancel") {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            role: "nova" as const,
-            text: "No problem — ticket creation cancelled.",
-            ts: new Date(),
-          },
-        ]);
+      if (value === 'confirm') {
+        const finalTicket = wizardState?.ticket ??
+          [...messages].reverse().find(m => m.role === 'nova')?.pendingTicket;
+        if (!finalTicket) return;
+        (async () => {
+          try {
+            const created = await executeTicketCreate(finalTicket as PendingTicket);
+            const ticketKey = created?.key ?? 'TRK-???';
+            const createdType: CreatedType =
+              (finalTicket.issue_type === 'Bug' || finalTicket.issue_type === 'UI Bug') ? 'bug' : 'ticket';
+            const sprintName = wizardState?.sprintName ?? (activeSprint?.name ?? '');
+            const pod = wizardState?.pod ?? finalTicket.pod ?? '';
+            toast.success(`${createdType === 'bug' ? 'Bug' : 'Ticket'} ${ticketKey} created!`);
+            const successMsg: Message = {
+              id: crypto.randomUUID(),
+              role: 'nova',
+              text: `**${ticketKey}** created successfully.${sprintName ? ` → ${sprintName === 'Backlog' ? 'Added to Backlog' : `Sprint: ${sprintName}`}.` : ''}`,
+              created: {
+                type: createdType,
+                id: ticketKey,
+                title: finalTicket.title,
+                meta: `${finalTicket.priority} · ${finalTicket.issue_type}${finalTicket.assignee ? ` · ${finalTicket.assignee}` : ' · Unassigned'}${finalTicket.story_points ? ` · ${finalTicket.story_points} pts` : ''}${pod ? ` · ${pod}` : ''}`,
+              },
+              ts: new Date(),
+            };
+            setRecentItems(prev =>
+              [{ type: createdType, id: ticketKey, title: finalTicket.title, meta: `Priority: ${finalTicket.priority}`, age: 'just now' }, ...prev].slice(0, 6)
+            );
+            setMessages(prev => [...prev, successMsg]);
+            setWizardState(null);
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Ticket creation failed.';
+            console.error('[EOS] Ticket creation error:', err);
+            toast.error(msg);
+            setMessages(prev => [...prev, {
+              id: crypto.randomUUID(), role: 'nova' as const,
+              text: `Failed to create ticket: ${msg}`, ts: new Date(),
+            }]);
+            setWizardState(null);
+          }
+        })();
+      } else if (value === 'cancel') {
+        setWizardState(null);
+        setMessages(prev => [...prev, {
+          id: crypto.randomUUID(), role: 'nova' as const,
+          text: 'No problem — ticket creation cancelled. Let me know if you need anything else.', ts: new Date(),
+        }]);
+      } else if (value.startsWith('space:')) {
+        const pod = value.replace('space:', '');
+        if (!wizardState) return;
+        const nextWizard: WizardState = { ...wizardState, stage: 'sprint', pod };
+        setWizardState(nextWizard);
+        const sprintOptions = buildSprintOptions(allSprints, pod);
+        setMessages(prev => [...prev, {
+          id: crypto.randomUUID(), role: 'nova' as const,
+          text: `Got it — **${pod}** project. Which sprint should this go into?`,
+          options: sprintOptions,
+          ts: new Date(),
+        }]);
+      } else if (value.startsWith('sprint:')) {
+        const sprintId = value.replace('sprint:', '');
+        if (!wizardState) return;
+        const sprintName = sprintId === 'backlog'
+          ? 'Backlog'
+          : allSprints.find(s => s.id === sprintId)?.name ?? sprintId;
+        const nextWizard: WizardState = { ...wizardState, stage: 'assignee', sprintId, sprintName };
+        setWizardState(nextWizard);
+        const assigneeOpts = buildAssigneeOptions(orgUsers, standups);
+        setMessages(prev => [...prev, {
+          id: crypto.randomUUID(), role: 'nova' as const,
+          text: `**${sprintName}** it is. Who should this be assigned to?`,
+          options: assigneeOpts,
+          ts: new Date(),
+        }]);
+      } else if (value.startsWith('assignee:')) {
+        const assignee = value.replace('assignee:', '');
+        if (!wizardState) return;
+        const resolvedAssignee = assignee === 'unassigned' ? undefined : assignee;
+        const nextWizard: WizardState = { ...wizardState, stage: 'points', assignee: resolvedAssignee };
+        setWizardState(nextWizard);
+        setMessages(prev => [...prev, {
+          id: crypto.randomUUID(), role: 'nova' as const,
+          text: `Assigned to **${resolvedAssignee ?? 'no one'}**. How many story points?`,
+          options: STORY_POINT_OPTIONS,
+          ts: new Date(),
+        }]);
+      } else if (value.startsWith('points:')) {
+        const pts = parseInt(value.replace('points:', ''), 10);
+        if (!wizardState) return;
+        const finalTicket: PendingTicket & { pod?: string; sprintName?: string } = {
+          ...wizardState.ticket,
+          pod: wizardState.pod,
+          sprint_id: wizardState.sprintId === 'backlog' ? undefined : wizardState.sprintId,
+          assignee: wizardState.assignee,
+          story_points: pts > 0 ? pts : undefined,
+          sprintName: wizardState.sprintName,
+        };
+        const nextWizard: WizardState = { ...wizardState, stage: 'confirm', ticket: finalTicket };
+        setWizardState(nextWizard);
+        setMessages(prev => [...prev, {
+          id: crypto.randomUUID(), role: 'nova' as const,
+          text: 'Here is the complete ticket — ready to create:',
+          pendingTicket: finalTicket,
+          options: [
+            { label: '✓ Create Ticket', value: 'confirm' },
+            { label: '✕ Cancel', value: 'cancel' },
+          ],
+          ts: new Date(),
+        }]);
       } else {
-        send(value, "ask");
+        send(value, 'ask');
       }
     },
-    [send],
+    [wizardState, allSprints, orgUsers, standups, messages, activeSprint, executeTicketCreate, send],
   );
 
   function toggleRecording() {
@@ -1351,6 +1721,28 @@ Return ONLY valid JSON:
             <RiFlashlightLine size={12} />
             {agentMode ? "Agent ON" : "Agent mode"}
           </button>
+          <button
+            className={styles.historyBtn}
+            onClick={() => setShowHistory(true)}
+            title="View past conversations"
+          >
+            <RiHistoryLine size={12} />
+            History
+          </button>
+          {messages.length > 0 && (
+            <button
+              className={styles.newChatBtn}
+              onClick={() => {
+                saveConversation(messages);
+                setChatHistory(loadChatHistory());
+                setMessages([]);
+                setWizardState(null);
+              }}
+              title="Start a new conversation"
+            >
+              New chat
+            </button>
+          )}
           <button
             className={`${styles.pulseToggleBtn} ${pulseOpen ? styles.pulseToggleBtnActive : ""}`}
             onClick={() => setPulseOpen((o) => !o)}
@@ -1748,7 +2140,7 @@ Return ONLY valid JSON:
                   key={item.id}
                   item={item}
                   onDismiss={() =>
-                    setPulse((p) => p.filter((x) => x.id !== item.id))
+                    setDismissedPulseIds(prev => new Set([...prev, item.id]))
                   }
                 />
               ))}
@@ -1761,6 +2153,22 @@ Return ONLY valid JSON:
             )}
           </div>
         </SideDrawer>
+
+        {/* ── Chat History Panel ── */}
+        <ChatHistoryPanel
+          open={showHistory}
+          history={chatHistory}
+          onLoad={(msgs) => {
+            setMessages(msgs);
+            setWizardState(null);
+          }}
+          onClear={() => {
+            localStorage.removeItem(CHAT_HISTORY_KEY);
+            setChatHistory([]);
+            toast.success('Chat history cleared.');
+          }}
+          onClose={() => setShowHistory(false)}
+        />
       </div>
     </div>
   );

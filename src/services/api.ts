@@ -59,7 +59,10 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    const msg = err.response?.data?.detail ?? err.message ?? "Unknown error";
+    const rawDetail = err.response?.data?.detail;
+    const msg = Array.isArray(rawDetail)
+      ? rawDetail.map((e: any) => e.msg ?? String(e)).join('; ')
+      : (rawDetail ?? err.message ?? "Unknown error");
     console.error("[API Error]", msg);
     const normalized = new Error(msg) as Error & {
       status?: number;
@@ -1384,6 +1387,11 @@ export async function createSpace(payload: {
 export async function fetchOrgUsers() {
   const { data } = await api.get("/users/members");
   return data as { id: string; name: string; email: string; role: string; initials: string; color: string }[];
+}
+
+export async function fetchSpacesList(): Promise<{ pod: string }[]> {
+  const { data } = await api.get<{ pod: string }[]>("/spaces");
+  return data ?? [];
 }
 
 export async function addSpaceMember(pod: string, user_id: string, role = "member") {

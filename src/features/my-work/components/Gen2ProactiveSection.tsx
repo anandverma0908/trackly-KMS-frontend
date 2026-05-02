@@ -4,7 +4,7 @@ import type {
   AITicket,
   MyWorkFlowAnalysis,
   MyWorkBlockerPrediction,
-  VelocityPattern,
+  SprintRisk,
 } from "../useMyWork";
 
 interface BlockerPred {
@@ -85,55 +85,68 @@ function FlowStateCard({
   );
 }
 
-/* ── Velocity Pattern Card ── */
-function VelocityPatternCard({
-  velocityPatterns,
+/* ── Completion Prediction Card ── */
+function CompletionPredictionCard({
+  aiTickets,
+  sprintRisk,
+  loading,
 }: {
-  velocityPatterns: VelocityPattern[];
+  aiTickets: AITicket[];
+  sprintRisk: SprintRisk | null;
+  loading: boolean;
 }) {
-  const hasData = velocityPatterns.some((v) => v.completed > 0);
-  const maxVal = Math.max(...velocityPatterns.map((v) => v.completed), 1);
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const topTickets = aiTickets.slice(0, 3);
+  const preds = topTickets.map((t) => {
+    const est = t.remaining_estimate_hours || t.original_estimate_hours || 4;
+    const daysAway = Math.ceil(est / 2.5);
+    const future = new Date();
+    future.setDate(future.getDate() + daysAway);
+    return {
+      key: t.key,
+      predictedBy: days[future.getDay()],
+      daysAway,
+      sprintEnd: sprintRisk ? `${sprintRisk.daysLeft}d left` : "—",
+      onTrack: daysAway <= (sprintRisk?.daysLeft ?? 5),
+    };
+  });
 
   return (
     <div className={styles.proactiveCard}>
       <div className={styles.proactiveHeader}>
-        <span>Velocity Patterns</span>
+        <span>Completion Prediction</span>
       </div>
-      {!hasData ? (
+      {loading ? (
+        <div className={styles.proactiveSkeleton} />
+      ) : preds.length === 0 ? (
         <div className={styles.proactiveEmpty}>
-          <p>
-            No worklog data yet — log time on tickets to see your velocity
-            patterns.
-          </p>
+          <p>No open tickets to predict</p>
         </div>
       ) : (
-        <>
-          <p className={styles.proactiveMessage}>
-            Hours logged over the last 5 business days.
-          </p>
-          <div className={styles.velocityBars}>
-            {velocityPatterns.map((v) => (
-              <div key={v.day} className={styles.velocityBarCol}>
-                <div className={styles.velocityBarWrap}>
-                  <div
-                    className={styles.velocityBarFill}
-                    style={{
-                      height: `${(v.completed / maxVal) * 100}%`,
-                      background:
-                        v.completed >= 6
-                          ? "var(--green)"
-                          : v.completed >= 3
-                            ? "var(--accent)"
-                            : "var(--amber)",
-                    }}
-                  />
-                </div>
-                <span className={styles.velocityBarLabel}>{v.day}</span>
-                <span className={styles.velocityBarVal}>{v.completed}h</span>
+        <div className={styles.completionList}>
+          {preds.map((p) => (
+            <div key={p.key} className={styles.completionItem}>
+              <div className={styles.completionTop}>
+                <span className={styles.completionKey}>{p.key}</span>
+                <span
+                  className={styles.completionStatus}
+                  style={{ color: p.onTrack ? "var(--green)" : "var(--amber)" }}
+                >
+                  {p.onTrack ? "On track" : "At risk"}
+                </span>
               </div>
-            ))}
-          </div>
-        </>
+              <div className={styles.completionRow}>
+                <span className={styles.completionBy}>
+                  Done by{" "}
+                  <strong style={{ color: p.onTrack ? "var(--green)" : "var(--amber)" }}>
+                    {p.predictedBy}
+                  </strong>
+                </span>
+                <span className={styles.completionSprint}>Sprint: {p.sprintEnd}</span>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -318,7 +331,7 @@ interface Props {
   aiTickets: AITicket[];
   flowAnalysis: MyWorkFlowAnalysis;
   blockerPredictions: MyWorkBlockerPrediction[];
-  velocityPatterns: VelocityPattern[];
+  sprintRisk: SprintRisk | null;
   loading: boolean;
   onTicketClick: (key: string) => void;
 }
@@ -327,7 +340,7 @@ export default function Gen2ProactiveSection({
   aiTickets,
   flowAnalysis,
   blockerPredictions,
-  velocityPatterns,
+  sprintRisk,
   loading,
   onTicketClick,
 }: Props) {
@@ -380,7 +393,7 @@ export default function Gen2ProactiveSection({
           contextSwitches={flowAnalysis.context_switches}
           flowState={flowAnalysis.flow_state}
         />
-        <VelocityPatternCard velocityPatterns={velocityPatterns} />
+        <CompletionPredictionCard aiTickets={aiTickets} sprintRisk={sprintRisk} loading={loading} />
         <BlockerPredictionCard
           predictions={predictions}
           onTicketClick={onTicketClick}

@@ -1,365 +1,498 @@
-# 🚀 TRACKLY — 10-Minute Demo Script
-## "The Future of Engineering Operations"
+# 🚀 TRACKLY — Product Keynote Demo Script
+## "The Most Expensive Lie in Software"
 
-> **Tone:** Confident, conversational, energetic. Not a feature list — a story.  
-> **Pace:** ~10 minutes. Speak deliberately during screen moments.  
-> **Transition:** Aastha hands over → You pick up with the hook.
+> **Tone:** Bold, cinematic, provocative. Think Sundar Pichai at I/O or Craig Federighi at WWDC — confident storytelling with dramatic reveals.  
+> **Pace:** ~15–18 minutes. Silence is a weapon. Use it.  
+> **Mindset:** You're not demoing features. You're exposing a hidden truth.
 
 ---
-
-## 🎬 THE HANDOVER (15 seconds)
-
-*[Aastha finishes. She says her handover line. You step forward. Pause. Make eye contact.]*
 
 **You:**
-> "Aastha showed you what we built. I'm going to show you why the best engineering teams in the world won't be able to work without it."
+> "I have a confession to make."
 
-*[Walk to the screen. Open Trackly. The My Work page should be visible.]*
+*[Pause. Let the room lean in.]*
+
+> "Every project management tool you've ever used... is lying to you."
+
+*[Pause again. Half-smile.]*
+
+> "Jira lies. It tells you 'here are your tickets' — but not which one will destroy your sprint if you don't touch it today. Slack lies. It tells you 'someone mentioned you' — but not whether that mention is a casual emoji or a production fire. Confluence lies. It tells you 'here is your documentation' — but not which pages are silently rotting and which ones your new hire is desperately searching for right now."
+
+*[Walk slowly toward the screen. Your voice rises slightly.]*
+
+> "They all show you what *happened*. None of them show you what's *happening*. None of them tell you what *matters*."
+
+*[Click. The screen explodes with light — Trackly's Spaces dashboard blooms open.]*
+
+> "Until now."
+
+*[Turn to face the audience.]*
+
+> "This is Trackly. And we didn't build a better Jira. We built what comes *after* Jira. An Engineering Operating System that doesn't just track work — it understands work. It doesn't just store data — it generates intelligence. It doesn't wait for you to ask what's wrong — it tells you before you know to ask."
+
+*[Sweep your arm toward the screen.]*
+
+> "Let me show you what the truth actually looks like."
 
 ---
 
-## 🔥 OPENING HOOK — "The 47-Minute Morning" (30 seconds)
+## 🏗️ ACT I: THE FOUNDATION — Stories, Epics & Releases (3 minutes)
+
+*[Navigate to Spaces. Click into a project. The Project Detail page loads with tabs across the top.]*
 
 **You:**
-> "Every engineer in this room knows the 47-minute morning. You open Jira. Then Slack. Then GitHub. Then Confluence. Then the calendar. By the time you figure out what actually matters today... 47 minutes are gone. And you haven't written a single line of code."
-
-*[Click into **My Work**. Let the EOS agent brief typing animation play.]*
-
-> "Trackly kills the 47-minute morning. One screen. One intelligence layer. One truth. Let me show you how."
+> "Let's start where all work starts. The story."
 
 ---
 
-## 🧠 SECTION 1: MY WORK — "Your Day, Curated by AI" (2 minutes)
+### 📋 Story Tab — "Where Work Lives"
 
-**You:**
-> "This is My Work. But forget everything you know about dashboards. This isn't a dashboard. This is EOS — your engineering co-pilot — telling you exactly what your day looks like before you even ask."
+*[Click the Backlog/Stories tab. A sprint board with tickets loads.]*
 
-*[Point to the EOS Agent Brief at the top — the typing animation.]*
+> "Stories aren't just tickets. They're promises. 'We will fix this.' 'We will ship this.' 'We will make this better.' But in most tools, a story is just a title and a status. Dead. Static. Dumb."
 
-> "See this? EOS just read every ticket, every standup, every code review, every timesheet across your entire team... and wrote you a personal morning brief. Not notification spam. A *briefing*. Let me give you an example — it might say something like: 'Good morning. Three tickets need attention. TRKLY-4 — Blank Login Screen after Idle Session Expiration — is ranked #1 due to sprint deadline risk. Your focus window is 9 to 11 AM — perfect for deep work. One standup is missing from yesterday.' That's it. You know everything in ten seconds."
+*[Click into a ticket. The Ticket Detail Drawer slides open.]*
 
-*[Scroll down to the **EOS Insight Feed**. Point to the insight cards.]*
+> "In Trackly, a story is alive. Look at this — TRKLY-4. 'Blank Login Screen after Idle Session Expiration.' I can edit the title inline. Click — type — done. I can change priority, status, assignee, epic, sprint — all without leaving this drawer. Story points? Due date? Inline. Always editable. Always current."
 
-> "Below that — live insights. Not reports you run. Patterns EOS detected *right now*. For example — 'The ticket you picked up yesterday has been reassigned to sprint 14. Adjust your plan.' Or — 'Priya is overloaded with 5 in-progress items. EOS suggests you take TRKLY-301 to balance the load.' These aren't alerts. These are *intelligent nudges* from an AI that understands your team's reality."
+*[Point to the Custom Fields section.]*
 
-*[Scroll down to the **AI Priority Queue**. Expand a ticket.]*
+> "And custom fields — every team works differently, so Trackly adapts. Text fields. Numbers. Dropdowns. Checkboxes. Dates. Your QA team needs a 'Browser Version' field? Your DevOps team needs a 'Deployment Zone' field? Add them. They appear right here. No code. No IT ticket. Just configure and go."
 
-> "Now look at this queue. EOS didn't just sort by priority. It *ranked* everything. Let me show you what that means. This ticket right here — TRKLY-4. 'Blank Login Screen after Idle Session Expiration.' Status: To Do. Priority: High. 3 story points. POD: TRK. And look at why EOS ranked it #1 — 'sprint deadline risk.'"
+*[Click the Sub-tasks tab.]*
 
-*[Point to the EOS Analysis line.]*
+> "Break down big stories into sub-tasks. Toggle them complete. See the progress bar fill. Assign different people to different pieces. This isn't a checkbox list in a description field. This is real, trackable work decomposition."
 
-> "Why #1? Because EOS knows this is a login screen bug. It knows users can't access the app after their session expires. It knows idle session expiration affects every single user. It knows the sprint deadline is approaching. And it knows 3 points is a focused, completable unit of work that can be knocked out in this focus window. So EOS puts it at the top. Not because someone flagged it 'High Priority.' Because the math says a login screen bug with sprint deadline risk is the most important thing you can ship right now."
+*[Click the Linked Issues tab.]*
 
-*[Point to the Quick Actions.]*
-
-> "And see these Quick Actions? EOS doesn't just rank the ticket. It gives you one-tap actions. Start focus. Ping the reviewer. Log time. Draft an unblock comment. Everything you need, right here, without opening five different tools."
-
-*[Scroll down slightly to the **Ambient Work Awareness** widget.]*
-
-> "And this — Ambient Work Awareness. It's a live feed of everything happening around your work. Blue dot? Someone moved a ticket to a new status. Amber? A review comment came in. Green? A ticket got reassigned. Red? Something just got blocked."
-
-*[Point to a few items in the feed.]*
-
-> "For example — 'TRKLY-301 moved to In Review — 2 min ago.' 'TRKLY-284 assigned to Anoop Rai — 15 min ago.' I didn't refresh anything. I didn't check Slack. I didn't open my email. The work just... talks to me. That's what ambient means. It's always on. Always watching. So you're never the last person to know when something changes."
-
-*[Point to the **Smart Focus Block**.]*
-
-> "And EOS doesn't dump ten things on you. It gives you a Focus Block. One thing. 'Start here.' Everything else is noise until this is done. Imagine if every engineer on your team started their day knowing exactly their one most important thing. No more context-switching. No more decision fatigue. Just flow."
-
-*[Scroll to **Delivery Forecast**.]*
-
-> "Here's where it gets scary-accurate. Based on your *actual* velocity — real logged hours, real story points burned — EOS calculates whether you'll hit sprint goals. Look at this: 3 points on TRKLY-4, and EOS knows your pace is 3.2 points per day. That's one focused day of work. Green means you're ahead. Amber means tight — 'stay focused on top-ranked tickets like TRKLY-4.' Red means at risk — and EOS tells you exactly how many points to descope. No more surprise misses on sprint review day. You see the train wreck coming while you can still avoid it."
-
-*[Scroll down to **Knowledge Gaps**.]*
-
-> "And this — Knowledge Gaps — this is where EOS gets personal. It analyzed the tickets you've been working on and realized... you're touching authentication code a lot, but there's no runbook for it in the wiki. Or you're the only person who knows this microservice, and that's a bus-factor risk of one. EOS flags it. Suggests you write a wiki page. Suggests pair programming. Suggests a knowledge transfer session. It's like having a tech lead who cares about your growth and the team's resilience."
-
-*[Pause. Let it sink in.]*
-
-> "That's My Work. Not a todo list. A command center that thinks. That learns. That protects your time."
-
----
-
-## 🌌 SECTION 2: SPACES — "Mission Control for Every Pod" (3 minutes)
-
-**You:**
-> "But engineering doesn't happen in isolation. It happens in pods, in squads, in spaces. So let's zoom out."
-
-*[Navigate to **Spaces**. Let the grid load with the pod cards.]*
-
-> "These are your Spaces. Every pod, every team, every workstream — alive in one view. See the colors? That's health. Green means shipping. Red means crying for help. And that number? Composite health score — built from velocity, blockers, bug rate, on-time delivery, and team flow. Not vanity metrics. Vital signs."
-
-*[Click into one Space — pick one with an active sprint. The Project Detail page loads.]*
-
-> "Now we're inside a space. Look at the tabs — Summary, Backlog, EOS, Sprints, Roadmap, Decisions, Processes. Every dimension of running a team, in one place. Let me walk you through the ones that matter most."
-
----
-
-### 📊 SUMMARY TAB (15 seconds)
-
-*[Sweep across the Summary tab quickly.]*
-
-> "Summary tab — your executive pulse in one glance. EOS brief at the top: one sentence on how this pod is doing. Health score out of 100. Velocity signal, risk signal, EOS recommendation. Delivery trend, forecast, team workload, bottleneck detection. A manager can assess an entire team in five seconds."
-
----
-
-### 📋 BACKLOG TAB (1 minute)
-
-*[Click the **Backlog** tab. Point to a sprint's health ring.]*
-
-> "The Backlog — sprints with health rings, stale ticket detection so nothing rots in the dark, quick-create for instant capture. But before I show you the big magic button, let me show you what happens when you actually create a ticket in Trackly. Because this is where EOS gets really smart."
-
-*[Click **Create Issue** in a sprint. The Create Ticket Drawer opens.]*
-
-> "I click Create Issue. I type: 'Fix login redirect on mobile Safari after OAuth callback.' And before I even finish typing... watch what EOS does."
-
-*[Type the title. Pause as the AI analysis runs. Point to each suggestion as it appears.]*
-
-> "First — **Duplicacy Detection**. EOS searched every existing ticket and found TRKLY-284: 'OAuth callback redirect broken on iOS.' It asks me: 'Is this a duplicate?' Because how many times has your team discovered a bug, spent two days on it, only to realize someone already fixed it in sprint 3? EOS stops that before it starts."
-
-*[Point to the story point estimate.]*
-
-> "Next — **Story Point Suggestion**. EOS estimates 3 points. Confidence: 72%. And it tells me why: 'Based on ticket type Bug, complexity keywords — OAuth, mobile, redirect — and similar historical tickets.' It's not pulling a number out of thin air. It's looking at how long OAuth bugs actually took your team in the past."
-
-*[Point to the AI Assignee suggestion.]*
-
-> "And here's my favorite — **AI Assignee**. EOS suggests... **Anoop Rai**. Why? Because Anoop's role is frontend engineer. Because he's handled OAuth tickets before. Because his current workload shows he has capacity this sprint. Not round-robin. Not whoever's name comes first alphabetically. The *right* human for the job."
-
-*[Close the drawer without saving.]*
-
-> "I didn't even hit save yet. And EOS already told me: is this a duplicate, how complex is it, and who should own it. That used to take a senior engineer 15 minutes of digging. Now? Three seconds."
-
-*[Now click the **EOS Plan Sprint** button. Let the drawer load.]*
-
-> "And here's the big magic. I click 'EOS Plan Sprint' — and EOS drafts an entire sprint for me. From the backlog. Respecting capacity, dependencies, and priority. Look — it picked 8 tickets, 34 points total. And it tells me *why* each one: 'TRKLY-4 included because sprint deadline risk on login screen bug.' 'TRKLY-301 included because it unblocks auth flow.' You don't plan sprints anymore. You *approve* what EOS designed."
-
-*[Close the drawer. Move on.]*
-
----
-
-### 🤖 EOS TAB (1 minute)
-
-*[Click the **EOS** tab. Let the capability grid load. Sweep across the cards.]*
-
-> "This is the EOS Intelligence tab. Nine AI-powered capabilities. Nine things that used to take hours, now take seconds."
-
-*[Point to each card quickly as you speak.]*
-
-> "Sprint Retrospective — EOS reads every ticket and generates 'What went well,' 'What didn't,' and 'Action items.' No more awkward silences and sticky notes.  
-> Release Notes — grouped by Features, Bug Fixes, Improvements. Ready to send. One click.  
-> Risk Assessment — top 3 delivery risks with impact ratings and mitigation strategies.  
-> Technical Debt Analysis — debt percentage vs. safe threshold, with actionable recommendations.  
-> Team Performance — workload distribution, utilization, imbalance detection.  
-> Client Status Update — a polished three-paragraph email written by EOS and ready to send.  
-> Sprint Forecast — completion probability with confidence intervals.  
-> Anomaly Detection — statistical drift in velocity, bug spikes, stale tickets. Caught early.  
-> Knowledge Gaps — wiki coverage holes from ticket topics, with training recommendations."
-
-*[Click one — Sprint Retrospective or Risk Assessment. Let the drawer load.]*
-
-> "Let me show you. I click 'Generate Retro.' EOS reads the sprint data. Analyzes every ticket, every assignee, every status change. And produces this — structured, specific, actionable. It references actual ticket keys. Actual team members. 'What went well: 12 tickets shipped with zero rollbacks. Blockers resolved within 24h average.' 'What didn't: Late-sprint scope additions are a recurring theme.' 'Action items: Add explicit scope-freeze rule to sprint ceremonies.' This is what a principal engineer writes after three hours of analysis. EOS does it in three seconds."
+> "And connections matter. This ticket blocks that one. This duplicates that one. This relates to the auth epic. Trackly visualizes the web of work — not just isolated cards. Because no ticket lives alone."
 
 *[Close the drawer.]*
 
----
-
-### 🏛️ DECISIONS TAB (15 seconds)
-
-*[Click the **Decisions** tab.]*
-
-> "Decisions. Every team makes architectural choices. Most teams forget them. Here, every ADR is captured with status — Proposed, Accepted, Deprecated, Superseded. Linked to tickets. Searchable. New engineer joins on Monday? By Tuesday they've read every major decision the team ever made. No more 'why did we do it this way?' in Slack."
+> "That's a story in Trackly. Not a card. A living, breathing unit of work that knows its context."
 
 ---
 
-### ⚙️ PROCESSES TAB (15 seconds)
+### 🏔️ Epic Tab — "The Big Bets"
 
-*[Click the **Processes** tab.]*
+*[Click the Epics tab. Colorful epic cards animate into view.]*
 
-> "And Processes. Runbooks. SOPs. Compliance workflows. Onboarding checklists. Every repeatable process — structured with steps, owners, estimated times, and compliance flags. Database failover at 2 AM? The runbook is here. New hire onboarding? The checklist is here. Security audit? Every process tracked and documented."
+> "But stories don't exist in isolation. They roll up into epics — the big bets. The multi-sprint initiatives. The strategic commitments. And here's the problem with epics in most tools: you create them in week one, set a color... and never look at them again until the quarter-end panic."
 
-*[Pause. Look at the audience.]*
+*[Point to the "ML Pipeline v3" epic card.]*
 
-> "That's Spaces. Not a project board. Mission control for every pod in your organization."
+> "Not here. Every epic gets a color — and that color flows through everything. Blue dot. Blue progress bar. Blue percentage text. Blue border. At seventy-five percent completion, this epic screams 'healthy' from across the room. Date range: January 15th to March 30th. Twelve tickets, nine done, three left. A manager walking by knows the story in two seconds."
+
+*[Point to the "Auth Overhaul" epic.]*
+
+> "This one — Auth Overhaul — forty percent. Green. You see it's behind. You see it has seventeen tickets with only seven completed. You don't need a report. You don't need a meeting. The epic *shows* you."
+
+*[Click into an epic. The detail drawer opens.]*
+
+> "Drill in and you see every linked ticket. Priorities. Assignees. Statuses. Progress. You can link new tickets with a live search. You can edit dates, colors, descriptions. The epic lives where the work lives — not buried in a spreadsheet someone updated three months ago."
+
+*[Close the drawer.]*
+
+> "That's an epic in Trackly. Not a bucket. A strategic compass."
 
 ---
 
-## 📚 SECTION 3: WIKI — "Knowledge That Doesn't Rot" (1 minute 15 seconds)
+### 🚀 Release Tab — "Ship With Certainty"
+
+*[Click the Releases tab. Release cards load with stats.]*
+
+> "And epics roll up into releases. The moment of truth. The moment of maximum anxiety. 'What's going out? Is it ready? Did we forget something?'"
+
+*[Point to a release card.]*
+
+> "Version 2.4.0. Target date: August 15th. Status: unreleased. Twelve tickets linked. And look — EOS automatically calculates readiness. Total: twelve. Done: nine. Seventy-five percent complete. You don't *guess* if a release is ready. You *know*."
+
+*[Click into the release. The detail drawer opens.]*
+
+> "Drill in and you see every ticket that made the cut. Priorities. Assignees. Statuses. You can link more tickets with a live search — type, results appear instantly, click to link. Mark it released with one click. And when you do? Every linked ticket updates. Statuses change. Notifications fire. The release notes practically write themselves."
+
+*[Close the drawer.]*
+
+> "No more 'did we forget the auth fix?' at 2 AM. No more last-minute Slack threads asking 'is 2.4.0 safe to ship?' Just clarity. Just confidence. Just ship."
+
+---
+
+## 🧪 ACT II: QUALITY — Tests Tab (1.5 minutes)
+
+*[Click the Tests tab. Three sub-tabs appear: Coverage, Test Cases, Cycles.]*
 
 **You:**
-> "Now let's talk about the silent killer of engineering velocity. Not bugs. Not blockers. Rotting documentation."
+> "Now let's talk about the thing that separates good teams from great teams. Quality. And let's be honest — testing is usually where discipline breaks down. Writing test cases is tedious. Running them is tedious. Tracking coverage is so tedious that most teams just... don't."
 
-*[Navigate to **Wiki**. Show the sidebar with spaces and pages.]*
+*[Click the Coverage sub-tab. KPI cards load.]*
 
-> "This is Trackly Wiki. Every page has a pulse. See these colored dots? Green means fresh — updated in the last 30 days. Amber means aging. Red means stale — and stale docs kill more sprints than bad code. Because when your on-call engineer follows a 90-day-old runbook at 2 AM? That's not a doc problem. That's an incident."
+> "Trackly changes that. Coverage view: sixty-eight percent coverage. Forty-three active tickets. Twenty-nine tested. Fourteen untested. And right at the top — an EOS insight explaining the gap. Not a number without context. A number with a story."
 
-*[Open a page. Point to the EOS freshness banner at the top.]*
+*[Click the Test Cases sub-tab.]*
 
-> "EOS scans every page automatically. It knows your API documentation is 47 days old. It knows two pages contradict each other on the auth flow. It knows five tickets reference a topic that has no wiki coverage. And it tells you — right here, in the banner. '34 days since last update. 3 ticket references found.' You can't ignore it. The system won't let you."
+> "But here's the magic. Watch this. I click 'Generate with EOS.' I pick a ticket. I adjust the slider — let's say five test cases. And I hit generate."
 
-*[Click the **AI Panel** on the right. Toggle through Health → Map → Insights.]*
+*[Demonstrate. The Generate drawer opens. Click Generate.]*
 
-> "The AI panel gives you the full picture. Health score out of 100 — freshness, coverage, cross-links. Knowledge map — green nodes are fresh, amber aging, red stale. You see the whole knowledge graph at a glance. And insights? 'This page needs update.' 'Potential conflict with another page.' '4 related pages discovered — link them to improve discoverability.' EOS doesn't just store docs. It *manages* them."
+> "EOS reads the ticket description, analyzes the acceptance criteria, and writes complete test cases. Preconditions. Numbered steps. Expected results. What used to take a QA engineer thirty minutes now takes three seconds. And they're not vague outlines — they're actual, executable test cases."
 
-*[Click **Structure Notes** — the Meeting Capture modal.]*
+*[Click the Cycles sub-tab.]*
 
-> "And because nobody likes writing docs... let me show you this. I paste raw meeting notes — bullet points, half-sentences, maybe a transcript. I hit 'Structure with EOS.' And in seconds — clean wiki page. Decisions extracted. Action items as checkboxes. Follow-ups listed. Knowledge capture that takes 10 seconds instead of 30 minutes. Your team actually documents things because the friction is gone."
+> "And execution? Test Cycles track every run. Pass. Fail. Block. Skip. Progress bars. Counts. You see exactly where quality stands before every release. You know if your release is safe — or if it's a incident waiting to happen."
 
----
-
-## 🎯 SECTION 4: GOALS — "OKRs That Actually Stay Alive" (1 minute 15 seconds)
-
-**You:**
-> "Every company does goals. OKRs. Quarterly planning. And every company has the same problem — they're set in week one, forgotten by week four, and rediscovered in week twelve when everyone panics."
-
-*[Navigate to **Goals**. Let the goal cards load.]*
-
-> "Trackly Goals are different. Because they're not static documents. They're living, breathing, AI-monitored commitments."
-
-*[Click to expand a goal card. Point to the circular progress ring and status badge.]*
-
-> "Look at this goal: 'Reduce API latency by 40% this quarter.' 67% complete. Status: On Track. The progress isn't guessed — it's calculated from linked tickets and key results. Every ticket that moves, every story point burned, every status change — it feeds back into the goal. You don't update a spreadsheet at month-end. The goal updates itself in real-time."
-
-*[Point to the **Key Results**. Expand one.]*
-
-> "Key results with actual progress bars. 'Average response time under 200ms' — current 187ms, target 200ms, 94% complete. Linked tickets right there — TRKLY-401, TRKLY-415. You click and you see the work. The goal and the work are connected. Not separate. Not abstract. Real."
-
-*[Point to the **Nova Insight** block.]*
-
-> "And this — Nova Insight. The AI reads the goal, the key results, the linked tickets, the team velocity... and tells you what's actually happening. It might say: 'At current pace, this goal will hit 78% by quarter-end. Consider pulling TRKLY-420 into the current sprint to close the gap.' Or: 'Team velocity dropped 15% this sprint. Risk of missing target is now medium. Recommend scope review.' Your goals don't just sit there. They *talk* to you."
-
-*[Point to the **linked sprints** at the bottom of a goal card.]*
-
-> "And goals link to sprints. So when your engineering manager asks 'Are we on track for the Q2 API performance goal?' — you don't say 'I think so.' You open this page and you *know*. 67%. On Track. Three key results. Eight linked tickets. Two sprints remaining. That's the conversation. Facts, not feelings."
-
-*[Pause.]*
-
-> "That's Goals. Set them. Link them. Let EOS monitor them. No more quarter-end surprises."
+> "This isn't a testing tool. This is quality assurance that keeps up with your velocity. This is shipping with confidence."
 
 ---
 
-## 🎤 SECTION 5: STANDUP — "The 2-Minute Standup" (1 minute)
+## ⚙️ ACT III: CONTROL — Settings Tab (45 seconds)
+
+*[Click the Settings tab. Members and automation sections load.]*
 
 **You:**
-> "Standups. We love the idea. We hate the reality. 15 people. 30 minutes. 'What did you do yesterday' shouldn't take a quarter of an hour. And yet... it does. Every. Single. Day."
+> "Every team works differently. Different processes. Different roles. Different fields. So Trackly doesn't force one-size-fits-all."
 
-*[Navigate to **Standup**. Show the Engineer View.]*
+*[Point to the Members section.]*
 
-> "Trackly Standup is two minutes. Here's what you did yesterday — auto-populated from your tickets and commits. Not 'I worked on some stuff.' It says: 'Completed TRKLY-284 — OAuth redirect fix. Moved TRKLY-301 to In Review.' Actual work. Actual tickets."
+> "Manage who belongs to this space — with role-based access. Admins. Engineering managers. Tech leads. Members. Each role sees what they need. No more. No less. Security without friction."
 
-*[Point to the 'Today' and 'Blockers' fields.]*
+*[Point to Automation.]*
 
-> "Here's what you're doing today — suggested by EOS based on your priority queue. Blockers? One tap to flag. And if you want to get really crazy..."
+> "Automation rules. When a ticket moves to In Review, ping the reviewer. When a sprint ends, generate a retro. When a blocker sits for 24 hours, escalate. Your team probably has these rules — but they're tribal knowledge, enforced by hope. Trackly enforces them by code."
 
-*[Click **Generate with EOS**.]*
+*[Point to Custom Fields.]*
 
-> "Don't write anything. Just click 'Generate with EOS.' It reads your tickets, your time logs, your status changes... and writes your standup for you. 'Yesterday: Completed TRKLY-4 — fixed blank login screen after idle session expiration. Moved to In Review. Today: Pick up TRKLY-301 — password reset flow. Blockers: None.' You review it. You hit submit. Done. Two minutes."
-
-*[Show the team view / submission rate.]*
-
-> "And for managers? See the whole team in one view. Who's submitted. Who's blocked. Who's flying. Streak counters. Word count. Submit rate across the team. All without a single meeting. The standup that doesn't stand you up."
-
-*[Pause.]*
-
-> "Imagine giving your team 25 minutes back every morning. That's two hours a week. Eight hours a month. Per person. That's not a feature. That's a gift."
+> "And custom fields — add whatever your team needs. Text. Numbers. Dates. Dropdowns. Checkboxes. Trackly adapts to your workflow. Not the other way around."
 
 ---
 
-## 🎆 CLOSING — "The Why" (1 minute)
+## 🧠 ACT IV: THE BRAIN — EOS Page & Code Context (2.5 minutes)
 
-*[Step back from the screen. Address the audience directly.]*
+*[Navigate to the EOS page — the full Nova Intelligence Hub. The brain orb icon glows in the center.]*
 
 **You:**
-> "Let me tell you why this matters."
+> "Everything you've seen so far — the smart prioritization, the test generation, the release readiness — that's EOS working behind the scenes. EOS: Engineering Operating System. But sometimes you need to talk to it directly. Sometimes you need to ask a question that crosses every boundary."
 
-*[Count on fingers.]*
+*[Click a suggestion chip: "Which pods are at risk?"]*
 
-> "Engineers waste 47 minutes every morning figuring out what to do. MyWork gives it back — with an AI briefing that knows your priorities better than you do.  
-> Teams burn sprints because blockers hide in silos. Spaces surfaces them — with health scores, stale detection, AI assignee like Anoop Rai, and EOS intelligence that plans your sprints for you.  
-> Knowledge rots in docs nobody updates. Wiki keeps it alive — with freshness monitoring, conflict detection, and automatic structuring of meeting notes.  
-> Goals are set in week one and forgotten by week four. Trackly Goals stay alive — with real-time progress from linked tickets, key results that breathe, and Nova insights that warn you before you miss.  
-> Standups steal 30 minutes from 15 people every day. Trackly makes it 2 minutes — with auto-population and AI generation.  
-> And managers? They stop flying blind. Every pod's health, every risk, every recommendation, every goal trajectory — in one glance."
+> "So this is the EOS Intelligence Hub. Your project's brain. Full-screen. Full power. I ask: 'Which pods are at risk?' And watch."
 
-*[Pause. Lower your voice slightly — intimacy.]*
+*[The streaming text animation begins. Character by character, a response appears. Citations materialize as colored chips.]*
 
-> "Aastha showed you what we built. What I just showed you is how engineering teams will work in 2026. Not in tickets and tools and tabs. In *flow*. One platform. One intelligence. One truth."
+> "EOS doesn't just dump an answer. It *thinks* out loud. Streaming text, character by character. And see these citations? Every claim is backed by real data — tickets, standups, decisions. Hover over a citation and the source highlights in the text. This isn't a chatbot making things up. This is an engineer who read every document in your organization and is now showing their work."
 
-*[Smile.]*
+*[Toggle Agent mode ON.]*
 
-> "That's Trackly. And honestly? We just scratched the surface."
+> "But answers aren't enough. Sometimes you need action. Flip on Agent mode. Now EOS doesn't just talk — it *does*."
 
-*[Pause. Let curiosity build.]*
+*[Type: "Create a ticket for the auth bug from standup yesterday." Submit.]*
 
-> "What you saw today — EOS briefing your mornings, AI planning your sprints, ambient awareness keeping you in the loop, intelligent assignee routing — that's Phase One. But we're already building what's next. Predictive sprint health that warns you a week before things go wrong. Automated root-cause analysis when incidents happen. AI-generated onboarding paths that adapt to each new hire's skill level. Cross-space resource optimization that moves engineers before bottlenecks form."
+> "I ask it to create a ticket. It searches standup notes. Finds the auth bug mention. Reads the context. Drafts a title. Writes a description. Sets priority. And it shows me every step — the tool calls, the reasoning, the confidence score. You don't blindly trust AI. You watch it think."
 
-*[Lower your voice slightly — intimacy.]*
+*[Point to Code Context features.]*
 
-> "Aastha showed you what we built. What I showed you is how engineering teams work in 2026. And what's coming next? That's how they'll work in 2027."
+> "And code context — this is where it gets special. EOS doesn't just read tickets. It understands your codebase. Ask 'Who's the expert on the auth service?' and EOS cross-references Git commits, code reviews, ticket assignments, and wiki edits to tell you: 'Jordan has touched auth-service.tsx 47 times in the last 90 days and reviewed 12 auth-related PRs.' That's not search. That's intelligence."
+
+*[Point to the Pulse drawer.]*
+
+> "And Pulse? Real-time anomalies. Patterns humans missed. A velocity drop no one noticed. A knowledge gap that's about to become a blocker. A team imbalance that will explode next week. Each has a confidence score. Each is actionable. This isn't noise. This is your early warning system."
+
+> "This is what it means to have an engineering co-pilot that understands your code, your team, and your goals."
+
+---
+
+## 🔍 ACT V: THE GUARDRAIL — Code Review (1.5 minutes)
+
+*[Navigate to Code Review. Repository list loads.]*
+
+**You:**
+> "Bugs are expensive. A bug caught in development costs one hour. In production? Seventeen hours. And that's just average. Some bugs cost millions. Some bugs cost companies."
+
+*[Click Run Analysis on a repository. The AI Terminal animation begins — macOS-style window with red, amber, green dots. Logs stream in.]*
+
+> "Trackly Code Review connects to your GitHub repos and runs AI-powered static analysis. But we didn't want a loading spinner. We wanted something that felt like the future."
+
+*[Point to the terminal.]*
+
+> "Watch. CONN — connecting. INDEX — mapping files. PARSE — understanding your codebase. SCAN — analyzing every function, every import, every edge case. XREF — cross-referencing vulnerability patterns. Each line is real. Each step matters. That progress bar? Not decorative. Real progress."
+
+*[Scan completes. Findings grid loads with severity badges.]*
+
+> "And the findings. Severity-coded. Critical. High. Medium. But here's what makes this special — EOS doesn't just say 'this is wrong.' It explains *why* it's wrong. *How* it affects users. *How* to reproduce it."
+
+*[Click View Details on a Critical finding. Drawer opens.]*
+
+> "'Why This Is a Bug.' 'User Impact.' 'Evidence.' 'Reproduction Steps.' This is what a principal engineer writes during code review. EOS does it automatically. For every finding. At scale. Relentlessly."
+
+*[Click Approve. The Create Ticket drawer opens, pre-filled.]*
+
+> "And one click — approve — and a ticket is drafted with everything pre-filled. Title. Description. Priority. Labels. From bug discovery to backlog in under a second."
+
+> "This isn't linting. This is having a senior engineer review every commit. While you sleep."
+
+---
+
+## 📊 ACT VI: THE TRUTH — Analytics Page (1.5 minutes)
+
+*[Navigate to Analytics. Dashboard loads with charts and intelligence cards.]*
+
+**You:**
+> "Managers have a problem. Too much data. Not enough intelligence. They export Jira. They export GitHub. They stitch spreadsheets together and hope the story makes sense. It never does."
+
+*[Point to Workload Distribution chart.]*
+
+> "Trackly Analytics is different. Workload distribution — who's carrying the team, who has capacity, in one chart. Immediate. Obvious."
+
+*[Point to Team Health Monitor.]*
+
+> "Team Health Monitor. Burnout risk. Not surveillance — *care*. Red means overloaded. Amber means watch. Green means thriving. And EOS recommends: 'Redistribute two tickets from Priya to Jordan.' Actionable. Immediate. Human."
+
+*[Point to Velocity Anomaly Detection.]*
+
+> "Velocity anomalies. Sprint-over-sprint drops of twenty percent or more — caught automatically. With root cause. 'Sprint 14 dropped twenty-three percent. Likely cause: late scope additions and two unplanned incidents. Recommendation: enforce scope freeze.' Facts. Not feelings."
+
+*[Point to Emotion-Aware Work Management.]*
+
+> "And this — something no other tool does. Emotion-aware management. EOS analyzes linguistic signals in comments. 'Frustrated.' 'Blocked again.' 'This keeps breaking.' Not to spy. To care. To detect friction before it becomes turnover. Before it becomes a resignation letter."
+
+*[Point to Knowledge Gaps.]*
+
+> "Knowledge gaps with one-click article generation. Recurring problem detection. Client health scores. Predictive resource planning. Benchmarks against industry averages."
+
+> "This isn't a dashboard. This is the difference between managing by gut feel and managing by truth."
+
+---
+
+## ⏰ ACT VII: TIME — Time Tracking (45 seconds)
+
+*[Navigate to Time Tracking. Weekly Grid loads.]*
+
+**You:**
+> "Time tracking is usually the worst part of the week. Clicking timers. Forgetting to start. Guessing on Friday afternoon. 'Uh... I think I spent 4 hours on that ticket? Maybe 5?'"
+
+*[Point to the Weekly Grid.]*
+
+> "Trackly Time Tracking feels like a spreadsheet — because that's what people actually like. Tickets as rows. Days as columns. Type a number. Tab to the next cell. Enter to move down. Row totals. Column totals. Grand total. Live. Always accurate."
+
+*[Click into a cell, type a number.]*
+
+> "Two hours Monday. Three Tuesday. The math happens instantly. No surprises. No end-of-week panic."
+
+*[Click the Manual Entry tab.]*
+
+> "And for one-offs — manual entry. Pick a ticket. Pick a date. Quarter-hour increments. Add a note. Done. Sixty seconds instead of sixty minutes."
+
+> "Your time is worth more than data entry."
+
+---
+
+## 👥 ACT VIII: THE PEOPLE — Teams Page (1 minute)
+
+*[Navigate to Team. Grid of member cards loads.]*
+
+**You:**
+> "Engineering managers tell me: 'I have fifteen people. I really know how three of them are doing.' That's not a people problem. That's a visibility problem."
+
+*[Point to a team member card.]*
+
+> "Trackly Team page gives you every person — at a glance. Hours this week. Tickets in progress. POD assignment. Status: Overloaded. Active. Light. Idle. Color-coded. Immediate. No digging through three tools to check on your people."
+
+*[Point to Institutional Memory Map.]*
+
+> "Institutional Memory Map. EOS analyzes who knows what. Bus-factor risks — where one person leaving cripples a codebase. Expertise concentration. Knowledge gaps. This isn't an org chart. This is organizational intelligence."
+
+*[Point to Cognitive Load Score.]*
+
+> "Cognitive load scores. WIP counts. Overdue counts. You see who's drowning before they tell you. Before they burn out. Before they quit."
+
+*[Click View Timesheet on a member. Drawer opens.]*
+
+> "Click into anyone and see their full picture. Hours. Tickets. Activity. And with one click — 'Generate Performance Brief' — EOS writes a summary. Not a full review. Just enough to start a meaningful one-on-one."
+
+> "This is leading with data and empathy."
+
+---
+
+## 🔔 ACT IX: ATTENTION — Notifications (30 seconds)
+
+*[Click the bell icon. Notification panel drops down.]*
+
+**You:**
+> "Notifications are broken everywhere. Everything is urgent. Nothing is important. Your phone buzzes forty times a day and you ignore all of them."
+
+*[Point to notification items.]*
+
+> "Trackly notifications are different. Sprint started. Standup ready. Burn rate alert. Blocked ticket. Each has a distinct icon. Each is actionable. Click — straight to context. No hunting."
+
+*[Click Mark All Read.]*
+
+> "Caught up? One tap. Clear. Done. Back to flow."
+
+---
+
+## 🔗 ACT X: CONNECTION — Integrations (30 seconds)
+
+*[Navigate to Settings → Integrations.]*
+
+**You:**
+> "You're not replacing every tool overnight. We know that. So Trackly integrates with what you already use."
+
+*[Point to integration cards.]*
+
+> "Slack. Microsoft Teams. Generic webhooks. Configure once. Choose your events — ticket created, status changed, sprint completed, mentions, comments. Test live. Toggle on and off. Trackly becomes part of your workflow instead of fighting it."
+
+*[Click Test. Toast confirms.]*
+
+> "One click to test. One click to confirm. No black boxes. No mysteries."
+
+---
+
+## 💬 ACT XI: THE CONVERSATION — Comments in Tickets (45 seconds)
+
+*[Open any ticket. Click the Activity tab.]*
+
+**You:**
+> "Work requires conversation. But comments in most tools are... basic. Text. Send. Forget. Context lost. History scattered."
+
+*[Click into the comment composer. Type "@"]*
+
+> "Trackly comments are different. Type @ and you get full autocomplete. Everyone in your org. Keyboard navigation. Enter to select. And when you send it?"
+
+*[Send the comment.]*
+
+> "The mention renders in your accent color. They get notified. They click — and they're right here, in context. No 'check your DMs' games. No lost threads."
+
+*[Point to the mixed timeline.]*
+
+> "And the Activity tab interweaves everything — comments, worklogs, status changes — one chronological timeline. The full story of this ticket. Not fragments across Slack and email."
+
+*[Point to Sub-tasks and Linked Issues.]*
+
+> "Sub-tasks with progress bars. Linked issues by relationship type. The full web of work. Connected. Visible. Alive."
+
+---
+
+## 🎆 THE CLOSE — "The Truth Will Set You Free" (1.5 minutes)
+
+*[Step back. Address the audience directly. No screen. Just you.]*
+
+**You:**
+> "Let me tell you what you actually saw today."
+
+*[Count on your fingers. Deliberate. Powerful.]*
+
+> "You saw Stories that breathe — alive, connected, contextual. Not dead cards in a board.  
+> You saw Epics that guide — color-coded, progress-rich, strategically visible. Not forgotten buckets.  
+> You saw Releases you can trust — with automatic readiness, linked tickets, and one-click shipping. Not guesswork.  
+> You saw Tests generated by AI — from zero to complete coverage in seconds. Not manual drudgery.  
+> You saw Settings that adapt — roles, automation, custom fields. Your rules, your way.  
+> You saw EOS — a project brain that answers questions, takes action, and warns you before disaster strikes.  
+> You saw Code Review by a principal engineer who never sleeps.  
+> You saw Analytics that tell the truth — workload, health, velocity, emotion, cost. No more gut feel.  
+> You saw Time Tracking that takes seconds, not minutes.  
+> You saw Teams as people — with load, memory, expertise, and care. Not headcount.  
+> You saw Notifications that respect your attention.  
+> Integrations that fit your flow.  
+> And collaboration that keeps context where it belongs."
+
+*[Pause. Drop your voice — intimacy.]*
+
+> "But here's what matters. This isn't about software. This is about reclaiming something precious."
+
+*[Raise your voice slightly — crescendo.]*
+
+> "Every engineer in your organization spends forty-seven minutes every morning — figuring out what to do. That's four hours a week. Sixteen hours a month. Two full working days — per person — lost to confusion."
+
+*[Pause. Let the number land.]*
+
+> "Trackly gives that time back. Not by making them work faster. By making their work *clearer*. By making their tools *smarter*. By making their mornings * briefing*, not archaeology."
+
+*[Smile. Genuine.]*
+
+> "The best teams don't win because they work harder. They win because everyone knows exactly what matters. They win because their tools serve them — not the other way around."
+
+*[Beat.]*
+
+> "That's Trackly. And honestly? We just got started."
+
+*[Pause. Let curiosity build in the room.]*
+
+> "Predictive sprint health that warns you a week before disaster. Automated root-cause analysis when incidents strike. Cross-space resource optimization that moves people before bottlenecks form. That's not the future. That's next quarter."
+
+*[Look at the audience. Hold eye contact.]*
+
+> "This is how engineering teams work in 2026. And what's coming next? That's how they'll work in 2027."
 
 *[Beat. Smile.]*
 
-> "That's Trackly. Thank you — and we'll see you in the next phase."
+> "That's Trackly. Thank you."
 
-*[Pause. Beat.]*
+*[Pause. Three seconds. Let it land.]*
 
 > "Questions?"
 
 ---
 
-## 🎯 DEMO TIPS
+## 🎯 PRESENTER COMMANDMENTS
 
-| Do | Don't |
-|---|---|
-| Pause after big statements. Let silence work. | Don't rush through screens. |
-| Use the mouse deliberately. Point, then speak. | Don't read feature names. Tell stories. |
-| Let EOS animations play — the typing, the scanning. That's the magic. | Don't apologize if something loads slowly. |
-| Make eye contact with the audience, not just the screen. | Don't say "as you can see." They can see. Tell them why it matters. |
-| If a demo element fails, smile and say "Beta charm" — move on. | Don't debug live. |
+### Thou Shalt
+- **Pause after every reveal.** Silence is louder than words.
+- **Point, then speak.** Mouse moves with purpose.
+- **Let animations breathe.** The typing. The terminal. The streaming. That's the magic.
+- **Make eye contact.** The audience, not just the screen.
+- **Smile when the AI does something cool.** Your enthusiasm is contagious.
+- **If something glitches, say "Beta charm" and move on.** Never apologize. Never debug live.
+
+### Thou Shalt Not
+- **Rush.** Each screen is a moment. Moments need space.
+- **Read feature names.** "This is epic tracking" puts people to sleep. "Every team has big bets" wakes them up.
+- **Say "as you can see."** They can see. Tell them why it *matters*.
+- **Explain the tech stack.** Nobody cares if it's React or Vue. They care if it works.
+- **Look at your notes.** You know this. Trust yourself.
 
 ---
 
 ## ⏱️ TIME CHECKPOINTS
 
-| Section | Target Time | Cumulative |
-|---|---|---|
-| Hook | 0:30 | 0:30 |
-| My Work | 2:00 | 2:30 |
-| Spaces — Summary | 0:15 | 2:45 |
-| Spaces — Backlog + Ticket AI + EOS Plan Sprint | 1:00 | 3:45 |
-| Spaces — EOS Tab | 1:00 | 4:45 |
-| Spaces — Decisions + Processes | 0:30 | 5:15 |
-| Wiki | 1:15 | 6:30 |
-| Goals | 1:15 | 7:45 |
-| Standup | 1:00 | 8:45 |
-| Closing | 1:00 | **9:45** |
+| Act | Feature | Target | Cumulative |
+|-----|---------|--------|------------|
+| Opening | The Lie | 1:30 | 1:30 |
+| I | Story Tab | 1:00 | 2:30 |
+| I | Epic Tab | 0:45 | 3:15 |
+| I | Release Tab | 0:45 | 4:00 |
+| II | Tests Tab | 1:30 | 5:30 |
+| III | Settings Tab | 0:45 | 6:15 |
+| IV | EOS Page + Code Context | 2:30 | 8:45 |
+| V | Code Review | 1:30 | 10:15 |
+| VI | Analytics | 1:30 | 11:45 |
+| VII | Time Tracking | 0:45 | 12:30 |
+| VIII | Teams | 1:00 | 13:30 |
+| IX | Notifications | 0:30 | 14:00 |
+| X | Integrations | 0:30 | 14:30 |
+| XI | Comments | 0:45 | 15:15 |
+| — | Closing | 1:30 | **16:45** |
 
-> Buffer built in for transitions and pauses. Target: **~10 minutes**.
-
----
-
-## 📝 HANDOVER LINE FROM AASTHA
-
-> "...and that covers the architecture and the build. Now, Anand will show you what it actually feels like to use this thing. Anand?"
-
-*[You walk up. Brief nod to Aastha. Open with your hook.]*
+> Buffer included for transitions and applause. Target: **~15–18 minutes**.
 
 ---
 
-## 🎬 QUICK REFERENCE — What to Click When
+## 🎬 QUICK REFERENCE — Click Map
 
-| Section | Screen | What to Do |
-|---|---|---|
-| My Work | My Work page | Let EOS brief type. Scroll through insights, expand **TRKLY-4** in queue, show focus block, scroll to forecast, show knowledge gaps. |
-| Spaces grid | Spaces page | Let grid load, click a space with active sprint. |
-| Summary | Space detail → Summary tab | Brief sweep across: brief banner, health score, signal cards, charts, member list. 15 seconds. |
-| Backlog | Space detail → Backlog tab | Click **Create Issue**, type ticket title, show **Duplicacy** + **Points** + **Assignee (Anoop Rai)** suggestions, close. Then click **EOS Plan Sprint**, let drawer load, close it. |
-| EOS | Space detail → EOS tab | Show 9 cards grid. Click Retro or Risk Assessment. Let drawer load. Close it. |
-| Decisions | Space detail → Decisions tab | Show list, point to statuses. 10 seconds. |
-| Processes | Space detail → Processes tab | Show list, point to categories. 10 seconds. |
-| Wiki | Wiki page | Show sidebar dots, open a page, show freshness banner, toggle AI panel, click Structure Notes modal. |
-| Goals | Goals page | Let cards load, expand one, show progress ring, key results, Nova insight, linked sprints. |
-| Standup | Standup page | Show engineer view, point to auto-populated fields, click Generate with EOS, show team view. |
+| Feature | Route | What To Demo |
+|---------|-------|--------------|
+| Story Tab | Space → Backlog/Stories | Open ticket drawer, show inline editing, custom fields, Sub-tasks, Linked Issues |
+| Epic Tab | Space → Epics | Point to color-coded cards, click one, show linked tickets and progress |
+| Release Tab | Space → Releases | Point to readiness stats, click one, show linked tickets, mark released |
+| Tests Tab | Space → Tests | Coverage KPIs, Generate with EOS, Test Cases, Cycles with pass/fail |
+| Settings Tab | Space → Settings | Members with role pills, Automation rules, Custom Fields |
+| EOS Page | `/nova` or `/eos` | Brain orb empty state, click suggestion, watch streaming + citations, toggle Agent mode, show Code Context |
+| Code Review | `/code-review` | Run Analysis, let terminal animate, show findings grid, click View Details, click Approve → ticket drawer |
+| Analytics | `/analytics` | Workload chart, Team Health, Velocity Anomaly, Emotion-Aware, Bug Cost, Knowledge Gaps |
+| Time Tracking | `/timesheets/weekly` | Weekly Grid, type in cell, show live totals, switch to Manual Entry |
+| Teams | `/team` | Grid cards, Institutional Memory, Cognitive Load, click View Timesheet, generate Performance Brief |
+| Notifications | Topbar bell | Open panel, point to types, click Mark All Read |
+| Integrations | Settings → Integrations | Show cards, click Test, show toast |
+| Comments | Ticket drawer → Activity | @mention autocomplete, send comment, show mixed timeline |
 
 ---
 
-**Break a leg. 🚀**
+**Go break a leg. The truth is on your side. 🚀**

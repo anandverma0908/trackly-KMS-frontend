@@ -119,16 +119,15 @@ export default function MyWorkPage() {
         aiTickets={aiTickets}
         flowAnalysis={flowAnalysis}
         blockerPredictions={blockerPredictions}
-        velocityPatterns={velocityPatterns}
+        sprintRisk={sprintRisk}
         loading={loading}
         onTicketClick={setSelectedKey}
       />
 
       {/* Gen 3: Predictive Intelligence */}
       <Gen3PredictiveSection
-        aiTickets={aiTickets}
-        sprintRisk={sprintRisk}
         cognitiveData={cognitiveData}
+        velocityPatterns={velocityPatterns}
         loading={loading}
       />
 

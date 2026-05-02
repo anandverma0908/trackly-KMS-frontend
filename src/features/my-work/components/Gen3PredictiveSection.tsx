@@ -1,6 +1,6 @@
-import { RiBrainLine, RiCalendarLine, RiRocketLine, RiSparklingLine } from "react-icons/ri";
+import { RiSparklingLine } from "react-icons/ri";
 import styles from "../MyWorkPage.module.css";
-import type { AITicket, CognitiveData, SprintRisk } from "../useMyWork";
+import type { CognitiveData, VelocityPattern } from "../useMyWork";
 
 /* ── Cognitive Load Card ── */
 function CognitiveLoadCard({
@@ -96,70 +96,44 @@ function FocusWindowCard() {
   );
 }
 
-/* ── Completion Prediction Card ── */
-function CompletionPredictionCard({
-  aiTickets,
-  sprintRisk,
-  loading,
-}: {
-  aiTickets: AITicket[];
-  sprintRisk: SprintRisk | null;
-  loading: boolean;
-}) {
-  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const topTickets = aiTickets.slice(0, 3);
-  const preds = topTickets.map((t) => {
-    const est = t.remaining_estimate_hours || t.original_estimate_hours || 4;
-    const daysAway = Math.ceil(est / 2.5);
-    const future = new Date();
-    future.setDate(future.getDate() + daysAway);
-    return {
-      key: t.key,
-      predictedBy: days[future.getDay()],
-      daysAway,
-      sprintEnd: sprintRisk ? `${sprintRisk.daysLeft}d left` : "—",
-      onTrack: daysAway <= (sprintRisk?.daysLeft ?? 5),
-    };
-  });
+/* ── Velocity Pattern Card ── */
+function VelocityPatternCard({ velocityPatterns }: { velocityPatterns: VelocityPattern[] }) {
+  const hasData = velocityPatterns.some((v) => v.completed > 0);
+  const maxVal = Math.max(...velocityPatterns.map((v) => v.completed), 1);
 
   return (
     <div className={styles.predictiveCard}>
       <div className={styles.predictiveHeader}>
-        {/* <RiRocketLine size={14} color="#a78bfa" /> */}
-        <span>Completion Prediction</span>
+        <span>Velocity Patterns</span>
       </div>
-      {loading ? (
-        <div className={styles.proactiveSkeleton} />
-      ) : preds.length === 0 ? (
+      {!hasData ? (
         <div className={styles.proactiveEmpty}>
-          {/* <RiRocketLine size={24} color="var(--text-3)" /> */}
-          <p>No open tickets to predict</p>
+          <p>No worklog data yet — log time on tickets to see your velocity patterns.</p>
         </div>
       ) : (
-        <div className={styles.completionList}>
-          {preds.map((p) => (
-            <div key={p.key} className={styles.completionItem}>
-              <div className={styles.completionTop}>
-                <span className={styles.completionKey}>{p.key}</span>
-                <span
-                  className={styles.completionStatus}
-                  style={{ color: p.onTrack ? "var(--green)" : "var(--amber)" }}
-                >
-                  {p.onTrack ? "On track" : "At risk"}
-                </span>
+        <>
+          <p className={styles.predictiveRec}>
+            <RiSparklingLine size={10} />
+            Hours logged over the last 5 business days.
+          </p>
+          <div className={styles.velocityBars}>
+            {velocityPatterns.map((v) => (
+              <div key={v.day} className={styles.velocityBarCol}>
+                <div className={styles.velocityBarWrap}>
+                  <div
+                    className={styles.velocityBarFill}
+                    style={{
+                      height: `${(v.completed / maxVal) * 100}%`,
+                      background: v.completed >= 6 ? "var(--green)" : v.completed >= 3 ? "var(--accent)" : "var(--amber)",
+                    }}
+                  />
+                </div>
+                <span className={styles.velocityBarLabel}>{v.day}</span>
+                <span className={styles.velocityBarVal}>{v.completed}h</span>
               </div>
-              <div className={styles.completionRow}>
-                <span className={styles.completionBy}>
-                  Done by{" "}
-                  <strong style={{ color: p.onTrack ? "var(--green)" : "var(--amber)" }}>
-                    {p.predictedBy}
-                  </strong>
-                </span>
-                <span className={styles.completionSprint}>Sprint: {p.sprintEnd}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -167,19 +141,18 @@ function CompletionPredictionCard({
 
 /* ── Gen3 Section ── */
 interface Props {
-  aiTickets: AITicket[];
-  sprintRisk: SprintRisk | null;
   cognitiveData: CognitiveData;
+  velocityPatterns: VelocityPattern[];
   loading: boolean;
 }
 
-export default function Gen3PredictiveSection({ aiTickets, sprintRisk, cognitiveData, loading }: Props) {
+export default function Gen3PredictiveSection({ cognitiveData, velocityPatterns, loading }: Props) {
   return (
     <div className={`${styles.genSection} fade-up-3`}>
       <div className={styles.gen3Grid}>
         <CognitiveLoadCard cognitiveData={cognitiveData} loading={loading} />
         <FocusWindowCard />
-        <CompletionPredictionCard aiTickets={aiTickets} sprintRisk={sprintRisk} loading={loading} />
+        <VelocityPatternCard velocityPatterns={velocityPatterns} />
       </div>
     </div>
   );
