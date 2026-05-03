@@ -32,9 +32,6 @@ import {
   RiEyeLine,
   RiAlertLine,
   RiCheckLine,
-  RiBrainLine,
-  RiFlashlightLine,
-  RiGitBranchLine,
   RiSearchLine,
 } from "react-icons/ri";
 

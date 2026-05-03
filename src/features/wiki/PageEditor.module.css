@@ -9,6 +9,37 @@
   position: relative;
 }
 
+/* Active Users Bar */
+.activeUsersBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 32px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--text-2);
+  min-height: 32px;
+}
+
+.activeUser {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.activeUserDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.onlyYou {
+  color: var(--text-3);
+  font-style: italic;
+}
+
 .titleInput {
   background: none;
   border: none;
@@ -348,4 +379,49 @@
   color: var(--accent);
   box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+.awarenessBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-height: 32px;
+}
+
+.awarenessOnlyYou {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+.awarenessList {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.awarenessUser {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface);
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+}
+
+.awarenessDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }

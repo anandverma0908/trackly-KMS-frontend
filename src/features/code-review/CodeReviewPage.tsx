@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   RiBugLine,
   RiCloseLine,
-  RiCodeBoxLine,
   RiGitRepositoryLine,
   RiPlayLine,
   RiShieldCheckLine,
@@ -603,7 +602,7 @@ export default function CodeReviewPage() {
 function IdleMain({
   repo,
   history,
-  onStart,
+  onStart: _onStart,
   onLoadSnapshot,
 }: {
   repo: RepoOption;

@@ -910,6 +910,7 @@ export default function WikiPage() {
                   }
                   onSave={handleSave}
                   pages={pages}
+                  pageId={activePage.id}
                 />
               </div>
             </>

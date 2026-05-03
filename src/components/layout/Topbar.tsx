@@ -226,7 +226,7 @@ export default function Topbar({
         </Tooltip>
 
         {/* {sidebarCollapsed && (
-          <div className={styles.logo} onClick={() => navigate("/dashboard")}>
+          <div className={styles.logo} onClick={() => navigate("/my-work")}>
             <div className={styles.logoMark}>T</div>
             <span className={styles.logoName}>Trackly</span>
           </div>

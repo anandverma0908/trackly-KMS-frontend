@@ -73,13 +73,6 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       logout: () => {
-        const { token } = get();
-        if (token) {
-          fetch(`/api/auth/logout`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-          }).catch(() => {});
-        }
         set({ user: null, token: null, isLoggedIn: false });
       },
 

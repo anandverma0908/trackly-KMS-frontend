@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import RequireAuth from "@/components/guards/RequireAuth";
@@ -18,9 +18,17 @@ import SpacesPage from "@/features/spaces/SpacesPage";
 import ProjectDetailPage from "@/features/spaces/ProjectDetailPage";
 
 import MyWorkPage from "@/features/my-work/MyWorkPage";
-import NovaPage from "@/features/nova/NovaPage";
+const NovaPage = lazy(() => import("@/features/nova/NovaPage"));
 import CodeReviewPage from "@/features/code-review/CodeReviewPage";
 import GoalsPage from "@/features/goals/GoalsPage";
+import CalendarPage from "@/features/calendar/CalendarPage";
+import DecisionsPage from "@/features/decisions/DecisionsPage";
+import ProcessesPage from "@/features/processes/ProcessesPage";
+import AuditLogPage from "@/features/audit/AuditLogPage";
+import ChatPage from "@/features/chat/ChatPage";
+import FormsPage from "@/features/forms/FormsPage";
+import GuestPortalPage from "@/features/guest/GuestPortalPage";
+import GuestLoginPage from "@/features/guest/GuestLoginPage";
 
 function useRouteDirection() {
   const location = useLocation();
@@ -93,6 +101,14 @@ function AnimatedRoutes() {
             </PageTransition>
           }
         />
+        <Route
+          path="/guest-login"
+          element={
+            <PageTransition>
+              <GuestLoginPage />
+            </PageTransition>
+          }
+        />
 
         {/* All app routes — require login + shell */}
         <Route
@@ -124,9 +140,16 @@ function AnimatedRoutes() {
                 element={<ProjectDetailPage />}
               />
               <Route path="/my-work" element={<MyWorkPage />} />
-              <Route path="/eos" element={<NovaPage />} />
+              <Route path="/eos" element={<Suspense fallback={null}><NovaPage /></Suspense>} />
               <Route path="/code-review" element={<CodeReviewPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/goals" element={<GoalsPage />} />
+              <Route path="/decisions" element={<DecisionsPage />} />
+              <Route path="/processes" element={<ProcessesPage />} />
+              <Route path="/audit-log" element={<AuditLogPage />} />
+              <Route path="/chat" element={<ChatPage />} />
+              <Route path="/forms" element={<FormsPage />} />
+              <Route path="/guest" element={<GuestPortalPage />} />
             </Route>
           </Route>
         </Route>

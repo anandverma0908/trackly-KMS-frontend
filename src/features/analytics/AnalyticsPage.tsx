@@ -7,7 +7,7 @@ import {
   detectKnowledgeGaps,
   createWikiPage,
   fetchWikiSpaces,
-  fetchVelocity,
+  fetchVelocityAnomalies,
   analyzeTicketNL,
   fetchBugCost,
   fetchRecurringProblems,
@@ -24,6 +24,7 @@ import type {
   BenchmarkEntry,
   ResourceGapsResponse,
 } from "@/services/api";
+import type { VelocityAnomalyResult } from "@/types";
 import {
   BarChart,
   Bar,
@@ -32,6 +33,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  LineChart,
+  Line,
+  Legend,
 } from "recharts";
 import {
   RiSparklingLine,
@@ -44,12 +48,19 @@ import {
   RiBarChartLine,
   RiArrowUpLine,
   RiArrowDownLine,
-  RiBugLine,
-  RiRepeatLine,
-  RiHeartLine,
 } from "react-icons/ri";
-import type { KnowledgeGap } from "@/types";
+import type { KnowledgeGap, VelocityAnomalySprint } from "@/types";
 import styles from "./AnalyticsPage.module.css";
+
+function AnomalyDot(props: any): React.ReactElement<SVGElement> | null {
+  const { cx, cy } = props;
+  if (cx == null || cy == null) return <g />;
+  return (
+    <svg x={cx - 6} y={cy - 6} width={12} height={12}>
+      <circle cx={6} cy={6} r={5} fill="var(--red)" />
+    </svg>
+  );
+}
 
 export default function AnalyticsPage() {
   const qc = useQueryClient();
@@ -84,9 +95,9 @@ export default function AnalyticsPage() {
     queryFn: fetchWikiSpaces,
   });
 
-  const { data: velocityData = [] } = useQuery({
-    queryKey: ["velocity"],
-    queryFn: fetchVelocity,
+  const { data: velocityAnomalyData } = useQuery<VelocityAnomalyResult>({
+    queryKey: ["velocity-anomalies"],
+    queryFn: fetchVelocityAnomalies,
   });
 
   const { data: sentimentData } = useQuery<SentimentSignalsResponse>({
@@ -176,34 +187,22 @@ export default function AnalyticsPage() {
       .sort((a, b) => b.total_hours - a.total_hours);
   }, [workload]);
 
-  // Velocity anomaly detection
-  const velocityAnomalies = useMemo(() => {
-    if (velocityData.length < 2) return [];
-    const anomalies: {
-      sprint: string;
-      prevSprint: string;
-      dropPct: number;
-      committed: number;
-      completed: number;
-    }[] = [];
-    for (let i = 1; i < velocityData.length; i++) {
-      const prev = velocityData[i - 1];
-      const curr = velocityData[i];
-      if (prev.completed > 0) {
-        const change = (curr.completed - prev.completed) / prev.completed;
-        if (change <= -0.2) {
-          anomalies.push({
-            sprint: curr.sprint,
-            prevSprint: prev.sprint,
-            dropPct: Math.abs(change),
-            committed: curr.committed,
-            completed: curr.completed,
-          });
-        }
-      }
-    }
-    return anomalies;
-  }, [velocityData]);
+  const anomalySprints = velocityAnomalyData?.sprints ?? [];
+  const anomalySummary = velocityAnomalyData?.summary;
+
+  const chartData = useMemo(() => {
+    return anomalySprints.map((s) => ({
+      name: s.name,
+      velocity: s.velocity,
+      rolling_avg: s.rolling_avg,
+      anomaly: s.is_anomaly ? s.velocity : null,
+    }));
+  }, [anomalySprints]);
+
+  const anomalousSprints = useMemo(
+    () => anomalySprints.filter((s) => s.is_anomaly),
+    [anomalySprints]
+  );
 
   const sentimentSignals = sentimentData?.signals ?? [];
   const benchmarks = benchmarkData;
@@ -359,68 +358,173 @@ export default function AnalyticsPage() {
         <div className={styles.cardGrid}>
           {/* Velocity Anomaly Detection */}
           <div
-            className={`${styles.card} ${velocityAnomalies.length > 0 ? styles.cardAlert : ""}`}
+            className={`${styles.card} ${anomalousSprints.length > 0 ? styles.cardAlert : ""}`}
           >
             <div className={styles.cardHeader}>
               <div>
                 <div className={styles.cardTitle}>
                   Velocity Anomaly Detection
                 </div>
-                {/* <span className={styles.cardSub}>
-                  Sprint-over-sprint pattern analysis
-                </span> */}
               </div>
             </div>
-            {velocityData.length < 2 ? (
+            {anomalySprints.length < 2 ? (
               <p className={styles.empty}>
                 Need at least 2 completed sprints for anomaly analysis.
               </p>
-            ) : velocityAnomalies.length === 0 ? (
-              <div className={styles.anomalyHealthy}>
-                <RiSparklingLine size={16} color="var(--green)" />
-                <span>
-                  No velocity anomalies detected. Sprint-over-sprint performance
-                  looks consistent.
-                </span>
-              </div>
             ) : (
-              <div className={styles.anomalyList}>
-                {velocityAnomalies.map((a, i) => (
-                  <div key={i} className={styles.anomalyItem}>
-                    <div className={styles.anomalyTop}>
-                      <RiAlertLine size={13} color="var(--amber)" />
-                      <span className={styles.anomalyTitle}>
-                        {a.sprint} velocity dropped{" "}
-                        <strong>{Math.round(a.dropPct * 100)}%</strong> from{" "}
-                        {a.prevSprint}
-                      </span>
-                      <span className={styles.anomalyBadge}>Anomaly</span>
+              <>
+                {/* Summary panel */}
+                <div className={styles.anomalySummaryPanel}>
+                  <span className={styles.anomalySummaryCount}>
+                    {anomalySummary?.anomaly_count ?? 0} anomaly
+                    {(anomalySummary?.anomaly_count ?? 0) !== 1 ? "ies" : "y"} detected
+                    in last {anomalySummary?.total_sprints ?? 0} sprints.
+                  </span>
+                  <span className={styles.anomalySummaryTrend}>
+                    Trend:{" "}
+                    <strong
+                      style={{
+                        color:
+                          anomalySummary?.trend_direction === "improving"
+                            ? "var(--green)"
+                            : anomalySummary?.trend_direction === "declining"
+                              ? "var(--red)"
+                              : "var(--amber)",
+                      }}
+                    >
+                      {anomalySummary?.trend_direction ?? "stable"}
+                    </strong>
+                  </span>
+                  <span className={styles.anomalySummaryAvg}>
+                    Avg velocity:{" "}
+                    <strong>{anomalySummary?.avg_velocity ?? 0} pts</strong>
+                  </span>
+                </div>
+
+                {/* Chart */}
+                <ResponsiveContainer width="100%" height={260}>
+                  <LineChart
+                    data={chartData}
+                    margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--border)"
+                    />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 10, fill: "var(--text-2)" }}
+                      interval={0}
+                      angle={-20}
+                      textAnchor="end"
+                      height={50}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "var(--text-2)" }}
+                      label={{
+                        value: "Story Points",
+                        angle: -90,
+                        position: "insideLeft",
+                        style: { fontSize: 11, fill: "var(--text-2)" },
+                      }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--surface-2)",
+                        border: "1px solid var(--border-2)",
+                        borderRadius: 8,
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: "0.75rem" }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="velocity"
+                      name="Actual Velocity"
+                      stroke="var(--accent)"
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: "var(--accent)" }}
+                      activeDot={{ r: 5 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="rolling_avg"
+                      name="Rolling Average"
+                      stroke="var(--text-3)"
+                      strokeWidth={2}
+                      strokeDasharray="6 4"
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="anomaly"
+                      name="Anomaly"
+                      stroke="transparent"
+                      dot={<AnomalyDot />}
+                      activeDot={{ r: 7, fill: "var(--red)" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+
+                {/* Anomaly table */}
+                {anomalousSprints.length > 0 && (
+                  <div className={styles.anomalyTableWrap}>
+                    <div className={styles.anomalyTableHeader}>
+                      <span>Sprint</span>
+                      <span>Velocity</span>
+                      <span>Z-Score</span>
+                      <span>Direction</span>
+                      <span>Hint</span>
                     </div>
-                    <div className={styles.anomalyMeta}>
-                      <span>
-                        Committed: <strong>{a.committed} pts</strong>
-                      </span>
-                      <span>
-                        Completed:{" "}
-                        <strong style={{ color: "var(--amber)" }}>
-                          {a.completed} pts
-                        </strong>
-                      </span>
-                      <span>
-                        Shortfall:{" "}
-                        <strong style={{ color: "var(--red)" }}>
-                          {a.committed - a.completed} pts
-                        </strong>
-                      </span>
-                    </div>
-                    <p className={styles.anomalyRec}>
-                      ✦ EOS recommends reviewing mid-sprint scope changes and
-                      team capacity for {a.sprint}. Consider a sprint scope
-                      freeze policy.
-                    </p>
+                    {anomalousSprints.map((s: VelocityAnomalySprint) => {
+                      const dropPct = s.rolling_avg > 0
+                        ? Math.round(
+                            (Math.abs(s.velocity - s.rolling_avg) /
+                              s.rolling_avg) *
+                              100
+                          )
+                        : 0;
+                      return (
+                        <div
+                          key={s.sprint_id}
+                          className={styles.anomalyTableRow}
+                        >
+                          <span className={styles.anomalyTableName}>
+                            {s.name}
+                          </span>
+                          <span>{s.velocity} pts</span>
+                          <span
+                            style={{
+                              color:
+                                s.direction === "drop"
+                                  ? "var(--red)"
+                                  : "var(--green)",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {s.z_score}
+                          </span>
+                          <span
+                            className={`${styles.anomalyTableDir} ${
+                              s.direction === "drop"
+                                ? styles.anomalyTableDirDrop
+                                : styles.anomalyTableDirSpike
+                            }`}
+                          >
+                            {s.direction}
+                          </span>
+                          <span className={styles.anomalyTableHint}>
+                            {s.direction === "drop"
+                              ? `Velocity dropped ${dropPct}% below rolling average`
+                              : `Velocity spiked ${dropPct}% above rolling average`}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
 

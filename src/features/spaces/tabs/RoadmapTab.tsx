@@ -8,7 +8,6 @@ import styles from "./RoadmapTab.module.css";
 
 import {
   RiCalendarLine,
-  RiHistoryLine,
   RiSparklingLine,
   RiAlertLine,
   RiFlag2Line,

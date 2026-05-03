@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   fetchSpaceHealth,
   fetchSpacesBrief,
@@ -25,16 +25,9 @@ import LinearProgress from "@mui/material/LinearProgress";
 import {
   RiSparklingLine,
   RiAlertLine,
-  RiCheckLine,
   RiCloseLine,
-  RiRefreshLine,
-  RiBarChartBoxLine,
-  RiTimeLine,
-  RiTeamLine,
-  RiLightbulbLine,
   RiArrowUpLine,
   RiArrowDownLine,
-  RiCalendarLine,
   RiUserLine,
 } from "react-icons/ri";
 import type { Project, ProjectTask } from "../spacesData";
@@ -68,7 +61,7 @@ function ChartTooltip({ active, payload, label }: any) {
 }
 
 export default function SummaryTab({ project }: { project: Project }) {
-  const qc = useQueryClient();
+  /* const qc = useQueryClient(); */
   const [briefDismissed, setBriefDismissed] = useState(false);
 
   const allTasks: ProjectTask[] = useMemo(
@@ -407,7 +400,6 @@ export default function SummaryTab({ project }: { project: Project }) {
               qc.invalidateQueries({ queryKey: ["spaces-brief", project.key] })
             }
           >
-            <RiRefreshLine size={12} /> Refresh
           </button> */}
         </div>
 

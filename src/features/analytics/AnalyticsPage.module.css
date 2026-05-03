@@ -348,6 +348,95 @@
   line-height: 1.5;
 }
 
+.anomalySummaryPanel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  font-size: 0.82rem;
+  color: var(--text-2);
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+
+.anomalySummaryCount {
+  font-weight: 500;
+}
+
+.anomalySummaryTrend {
+  text-transform: capitalize;
+}
+
+.anomalySummaryAvg {
+  margin-left: auto;
+  color: var(--text-3);
+}
+
+.anomalyTableWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+.anomalyTableHeader {
+  display: grid;
+  grid-template-columns: 1.2fr 80px 70px 80px 1.5fr;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--surface-2);
+}
+
+.anomalyTableRow {
+  display: grid;
+  grid-template-columns: 1.2fr 80px 70px 80px 1.5fr;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  color: var(--text-2);
+  border-top: 1px solid var(--border);
+  align-items: center;
+}
+
+.anomalyTableName {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.anomalyTableDir {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.anomalyTableDirDrop {
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--red, #f87171);
+}
+
+.anomalyTableDirSpike {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--green, #34d399);
+}
+
+.anomalyTableHint {
+  font-size: 0.74rem;
+  color: var(--text-3);
+  font-style: italic;
+}
+
 /* ── Emotion-Aware Work Management ── */
 .sentimentList {
   display: flex;

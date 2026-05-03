@@ -1,4 +1,3 @@
-import { RiRocketLine } from "react-icons/ri";
 import styles from "../MyWorkPage.module.css";
 import type { SprintRisk } from "../useMyWork";
 

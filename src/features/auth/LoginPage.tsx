@@ -32,7 +32,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login({ email: email.trim().toLowerCase(), password });
-      navigate("/dashboard", { replace: true });
+      navigate("/my-work", { replace: true });
     } catch (err: any) {
       setError(err.message ?? "Invalid credentials");
     } finally {

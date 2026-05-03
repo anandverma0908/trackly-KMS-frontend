@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { useFilterStore } from "@/store";
-import { fetchTickets, fetchTicket } from "@/services/api";
+import { fetchTickets, fetchTicket, exportTicketsAsCsv, importTicketsFromCsv } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import { useDebounce } from "@/hooks";
 import { formatDate, formatHours } from "@/utils/formatters";
@@ -86,6 +87,7 @@ export default function TicketsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTicketKey = searchParams.get("key");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: urlTicketData } = useQuery({
     queryKey: ["ticket", urlTicketKey],
@@ -154,9 +156,56 @@ export default function TicketsPage() {
               : `${(data?.total ?? tickets.length).toLocaleString()} tickets · ${tickets.length.toLocaleString()} shown`}
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
-          + New Ticket
-        </button>
+        <div className={styles.actions}>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() =>
+              exportTicketsAsCsv({
+                dateFrom: filters.dateFrom,
+                dateTo: filters.dateTo,
+                user: filters.user,
+                pods,
+                clients,
+              })
+            }
+            title="Export CSV"
+          >
+            ⬇ Export
+          </button>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => fileInputRef.current?.click()}
+            title="Import CSV"
+          >
+            ⬆ Import
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            style={{ display: "none" }}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              try {
+                const summary = await importTicketsFromCsv(file);
+                const msg = `Created ${summary.created}, Updated ${summary.updated}, Errors: ${summary.errors.length}`;
+                if (summary.errors.length > 0) {
+                  toast(msg, { icon: "⚠️" });
+                } else {
+                  toast.success(msg);
+                }
+              } catch (err: any) {
+                toast.error(err.message ?? "Import failed");
+              } finally {
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }
+            }}
+          />
+          <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
+            + New Ticket
+          </button>
+        </div>
       </div>
 
       {/* Filter bar */}
@@ -187,6 +236,14 @@ export default function TicketsPage() {
           <option value="">All Statuses</option>
           {uniqueStatuses.map((s) => <option key={s}>{s}</option>)}
         </select>
+
+        <button
+          className={`btn btn-sm ${statusFilter === "Pending Approval" ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setStatusFilter(statusFilter === "Pending Approval" ? "" : "Pending Approval")}
+          title="Pending Approvals"
+        >
+          ⏳ Pending Approvals
+        </button>
 
         {activeFilters.map((f) => (
           <button key={f.label} className="chip active" onClick={f.onRemove}>

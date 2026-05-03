@@ -1,4 +1,4 @@
-import { RiBookOpenLine, RiSparklingLine } from "react-icons/ri";
+import { RiSparklingLine } from "react-icons/ri";
 import styles from "../MyWorkPage.module.css";
 import type { KnowledgeGap } from "@/types";
 

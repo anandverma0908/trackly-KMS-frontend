@@ -1,0 +1,139 @@
+.page {
+  padding: 24px 28px;
+  max-width: 1200px;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  margin: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-3);
+}
+
+.filterInput {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  color: var(--text);
+  outline: none;
+  width: 160px;
+}
+
+.filterInput:focus {
+  border-color: var(--accent);
+}
+
+.count {
+  font-size: 0.8rem;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.time {
+  font-size: 0.8rem;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.actor {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.actionBadge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: var(--surface-2);
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.entity {
+  font-size: 0.8rem;
+  color: var(--text-2);
+  font-family: monospace;
+}
+
+.diffList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.diffItem {
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+
+.empty {
+  color: var(--text-3);
+  font-size: 0.8rem;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.pageBtn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  font-size: 0.82rem;
+  color: var(--text-2);
+}

@@ -55,6 +55,16 @@ function Root() {
   )
 }
 
+/* ── Register service worker for PWA support ── */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => console.log("[SW] Registered:", reg.scope))
+      .catch((err) => console.error("[SW] Registration failed:", err));
+  });
+}
+
 async function bootstrap() {
   if (import.meta.env.VITE_USE_MOCK === "true") {
     const { enableMocks } = await import("./services/mock");

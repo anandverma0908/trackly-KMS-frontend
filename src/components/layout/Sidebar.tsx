@@ -27,6 +27,13 @@ import {
   RiArrowRightSLine,
   RiBugLine,
   RiFilter3Line,
+  RiFileTextLine,
+  RiListCheck2,
+  RiHistoryLine,
+  RiCalendarLine,
+  RiChat3Line,
+  RiSurveyLine,
+  RiGlobalLine,
 } from "react-icons/ri";
 
 interface SidebarProps {
@@ -40,10 +47,19 @@ export default function Sidebar({
   onClose,
   collapsed = true,
 }: SidebarProps) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { user } = useAuthStore();
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const { user }  = useAuthStore();
   const [spacesOpen, setSpacesOpen] = useState(true);
+
+  const role = user?.role ?? null;
+
+  // Role booleans
+  const isAdmin     = role === "admin";
+  const isManager   = role === "admin" || role === "engineering_manager";
+  const isLead      = role === "admin" || role === "engineering_manager" || role === "tech_lead";
+  const isFinance   = role === "finance_viewer";
+  const isWorker    = !isFinance; // everyone except finance sees most of the app
 
   const { data: pods = [] } = useQuery({
     queryKey: ["pod-summary"],
@@ -51,38 +67,22 @@ export default function Sidebar({
     staleTime: 1000 * 60 * 2,
   });
 
-  const isManagerRole =
-    user?.role === "admin" ||
-    user?.role === "engineering_manager" ||
-    user?.role === "tech_lead";
-
-  // Only fetch org members for non-managers to check if they have direct reports
+  // Determine if this user has direct reports (for "My Team" visibility)
   const { data: orgMembersRaw } = useQuery({
     queryKey: ["org-members"],
     queryFn: fetchOrgMembers,
     staleTime: 5 * 60 * 1000,
-    enabled: !isManagerRole && !!user,
+    enabled: !isManager && !!user,
   });
-
   const orgMembers = Array.isArray(orgMembersRaw) ? orgMembersRaw : [];
-  const myProfile = orgMembers.find(
-    (m: { email: string }) => m.email === user?.email,
-  );
-
-  // reporting_to could be emp_no, id, email, or name depending on backend
-  const myIds = myProfile
-    ? [myProfile.emp_no, myProfile.id, myProfile.email, myProfile.name].filter(
-        Boolean,
-      )
+  const myProfile  = orgMembers.find((m: { email: string }) => m.email === user?.email);
+  const myIds      = myProfile
+    ? [myProfile.emp_no, myProfile.id, myProfile.email, myProfile.name].filter(Boolean)
     : [];
-  const hasDirectReports =
-    myIds.length > 0
-      ? orgMembers.some(
-          (m: { reporting_to: string | null }) =>
-            m.reporting_to && myIds.includes(m.reporting_to),
-        )
-      : false;
-  const showTeamNav = isManagerRole || hasDirectReports;
+  const hasDirectReports = myIds.length > 0
+    ? orgMembers.some((m: { reporting_to: string | null }) => m.reporting_to && myIds.includes(m.reporting_to))
+    : false;
+  const showTeamNav = isManager || hasDirectReports;
 
   function handleNavClick(path: string) {
     navigate(path);
@@ -92,13 +92,14 @@ export default function Sidebar({
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
 
+  // nav() renders a NavItem only when the guard is true (omit guard = always shown)
   const nav = (
     icon: React.ReactNode,
     label: string,
     path: string,
-    guard?: boolean,
+    guard: boolean = true,
   ) => {
-    if (guard === false) return null;
+    if (!guard) return null;
     return (
       <NavItem
         key={path}
@@ -121,6 +122,11 @@ export default function Sidebar({
   const isInSpace = location.pathname.startsWith("/spaces/");
   const activePod = isInSpace ? location.pathname.split("/")[2] : null;
 
+  // For tech_leads and team_members, only show their own pod in the sub-nav
+  const visiblePods = isManager
+    ? pods
+    : pods.filter((p) => !user?.pod || p.pod === user.pod);
+
   return (
     <motion.aside
       className={`${styles.sidebar} ${open ? styles.sidebarOpen : ""}`}
@@ -129,11 +135,7 @@ export default function Sidebar({
       transition={{ type: "spring", stiffness: 320, damping: 38, mass: 0.7 }}
     >
       {/* Mobile close */}
-      <button
-        className={styles.mobileCloseBtn}
-        onClick={onClose}
-        aria-label="Close menu"
-      >
+      <button className={styles.mobileCloseBtn} onClick={onClose} aria-label="Close menu">
         <RiCloseLine size={20} />
       </button>
 
@@ -144,122 +146,116 @@ export default function Sidebar({
 
       <div className={styles.body}>
         <div className={styles.navGroup}>
+
           {/* ── ME ── */}
           {sectionLabel("Me")}
-          {nav(<RiUser3Line size={18} />, "My Work", "/my-work")}
+          {nav(<RiUser3Line  size={18} />, "My Work",       "/my-work")}
+          {nav(<RiSunLine    size={18} />, "Standup",       "/standup",      isWorker)}
+          {nav(<RiCalendarLine size={18} />, "Calendar",    "/calendar",     isWorker)}
+          {nav(<RiTimeLine   size={18} />, "Time Tracking", "/timesheets",   isWorker)}
 
           {/* ── WORK ── */}
-          {sectionLabel("Work")}
-
-          {/* Spaces — expandable */}
-          {collapsed ? (
-            <Tooltip title="Spaces" placement="right" arrow>
-              <button
-                className={`${styles.item} ${isActive("/spaces") ? styles.itemActive : ""}`}
-                style={{ width: "auto" }}
-                onClick={() => handleNavClick("/spaces")}
-              >
-                <span className={styles.itemIcon}>
-                  <RiRocketLine size={18} />
-                </span>
-              </button>
-            </Tooltip>
-          ) : (
-            <div className={styles.spacesGroup}>
-              {/* Spaces header row */}
-              <div className={styles.spacesRow}>
+          {isWorker && sectionLabel("Work")}
+          {isWorker && (
+            collapsed ? (
+              <Tooltip title="Spaces" placement="right" arrow>
                 <button
-                  className={`${styles.spacesMain} ${isActive("/spaces") && !isInSpace ? styles.itemActive : ""}`}
+                  className={`${styles.item} ${isActive("/spaces") ? styles.itemActive : ""}`}
+                  style={{ width: "auto" }}
                   onClick={() => handleNavClick("/spaces")}
                 >
-                  <span className={styles.itemIcon}>
-                    <RiRocketLine size={18} />
-                  </span>
-                  <span className={styles.label}>Spaces</span>
+                  <span className={styles.itemIcon}><RiRocketLine size={18} /></span>
                 </button>
-                {pods.length > 0 && (
+              </Tooltip>
+            ) : (
+              <div className={styles.spacesGroup}>
+                <div className={styles.spacesRow}>
                   <button
-                    className={styles.spacesChevron}
-                    onClick={() => setSpacesOpen((v) => !v)}
-                    title={spacesOpen ? "Collapse" : "Expand"}
+                    className={`${styles.spacesMain} ${isActive("/spaces") && !isInSpace ? styles.itemActive : ""}`}
+                    onClick={() => handleNavClick("/spaces")}
                   >
-                    <RiArrowRightSLine
-                      size={15}
-                      style={{
-                        transform: spacesOpen
-                          ? "rotate(90deg)"
-                          : "rotate(0deg)",
-                        transition: "transform 0.18s",
-                        color: "var(--text-3)",
-                      }}
-                    />
+                    <span className={styles.itemIcon}><RiRocketLine size={18} /></span>
+                    <span className={styles.label}>Spaces</span>
                   </button>
-                )}
+                  {visiblePods.length > 0 && (
+                    <button
+                      className={styles.spacesChevron}
+                      onClick={() => setSpacesOpen((v) => !v)}
+                      title={spacesOpen ? "Collapse" : "Expand"}
+                    >
+                      <RiArrowRightSLine
+                        size={15}
+                        style={{
+                          transform: spacesOpen ? "rotate(90deg)" : "rotate(0deg)",
+                          transition: "transform 0.18s",
+                          color: "var(--text-3)",
+                        }}
+                      />
+                    </button>
+                  )}
+                </div>
+                <AnimatePresence initial={false}>
+                  {spacesOpen && visiblePods.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.18 }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <div className={styles.spacesList}>
+                        {visiblePods.map((p) => {
+                          const color  = getPodColor(p.pod);
+                          const active = activePod === p.pod;
+                          return (
+                            <button
+                              key={p.pod}
+                              className={`${styles.spaceItem} ${active ? styles.spaceItemActive : ""}`}
+                              style={active ? { color } : {}}
+                              onClick={() => handleNavClick(`/spaces/${p.pod}`)}
+                            >
+                              <span className={styles.spaceDot} style={{ background: color }} />
+                              <span className={styles.spaceLabel}>{p.pod}</span>
+                              {p.has_active_sprint && <span className={styles.sprintDot} />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-
-              {/* Space sub-items */}
-              <AnimatePresence initial={false}>
-                {spacesOpen && pods.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.18 }}
-                    style={{ overflow: "hidden" }}
-                  >
-                    <div className={styles.spacesList}>
-                      {pods.map((p) => {
-                        const color = getPodColor(p.pod);
-                        const active = activePod === p.pod;
-                        return (
-                          <button
-                            key={p.pod}
-                            className={`${styles.spaceItem} ${active ? styles.spaceItemActive : ""}`}
-                            style={active ? { color } : {}}
-                            onClick={() => handleNavClick(`/spaces/${p.pod}`)}
-                          >
-                            <span
-                              className={styles.spaceDot}
-                              style={{ background: color }}
-                            />
-                            <span className={styles.spaceLabel}>{p.pod}</span>
-                            {p.has_active_sprint && (
-                              <span className={styles.sprintDot} />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            )
           )}
 
           {/* ── SAVED FILTERS ── */}
-          <SavedFiltersSection collapsed={collapsed} />
+          {isWorker && <SavedFiltersSection collapsed={collapsed} />}
 
           {/* ── KNOWLEDGE ── */}
-          {sectionLabel("Knowledge")}
-          {nav(<RiBookOpenLine size={18} />, "Wiki", "/wiki")}
-          {nav(<RiFocus3Line size={18} />, "Goals", "/goals")}
+          {isWorker && sectionLabel("Knowledge")}
+          {nav(<RiBookOpenLine size={18} />, "Wiki",       "/wiki",       isWorker)}
+          {nav(<RiFileTextLine size={18} />, "Decisions",  "/decisions",  isWorker)}
+          {nav(<RiFocus3Line   size={18} />, "Goals",      "/goals",      isWorker)}
+          {nav(<RiListCheck2   size={18} />, "Processes",  "/processes",  isWorker)}
 
           {/* ── INTELLIGENCE ── */}
-          {sectionLabel("Intelligence")}
-          {nav(<RiBrainLine size={18} />, "EOS", "/eos")}
-          {nav(<RiBugLine size={18} />, "Code Review", "/code-review")}
-          {nav(<RiBarChartLine size={18} />, "Analytics", "/analytics")}
-
-          {/* ── TIME ── */}
-          {sectionLabel("Time")}
-          {nav(<RiTimeLine size={18} />, "Time Tracking", "/timesheets")}
+          {(isLead || isFinance) && sectionLabel("Intelligence")}
+          {nav(<RiBrainLine    size={18} />, "EOS",          "/eos",          isLead)}
+          {nav(<RiBugLine      size={18} />, "Code Review",  "/code-review",  isLead)}
+          {nav(<RiBarChartLine size={18} />, "Analytics",    "/analytics",    isManager || isFinance)}
 
           {/* ── PEOPLE ── */}
-          {sectionLabel("People")}
-          {nav(<RiTeamLine size={18} />, "My Team", "/team", showTeamNav)}
-          {nav(<RiSunLine size={18} />, "Standup", "/standup")}
-        </div>
+          {(showTeamNav || isWorker) && sectionLabel("People")}
+          {nav(<RiTeamLine  size={18} />, "My Team",    "/team",  showTeamNav)}
+          {nav(<RiChat3Line size={18} />, "Team Chat",  "/chat",  isWorker)}
 
+          {/* ── ADMIN ── */}
+          {isManager && sectionLabel("Admin")}
+          {nav(<RiSurveyLine  size={18} />, "Forms",        "/forms",       isManager)}
+          {nav(<RiGlobalLine  size={18} />, "Guest Portal", "/guest",       isManager)}
+          {nav(<RiHistoryLine size={18} />, "Audit Log",    "/audit-log",   isAdmin)}
+
+        </div>
         <div className={styles.navGroupBottom} />
       </div>
     </motion.aside>
@@ -273,8 +269,7 @@ function SavedFiltersSection({ collapsed }: { collapsed: boolean }) {
     queryFn: fetchSavedFilters,
     staleTime: 1000 * 60 * 2,
   });
-
-  const setActiveFilter = useFilterStore((s) => s.setActiveFilter);
+  const applyFilter = useFilterStore((s) => s.setActiveFilter);
 
   if (filters.length === 0) return null;
 
@@ -282,21 +277,14 @@ function SavedFiltersSection({ collapsed }: { collapsed: boolean }) {
     <>
       {!collapsed && <div className={styles.section}>Saved Filters</div>}
       {collapsed && <div className={styles.sectionDividerCollapsed} />}
-      {filters.map((f) => (
-        <Tooltip
-          key={f.id}
-          title={collapsed ? f.name : ""}
-          placement="right"
-          arrow
-        >
+      {filters.map((f: { id: string; name: string; filters: any }) => (
+        <Tooltip key={f.id} title={collapsed ? f.name : ""} placement="right" arrow>
           <button
             className={styles.item}
             style={{ width: collapsed ? "auto" : "100%" }}
-            onClick={() => setActiveFilter(f.filters)}
+            onClick={() => applyFilter(f.filters)}
           >
-            <span className={styles.itemIcon}>
-              <RiFilter3Line size={16} />
-            </span>
+            <span className={styles.itemIcon}><RiFilter3Line size={16} /></span>
             {!collapsed && <span className={styles.label}>{f.name}</span>}
           </button>
         </Tooltip>
@@ -328,16 +316,8 @@ function NavItem({
       <span className={styles.itemIcon}>{icon}</span>
       <motion.span
         className={styles.label}
-        initial={
-          collapsed
-            ? { opacity: 0, display: "none", width: 0 }
-            : { opacity: 1, display: "block", width: 50 }
-        }
-        animate={
-          collapsed
-            ? { opacity: 0, transitionEnd: { display: "none", width: 0 } }
-            : { display: "block", opacity: 1, width: 50 }
-        }
+        initial={collapsed ? { opacity: 0, display: "none", width: 0 } : { opacity: 1, display: "block", width: 50 }}
+        animate={collapsed ? { opacity: 0, transitionEnd: { display: "none", width: 0 } } : { display: "block", opacity: 1, width: 50 }}
         transition={{ duration: 0.15 }}
       >
         {label}

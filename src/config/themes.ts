@@ -46,6 +46,9 @@ const STATUS_VARIANT: Record<string, string> = {
   "In Progress": "badge-amber",
   "QA In Progress": "badge-amber",
   Closed: "badge-green",
+  "Pending Approval": "badge-purple",
+  Approved: "badge-cyan",
+  Rejected: "badge-red",
 };
 
 export function getIssueTypeBadge(type: string) {

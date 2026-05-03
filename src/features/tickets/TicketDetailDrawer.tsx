@@ -6,6 +6,9 @@ import {
   fetchTicket,
   updateTicket,
   updateTicketStatus,
+  submitTicketForApproval,
+  approveTicket,
+  rejectTicket,
   fetchTicketComments,
   createComment,
   fetchTicketWorklogs,
@@ -37,11 +40,12 @@ import {
   RiCheckboxCircleLine,
   RiCheckboxBlankCircleLine,
 } from "react-icons/ri";
+import { useAuthStore } from "@/features/auth/useAuthStore";
 
 type DetailTab = "activity" | "subtasks" | "links";
 
 const LINK_TYPE_OPTIONS = ["blocks", "is blocked by", "duplicates", "relates to", "clones"];
-const STATUS_OPTIONS = ["To Do", "In Progress", "In Review", "Blocked", "Done"];
+const STATUS_OPTIONS = ["Backlog", "To Do", "In Progress", "In Review", "Blocked", "Done", "Pending Approval", "Approved", "Rejected"];
 const PRIORITY_OPTIONS = ["Critical", "High", "Medium", "Low"];
 
 export default function TicketDetailDrawer({
@@ -62,7 +66,10 @@ export default function TicketDetailDrawer({
   onUpdated?: () => void;
 }) {
   const qc = useQueryClient();
+  const user = useAuthStore((s) => s.user);
   const [activeTab, setActiveTab] = useState<DetailTab>("activity");
+  const [rejectReason, setRejectReason] = useState("");
+  const [showRejectInput, setShowRejectInput] = useState(false);
 
   /* ── Fetch ticket ── */
   const { data: ticket, isLoading } = useQuery({
@@ -92,6 +99,41 @@ export default function TicketDetailDrawer({
       qc.invalidateQueries({ queryKey: ["ticket", ticketKey] });
       qc.invalidateQueries({ queryKey: ["space-project"] });
       onUpdated?.();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const submitApprovalMut = useMutation({
+    mutationFn: () => submitTicketForApproval(ticketKey),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket", ticketKey] });
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      onUpdated?.();
+      toast.success("Ticket submitted for approval");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const approveMut = useMutation({
+    mutationFn: () => approveTicket(ticketKey),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket", ticketKey] });
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      onUpdated?.();
+      toast.success("Ticket approved");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const rejectMut = useMutation({
+    mutationFn: (reason: string) => rejectTicket(ticketKey, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket", ticketKey] });
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      onUpdated?.();
+      toast.success("Ticket rejected");
+      setShowRejectInput(false);
+      setRejectReason("");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -132,8 +174,11 @@ export default function TicketDetailDrawer({
     const s = ticket.status;
     if (s === "Done") return "var(--green)";
     if (s === "Blocked") return "var(--red)";
+    if (s === "Rejected") return "var(--red)";
     if (s === "In Progress") return "var(--amber)";
     if (s === "In Review") return "var(--purple)";
+    if (s === "Pending Approval") return "var(--purple)";
+    if (s === "Approved") return "var(--cyan, #22D3EE)";
     return "var(--text-3)";
   })();
 
@@ -245,6 +290,91 @@ export default function TicketDetailDrawer({
               type="date"
             />
           </div>
+
+          {/* Approval Workflow */}
+          {(() => {
+            const isDraftLike = ["Backlog", "To Do", "Rejected"].includes(ticket.status);
+            const isPendingApproval = ticket.status === "Pending Approval";
+            const canApprove = isPendingApproval && (user?.role === "admin" || user?.role === "engineering_manager");
+
+            return (
+              <div style={{ marginTop: 16 }}>
+                {isDraftLike && (
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => submitApprovalMut.mutate()}
+                    disabled={submitApprovalMut.isPending}
+                    style={{ width: "100%" }}
+                  >
+                    {submitApprovalMut.isPending ? "Submitting…" : "⏳ Submit for Approval"}
+                  </button>
+                )}
+
+                {canApprove && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {!showRejectInput ? (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => approveMut.mutate()}
+                          disabled={approveMut.isPending}
+                          style={{ flex: 1 }}
+                        >
+                          {approveMut.isPending ? "Approving…" : "✓ Approve"}
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setShowRejectInput(true)}
+                          style={{ flex: 1, color: "var(--red)" }}
+                        >
+                          ✕ Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <textarea
+                          className={styles.descInput}
+                          placeholder="Rejection reason…"
+                          value={rejectReason}
+                          onChange={(e) => setRejectReason(e.target.value)}
+                          rows={2}
+                        />
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => { setShowRejectInput(false); setRejectReason(""); }}
+                            style={{ flex: 1 }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => {
+                              if (rejectReason.trim()) {
+                                rejectMut.mutate(rejectReason.trim());
+                              } else {
+                                toast.error("Enter a rejection reason");
+                              }
+                            }}
+                            disabled={rejectMut.isPending}
+                            style={{ flex: 1, background: "var(--red)", borderColor: "var(--red)" }}
+                          >
+                            {rejectMut.isPending ? "Rejecting…" : "Confirm Reject"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {isPendingApproval && !canApprove && (
+                  <div style={{ fontSize: 12, color: "var(--text-3)", textAlign: "center", padding: "8px 0" }}>
+                    ⏳ Waiting for manager approval
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Custom Fields */}
           <CustomFieldsSection ticket={ticket} updateMut={updateMut} />

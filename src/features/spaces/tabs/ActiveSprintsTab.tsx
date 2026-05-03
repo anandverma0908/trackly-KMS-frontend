@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import Tooltip from "@mui/material/Tooltip";
-import LinearProgress from "@mui/material/LinearProgress";
 import {
   RiSearchLine,
   RiUserLine,
@@ -16,7 +15,6 @@ import {
   RiBookOpenLine,
   RiArrowDownSLine,
   RiCloseLine,
-  RiArrowRightLine,
   RiArrowRightSLine,
 } from "react-icons/ri";
 
@@ -205,7 +203,7 @@ export default function ActiveSprintsTab({
     [project],
   );
 
-  const [selectedSprintId, setSelectedSprintId] = useState<string | undefined>(
+  const [selectedSprintId, _setSelectedSprintId] = useState<string | undefined>(
     undefined,
   );
   const selectedSprint = useMemo(() => {
@@ -621,6 +619,7 @@ export default function ActiveSprintsTab({
           (selectedSprint.donePoints / selectedSprint.totalPoints) * 100,
         )
       : 0;
+  void sprintPct; // used in future progress indicator
 
   const visibleMembers = project.members.slice(0, 6);
   const overflowMembers = project.members.slice(6);

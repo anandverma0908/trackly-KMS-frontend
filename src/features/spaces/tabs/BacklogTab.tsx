@@ -17,7 +17,7 @@ import {
   fetchSprintDraft,
   updateTicket,
   updateTicketStatus,
-  createSavedFilter,
+  /* createSavedFilter, */
 } from "@/services/api";
 import type { SprintDraftResult } from "@/services/api";
 import type { TicketCreate } from "@/types";
@@ -33,14 +33,12 @@ import {
   RiCloseLine,
   RiPlayCircleLine,
   RiCheckboxCircleLine,
-  RiCalendarLine,
   RiMore2Line,
   RiArrowRightLine,
   RiListCheck2,
   RiArrowGoBackLine,
   RiAlertLine,
   RiCloseCircleLine,
-  RiFilter3Line,
   RiArrowDownSLine,
 } from "react-icons/ri";
 
@@ -69,8 +67,8 @@ export default function BacklogTab({ project }: { project: Project }) {
   const [localTasks, setLocalTasks] = useState<ProjectTask[]>([]);
   const [movingTicketKey, setMovingTicketKey] = useState<string | null>(null);
   const [viewingTask, setViewingTask] = useState<ProjectTask | null>(null);
-  const [showSaveFilter, setShowSaveFilter] = useState(false);
-  const [filterName, setFilterName] = useState("");
+  /* const [showSaveFilter, setShowSaveFilter] = useState(false);
+  const [filterName, setFilterName] = useState(""); */
 
   const [confirmDeleteSprintId, setConfirmDeleteSprintId] = useState<
     string | null
@@ -314,6 +312,7 @@ export default function BacklogTab({ project }: { project: Project }) {
     },
   });
 
+  /* saved filter — re-enable when UI is added
   const saveFilterMut = useMutation({
     mutationFn: (name: string) =>
       createSavedFilter({
@@ -328,6 +327,7 @@ export default function BacklogTab({ project }: { project: Project }) {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  */
 
   /* ── Handlers ── */
   function toggleCollapse(id: string) {
@@ -460,20 +460,20 @@ export default function BacklogTab({ project }: { project: Project }) {
             </select>
           </div>
 
-          {/* {showSaveFilter ? (
+          {/* {_showSaveFilter ? (
             <div className={styles.sortWrap}>
               <input
                 className={styles.select}
                 placeholder="Filter name"
-                value={filterName}
+                value={_filterName}
                 onChange={(e) => setFilterName(e.target.value)}
                 onKeyDown={(e) => {
                   if (
                     e.key === "Enter" &&
-                    filterName.trim() &&
-                    !saveFilterMut.isPending
+                    _filterName.trim() &&
+                    !_saveFilterMut.isPending
                   )
-                    saveFilterMut.mutate(filterName.trim());
+                    _saveFilterMut.mutate(_filterName.trim());
                   if (e.key === "Escape") {
                     setShowSaveFilter(false);
                     setFilterName("");
@@ -484,10 +484,10 @@ export default function BacklogTab({ project }: { project: Project }) {
               />
               <button
                 className={styles.clearBtn}
-                disabled={saveFilterMut.isPending || !filterName.trim()}
+                disabled={_saveFilterMut.isPending || !_filterName.trim()}
                 onClick={() => {
-                  if (filterName.trim())
-                    saveFilterMut.mutate(filterName.trim());
+                  if (_filterName.trim())
+                    _saveFilterMut.mutate(_filterName.trim());
                 }}
               >
                 Save
@@ -508,7 +508,6 @@ export default function BacklogTab({ project }: { project: Project }) {
               onClick={() => setShowSaveFilter(true)}
               style={{ color: "var(--text-2)", fontWeight: 600 }}
             >
-              <RiFilter3Line size={12} /> Save Filter
             </button>
           )} */}
 

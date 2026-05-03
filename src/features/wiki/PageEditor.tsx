@@ -7,7 +7,8 @@ import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table
 import { TaskList, TaskItem } from "@tiptap/extension-list";
 import Placeholder from "@tiptap/extension-placeholder";
 import { RiSparklingLine, RiCloseLine } from "react-icons/ri";
-import { novaGenerate } from "@/services/api";
+import { novaGenerate, postWikiAwareness, fetchWikiAwareness } from "@/services/api";
+import { useAuthStore } from "@/features/auth/useAuthStore";
 import { TicketLinkExtension } from "./extensions/TicketLinkExtension";
 import { PageLinkExtension } from "./extensions/PageLinkExtension";
 import type { WikiPage } from "@/types";
@@ -46,11 +47,12 @@ interface Props {
   initialContent: string;
   onSave:         (content: string, title: string) => void;
   pages?:         WikiPage[];
+  pageId?:        string;
 }
 
 const AUTO_SAVE_DELAY = 30_000;
 
-export default function PageEditor({ initialTitle, initialContent, onSave, pages = [] }: Props) {
+export default function PageEditor({ initialTitle, initialContent, onSave, pages = [], pageId }: Props) {
   const [title, setTitle]   = useState(initialTitle);
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -68,6 +70,13 @@ export default function PageEditor({ initialTitle, initialContent, onSave, pages
   const [aiTriggerPos, setAiTriggerPos] = useState<number>(0);
   const [aiLoading, setAiLoading] = useState(false);
   const aiMenuRef = useRef<HTMLDivElement>(null);
+
+  // Live co-editing awareness
+  const { user } = useAuthStore();
+  const [activeUsers, setActiveUsers] = useState<Array<{ user_id: string; name: string; color: string }>>([]);
+  const awarenessRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const USER_COLORS = ["#4F7EFF", "#10B981", "#F59E0B", "#F43F5E", "#8B5CF6", "#06B6D4", "#EC4899", "#84CC16"];
+  const myColor = USER_COLORS[(user?.name?.length ?? 0) % USER_COLORS.length];
 
   const editor = useEditor({
     extensions: [
@@ -128,6 +137,50 @@ export default function PageEditor({ initialTitle, initialContent, onSave, pages
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [editor, title, onSave]);
 
+  /* ── Live co-editing awareness ── */
+  useEffect(() => {
+    if (!pageId || !user) return;
+    let cancelled = false;
+
+    async function poll() {
+      if (cancelled || !pageId || !user) return;
+      try {
+        const data = await fetchWikiAwareness(pageId);
+        setActiveUsers(data.filter((u) => u.user_id !== user.id).map((u) => ({
+          user_id: u.user_id,
+          name: u.name,
+          color: u.color,
+        })));
+      } catch {
+        /* ignore awareness errors */
+      }
+    }
+
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [pageId, user]);
+
+  useEffect(() => {
+    if (!editor || !pageId || !user) return;
+
+    const handler = () => {
+      const { from } = editor.state.selection;
+      if (awarenessRef.current) clearTimeout(awarenessRef.current);
+      awarenessRef.current = setTimeout(() => {
+        postWikiAwareness(pageId, {
+          user_id: user.id,
+          name: user.name,
+          color: myColor,
+          cursor: from,
+        }).catch(() => {});
+      }, 500);
+    };
+
+    editor.on("selectionUpdate", handler);
+    return () => { editor.off("selectionUpdate", handler); };
+  }, [editor, pageId, user, myColor]);
+
   const handleAiAction = useCallback(async (actionId: AiActionId) => {
     if (!editor) return;
     setAiMenu(null);
@@ -173,6 +226,24 @@ export default function PageEditor({ initialTitle, initialContent, onSave, pages
 
   return (
     <div className={styles.editor}>
+      {/* Active Users Bar */}
+      {pageId && (
+        <div className={styles.awarenessBar}>
+          {activeUsers.length === 0 ? (
+            <span className={styles.awarenessOnlyYou}>Only you are editing</span>
+          ) : (
+            <div className={styles.awarenessList}>
+              {activeUsers.map((u) => (
+                <span key={u.user_id} className={styles.awarenessUser}>
+                  <span className={styles.awarenessDot} style={{ background: u.color }} />
+                  {u.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Title */}
       <input
         className={styles.titleInput}

@@ -1,0 +1,226 @@
+.page {
+  padding: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.addBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.addBtn:hover { opacity: 0.85; }
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+/* ── Empty State ── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 24px;
+  border: 2px dashed var(--border-2);
+  border-radius: var(--r-xl);
+  text-align: center;
+}
+
+.emptyIcon { color: var(--text-3); }
+
+.emptyText {
+  font-size: 14px;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.emptySubtext {
+  font-size: 12px;
+  color: var(--text-3);
+  margin: 0;
+}
+
+/* ── Token List ── */
+.tokenList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tokenCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-md);
+}
+
+.tokenMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tokenName {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tokenEmail {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.tokenPods {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+.tokenExpiry {
+  font-size: 11px;
+  color: var(--warning);
+  margin-top: 2px;
+}
+
+.tokenActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-1);
+  background: var(--surface-1);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.iconBtn:hover {
+  background: var(--surface-3);
+  color: var(--text-1);
+}
+.iconBtn.danger:hover {
+  background: rgba(var(--danger-rgb, 239, 68, 68), 0.1);
+  color: var(--danger);
+}
+
+/* ── Drawer ── */
+.drawerBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 4px 24px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-sm);
+  color: var(--text-1);
+  font-size: 13px;
+  outline: none;
+}
+.input:focus {
+  border-color: var(--accent);
+}
+
+.podGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.podChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.podChip:has(input:checked) {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.podChip input {
+  display: none;
+}
+
+.submitBtn {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: opacity 0.15s;
+}
+.submitBtn:hover:not(:disabled) { opacity: 0.85; }
+.submitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

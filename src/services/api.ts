@@ -39,6 +39,12 @@ import type {
   Integration,
   IntegrationType,
   IntegrationEvent,
+  ChatChannel,
+  ChatMessage,
+  GuestAccessToken,
+  GuestProfile,
+  FormTemplate,
+  FormSubmission,
 } from "@/types";
 import type { Project } from "@/features/spaces/spacesData";
 import { getAuthHeader } from "@/features/auth/useAuthStore";
@@ -243,6 +249,32 @@ export async function updateTicketStatus(key: string, status: string) {
   return data;
 }
 
+export async function submitTicketForApproval(key: string): Promise<Ticket> {
+  const { data } = await api.post(`/tickets/${key}/submit-for-approval`);
+  return _mapTicketOut(data);
+}
+
+export async function approveTicket(key: string): Promise<Ticket> {
+  const { data } = await api.post(`/tickets/${key}/approve`);
+  return _mapTicketOut(data);
+}
+
+export async function rejectTicket(key: string, reason: string): Promise<Ticket> {
+  const { data } = await api.post(`/tickets/${key}/reject`, { reason });
+  return _mapTicketOut(data);
+}
+
+export async function fetchPendingApprovals(): Promise<TicketsResponse> {
+  const { data } = await api.get("/tickets/pending-approval");
+  return {
+    ...data,
+    tickets: (data.tickets || []).map(_mapTicketOut),
+    count: data.total ?? 0,
+    limit: data.limit ?? 50,
+    offset: data.offset ?? 0,
+  };
+}
+
 export async function analyzeTicketNL(text: string, availableUsers: string[] = []): Promise<NLAnalysisResult> {
   if (mock()?.analyzeTicketNL) return mock().analyzeTicketNL(text);
   const { data } = await api.post("/tickets/ai-analyze", { text, available_users: availableUsers });
@@ -369,6 +401,41 @@ export async function deleteTicketLink(key: string, linkId: string) {
 export async function searchTickets(query: string): Promise<{ key: string; summary: string }[]> {
   const { data } = await api.get("/tickets", { params: { search: query, limit: 10 } });
   return (data.tickets ?? []).map((t: any) => ({ key: t.key ?? t.jira_key, summary: t.summary }));
+}
+
+export async function exportTicketsAsCsv(filters: MultiFilters): Promise<void> {
+  const params = buildParams(filters, filters.pods, filters.clients);
+  const response = await api.get("/tickets/export", {
+    params,
+    responseType: "blob",
+  });
+  const blob = new Blob([response.data], { type: "text/csv" });
+  const url = window.URL.createObjectURL(blob);
+  const contentDisposition = response.headers["content-disposition"] as string | undefined;
+  const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/);
+  const filename = filenameMatch?.[1] ?? "tickets_export.csv";
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+export interface ImportSummary {
+  created: number;
+  updated: number;
+  errors: string[];
+}
+
+export async function importTicketsFromCsv(file: File): Promise<ImportSummary> {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await api.post("/tickets/import", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data as ImportSummary;
 }
 
 export async function fetchTicketActivity(key: string): Promise<TicketActivity[]> {
@@ -542,6 +609,20 @@ export async function fetchRelatedDocs(type: 'ticket' | 'wiki', id: string | num
   const path = type === 'ticket' ? `/tickets/${id}/related` : `/wiki/pages/${id}/related`;
   const { data } = await api.get(path);
   return data;
+}
+
+export async function postWikiAwareness(
+  pageId: string,
+  payload: { user_id: string; name: string; color: string; cursor?: any },
+) {
+  await api.post(`/wiki/pages/${pageId}/awareness`, payload);
+}
+
+export async function fetchWikiAwareness(
+  pageId: string,
+): Promise<Array<{ user_id: string; name: string; color: string; cursor?: any; timestamp: number }>> {
+  const { data } = await api.get(`/wiki/pages/${pageId}/awareness`);
+  return data ?? [];
 }
 
 export async function extractMeetingActions(content: string) {
@@ -1551,6 +1632,31 @@ export async function fetchResourceGaps(): Promise<ResourceGapsResponse> {
   return data;
 }
 
+export interface VelocityAnomalySprint {
+  sprint_id:    string;
+  name:         string;
+  velocity:     number;
+  rolling_avg:  number;
+  z_score:      number;
+  is_anomaly:   boolean;
+  direction:    "drop" | "spike" | "normal";
+}
+
+export interface VelocityAnomalyResult {
+  sprints: VelocityAnomalySprint[];
+  summary: {
+    total_sprints:   number;
+    anomaly_count:   number;
+    avg_velocity:    number;
+    trend_direction: "improving" | "declining" | "stable";
+  };
+}
+
+export async function fetchVelocityAnomalies(): Promise<VelocityAnomalyResult> {
+  const { data } = await api.get<VelocityAnomalyResult>("/analytics/velocity-anomalies");
+  return data;
+}
+
 export interface CognitiveLoadMember {
   name: string;
   load_score: number;
@@ -1590,6 +1696,44 @@ export interface ExpertiseMember {
 
 export async function fetchMemoryGraph(): Promise<{ expertise_map: ExpertiseMember[]; bus_factor_risks: { pod: string; contributors: number; risk: string }[]; ai_summary: string }> {
   const { data } = await api.get("/nova/memory-graph");
+  return data;
+}
+
+/* ── Chat ── */
+export async function fetchChatChannels(): Promise<ChatChannel[]> {
+  const { data } = await api.get("/chat/channels");
+  return data;
+}
+
+export async function createChatChannel(payload: {
+  name: string;
+  type: "pod" | "general";
+  pod?: string | null;
+}): Promise<ChatChannel> {
+  const { data } = await api.post("/chat/channels", payload);
+  return data;
+}
+
+export async function fetchChatMessages(
+  channelId: string,
+  limit = 50,
+  offset = 0
+): Promise<{ messages: ChatMessage[]; limit: number; offset: number }> {
+  const { data } = await api.get(`/chat/channels/${channelId}/messages`, {
+    params: { limit, offset },
+  });
+  return data;
+}
+
+export async function sendChatMessage(
+  channelId: string,
+  body: string,
+  parentId?: string | null
+): Promise<ChatMessage> {
+  const { data } = await api.post(`/chat/channels/${channelId}/messages`, {
+    body,
+    parent_id: parentId,
+  });
   return data;
 }
 
@@ -2259,5 +2403,100 @@ export async function deleteIntegration(id: string): Promise<void> {
 
 export async function testIntegration(id: string): Promise<{ ok: boolean; message: string }> {
   const { data } = await api.post(`/integrations/${id}/test`);
+  return data;
+}
+
+export async function fetchAuditLogs(params?: {
+  entity_type?: string
+  action?: string
+  user_id?: string
+  limit?: number
+  offset?: number
+}): Promise<import("@/types").AuditLogResponse> {
+  const { data } = await api.get("/audit-logs", { params })
+  return data
+}
+
+/* ── Guest / Client Portal ── */
+
+export async function fetchGuestTokens(): Promise<GuestAccessToken[]> {
+  const { data } = await api.get("/guest/tokens");
+  return data ?? [];
+}
+
+export async function createGuestToken(payload: {
+  email: string;
+  name: string;
+  allowed_pods: string[];
+  allowed_tickets?: string[];
+  expires_at?: string | null;
+}): Promise<GuestAccessToken> {
+  const { data } = await api.post("/guest/tokens", payload);
+  return data;
+}
+
+export async function revokeGuestToken(id: string): Promise<void> {
+  await api.delete(`/guest/tokens/${id}`);
+}
+
+export async function fetchGuestMe(guestToken: string): Promise<GuestProfile> {
+  const { data } = await api.get("/guest/me", {
+    headers: { "X-Guest-Token": guestToken },
+  });
+  return data;
+}
+
+export async function fetchGuestTickets(guestToken: string, params?: { limit?: number; offset?: number }): Promise<TicketsResponse> {
+  const { data } = await api.get("/guest/tickets", {
+    headers: { "X-Guest-Token": guestToken },
+    params,
+  });
+  return {
+    tickets: (data.tickets ?? []).map(_mapTicketOut),
+    count: data.count ?? data.total ?? 0,
+    total: data.total ?? 0,
+    limit: data.limit ?? 50,
+    offset: data.offset ?? 0,
+  };
+}
+
+/* ── Forms / Intake ── */
+export async function fetchFormTemplates(): Promise<FormTemplate[]> {
+  const { data } = await api.get("/forms");
+  return data ?? [];
+}
+
+export async function createFormTemplate(payload: Omit<FormTemplate, "id" | "org_id" | "created_at">): Promise<FormTemplate> {
+  const { data } = await api.post("/forms", payload);
+  return data;
+}
+
+export async function fetchFormTemplate(id: string): Promise<FormTemplate> {
+  const { data } = await api.get(`/forms/${id}`);
+  return data;
+}
+
+export async function submitFormResponse(id: string, payload: { submitter_email: string; responses: Record<string, any> }): Promise<FormSubmission> {
+  const { data } = await api.post(`/forms/${id}/submissions`, payload);
+  return data;
+}
+
+export async function fetchFormSubmissions(id: string): Promise<FormSubmission[]> {
+  const { data } = await api.get(`/forms/${id}/submissions`);
+  return data ?? [];
+}
+
+export interface ConvertSubmissionPayload {
+  title: string;
+  description?: string;
+  pod?: string;
+  client?: string;
+  issue_type?: string;
+  priority?: string;
+  assignee?: string;
+}
+
+export async function convertSubmission(id: string, payload: ConvertSubmissionPayload): Promise<FormSubmission> {
+  const { data } = await api.post(`/forms/submissions/${id}/convert`, payload);
   return data;
 }

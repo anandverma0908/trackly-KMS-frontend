@@ -1,4 +1,3 @@
-import { RiFocus3Line, RiFlashlightLine } from "react-icons/ri";
 import styles from "../MyWorkPage.module.css";
 import type { FocusBlock } from "../useMyWork";
 

@@ -4,7 +4,17 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "react-dom/client",
+      "react-syntax-highlighter",
+      "react-syntax-highlighter/dist/cjs/styles/prism",
+    ],
+  },
   resolve: {
+    dedupe: ["react", "react-dom"],
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@features': path.resolve(__dirname, './src/features'),
@@ -20,6 +30,9 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    hmr: {
+      port: 3000,
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8000',

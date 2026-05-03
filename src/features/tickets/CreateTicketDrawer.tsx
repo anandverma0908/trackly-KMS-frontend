@@ -27,6 +27,9 @@ import {
   fetchPodStories,
   fetchReleases,
   fetchOrgUsers,
+  submitTicketForApproval,
+  approveTicket,
+  rejectTicket,
   type CodeContextResult,
 } from "@/services/api";
 import { useNavigate } from "react-router-dom";
@@ -145,12 +148,15 @@ const PRIORITIES = [
 ];
 
 const STATUSES = [
-  { value: "Backlog",    label: "Backlog",     color: "#475569" },
-  { value: "To Do",      label: "To Do",      color: "#64748B" },
-  { value: "In Progress",label: "In Progress", color: "#FBBF24" },
-  { value: "In Review",  label: "In Review",   color: "#A78BFA" },
-  { value: "Blocked",    label: "Blocked",     color: "#F87171" },
-  { value: "Done",       label: "Done",        color: "#34D399" },
+  { value: "Backlog",         label: "Backlog",         color: "#475569" },
+  { value: "To Do",           label: "To Do",           color: "#64748B" },
+  { value: "In Progress",     label: "In Progress",     color: "#FBBF24" },
+  { value: "In Review",       label: "In Review",       color: "#A78BFA" },
+  { value: "Blocked",         label: "Blocked",         color: "#F87171" },
+  { value: "Done",            label: "Done",            color: "#34D399" },
+  { value: "Pending Approval",label: "Pending Approval",color: "#A78BFA" },
+  { value: "Approved",        label: "Approved",        color: "#22D3EE" },
+  { value: "Rejected",        label: "Rejected",        color: "#F87171" },
 ];
 
 const LINK_TYPES = [
@@ -1090,6 +1096,46 @@ Respond with exactly this structure:
   const typeConfig = ISSUE_TYPES.find((t) => t.value === form.issue_type) ?? ISSUE_TYPES[2];
   const priorityConfig = PRIORITIES.find((p) => p.value === form.priority) ?? PRIORITIES[2];
   const statusConfig = STATUSES.find((s) => s.value === form.status) ?? STATUSES[1];
+
+  const isDraftLike = isEdit && ["Backlog", "To Do", "Rejected"].includes(form.status);
+  const isPendingApproval = isEdit && form.status === "Pending Approval";
+  const canApprove = isPendingApproval && (user?.role === "admin" || user?.role === "engineering_manager");
+
+  const submitApprovalMut = useMutation({
+    mutationFn: () => submitTicketForApproval(ticketKey!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket", ticketKey] });
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+      toast.success("Ticket submitted for approval");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const approveMut = useMutation({
+    mutationFn: () => approveTicket(ticketKey!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket", ticketKey] });
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+      toast.success("Ticket approved");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const rejectMut = useMutation({
+    mutationFn: (reason: string) => rejectTicket(ticketKey!, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket", ticketKey] });
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
+      toast.success("Ticket rejected");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const [rejectReason, setRejectReason] = useState("");
+  const [showRejectInput, setShowRejectInput] = useState(false);
   const reporterDisplay = form.reporter || (!isEdit ? user?.name || "" : "");
 
   /* ── Footer ── */
@@ -1199,6 +1245,77 @@ Respond with exactly this structure:
                   {STATUSES.map((s) => <MenuItem key={s.value} value={s.value}><span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color }} />{s.label}</span></MenuItem>)}
                 </Select>
               </FormControl>
+
+              {/* Submit for Approval */}
+              {isDraftLike && (
+                <button
+                  className={styles.btnSecondary}
+                  onClick={() => submitApprovalMut.mutate()}
+                  disabled={submitApprovalMut.isPending}
+                  style={{ marginTop: 8, width: "100%", fontSize: 12 }}
+                >
+                  {submitApprovalMut.isPending ? "Submitting…" : "⏳ Submit for Approval"}
+                </button>
+              )}
+
+              {/* Manager Approval Actions */}
+              {canApprove && (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {!showRejectInput ? (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        className={styles.btnPrimary}
+                        onClick={() => approveMut.mutate()}
+                        disabled={approveMut.isPending}
+                        style={{ flex: 1, fontSize: 12 }}
+                      >
+                        {approveMut.isPending ? "Approving…" : "✓ Approve"}
+                      </button>
+                      <button
+                        className={styles.btnSecondary}
+                        onClick={() => setShowRejectInput(true)}
+                        style={{ flex: 1, fontSize: 12, color: "var(--red)", borderColor: "var(--red)" }}
+                      >
+                        ✕ Reject
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <textarea
+                        className={styles.descInput}
+                        placeholder="Rejection reason…"
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        rows={2}
+                        style={{ fontSize: 12 }}
+                      />
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          className={styles.btnSecondary}
+                          onClick={() => { setShowRejectInput(false); setRejectReason(""); }}
+                          style={{ flex: 1, fontSize: 12 }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className={styles.btnPrimary}
+                          onClick={() => { if (rejectReason.trim()) { rejectMut.mutate(rejectReason.trim()); setShowRejectInput(false); setRejectReason(""); } else { toast.error("Enter a rejection reason"); } }}
+                          disabled={rejectMut.isPending}
+                          style={{ flex: 1, fontSize: 12, background: "var(--red)", borderColor: "var(--red)" }}
+                        >
+                          {rejectMut.isPending ? "Rejecting…" : "Confirm Reject"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {isPendingApproval && !canApprove && (
+                <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-3)", textAlign: "center" }}>
+                  ⏳ Waiting for manager approval
+                </div>
+              )}
             </div>
 
             {/* People */}

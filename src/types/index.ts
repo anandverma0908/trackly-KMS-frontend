@@ -173,6 +173,24 @@ export interface TicketActivity {
   created_at: string
 }
 
+export interface AuditLogEntry {
+  id: string
+  entity_type: string
+  entity_id: string
+  user_id: string | null
+  user_name: string
+  action: string
+  diff: Record<string, any> | null
+  created_at: string
+}
+
+export interface AuditLogResponse {
+  total: number
+  limit: number
+  offset: number
+  logs: AuditLogEntry[]
+}
+
 export interface DuplicateTicket {
   key:        string
   summary:    string
@@ -359,7 +377,7 @@ export interface SprintDependencyEdge {
 /* ── Sprint What-If ── */
 export interface WhatIfScenario {
   id:            string
-  name:          string
+  name:            string
   changes:       { type: 'reassign' | 'remove' | 'add' | 'extend' | 'split'; ticket_key?: string; description: string }[]
   predicted_completion_pct: number
   predicted_velocity: number
@@ -506,6 +524,26 @@ export interface WorkloadEntry {
   engineer:    string
   pod:         string
   total_hours: number
+}
+
+export interface VelocityAnomalySprint {
+  sprint_id:    string
+  name:         string
+  velocity:     number
+  rolling_avg:  number
+  z_score:      number
+  is_anomaly:   boolean
+  direction:    "drop" | "spike" | "normal"
+}
+
+export interface VelocityAnomalyResult {
+  sprints: VelocityAnomalySprint[]
+  summary: {
+    total_sprints:   number
+    anomaly_count:   number
+    avg_velocity:    number
+    trend_direction: "improving" | "declining" | "stable"
+  }
 }
 
 /* ── Goals / OKRs ── */
@@ -704,3 +742,83 @@ export interface TestCoverage {
   untested: { key: string; summary: string; priority: string; assignee: string }[];
   eos_insight: string;
 }
+
+/* ── Forms / Intake ── */
+export type FormFieldType = "text" | "number" | "select" | "checkbox" | "textarea";
+
+export interface FormField {
+  name: string;
+  type: FormFieldType;
+  label: string;
+  required: boolean;
+  options?: string[];
+}
+
+export interface FormTemplate {
+  id: string;
+  org_id: string;
+  name: string;
+  description?: string;
+  fields: FormField[];
+  is_active: boolean;
+  created_at?: string;
+}
+
+export type FormSubmissionStatus = "new" | "reviewed" | "converted";
+
+export interface FormSubmission {
+  id: string;
+  form_id: string;
+  org_id: string;
+  submitter_email: string;
+  responses: Record<string, any>;
+  status: FormSubmissionStatus;
+  ticket_id?: string | null;
+  created_at?: string;
+}
+
+/* ── Guest / Client Portal ── */
+export interface GuestAccessToken {
+  id: string;
+  org_id: string;
+  name: string;
+  email: string;
+  token: string;
+  allowed_pods: string[];
+  access_level: "view" | "comment";
+  is_active: boolean;
+  expires_at?: string;
+  created_at?: string;
+  revoked_at?: string;
+}
+
+export interface GuestProfile {
+  id: string;
+  name: string;
+  email: string;
+  allowed_pods: string[];
+  access_level: string;
+}
+
+/* ── Chat ── */
+export interface ChatChannel {
+  id: string;
+  org_id: string;
+  name: string;
+  type: "pod" | "general";
+  pod: string | null;
+  created_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  channel_id: string;
+  user_id: string;
+  author_name: string;
+  author_email?: string;
+  body: string;
+  parent_id?: string | null;
+  created_at: string;
+}
+
+
