@@ -536,6 +536,7 @@ export default function ManagerView() {
         standup={detailStandup}
         open={!!detailStandup}
         onClose={() => setDetailStandup(null)}
+        onSave={(updated) => setDetailStandup(updated)}
       />
     </div>
   );

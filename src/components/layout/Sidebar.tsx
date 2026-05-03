@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/useAuthStore";
-import { useFilterStore } from "@/features/filters/useFilterStore";
+import { useFilterStore } from "@/store";
 import {
   fetchPodSummary,
   fetchOrgMembers,
@@ -122,10 +122,15 @@ export default function Sidebar({
   const isInSpace = location.pathname.startsWith("/spaces/");
   const activePod = isInSpace ? location.pathname.split("/")[2] : null;
 
-  // For tech_leads and team_members, only show their own pod in the sub-nav
+  // Parse comma-separated pod string into an array (users can belong to multiple pods)
+  const userPods = user?.pod
+    ? user.pod.split(",").map((p) => p.trim()).filter(Boolean)
+    : [];
+
+  // Managers see all pods; others see only their own pod(s)
   const visiblePods = isManager
     ? pods
-    : pods.filter((p) => !user?.pod || p.pod === user.pod);
+    : pods.filter((p) => userPods.length === 0 || userPods.includes(p.pod));
 
   return (
     <motion.aside
@@ -239,8 +244,8 @@ export default function Sidebar({
           {nav(<RiListCheck2   size={18} />, "Processes",  "/processes",  isWorker)}
 
           {/* ── INTELLIGENCE ── */}
-          {(isLead || isFinance) && sectionLabel("Intelligence")}
-          {nav(<RiBrainLine    size={18} />, "EOS",          "/eos",          isLead)}
+          {(isLead || isFinance || isWorker) && sectionLabel("Intelligence")}
+          {nav(<RiBrainLine    size={18} />, "EOS",          "/eos",          isWorker)}
           {nav(<RiBugLine      size={18} />, "Code Review",  "/code-review",  isLead)}
           {nav(<RiBarChartLine size={18} />, "Analytics",    "/analytics",    isManager || isFinance)}
 
@@ -249,8 +254,8 @@ export default function Sidebar({
           {nav(<RiTeamLine  size={18} />, "My Team",    "/team",  showTeamNav)}
           {nav(<RiChat3Line size={18} />, "Team Chat",  "/chat",  isWorker)}
 
-          {/* ── ADMIN ── */}
-          {isManager && sectionLabel("Admin")}
+          {/* ── TOOLS ── */}
+          {isManager && sectionLabel("Tools")}
           {nav(<RiSurveyLine  size={18} />, "Forms",        "/forms",       isManager)}
           {nav(<RiGlobalLine  size={18} />, "Guest Portal", "/guest",       isManager)}
           {nav(<RiHistoryLine size={18} />, "Audit Log",    "/audit-log",   isAdmin)}
@@ -264,25 +269,39 @@ export default function Sidebar({
 
 /* ── Saved Filters Section ───────────────────────────────────────────────── */
 function SavedFiltersSection({ collapsed }: { collapsed: boolean }) {
+  const navigate    = useNavigate();
   const { data: filters = [] } = useQuery({
     queryKey: ["saved-filters"],
     queryFn: fetchSavedFilters,
     staleTime: 1000 * 60 * 2,
   });
-  const applyFilter = useFilterStore((s) => s.setActiveFilter);
+  const store = useFilterStore();
 
   if (filters.length === 0) return null;
 
+  function handleFilterClick(f: { id: string; name: string; filters: any }) {
+    const saved = f.filters ?? {};
+    store.resetFilters();
+    if (saved.dateFrom && saved.dateTo) store.setDateRange(saved.dateFrom, saved.dateTo);
+    if (saved.user)      store.setFilter("user",      saved.user);
+    if (saved.project)   store.setFilter("project",   saved.project);
+    if (saved.issueType) store.setFilter("issueType", saved.issueType);
+    if (saved.search)    store.setFilter("search",    saved.search);
+    (saved.pods ?? []).forEach((p: string) => store.togglePod(p));
+    (saved.clients ?? []).forEach((c: string) => store.toggleClient(c));
+    navigate("/tickets");
+  }
+
   return (
     <>
-      {!collapsed && <div className={styles.section}>Saved Filters</div>}
+      {!collapsed && <div className={styles.section}>Filters</div>}
       {collapsed && <div className={styles.sectionDividerCollapsed} />}
       {filters.map((f: { id: string; name: string; filters: any }) => (
         <Tooltip key={f.id} title={collapsed ? f.name : ""} placement="right" arrow>
           <button
             className={styles.item}
             style={{ width: collapsed ? "auto" : "100%" }}
-            onClick={() => applyFilter(f.filters)}
+            onClick={() => handleFilterClick(f)}
           >
             <span className={styles.itemIcon}><RiFilter3Line size={16} /></span>
             {!collapsed && <span className={styles.label}>{f.name}</span>}

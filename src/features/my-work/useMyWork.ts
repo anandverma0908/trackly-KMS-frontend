@@ -194,11 +194,10 @@ export function useMyWork() {
     retry: 2,
   });
 
-  const canViewGaps = user?.role === "admin" || user?.role === "engineering_manager";
   const { data: knowledgeGaps = [], isLoading: loadingGaps } = useQuery({
     queryKey: ["knowledge-gaps"],
     queryFn:  fetchKnowledgeGaps,
-    enabled:  canViewGaps,
+    enabled:  !!user,
   });
 
   /* AI-ranked tickets — merged from backend tickets + priority_queue */

@@ -101,11 +101,10 @@ export default function MyWorkPage() {
         onTicketClick={setSelectedKey}
         onNavigate={navigate}
       />
+        <SmartFocusBlock block={focusBlock} onTicketClick={setSelectedKey} />
 
       {/* Main grid */}
       <div className={`${styles.mainRow} fade-up-2`}>
-        <SmartFocusBlock block={focusBlock} onTicketClick={setSelectedKey} />
-        <SprintRiskWidget risk={sprintRisk} loading={loading} />
         <AIPriorityQueue
           tickets={aiTickets}
           loading={loading}
@@ -135,8 +134,10 @@ export default function MyWorkPage() {
       <div className={`${styles.deliveryRow} fade-up-3`}>
         <TimeEnergyWidget energy={timeEnergy} loading={loading} />
         <NovaDeliveryForecast risk={sprintRisk} />
-        <NovaKnowledgeGaps gaps={knowledgeGaps} loading={loadingGaps} />
+        <SprintRiskWidget risk={sprintRisk} loading={loading} />
       </div>
+
+      <NovaKnowledgeGaps gaps={knowledgeGaps} loading={loadingGaps} />
 
       {/* Quick Log Time Modal */}
       {logTimeTicket && (

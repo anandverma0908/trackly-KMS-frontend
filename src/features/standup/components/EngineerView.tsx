@@ -132,8 +132,8 @@ export default function EngineerView() {
   const updateMut = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Partial<Standup> }) =>
       updateStandup(id, payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["my-standup"] });
+    onSuccess: (updated) => {
+      qc.setQueryData(["my-standup"], updated);
       qc.invalidateQueries({ queryKey: ["team-standups"] });
       setEditing(false);
       setIsCreating(false);

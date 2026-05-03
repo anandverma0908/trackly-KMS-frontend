@@ -1413,6 +1413,11 @@ export default function SpacesPage() {
   const canManage =
     user?.role === "admin";
 
+  const isManager = user?.role === "admin" || user?.role === "engineering_manager";
+  const userPods = user?.pod
+    ? user.pod.split(",").map((p) => p.trim()).filter(Boolean)
+    : [];
+
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list" | "heatmap">("grid");
   const [showCreateDrawer, setShowCreateDrawer] = useState(false);
@@ -1451,7 +1456,9 @@ export default function SpacesPage() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const validPods = podSummaries.filter((p) => p.pod?.trim());
+  const validPods = podSummaries
+    .filter((p) => p.pod?.trim())
+    .filter((p) => isManager || userPods.length === 0 || userPods.includes(p.pod));
 
   const { data: capacityRows = [] } = useQuery({
     queryKey: ["capacity"],

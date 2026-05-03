@@ -289,7 +289,10 @@ export async function analyzeTicketNL(text: string, availableUsers: string[] = [
     story_points: fields.story_points,
     assignee: fields.assignee,
     labels: fields.labels,
-    duplicates: data.duplicates,
+    duplicates: (data.duplicates ?? []).map((d: any) => ({
+      ...d,
+      key: d.key ?? d.jira_key,
+    })),
     confidence: data.confidence ?? fields.confidence,
   };
 }

@@ -37,6 +37,8 @@ import {
   RiCodeSSlashLine,
   RiDatabase2Line,
   RiQuestionLine,
+  RiVolumeUpLine,
+  RiVolumeMuteLine,
 } from "react-icons/ri";
 import SideDrawer from "@/components/ui/SideDrawer";
 import { runAgentLoop } from "./agent/agentController";
@@ -506,12 +508,12 @@ const PULSE_LABEL: Record<PulseType, string> = {
 };
 
 const GLOBAL_SUGGESTIONS = [
-  "What bugs are open right now?",
-  "What's blocking the current sprint?",
-  "Which tickets are high priority?",
-  "Which pods are at risk?",
-  "What did we decide about auth?",
-  "Summarise what's been done this week",
+  "What was my timesheet last week?",
+  "Show me my standup for today",
+  "What open bugs are assigned to me?",
+  "Give me analytics for the current sprint",
+  "Which tickets are blocking the team?",
+  "Summarise what I've done this week",
 ];
 
 function podSuggestions(pod: string) {
@@ -553,6 +555,89 @@ function useStreamingText(text: string, active: boolean, speed = 11) {
   }, [text, active, speed]);
 
   return { displayed, done };
+}
+
+/* ══════════════════════════════════════════════════════════
+   SPEECH HOOK — female TTS via Web Speech API
+══════════════════════════════════════════════════════════ */
+const FEMALE_VOICE_NAMES = [
+  "Samantha", "Karen", "Victoria", "Moira", "Tessa", "Fiona",
+  "Google UK English Female", "Google US English", "Microsoft Zira",
+  "Microsoft Aria", "Microsoft Jenny", "Nicky",
+];
+
+function pickFemaleVoice(): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices();
+  for (const name of FEMALE_VOICE_NAMES) {
+    const v = voices.find((v) => v.name.includes(name));
+    if (v) return v;
+  }
+  return (
+    voices.find((v) => v.lang.startsWith("en") && v.name.toLowerCase().includes("female")) ??
+    voices.find((v) => v.lang.startsWith("en-")) ??
+    null
+  );
+}
+
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/`[^`]+`/g, "")
+    .replace(/#{1,6}\s/g, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[-*•›]\s/g, "")
+    .replace(/\n+/g, " ")
+    .trim();
+}
+
+function useSpeech() {
+  const [speaking, setSpeaking] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const currentTextRef = useRef<string>("");
+
+  const speak = useCallback((text: string) => {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const clean = stripMarkdown(text).slice(0, 600);
+    if (!clean) return;
+    currentTextRef.current = clean;
+
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.rate = 1.05;
+    utterance.pitch = 1.1;
+    utterance.volume = 1;
+
+    const doSpeak = () => {
+      const voice = pickFemaleVoice();
+      if (voice) utterance.voice = voice;
+      utterance.onstart = () => setSpeaking(true);
+      utterance.onend = () => setSpeaking(false);
+      utterance.onerror = () => setSpeaking(false);
+      window.speechSynthesis.speak(utterance);
+    };
+
+    if (window.speechSynthesis.getVoices().length > 0) {
+      doSpeak();
+    } else {
+      window.speechSynthesis.onvoiceschanged = doSpeak;
+    }
+  }, []);
+
+  const stop = useCallback(() => {
+    window.speechSynthesis.cancel();
+    setSpeaking(false);
+  }, []);
+
+  const speakIfEnabled = useCallback(
+    (text: string) => {
+      if (voiceEnabled) speak(text);
+    },
+    [voiceEnabled, speak],
+  );
+
+  return { speaking, voiceEnabled, setVoiceEnabled, speak, speakIfEnabled, stop };
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1010,11 +1095,15 @@ function AIOptionBlock({
 function MessageBubble({
   msg,
   isLatestNova,
+  isSpeaking,
   onOptionSelect,
+  onSpeak,
 }: {
   msg: Message;
   isLatestNova: boolean;
+  isSpeaking?: boolean;
   onOptionSelect?: (value: string, label: string) => void;
+  onSpeak?: (text: string) => void;
 }) {
   const [hoveredCitation, setHoveredCitation] = useState<string | null>(null);
   const streaming = msg.role === "nova" && isLatestNova;
@@ -1045,6 +1134,7 @@ function MessageBubble({
   }
 
   const showExtras = streaming ? done : true;
+  const speaking = isSpeaking && isLatestNova;
 
   return (
     <motion.div
@@ -1052,8 +1142,16 @@ function MessageBubble({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <div className={styles.novaAvatar}>
-        <RiBrainLine size={13} />
+      <div className={`${styles.novaAvatar} ${speaking ? styles.novaAvatarSpeaking : ""}`}>
+        {speaking ? (
+          <div className={styles.speakingBars}>
+            {[0,1,2,3,4].map((i) => (
+              <span key={i} className={styles.speakBar} style={{ animationDelay: `${i * 0.1}s` }} />
+            ))}
+          </div>
+        ) : (
+          <RiBrainLine size={13} />
+        )}
       </div>
       <div className={styles.novaContent}>
         <div className={styles.novaText}>
@@ -1092,6 +1190,15 @@ function MessageBubble({
         )}
         {msg.agentSteps && msg.agentSteps.length > 0 && showExtras && (
           <AgentStepTrace steps={msg.agentSteps} />
+        )}
+        {showExtras && onSpeak && (
+          <button
+            className={`${styles.speakBtn} ${speaking ? styles.speakBtnActive : ""}`}
+            onClick={() => onSpeak(msg.text)}
+            title={speaking ? "Speaking…" : "Read aloud"}
+          >
+            <RiVolumeUpLine size={11} />
+          </button>
         )}
       </div>
     </motion.div>
@@ -1132,6 +1239,17 @@ export default function NovaPage() {
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [cmdPaletteIndex, setCmdPaletteIndex] = useState(0);
+
+  const { speaking, voiceEnabled, setVoiceEnabled, speak, speakIfEnabled, stop } = useSpeech();
+
+  // Auto-speak latest nova message when voice is enabled
+  useEffect(() => {
+    if (!voiceEnabled) return;
+    const last = [...messages].reverse().find((m) => m.role === "nova");
+    if (last) speakIfEnabled(last.text);
+  // Only fire when a new nova message is appended (messages.length changes)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length]);
 
   const suggestions = podContext
     ? podSuggestions(podContext)
@@ -1948,6 +2066,17 @@ Return ONLY valid JSON:
             </button>
           )}
           <button
+            className={`${styles.agentToggle} ${voiceEnabled ? styles.agentToggleOn : ""}`}
+            onClick={() => {
+              if (voiceEnabled) stop();
+              setVoiceEnabled((v) => !v);
+            }}
+            title={voiceEnabled ? "Voice ON — click to mute EOS" : "Enable EOS voice"}
+          >
+            {voiceEnabled ? <RiVolumeUpLine size={12} /> : <RiVolumeMuteLine size={12} />}
+            {voiceEnabled ? "Voice ON" : "Voice"}
+          </button>
+          <button
             className={`${styles.pulseToggleBtn} ${pulseOpen ? styles.pulseToggleBtnActive : ""}`}
             onClick={() => setPulseOpen((o) => !o)}
           >
@@ -2120,10 +2249,10 @@ Return ONLY valid JSON:
                 <div className={styles.emptyOrb}>
                   <RiBrainLine size={28} className={styles.emptyOrbIcon} />
                 </div>
-                <h2 className={styles.emptyTitle}>Your project brain</h2>
+                <h2 className={styles.emptyTitle}>Hi, I'm EOS</h2>
                 <p className={styles.emptyDesc}>
-                  Ask anything about your tickets, team, decisions, or sprint
-                  EOS knows your project.
+                  I know your tickets, standups, timesheets, and sprint analytics.
+                  Ask me anything — I'll answer like JARVIS, but better.
                 </p>
                 <div className={styles.emptySuggestions}>
                   {suggestions.map((s) => (
@@ -2138,20 +2267,24 @@ Return ONLY valid JSON:
                 </div>
                 <div className={styles.emptyModes}>
                   <div className={styles.emptyMode}>
-                    <RiBrainLine size={12} />
-                    <span>Tickets &amp; bugs</span>
+                    <RiTimeLine size={12} />
+                    <span>Timesheets</span>
                   </div>
                   <div className={styles.emptyMode}>
-                    <RiFileTextLine size={12} />
-                    <span>Decisions &amp; wiki</span>
+                    <RiBugLine size={12} />
+                    <span>Bugs &amp; tickets</span>
                   </div>
                   <div className={styles.emptyMode}>
                     <RiBarChartLine size={12} />
-                    <span>Sprint &amp; blockers</span>
+                    <span>Analytics</span>
+                  </div>
+                  <div className={styles.emptyMode}>
+                    <RiFileTextLine size={12} />
+                    <span>Standups</span>
                   </div>
                   <div className={styles.emptyMode}>
                     <RiMicLine size={12} />
-                    <span>Voice input</span>
+                    <span>Voice</span>
                   </div>
                 </div>
               </div>
@@ -2162,7 +2295,9 @@ Return ONLY valid JSON:
                     key={msg.id}
                     msg={msg}
                     isLatestNova={msg.id === latestNovaId}
+                    isSpeaking={speaking && msg.id === latestNovaId}
                     onOptionSelect={handleOptionSelect}
+                    onSpeak={msg.role === "nova" ? speak : undefined}
                   />
                 ))}
                 {loading && (

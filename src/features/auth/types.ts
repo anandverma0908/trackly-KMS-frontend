@@ -12,7 +12,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role: UserRole;
-  pod: string | null;
+  pod: string | null; // comma-separated when multiple pods, e.g. "PULSE,DPAI"
   org_id: string;
   last_login: string | null;
 }

@@ -50,6 +50,7 @@ import {
   RiArrowDownLine,
 } from "react-icons/ri";
 import type { KnowledgeGap, VelocityAnomalySprint } from "@/types";
+import BudgetTab from "@/features/settings/BudgetTab";
 import styles from "./AnalyticsPage.module.css";
 
 function AnomalyDot(props: any): React.ReactElement<SVGElement> | null {
@@ -1047,6 +1048,10 @@ export default function AnalyticsPage() {
               ))
             )}
           </div>
+        </div>
+        {/* Budget & Burn Rate */}
+        <div className={styles.card}>
+          <BudgetTab />
         </div>
       </div>
     </div>

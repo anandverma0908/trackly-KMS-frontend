@@ -36,24 +36,27 @@ export default function StandupDetailDrawer({
   standup,
   open,
   onClose,
+  onSave,
 }: {
   standup: Standup | null;
   open: boolean;
   onClose: () => void;
+  onSave?: (updated: Standup) => void;
 }) {
   const qc = useQueryClient();
   const { user } = useAuthStore();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ yesterday: "", today: "", blockers: "" });
 
-  const canEdit = standup?.engineer === user?.name || user?.role === "admin" || user?.role === "engineering_manager";
+  const canEdit = standup?.engineer === user?.name || user?.role === "admin" || user?.role === "engineering_manager" || user?.role === "tech_lead";
 
   const updateMut = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Partial<Standup> }) =>
       updateStandup(id, payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["my-standup"] });
+    onSuccess: (updated) => {
+      qc.setQueryData(["my-standup"], updated);
       qc.invalidateQueries({ queryKey: ["team-standups"] });
+      onSave?.(updated);
       setEditing(false);
       toast.success("Standup updated");
     },
