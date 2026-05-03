@@ -671,13 +671,14 @@
   animation: blink 0.85s step-end infinite;
 }
 @keyframes blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ▋ cursor inside markdown body — targets the inline text node rendered by ReactMarkdown */
+.mdBody p:last-child::after,
+.mdBody li:last-child span:last-child::after {
+  content: none; /* cursor is appended as text, no pseudo needed */
 }
 
 .citedMark {
@@ -838,6 +839,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: relative;
 }
 
 .attachedBadge {
@@ -1647,6 +1649,322 @@
 .historyClearCancel:hover {
   border-color: var(--border-3, var(--accent));
   color: var(--text);
+}
+
+/* ══════════════════════════════════════════════════════════
+   MARKDOWN BODY — ChatGPT/Claude style
+══════════════════════════════════════════════════════════ */
+
+.mdBody {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.mdBody > *:first-child { margin-top: 0; }
+.mdBody > *:last-child  { margin-bottom: 0; }
+
+/* ── Headings ── */
+.mdH1 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 18px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-2);
+  letter-spacing: -0.02em;
+}
+.mdH2 {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 14px 0 6px;
+  letter-spacing: -0.01em;
+}
+.mdH3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 12px 0 4px;
+}
+.mdH4 {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin: 10px 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Paragraph ── */
+.mdP {
+  margin: 0 0 10px;
+  line-height: 1.7;
+}
+
+/* ── Lists ── */
+.mdUl,
+.mdOl {
+  margin: 4px 0 10px 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mdLi {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  line-height: 1.6;
+}
+
+.mdLiBullet {
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 13px;
+  line-height: 1.6;
+  min-width: 14px;
+  text-align: right;
+}
+
+.mdLiNum {
+  color: var(--accent);
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 12px;
+  line-height: 1.6;
+  min-width: 20px;
+  text-align: right;
+}
+
+/* ── Inline formatting ── */
+.mdStrong {
+  font-weight: 700;
+  color: var(--text);
+}
+.mdEm {
+  font-style: italic;
+  color: var(--text-2);
+}
+.mdInlineCode {
+  background: var(--surface-3, rgba(255,255,255,0.06));
+  color: var(--accent);
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: var(--font-mono, 'Fira Code', 'JetBrains Mono', monospace);
+  border: 1px solid var(--border-2);
+}
+
+/* ── Code block ── */
+.mdCodeBlock {
+  margin: 10px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-2);
+}
+
+.mdCodeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--surface-3, rgba(255,255,255,0.04));
+  border-bottom: 1px solid var(--border-2);
+}
+
+.mdCodeLang {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: var(--font-mono, monospace);
+}
+
+.codeCopyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-3);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.codeCopyBtn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+/* ── Blockquote ── */
+.mdBlockquote {
+  margin: 8px 0;
+  padding: 8px 14px;
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-radius: 0 6px 6px 0;
+  color: var(--text-2);
+  font-style: italic;
+  font-size: 13px;
+}
+
+/* ── Table ── */
+.mdTableWrap {
+  overflow-x: auto;
+  margin: 10px 0;
+  border-radius: 8px;
+  border: 1px solid var(--border-2);
+}
+.mdTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.mdThead { background: var(--surface-2); }
+.mdTh {
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-2);
+  white-space: nowrap;
+}
+.mdTd {
+  padding: 7px 12px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border-1);
+  vertical-align: top;
+}
+.mdTr:last-child .mdTd { border-bottom: none; }
+.mdTr:hover .mdTd { background: var(--surface-2); }
+
+/* ── Horizontal rule ── */
+.mdHr {
+  border: none;
+  border-top: 1px solid var(--border-2);
+  margin: 14px 0;
+}
+
+/* ── Link ── */
+.mdLink {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.mdLink:hover { opacity: 0.8; }
+
+/* ── Command Palette ── */
+.commandPalette {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  z-index: 50;
+}
+
+.commandPaletteHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--border-1);
+  background: var(--surface-2);
+}
+
+.commandItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.commandItem:hover,
+.commandItemActive {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.commandItemIcon {
+  color: var(--accent);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.commandItemCmd {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  font-family: var(--font-mono, monospace);
+  min-width: 90px;
+}
+
+.commandItemDesc {
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+/* ── Mode Badge ── */
+.modeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.mode_assistant { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+.mode_engineer  { background: color-mix(in srgb, #a78bfa 12%, transparent);       color: #a78bfa; }
+.mode_execution { background: color-mix(in srgb, var(--green) 12%, transparent);   color: var(--green); }
+.mode_knowledge { background: color-mix(in srgb, var(--amber) 12%, transparent);   color: var(--amber); }
+.mode_debug     { background: color-mix(in srgb, var(--red, #f87171) 12%, transparent); color: var(--red, #f87171); }
+.mode_admin     { background: color-mix(in srgb, #60a5fa 12%, transparent);        color: #60a5fa; }
+
+/* ── Status Line ── */
+.statusLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-2);
+  margin-bottom: 2px;
 }
 
 /* ── Responsive ── */

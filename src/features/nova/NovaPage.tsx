@@ -1,4 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,6 +29,14 @@ import {
   RiMusicLine,
   RiLayoutGridLine,
   RiHistoryLine,
+  RiTerminalBoxLine,
+  RiSearchLine,
+  RiBugLine,
+  RiTimeLine,
+  RiRocketLine,
+  RiCodeSSlashLine,
+  RiDatabase2Line,
+  RiQuestionLine,
 } from "react-icons/ri";
 import SideDrawer from "@/components/ui/SideDrawer";
 import { runAgentLoop } from "./agent/agentController";
@@ -55,8 +67,9 @@ import styles from "./NovaPage.module.css";
    TYPES
 ══════════════════════════════════════════════════════════ */
 type PulseType = "risk" | "pattern" | "suggestion" | "signal";
-type Intent = "ask" | "thought" | "meeting" | "screenshot" | "voice";
+type Intent = "ask" | "thought" | "meeting" | "screenshot" | "voice" | "command";
 type CreatedType = "ticket" | "doc" | "bug";
+type Mode = "assistant" | "engineer" | "execution" | "knowledge" | "debug" | "admin";
 type AgentStatus = "running" | "done" | "waiting";
 
 interface PendingTicket {
@@ -328,9 +341,136 @@ function intentLabel(intent: Intent, wordCount: number): string {
       return "→ analyze screenshot";
     case "voice":
       return "◉ voice captured";
+    case "command":
+      return "→ command mode";
     case "ask":
       return "";
   }
+}
+
+/* ══════════════════════════════════════════════════════════
+   MODE ROUTING
+══════════════════════════════════════════════════════════ */
+function detectMode(text: string): Mode {
+  const t = text.toLowerCase();
+  if (/\b(deploy|production|prod|staging|infra|server|permission|environment|release|devops)\b/.test(t)) return "admin";
+  if (/\b(bug|error|crash|exception|stack trace|fail|failure|undefined|null|traceback|lint)\b/.test(t)) return "debug";
+  if (/\b(code|function|class|refactor|architecture|implement|review|pr|pull request|component|module)\b/.test(t)) return "engineer";
+  if (/\b(do it|execute|run|create|update|delete|submit|handle|make|generate|write|build)\b/.test(t)) return "execution";
+  if (/\b(doc|documentation|wiki|knowledge|explain|how|what is|guide|decision|policy)\b/.test(t)) return "knowledge";
+  return "assistant";
+}
+
+const MODE_LABEL: Record<Mode, string> = {
+  assistant: "Assistant",
+  engineer:  "Engineer",
+  execution: "Execution",
+  knowledge: "Knowledge",
+  debug:     "Debug",
+  admin:     "Admin",
+};
+
+const MODE_STATUS_SEQUENCE: Record<Mode, string[]> = {
+  assistant: ["Analyzing request...", "Generating response..."],
+  engineer:  ["Analyzing code...", "Inspecting architecture...", "Generating response..."],
+  execution: ["Preparing execution...", "Running action...", "Verifying result..."],
+  knowledge: ["Searching knowledge base...", "Retrieving context...", "Synthesizing answer..."],
+  debug:     ["Inspecting logs...", "Analyzing error...", "Identifying root cause..."],
+  admin:     ["Validating environment...", "Checking permissions...", "Executing..."],
+};
+
+const TOOL_STATUS: Record<string, string> = {
+  search:               "Searching knowledge base...",
+  get_ticket:           "Fetching ticket data...",
+  update_ticket_status: "Updating ticket...",
+  create_ticket:        "Creating ticket...",
+  rag_query:            "Querying knowledge index...",
+  generate_standup:     "Generating standup report...",
+  create_wiki_page:     "Creating wiki page...",
+};
+
+/* ══════════════════════════════════════════════════════════
+   COMMAND PALETTE
+══════════════════════════════════════════════════════════ */
+interface CommandDef {
+  cmd: string;
+  desc: string;
+  icon: React.ReactNode;
+  toQuery: (args: string) => string | null;
+}
+
+const COMMANDS: CommandDef[] = [
+  { cmd: "/tickets",   desc: "Fetch or manage tickets",     icon: <RiFileTextLine size={12} />,    toQuery: (a) => a ? `Show tickets: ${a}` : "What tickets are open right now?" },
+  { cmd: "/search",    desc: "Search the knowledge base",   icon: <RiSearchLine size={12} />,      toQuery: (a) => a ? `Search: ${a}` : "Search the project knowledge base" },
+  { cmd: "/analyze",   desc: "Analyze sprint or metrics",   icon: <RiBarChartLine size={12} />,    toQuery: (a) => a ? `Analyze ${a}` : "Analyze current sprint health and blockers" },
+  { cmd: "/debug",     desc: "Debug workflow",              icon: <RiBugLine size={12} />,         toQuery: (a) => a ? `Debug ${a}` : "Show all open bugs and errors" },
+  { cmd: "/logs",      desc: "Inspect system logs",         icon: <RiDatabase2Line size={12} />,   toQuery: (_a) => "What errors or issues are in the system logs?" },
+  { cmd: "/timesheet", desc: "Manage timesheet",            icon: <RiTimeLine size={12} />,        toQuery: (a) => a || "Show my timesheet for this week" },
+  { cmd: "/deploy",    desc: "Deployment workflow",         icon: <RiRocketLine size={12} />,      toQuery: (a) => a ? `Deploy to ${a}` : "Show deployment status and recent builds" },
+  { cmd: "/db",        desc: "Query database",              icon: <RiCodeSSlashLine size={12} />,  toQuery: (a) => a ? `Query database: ${a}` : "Show database health and recent queries" },
+  { cmd: "/help",      desc: "List all commands",           icon: <RiQuestionLine size={12} />,    toQuery: (_a) => null },
+];
+
+const HELP_TEXT = `**NOVA/EOS Command Palette**
+
+**Slash Commands:**
+\`/tickets [query]\` — Fetch or manage tickets
+\`/search [query]\` — Search the knowledge base
+\`/analyze [target]\` — Analyze sprint, code, or metrics
+\`/debug [issue]\` — Enter debug workflow
+\`/logs\` — Inspect system logs and errors
+\`/timesheet\` — View or submit timesheet
+\`/deploy [env]\` — Trigger deployment workflow
+\`/db [query]\` — Query the database
+\`/help\` — Show this help message
+
+**Auto-detected Modes:**
+• **Assistant** — general questions and conversation
+• **Engineer** — code, architecture, refactoring
+• **Execution** — "create", "run", "do it"
+• **Knowledge** — docs, wiki, decisions
+• **Debug** — bugs, errors, stack traces
+• **Admin** — deployments, environments, permissions
+
+**Operating Pattern:** Observe → Think → Route → Execute → Verify → Respond`;
+
+function CommandPalette({
+  input,
+  onSelect,
+  selectedIndex,
+}: {
+  input: string;
+  onSelect: (cmd: CommandDef) => void;
+  selectedIndex: number;
+}) {
+  const partial = input.slice(1).toLowerCase();
+  const filtered = COMMANDS.filter((c) => c.cmd.slice(1).startsWith(partial));
+  if (filtered.length === 0) return null;
+
+  return (
+    <motion.div
+      className={styles.commandPalette}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 6 }}
+    >
+      <div className={styles.commandPaletteHeader}>
+        <RiTerminalBoxLine size={10} />
+        <span>Commands</span>
+      </div>
+      {filtered.map((c, i) => (
+        <button
+          key={c.cmd}
+          className={`${styles.commandItem} ${i === selectedIndex % filtered.length ? styles.commandItemActive : ""}`}
+          onMouseDown={(e) => { e.preventDefault(); onSelect(c); }}
+        >
+          <span className={styles.commandItemIcon}>{c.icon}</span>
+          <span className={styles.commandItemCmd}>{c.cmd}</span>
+          <span className={styles.commandItemDesc}>{c.desc}</span>
+        </button>
+      ))}
+    </motion.div>
+  );
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -416,70 +556,98 @@ function useStreamingText(text: string, active: boolean, speed = 11) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   FORMATTED TEXT
+   FORMATTED TEXT — full markdown renderer (ChatGPT/Claude style)
 ══════════════════════════════════════════════════════════ */
-function FormattedText({ text, cursor }: { text: string; cursor?: React.ReactNode }) {
-  const paragraphs = text.split(/\n{2,}/);
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      className={styles.codeCopyBtn}
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1800); }}
+    >
+      {copied ? <RiCheckLine size={11} /> : <RiAttachmentLine size={11} />}
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
+}
 
-  function renderInline(str: string): React.ReactNode {
-    const parts: React.ReactNode[] = [];
-    let remaining = str;
-    let key = 0;
-    while (remaining) {
-      const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
-      const codeMatch = remaining.match(/`(.+?)`/);
-      const firstBold = boldMatch?.index ?? Infinity;
-      const firstCode = codeMatch?.index ?? Infinity;
-      if (firstBold === Infinity && firstCode === Infinity) {
-        parts.push(remaining);
-        break;
-      }
-      if (firstBold <= firstCode && boldMatch) {
-        parts.push(remaining.slice(0, boldMatch.index));
-        parts.push(<strong key={key++}>{boldMatch[1]}</strong>);
-        remaining = remaining.slice(boldMatch.index! + boldMatch[0].length);
-      } else if (codeMatch) {
-        parts.push(remaining.slice(0, codeMatch.index));
-        parts.push(<code key={key++} style={{ background: 'var(--surface-3)', padding: '1px 5px', borderRadius: 4, fontSize: '0.85em', fontFamily: 'monospace' }}>{codeMatch[1]}</code>);
-        remaining = remaining.slice(codeMatch.index! + codeMatch[0].length);
-      }
-    }
-    return parts;
-  }
-
-  const nodes: React.ReactNode[] = [];
-  paragraphs.forEach((para, pi) => {
-    const lines = para.split('\n');
-    const isList = lines.every(l => l.match(/^[-•*]\s/));
-    if (isList) {
-      nodes.push(
-        <ul key={`ul-${pi}`} style={{ margin: '6px 0 6px 12px', padding: 0, listStyle: 'none' }}>
-          {lines.map((l, li) => (
-            <li key={li} style={{ display: 'flex', gap: 6, alignItems: 'flex-start', marginBottom: 3, fontSize: '0.88rem', color: 'var(--text)' }}>
-              <span style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }}>›</span>
-              <span>{renderInline(l.replace(/^[-•*]\s/, ''))}</span>
-            </li>
-          ))}
-        </ul>
-      );
-    } else {
-      nodes.push(
-        <p key={`p-${pi}`} style={{ margin: '0 0 8px', lineHeight: 1.6, fontSize: '0.88rem', color: 'var(--text)' }}>
-          {lines.map((l, li) => (
-            <span key={li}>
-              {renderInline(l)}
-              {li < lines.length - 1 && <br />}
-            </span>
-          ))}
-        </p>
-      );
-    }
-  });
-  if (nodes.length) {
-    const last = nodes[nodes.length - 1] as React.ReactElement;
-    nodes[nodes.length - 1] = React.cloneElement(last, {}, ...(last.props.children ?? []), cursor);
-  }
-  return <div style={{ marginBottom: 4 }}>{nodes}</div>;
+function FormattedText({ text, cursor }: { text: string; cursor?: boolean }) {
+  const content = cursor ? text + " ▋" : text;
+  return (
+    <div className={styles.mdBody}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => <h1 className={styles.mdH1}>{children}</h1>,
+          h2: ({ children }) => <h2 className={styles.mdH2}>{children}</h2>,
+          h3: ({ children }) => <h3 className={styles.mdH3}>{children}</h3>,
+          h4: ({ children }) => <h4 className={styles.mdH4}>{children}</h4>,
+          p:  ({ children }) => <p  className={styles.mdP}>{children}</p>,
+          ul: ({ children }) => <ul className={styles.mdUl}>{children}</ul>,
+          ol: ({ children }) => <ol className={styles.mdOl}>{children}</ol>,
+          li: ({ children, node, ...props }) => {
+            const isOrdered = node?.position && (props as any).ordered;
+            const idx = (props as any).index ?? 0;
+            return (
+              <li className={styles.mdLi}>
+                {isOrdered
+                  ? <span className={styles.mdLiNum}>{idx + 1}.</span>
+                  : <span className={styles.mdLiBullet}>›</span>
+                }
+                <span>{children}</span>
+              </li>
+            );
+          },
+          strong: ({ children }) => <strong className={styles.mdStrong}>{children}</strong>,
+          em:     ({ children }) => <em className={styles.mdEm}>{children}</em>,
+          blockquote: ({ children }) => <blockquote className={styles.mdBlockquote}>{children}</blockquote>,
+          hr: () => <hr className={styles.mdHr} />,
+          a:  ({ href, children }) => <a href={href} className={styles.mdLink} target="_blank" rel="noopener noreferrer">{children}</a>,
+          table: ({ children }) => (
+            <div className={styles.mdTableWrap}>
+              <table className={styles.mdTable}>{children}</table>
+            </div>
+          ),
+          thead: ({ children }) => <thead className={styles.mdThead}>{children}</thead>,
+          th: ({ children }) => <th className={styles.mdTh}>{children}</th>,
+          td: ({ children }) => <td className={styles.mdTd}>{children}</td>,
+          tr: ({ children }) => <tr className={styles.mdTr}>{children}</tr>,
+          code({ className, children, ...props }) {
+            const match = /language-(\w+)/.exec(className || "");
+            const isBlock = !!match || String(children).includes("\n");
+            const codeText = String(children).replace(/\n$/, "");
+            if (isBlock) {
+              return (
+                <div className={styles.mdCodeBlock}>
+                  <div className={styles.mdCodeHeader}>
+                    <span className={styles.mdCodeLang}>{match?.[1] ?? "code"}</span>
+                    <CopyButton text={codeText} />
+                  </div>
+                  <SyntaxHighlighter
+                    style={oneDark as any}
+                    language={match?.[1] ?? "text"}
+                    PreTag="div"
+                    customStyle={{
+                      margin: 0,
+                      borderRadius: "0 0 8px 8px",
+                      fontSize: "12px",
+                      lineHeight: 1.6,
+                      background: "var(--code-bg, #1a1b26)",
+                    }}
+                  >
+                    {codeText}
+                  </SyntaxHighlighter>
+                </div>
+              );
+            }
+            return <code className={styles.mdInlineCode} {...props}>{children}</code>;
+          },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -891,7 +1059,7 @@ function MessageBubble({
         <div className={styles.novaText}>
           <FormattedText
             text={text}
-            cursor={streaming && !done ? <span className={styles.streamCursor}>▋</span> : undefined}
+            cursor={streaming && !done ? true : undefined}
           />
         </div>
         {msg.pendingTicket && showExtras && (
@@ -960,6 +1128,10 @@ export default function NovaPage() {
   const [wizardState, setWizardState] = useState<WizardState | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [chatHistory, setChatHistory] = useState<ConversationRecord[]>(() => loadChatHistory());
+  const [detectedMode, setDetectedMode] = useState<Mode>("assistant");
+  const [statusMessage, setStatusMessage] = useState<string>("");
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [cmdPaletteIndex, setCmdPaletteIndex] = useState(0);
 
   const suggestions = podContext
     ? podSuggestions(podContext)
@@ -1161,15 +1333,43 @@ export default function NovaPage() {
 
   const send = useCallback(
     async (overrideText?: string, overrideIntent?: Intent) => {
-      const text = (overrideText ?? input).trim();
+      const rawText = (overrideText ?? input).trim();
+
+      // ── Command palette routing ──
+      if (rawText.startsWith("/") && !overrideIntent) {
+        const [cmd, ...argParts] = rawText.split(" ");
+        const args = argParts.join(" ").trim();
+        setInput("");
+        setShowCommandPalette(false);
+
+        if (cmd === "/help") {
+          setMessages((prev) => [...prev,
+            { id: crypto.randomUUID(), role: "user" as const, text: rawText, ts: new Date() },
+            { id: crypto.randomUUID(), role: "nova" as const, text: HELP_TEXT, ts: new Date() },
+          ]);
+          return;
+        }
+        const def = COMMANDS.find((c) => c.cmd === cmd);
+        const routed = def?.toQuery(args) ?? rawText;
+        return send(routed, "ask");
+      }
+
+      const text = rawText;
       const finalIntent =
         overrideIntent ??
         (attachedMedia ? "screenshot" : detectIntent(text, false));
       if ((!text && !attachedMedia) || loading) return;
 
+      // Detect mode and set initial status
+      const mode = detectMode(text);
+      setDetectedMode(mode);
+      const statusSeq = MODE_STATUS_SEQUENCE[mode];
+      setStatusMessage(statusSeq[0]);
+
       const capturedMedia = attachedMedia;
       setInput("");
       setAttachedMedia(null);
+      setShowCommandPalette(false);
 
       const userMsg: Message = {
         id: crypto.randomUUID(),
@@ -1227,7 +1427,7 @@ Return ONLY valid JSON, no prose or markdown fences:
   "due_date": null
 }
 Input: "${text}"`,
-            "You are EOS, an engineering assistant. Return ONLY a valid JSON object. No prose, no markdown fences.",
+            "You are NOVA/EOS, the AI operating system of Trackly. Return ONLY a valid JSON object. No prose, no markdown fences.",
             0.2,
           );
 
@@ -1295,7 +1495,7 @@ Input: "${text}"`,
                 `A screenshot was uploaded${text ? ` with context: "${text}"` : ""}. Based on the description, extract bug/issue details.
 Return ONLY valid JSON:
 {"title": string, "description": string, "repro_steps": [string], "severity": "critical|high|medium|low", "issue_type": "Bug|Task", "story_points": 2}`,
-                "You are EOS, a bug triage assistant. Return ONLY valid JSON.",
+                "You are NOVA/EOS, the AI operating system of Trackly. Return ONLY valid JSON.",
                 0.3,
               );
               try {
@@ -1336,7 +1536,7 @@ Return ONLY valid JSON:
               `A ${mediaLabel} was shared showing a potential issue. Description: "${text || "No description"}". Describe the likely bug and reproduction steps.
 Return ONLY valid JSON:
 {"title": string, "description": string, "repro_steps": [string], "severity": "medium", "issue_type": "Bug"}`,
-              "You are NOVA, a bug triage assistant. Return ONLY valid JSON.",
+              "You are NOVA/EOS, the AI operating system of Trackly. Return ONLY valid JSON.",
               0.3,
             );
             try {
@@ -1437,6 +1637,9 @@ Return ONLY valid JSON:
             console.log("[EOS] Running agent loop for:", text);
             const result = await runAgentLoop(text, history, (step) => {
               setLiveSteps((prev) => [...prev, step]);
+              if (step.toolCall?.action) {
+                setStatusMessage(TOOL_STATUS[step.toolCall.action] ?? "Processing...");
+              }
             });
             console.log("[EOS] Agent loop result:", result);
             novaMsg = {
@@ -1496,6 +1699,7 @@ Return ONLY valid JSON:
         ]);
       } finally {
         setLoading(false);
+        setStatusMessage("");
       }
     },
     [input, attachedMedia, loading, agentMode, messages, qc, activeSprint, allSprints, availablePods, executeTicketCreate, podContext, setWizardState],
@@ -1966,53 +2170,34 @@ Return ONLY valid JSON:
                     <div className={styles.novaAvatar}>
                       <RiBrainLine size={13} />
                     </div>
-                    {agentMode && liveSteps.length > 0 ? (
-                      <div className={styles.agentLiveTrace}>
-                        {liveSteps
-                          .filter((s) => s.toolCall)
-                          .map((s, i) => (
-                            <div key={i} className={styles.agentLiveStep}>
-                              <RiLoader4Line
-                                size={10}
-                                className={styles.spinning}
-                              />
-                              <span>{s.toolCall!.action}</span>
-                              {s.toolResult &&
-                                (s.toolResult.success ? (
-                                  <RiCheckLine
-                                    size={10}
-                                    style={{
-                                      color: "var(--green)",
-                                      marginLeft: 4,
-                                    }}
-                                  />
-                                ) : (
-                                  <RiErrorWarningLine
-                                    size={10}
-                                    style={{
-                                      color: "var(--red, #f87171)",
-                                      marginLeft: 4,
-                                    }}
-                                  />
-                                ))}
-                            </div>
-                          ))}
-                        <div
-                          className={styles.thinkingDots}
-                          style={{ marginTop: 4 }}
-                        >
-                          <span />
-                          <span />
-                          <span />
+                    <div className={styles.agentLiveTrace}>
+                      {/* Mode badge */}
+                      <span className={`${styles.modeBadge} ${styles[`mode_${detectedMode}`]}`}>
+                        {MODE_LABEL[detectedMode]}
+                      </span>
+                      {/* Status message */}
+                      {statusMessage && (
+                        <div className={styles.statusLine}>
+                          <RiLoader4Line size={10} className={styles.spinning} />
+                          <span>{statusMessage}</span>
                         </div>
+                      )}
+                      {/* Live tool call steps */}
+                      {agentMode && liveSteps.filter((s) => s.toolCall).map((s, i) => (
+                        <div key={i} className={styles.agentLiveStep}>
+                          <RiLoader4Line size={10} className={styles.spinning} />
+                          <span>{s.toolCall!.action}</span>
+                          {s.toolResult && (
+                            s.toolResult.success
+                              ? <RiCheckLine size={10} style={{ color: "var(--green)", marginLeft: 4 }} />
+                              : <RiErrorWarningLine size={10} style={{ color: "var(--red, #f87171)", marginLeft: 4 }} />
+                          )}
+                        </div>
+                      ))}
+                      <div className={styles.thinkingDots} style={{ marginTop: 4 }}>
+                        <span /><span /><span />
                       </div>
-                    ) : (
-                      <div className={styles.thinkingDots}>
-                        <span />
-                        <span />
-                        <span />
-                      </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -2021,6 +2206,21 @@ Return ONLY valid JSON:
 
           {/* Input bar */}
           <div className={styles.inputWrap}>
+            {/* Command palette */}
+            <AnimatePresence>
+              {showCommandPalette && (
+                <CommandPalette
+                  input={input}
+                  selectedIndex={cmdPaletteIndex}
+                  onSelect={(cmd) => {
+                    setInput(cmd.cmd + " ");
+                    setShowCommandPalette(false);
+                    textareaRef.current?.focus();
+                  }}
+                />
+              )}
+            </AnimatePresence>
+
             {attachedMedia && (
               <div className={styles.attachedBadge}>
                 {attachedMedia.mediaType === "image" ? (
@@ -2085,8 +2285,26 @@ Return ONLY valid JSON:
                   placeholder="Ask EOS anything about your project… (prefix 'create ticket:' to log a task)"
                   value={input}
                   rows={1}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setInput(val);
+                    setShowCommandPalette(val.startsWith("/") && val.length >= 1 && !val.includes(" "));
+                    setCmdPaletteIndex(0);
+                  }}
                   onKeyDown={(e) => {
+                    if (showCommandPalette) {
+                      const partial = input.slice(1).toLowerCase();
+                      const filtered = COMMANDS.filter((c) => c.cmd.slice(1).startsWith(partial));
+                      if (e.key === "ArrowDown") { e.preventDefault(); setCmdPaletteIndex((i) => (i + 1) % Math.max(1, filtered.length)); return; }
+                      if (e.key === "ArrowUp")   { e.preventDefault(); setCmdPaletteIndex((i) => (i - 1 + filtered.length) % Math.max(1, filtered.length)); return; }
+                      if (e.key === "Tab" || (e.key === "Enter" && filtered.length > 0)) {
+                        e.preventDefault();
+                        const chosen = filtered[cmdPaletteIndex % filtered.length];
+                        if (chosen) { setInput(chosen.cmd + " "); setShowCommandPalette(false); }
+                        return;
+                      }
+                      if (e.key === "Escape") { setShowCommandPalette(false); return; }
+                    }
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       send();
@@ -2108,7 +2326,7 @@ Return ONLY valid JSON:
             </div>
 
             <AnimatePresence>
-              {intentLabel(intent, wordCount) &&
+              {(intentLabel(intent, wordCount) || input.trim().startsWith("/")) &&
                 (input.trim() || attachedMedia) && (
                   <motion.div
                     className={styles.intentHint}
@@ -2116,8 +2334,17 @@ Return ONLY valid JSON:
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 4 }}
                   >
-                    <RiSparklingLine size={10} />
-                    <span>{intentLabel(intent, wordCount)}</span>
+                    {input.trim().startsWith("/") ? (
+                      <>
+                        <RiTerminalBoxLine size={10} />
+                        <span>Command mode — press ↑↓ to navigate, Tab to select</span>
+                      </>
+                    ) : (
+                      <>
+                        <RiSparklingLine size={10} />
+                        <span>{intentLabel(intent, wordCount)}</span>
+                      </>
+                    )}
                   </motion.div>
                 )}
             </AnimatePresence>
