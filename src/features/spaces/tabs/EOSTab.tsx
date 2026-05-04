@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import {
   RiSparklingLine,
@@ -16,6 +16,10 @@ import {
   RiEyeLine,
   RiArrowRightLine,
   RiUserLine,
+  RiMicLine,
+  RiMicOffLine,
+  RiSendPlaneLine,
+  RiLoader4Line,
 } from "react-icons/ri";
 import { novaQuery } from "@/services/api";
 import SideDrawer from "@/components/ui/SideDrawer";
@@ -976,6 +980,81 @@ export default function EOSTab({ project, activeSprint, pod }: EOSTabProps) {
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
   const [activeLoading, setActiveLoading] = useState<DrawerType | null>(null);
 
+  // ── Voice assistant state ──────────────────────────────────────────────────
+  const [voiceInput, setVoiceInput] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const [voiceLoading, setVoiceLoading] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const voiceInputRef = useRef<HTMLInputElement>(null);
+
+  const SpeechRecognitionAPI =
+    typeof window !== "undefined"
+      ? (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition
+      : null;
+  const voiceSupported = !!SpeechRecognitionAPI;
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.abort();
+    };
+  }, []);
+
+  function startListening() {
+    if (!voiceSupported) {
+      toast.error("Voice input is not supported in this browser. Try Chrome.");
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const recognition = new SpeechRecognitionAPI();
+    recognition.lang = "en-US";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = (e: any) => {
+      setIsListening(false);
+      if (e.error !== "aborted") toast.error("Microphone error: " + e.error);
+    };
+    recognition.onresult = (e: any) => {
+      const transcript = Array.from(e.results as SpeechRecognitionResultList)
+        .map((r: SpeechRecognitionResult) => r[0].transcript)
+        .join("");
+      setVoiceInput(transcript);
+    };
+    recognition.start();
+  }
+
+  async function handleVoiceQuery(e?: React.FormEvent) {
+    e?.preventDefault();
+    const q = voiceInput.trim();
+    if (!q) return;
+    setVoiceLoading(true);
+    setDrawer({ type: "retro", title: `EOS: "${q}"`, loading: true, data: null });
+    try {
+      const ctx = sprintContext();
+      const res = await novaQuery(
+        `You are EOS, an AI scrum master for ${project.name}.
+Context: ${ctx}
+
+The user asked: "${q}"
+
+Answer concisely and helpfully, referencing sprint data where relevant.`,
+      );
+      setDrawer({ type: "retro", title: `EOS: "${q}"`, loading: false, data: [{ title: "EOS Response", items: res.answer.split("\n").filter(Boolean) }] });
+      setVoiceInput("");
+    } catch {
+      toast.error("EOS query failed");
+      setDrawer(null);
+    } finally {
+      setVoiceLoading(false);
+    }
+  }
+
   function open(type: DrawerType, title: string) {
     setDrawer({ type, title, loading: true, data: null });
   }
@@ -1595,6 +1674,38 @@ Return a JSON array ONLY of up to 5 gap objects:
 
   return (
     <div className={styles.root}>
+      {/* Voice / free-form query bar */}
+      <form className={styles.voiceBar} onSubmit={handleVoiceQuery}>
+        <button
+          type="button"
+          className={`${styles.micBtn} ${isListening ? styles.micBtnActive : ""}`}
+          onClick={startListening}
+          title={isListening ? "Stop listening" : "Speak to EOS"}
+          disabled={voiceLoading}
+        >
+          {isListening ? <RiMicOffLine size={16} /> : <RiMicLine size={16} />}
+          {isListening && <span className={styles.micPulse} />}
+        </button>
+        <input
+          ref={voiceInputRef}
+          className={styles.voiceInput}
+          placeholder={isListening ? "Listening…" : "Ask EOS anything about this project…"}
+          value={voiceInput}
+          onChange={(e) => setVoiceInput(e.target.value)}
+          disabled={voiceLoading}
+        />
+        <button
+          type="submit"
+          className={styles.voiceSendBtn}
+          disabled={!voiceInput.trim() || voiceLoading}
+          title="Send"
+        >
+          {voiceLoading
+            ? <RiLoader4Line size={15} className={styles.spinIcon} />
+            : <RiSendPlaneLine size={15} />}
+        </button>
+      </form>
+
       <div className={styles.capGrid}>
         {visibleCards.map((card) => (
           <CapCard

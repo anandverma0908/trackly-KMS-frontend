@@ -1,17 +1,26 @@
 .page {
+  padding: 10px 40px 40px;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  gap: 10px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+  height: calc(100vh - var(--topbar-h));
   overflow: hidden;
+  box-sizing: border-box;
 }
 
-.listCol {
+.content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 24px 28px;
+  gap: 14px;
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
+  padding: 16px 20px;
   overflow-y: auto;
+  min-height: 0;
   scrollbar-width: thin;
   scrollbar-color: var(--border-2) transparent;
 }
@@ -81,6 +90,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
 }
 
 .headerLeft {
@@ -89,14 +100,23 @@
   gap: 12px;
 }
 
-.headerIcon { color: var(--green); }
+.headerIcon { color: var(--accent); }
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
+  padding: 12px 15px;
+}
 
 .title {
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 800;
+  letter-spacing: -0.04em;
   color: var(--text);
-  margin: 0 0 2px;
-  letter-spacing: -0.03em;
+  margin: 0;
 }
 
 .subtitle {

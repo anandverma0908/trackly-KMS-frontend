@@ -18,6 +18,7 @@ import {
   RiSendPlaneLine,
   RiAddLine,
   RiChat3Line,
+  RiMessage3Line,
 } from "react-icons/ri";
 
 const AVATAR_COLORS = [
@@ -180,10 +181,27 @@ export default function ChatPage() {
     });
   }
 
+  const totalChannels = channels.length;
+  const activeMembers = members.length;
+
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Team Chat</h1>
+        <div className={styles.pageHeaderLeft}>
+          <RiMessage3Line size={20} className={styles.pageHeaderIcon} />
+          <div className={styles.pageTitleWrap}>
+            <h1 className={styles.pageTitle}>Team Chat</h1>
+            <p className={styles.pageSubtitle}>Real-time team messaging · Channels & Pods</p>
+          </div>
+        </div>
+        <div className={styles.pageHeaderRight}>
+          <span className={styles.headerBadge}>
+            <RiHashtag size={11} /> {totalChannels} Channels
+          </span>
+          <span className={styles.headerBadge}>
+            <RiTeamLine size={11} /> {activeMembers} Members
+          </span>
+        </div>
       </div>
 
       <div className={styles.body}>

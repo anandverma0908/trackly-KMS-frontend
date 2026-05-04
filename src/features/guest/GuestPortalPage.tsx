@@ -14,6 +14,7 @@ import {
   RiLink,
   RiCheckLine,
   RiGlobalLine,
+  RiShieldUserLine,
 } from "react-icons/ri";
 import SideDrawer from "@/components/ui/SideDrawer";
 import styles from "./GuestPortalPage.module.css";
@@ -106,26 +107,24 @@ export default function GuestPortalPage() {
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
-        <div>
-          <h1 className={styles.title}>
-            <RiGlobalLine size={20} style={{ verticalAlign: "-2px", marginRight: 8 }} />
-            Guest Portal
-          </h1>
-          <p className={styles.subtitle}>
-            Create shareable links so clients can view selected tickets read-only.
-          </p>
+        <div className={styles.pageHeaderLeft}>
+          <RiShieldUserLine size={20} className={styles.pageHeaderIcon} />
+          <div>
+            <h1 className={styles.title}>Guest Portal</h1>
+            <p className={styles.subtitle}>Share read-only ticket access with clients</p>
+          </div>
         </div>
         <button className={styles.addBtn} onClick={() => setShowDrawer(true)}>
-          <RiAddLine size={16} />
+          <RiAddLine size={15} />
           Create Guest Link
         </button>
       </div>
 
       {/* Token list */}
-      <div className="card" style={{ padding: 20 }}>
+      <div className={styles.contentCard}>
         <h3 className={styles.sectionTitle}>Active Guest Links</h3>
         {tokensLoading ? (
-          <p className={styles.emptyText}>Loading…</p>
+          <p style={{ fontSize: 13, color: "var(--text-3)" }}>Loading…</p>
         ) : activeTokens.length === 0 ? (
           <div className={styles.emptyState}>
             <RiGlobalLine size={32} className={styles.emptyIcon} />

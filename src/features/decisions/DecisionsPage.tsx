@@ -386,50 +386,71 @@ export default function DecisionsPage({
     </div>
   ) : undefined;
 
+  const kpis = [
+    { label: "Total", value: decisions.length, icon: <RiFileTextLine size={16} /> },
+    { label: "Accepted", value: decisions.filter((d) => d.status === "accepted").length, icon: <RiCheckLine size={16} /> },
+    { label: "Proposed", value: decisions.filter((d) => d.status === "proposed").length, icon: <RiQuestionLine size={16} /> },
+    { label: "Deprecated", value: decisions.filter((d) => d.status === "deprecated").length, icon: <RiTimeLine size={16} /> },
+  ];
+
   return (
     <div className={styles.page}>
-      <div className={styles.listCol}>
-        {!compact && (
-          <div className={styles.header}>
-            <div className={styles.headerLeft}>
-              <RiFileTextLine size={20} className={styles.headerIcon} />
-              <div>
-                <h1 className={styles.title}>Decisions</h1>
-                <p className={styles.subtitle}>Architecture decision records · Institutional memory</p>
+      {!compact ? (
+        <div className={styles.header}>
+          <div className={styles.headerLeft}>
+            <RiFileTextLine size={20} className={styles.headerIcon} />
+            <div>
+              <h1 className={styles.title}>Decisions</h1>
+              <p className={styles.subtitle}>Architecture decision records · Institutional memory</p>
+            </div>
+          </div>
+          <div className={styles.headerRight}>
+            <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
+              <RiAddLine size={15} /> New Decision
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className={styles.header}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {spaceId && (
+              <>
+                <button
+                  className={`${styles.filterChip} ${!includeOrg ? styles.filterChipActive : ""}`}
+                  onClick={() => setIncludeOrg(false)}
+                >
+                  <RiBuilding2Line size={11} /> This Space
+                </button>
+                <button
+                  className={`${styles.filterChip} ${includeOrg ? styles.filterChipActive : ""}`}
+                  onClick={() => setIncludeOrg(true)}
+                >
+                  <RiGlobalLine size={11} /> Org-Wide
+                </button>
+              </>
+            )}
+          </div>
+          <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
+            <RiAddLine size={15} /> New Decision
+          </button>
+        </div>
+      )}
+
+      {!compact && (
+        <div className={styles.summaryStrip}>
+          {kpis.map((k) => (
+            <div key={k.label} className={styles.kpiBox}>
+              <div className={styles.kpiTop}>
+                <span className={styles.kpiLabel}>{k.label}</span>
+                <span className={styles.kpiIconWrap}>{k.icon}</span>
               </div>
+              <div className={styles.kpiNum}>{k.value}</div>
             </div>
-            <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
-              <RiAddLine size={15} /> New Decision
-            </button>
-          </div>
-        )}
+          ))}
+        </div>
+      )}
 
-        {compact && (
-          <div className={styles.header}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              {spaceId && (
-                <>
-                  <button
-                    className={`${styles.filterChip} ${!includeOrg ? styles.filterChipActive : ""}`}
-                    onClick={() => setIncludeOrg(false)}
-                  >
-                    <RiBuilding2Line size={11} /> This Space
-                  </button>
-                  <button
-                    className={`${styles.filterChip} ${includeOrg ? styles.filterChipActive : ""}`}
-                    onClick={() => setIncludeOrg(true)}
-                  >
-                    <RiGlobalLine size={11} /> Org-Wide
-                  </button>
-                </>
-              )}
-            </div>
-            <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
-              <RiAddLine size={15} /> New Decision
-            </button>
-          </div>
-        )}
-
+      <div className={styles.content}>
         {/* Nova search */}
         <div className={styles.novaBar}>
           <div className={styles.novaBarInner}>

@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { RiCloseLine, RiSendPlaneLine } from "react-icons/ri";
+import { RiSendPlaneLine, RiCheckLine } from "react-icons/ri";
 import toast from "react-hot-toast";
-import styles from "./FormsPage.module.css";
+import styles from "./FormSubmitModal.module.css";
+import SideDrawer from "@/components/ui/SideDrawer";
 import { submitFormResponse } from "@/services/api";
 import type { FormTemplate, FormField } from "@/types";
 
@@ -18,6 +18,7 @@ export default function FormSubmitModal({
   const [email, setEmail] = useState("");
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   function setResponse(name: string, value: any) {
     setResponses((r) => ({ ...r, [name]: value }));
@@ -41,9 +42,8 @@ export default function FormSubmitModal({
         submitter_email: email.trim(),
         responses,
       });
-      toast.success("Submitted successfully!");
+      setSubmitted(true);
       onSubmitted?.();
-      onClose();
     } catch (err: any) {
       toast.error(err.message || "Submission failed");
     } finally {
@@ -57,9 +57,10 @@ export default function FormSubmitModal({
       case "textarea":
         return (
           <textarea
-            className={styles.formTextarea}
-            placeholder={field.label}
+            className={styles.input}
+            placeholder={`Enter ${field.label.toLowerCase()}…`}
             value={val ?? ""}
+            rows={4}
             onChange={(e) => setResponse(field.name, e.target.value)}
             required={field.required}
           />
@@ -68,8 +69,8 @@ export default function FormSubmitModal({
         return (
           <input
             type="number"
-            className={styles.formInput}
-            placeholder={field.label}
+            className={styles.input}
+            placeholder="0"
             value={val ?? ""}
             onChange={(e) => setResponse(field.name, e.target.valueAsNumber || e.target.value)}
             required={field.required}
@@ -78,16 +79,14 @@ export default function FormSubmitModal({
       case "select":
         return (
           <select
-            className={styles.formSelect}
+            className={styles.select}
             value={val ?? ""}
             onChange={(e) => setResponse(field.name, e.target.value)}
             required={field.required}
           >
-            <option value="">Select…</option>
+            <option value="">Select an option…</option>
             {(field.options ?? []).map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
+              <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
         );
@@ -96,18 +95,19 @@ export default function FormSubmitModal({
           <label className={styles.checkboxWrap}>
             <input
               type="checkbox"
+              className={styles.checkbox}
               checked={!!val}
               onChange={(e) => setResponse(field.name, e.target.checked)}
             />
-            <span>{field.label}</span>
+            <span className={styles.checkboxLabel}>{field.label}</span>
           </label>
         );
       default:
         return (
           <input
             type="text"
-            className={styles.formInput}
-            placeholder={field.label}
+            className={styles.input}
+            placeholder={`Enter ${field.label.toLowerCase()}…`}
             value={val ?? ""}
             onChange={(e) => setResponse(field.name, e.target.value)}
             required={field.required}
@@ -117,65 +117,59 @@ export default function FormSubmitModal({
   }
 
   return (
-    <AnimatePresence>
-      <motion.div
-        className={styles.modalOverlay}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-      >
-        <motion.div
-          className={styles.modal}
-          initial={{ scale: 0.96, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.96, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className={styles.modalHeader}>
-            <h3 className={styles.modalTitle}>{template.name}</h3>
-            <button className={styles.closeBtn} onClick={onClose}>
-              <RiCloseLine size={20} />
+    <SideDrawer
+      open
+      onClose={onClose}
+      title={template.name}
+      subtitle={template.description ?? undefined}
+    >
+      {submitted ? (
+        <div className={styles.successState}>
+          <div className={styles.successIcon}>
+            <RiCheckLine size={28} />
+          </div>
+          <div className={styles.successTitle}>Submitted!</div>
+          <div className={styles.successSub}>
+            Your response has been recorded. Thank you.
+          </div>
+          <button className={styles.doneBtn} onClick={onClose}>Done</button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className={styles.form}>
+          {/* Email field always first */}
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>
+              Your Email <span className={styles.required}>*</span>
+            </label>
+            <input
+              type="email"
+              className={styles.input}
+              placeholder="you@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Template fields */}
+          {template.fields.map((field) => (
+            <div key={field.name} className={styles.fieldGroup}>
+              <label className={styles.label}>
+                {field.label}
+                {field.required && <span className={styles.required}> *</span>}
+              </label>
+              {renderField(field)}
+            </div>
+          ))}
+
+          <div className={styles.footer}>
+            <button type="submit" className={styles.submitBtn} disabled={submitting}>
+              <RiSendPlaneLine size={15} />
+              {submitting ? "Submitting…" : "Submit Response"}
             </button>
           </div>
-          {template.description && (
-            <p style={{ fontSize: 13, color: "var(--text-2)", margin: 0 }}>
-              {template.description}
-            </p>
-          )}
-          <form onSubmit={handleSubmit} className={styles.modalBody}>
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Your email *</label>
-              <input
-                type="email"
-                className={styles.formInput}
-                placeholder="you@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            {template.fields.map((field) => (
-              <div key={field.name} className={styles.formGroup}>
-                <label className={styles.formLabel}>
-                  {field.label}
-                  {field.required && <span style={{ color: "var(--red)" }}> *</span>}
-                </label>
-                {renderField(field)}
-              </div>
-            ))}
-            <button
-              type="submit"
-              className={styles.submitBtn}
-              disabled={submitting}
-            >
-              <RiSendPlaneLine size={15} />
-              {submitting ? "Submitting…" : "Submit"}
-            </button>
-          </form>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        </form>
+      )}
+    </SideDrawer>
   );
 }

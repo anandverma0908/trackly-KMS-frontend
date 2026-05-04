@@ -589,44 +589,61 @@ export default function ProcessesPage({
 
   return (
     <div className={styles.page}>
-      <div className={styles.listCol}>
+      {/* Header */}
+      {!compact ? (
+        <div className={styles.header}>
+          <div className={styles.headerLeft}>
+            <RiShieldCheckLine size={20} className={styles.headerIcon} />
+            <div>
+              <h1 className={styles.title}>Processes</h1>
+              <p className={styles.subtitle}>SOPs · Runbooks · Compliance · Templates</p>
+            </div>
+          </div>
+          <div className={styles.headerRight}>
+            <button className={styles.complianceBtn} onClick={() => setShowCompliance(true)}>
+              <RiShieldCheckLine size={14} /> Compliance
+            </button>
+            <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
+              <RiAddLine size={15} /> New Process
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className={styles.header}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {spaceId && (
+              <>
+                <button
+                  className={`${styles.filterChip} ${!includeOrg ? styles.filterChipActive : ""}`}
+                  onClick={() => setIncludeOrg(false)}
+                >
+                  <RiBuilding2Line size={11} /> This Space
+                </button>
+                <button
+                  className={`${styles.filterChip} ${includeOrg ? styles.filterChipActive : ""}`}
+                  onClick={() => setIncludeOrg(true)}
+                >
+                  <RiGlobalLine size={11} /> Org-Wide
+                </button>
+              </>
+            )}
+          </div>
+          <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
+            <RiAddLine size={15} /> New Process
+          </button>
+        </div>
+      )}
 
-                {/* KPI cards */}
+      {/* KPI strip */}
+      {!compact && (
         <div className={styles.kpiRow}>
           {[
-            {
-              label: "Total",
-              value: String(processes.length),
-              sub: "Processes documented",
-              icon: <RiListCheck2 />,
-            },
-            {
-              label: "Compliance",
-              value: String(
-                processes.filter((p) => p.complianceRequired).length,
-              ),
-              sub: "Require compliance",
-              icon: <RiShieldCheckLine />,
-            },
-            {
-              label: "Executions",
-              value: String(
-                processes.reduce((a, p) => a + (p.runCount ?? 0), 0),
-              ),
-              sub: "Total runs logged",
-              icon: <RiLoopLeftLine />,
-            },
+            { label: "Total", value: String(processes.length), sub: "Processes documented", icon: <RiListCheck2 /> },
+            { label: "Compliance", value: String(processes.filter((p) => p.complianceRequired).length), sub: "Require compliance", icon: <RiShieldCheckLine /> },
+            { label: "Executions", value: String(processes.reduce((a, p) => a + (p.runCount ?? 0), 0)), sub: "Total runs logged", icon: <RiLoopLeftLine /> },
             {
               label: "Stale",
-              value: String(
-                processes.filter((p) => {
-                  if (!p.lastUpdated) return false;
-                  return (
-                    Date.now() - new Date(p.lastUpdated).getTime() >
-                    90 * 24 * 60 * 60 * 1000
-                  );
-                }).length,
-              ),
+              value: String(processes.filter((p) => { if (!p.lastUpdated) return false; return Date.now() - new Date(p.lastUpdated).getTime() > 90 * 24 * 60 * 60 * 1000; }).length),
               sub: "Not updated in 90d",
               icon: <RiAlertLine />,
             },
@@ -643,64 +660,9 @@ export default function ProcessesPage({
             </div>
           ))}
         </div>
+      )}
 
-        
-        {/* Header */}
-        {!compact ? (
-          <div className={styles.header}>
-            <div className={styles.headerLeft}>
-              <RiShieldCheckLine size={20} className={styles.headerIcon} />
-              <div>
-                <h1 className={styles.title}>Processes</h1>
-                <p className={styles.subtitle}>
-                  SOPs · Runbooks · Compliance · Templates
-                </p>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                className={styles.complianceBtn}
-                onClick={() => setShowCompliance(true)}
-              >
-                <RiShieldCheckLine size={14} /> Compliance
-              </button>
-              <button
-                className={styles.addBtn}
-                onClick={() => setShowCreate(true)}
-              >
-                <RiAddLine size={15} /> New Process
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className={styles.header}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              {spaceId && (
-                <>
-                  <button
-                    className={`${styles.filterChip} ${!includeOrg ? styles.filterChipActive : ""}`}
-                    onClick={() => setIncludeOrg(false)}
-                  >
-                    <RiBuilding2Line size={11} /> This Space
-                  </button>
-                  <button
-                    className={`${styles.filterChip} ${includeOrg ? styles.filterChipActive : ""}`}
-                    onClick={() => setIncludeOrg(true)}
-                  >
-                    <RiGlobalLine size={11} /> Org-Wide
-                  </button>
-                </>
-              )}
-            </div>
-            <button
-              className={styles.addBtn}
-              onClick={() => setShowCreate(true)}
-            >
-              <RiAddLine size={15} /> New Process
-            </button>
-          </div>
-        )}
-
+      <div className={styles.content}>
         {/* Nova bar */}
         <div className={styles.novaBar}>
           <div className={styles.novaBarInner}>

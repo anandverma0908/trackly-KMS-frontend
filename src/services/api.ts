@@ -479,6 +479,9 @@ export interface CodeContextResult {
     reason?: string;
     confidence?: number;
     touched_files?: string[];
+    merged_at?: string | null;
+    updated_at?: string | null;
+    author?: string | null;
   }[];
   search_terms?: string[];
   diagnosis?: {

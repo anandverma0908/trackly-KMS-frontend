@@ -1216,6 +1216,62 @@
 .codePrMerged { background: rgba(52,211,153,0.12); color: var(--green, #34D399); }
 .codePrOpen   { background: rgba(79,126,255,0.1);  color: var(--accent); }
 
+/* Last Touched PR card */
+.lastPrCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  transition: border-color 0.15s;
+}
+.lastPrCard:hover { border-color: var(--accent-border); }
+
+.lastPrTop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lastPrTitle {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.lastPrMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lastPrAuthor {
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.lastPrFiles {
+  font-size: 0.68rem;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.lastPrDate {
+  font-size: 0.67rem;
+  color: var(--text-3);
+  margin-left: auto;
+}
+
 /* Diagnosis row */
 .codeCtxDiagRow {
   display: flex; align-items: center; gap: 6px;

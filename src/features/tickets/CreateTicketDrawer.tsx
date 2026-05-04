@@ -1908,8 +1908,51 @@ Respond with exactly this structure:
                           );
                         })()}
 
+                        {/* Last Touched PR — most recently merged/updated */}
+                        {codeCtx.prs.length > 0 && (() => {
+                          const sortedPrs = [...codeCtx.prs].sort((a, b) => {
+                            const aDate = a.merged_at ?? a.updated_at ?? "";
+                            const bDate = b.merged_at ?? b.updated_at ?? "";
+                            return bDate.localeCompare(aDate);
+                          });
+                          const lastPr = sortedPrs[0];
+                          const layer = inferLayer(lastPr.repo, lastPr.touched_files?.[0] ?? "");
+                          const m = LAYER_META[layer];
+                          const touchedDate = lastPr.merged_at ?? lastPr.updated_at;
+                          const dateLabel = touchedDate
+                            ? new Date(touchedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                            : null;
+                          return (
+                            <div className={styles.codeCtxSection}>
+                              <div className={styles.codeCtxSectionTitle}><RiGitMergeLine size={11} /> Last Touched PR</div>
+                              <a href={lastPr.url} target="_blank" rel="noreferrer" className={styles.lastPrCard} style={{ textDecoration: "none" }}>
+                                <div className={styles.lastPrTop}>
+                                  <span className={styles.layerBadgeSm} style={{ background: m.bg, color: m.color }}>{m.short}</span>
+                                  <span className={styles.codePrKey}>{lastPr.number}</span>
+                                  <span className={`${styles.codePrStatus} ${lastPr.status === "merged" ? styles.codePrMerged : styles.codePrOpen}`}>
+                                    {lastPr.status}
+                                  </span>
+                                  {dateLabel && (
+                                    <span className={styles.lastPrDate}>{dateLabel}</span>
+                                  )}
+                                </div>
+                                <div className={styles.lastPrTitle}>{lastPr.title}</div>
+                                <div className={styles.lastPrMeta}>
+                                  {lastPr.author && <span className={styles.lastPrAuthor}>@{lastPr.author}</span>}
+                                  {lastPr.touched_files && lastPr.touched_files.length > 0 && (
+                                    <span className={styles.lastPrFiles}>
+                                      {lastPr.touched_files.slice(0, 2).map((f) => f.split("/").pop()).join(", ")}
+                                      {lastPr.touched_files.length > 2 ? ` +${lastPr.touched_files.length - 2}` : ""}
+                                    </span>
+                                  )}
+                                </div>
+                              </a>
+                            </div>
+                          );
+                        })()}
+
                         {/* PRs with FE/BE badge */}
-                        {codeCtx.prs.length > 0 && (
+                        {codeCtx.prs.length > 1 && (
                           <div className={styles.codeCtxSection}>
                             <div className={styles.codeCtxSectionTitle}><RiGitMergeLine size={11} /> Related PRs</div>
                             {codeCtx.prs.map((pr) => {

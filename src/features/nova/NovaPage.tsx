@@ -1781,6 +1781,13 @@ Return ONLY valid JSON:
                 [{ type: "ticket" as CreatedType, id, title, meta: `Priority: ${priority}`, age: "just now" }, ...prev].slice(0, 6),
               );
             }
+            // Auto-refresh timesheet/activity if timesheet tools were used
+            const toolsUsed = result.steps
+              .filter((s) => s.toolCall?.action)
+              .map((s) => s.toolCall!.action);
+            if (toolsUsed.some((t) => ["log_time", "update_worklog", "get_timesheet"].includes(t))) {
+              qc.invalidateQueries({ queryKey: ["activity"] });
+            }
             setLiveSteps([]);
           } else {
             const res = await novaQuery(text, undefined, podContext);
