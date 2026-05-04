@@ -117,7 +117,7 @@ function inferLayer(repo: string | undefined, path: string): CodeLayer {
 }
 
 const LAYER_META: Record<CodeLayer, { label: string; short: string; bg: string; color: string }> = {
-  frontend: { label: "Frontend",  short: "FE", bg: "rgba(79,126,255,0.10)", color: "var(--accent)" },
+  frontend: { label: "Frontend",  short: "FE", bg: "rgba(245, 158, 11,0.10)", color: "var(--accent)" },
   backend:  { label: "Backend",   short: "BE", bg: "rgba(52,211,153,0.10)", color: "var(--green, #34D399)" },
   unknown:  { label: "Unknown",   short: "?",  bg: "var(--surface-2)",      color: "var(--text-3)" },
 };
@@ -131,7 +131,7 @@ function layerFromDiagnosis(likely_layer?: string): CodeLayer {
 
 /* ── Config ── */
 const ISSUE_TYPES = [
-  { value: "Story",       label: "Story",       color: "#4F7EFF", icon: <RiBookmarkLine size={14} /> },
+  { value: "Story",       label: "Story",       color: "#f59e0b", icon: <RiBookmarkLine size={14} /> },
   { value: "Bug",         label: "Bug",         color: "#F87171", icon: <RiBugLine size={14} /> },
   { value: "Task",        label: "Task",        color: "#A78BFA", icon: <RiCheckboxLine size={14} /> },
   { value: "Epic",        label: "Epic",        color: "#FBBF24", icon: <RiFlashlightLine size={14} /> },

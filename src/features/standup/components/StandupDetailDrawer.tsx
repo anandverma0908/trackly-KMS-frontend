@@ -16,7 +16,7 @@ import {
 } from "react-icons/ri";
 
 const AVATAR_COLORS = [
-  "linear-gradient(135deg,#4F7EFF,#818CF8)",
+  "linear-gradient(135deg,#f59e0b,#fbbf24)",
   "linear-gradient(135deg,#34D399,#10B981)",
   "linear-gradient(135deg,#FBBF24,#F59E0B)",
   "linear-gradient(135deg,#F87171,#FCA5A5)",

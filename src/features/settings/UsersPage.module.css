@@ -24,7 +24,7 @@
 }
 .addBtn {
   padding: 9px 18px;
-  background: var(--accent, #4f7eff);
+  background: var(--accent, #f59e0b);
   border: none;
   border-radius: 8px;
   font-size: 13px;
@@ -107,7 +107,7 @@
   border-radius: 20px;
   font-size: 11px;
   font-weight: 600;
-  background: rgba(79, 126, 255, 0.12);
+  background: rgba(245, 158, 11, 0.12);
   color: var(--accent);
 }
 .roleBadge[data-role="admin"] {
@@ -142,7 +142,7 @@
   font-weight: 600;
   padding: 2px 7px;
   border-radius: 4px;
-  background: rgba(79, 126, 255, 0.1);
+  background: rgba(245, 158, 11, 0.1);
   color: var(--accent);
 }
 .noPod {
@@ -332,7 +332,7 @@
   color: var(--accent);
 }
 .podToggleOn {
-  background: rgba(79, 126, 255, 0.15) !important;
+  background: rgba(245, 158, 11, 0.15) !important;
   border-color: var(--accent) !important;
   color: var(--accent) !important;
 }
@@ -359,7 +359,7 @@
 
 .saveBtn {
   padding: 9px 18px;
-  background: var(--accent, #4f7eff);
+  background: var(--accent, #f59e0b);
   border: none;
   border-radius: 8px;
   font-size: 13px;

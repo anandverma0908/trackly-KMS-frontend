@@ -37,7 +37,7 @@ interface Epic {
 }
 
 const COLORS = [
-  "#4F7EFF",
+  "#f59e0b",
   "#34D399",
   "#FBBF24",
   "#F87171",
@@ -182,7 +182,7 @@ function EpicFormDrawer({
 }) {
   const isEdit = Boolean(epic);
   const [title, setTitle] = useState(epic?.title ?? "");
-  const [color, setColor] = useState(epic?.color ?? "#4F7EFF");
+  const [color, setColor] = useState(epic?.color ?? "#f59e0b");
   const [start, setStart] = useState(
     epic?.startDate ? epic.startDate.slice(0, 10) : "",
   );

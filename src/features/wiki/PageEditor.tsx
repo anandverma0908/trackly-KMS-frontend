@@ -75,7 +75,7 @@ export default function PageEditor({ initialTitle, initialContent, onSave, pages
   const { user } = useAuthStore();
   const [activeUsers, setActiveUsers] = useState<Array<{ user_id: string; name: string; color: string }>>([]);
   const awarenessRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const USER_COLORS = ["#4F7EFF", "#10B981", "#F59E0B", "#F43F5E", "#8B5CF6", "#06B6D4", "#EC4899", "#84CC16"];
+  const USER_COLORS = ["#f59e0b", "#10B981", "#F59E0B", "#F43F5E", "#8B5CF6", "#06B6D4", "#EC4899", "#84CC16"];
   const myColor = USER_COLORS[(user?.name?.length ?? 0) % USER_COLORS.length];
 
   const editor = useEditor({

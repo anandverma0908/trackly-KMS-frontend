@@ -148,7 +148,7 @@
   white-space: nowrap;
   border: 1px solid transparent;
 }
-.badge-blue   { background: rgba(79,126,255,.12); color: #818CF8; border-color: rgba(79,126,255,.2); }
+.badge-blue   { background: rgba(245, 158, 11,.12); color: #fbbf24; border-color: rgba(245, 158, 11,.2); }
 .badge-green  { background: rgba(52,211,153,.12); color: #34D399; border-color: rgba(52,211,153,.2); }
 .badge-red    { background: rgba(248,113,113,.12); color: #F87171; border-color: rgba(248,113,113,.2); }
 .badge-amber  { background: rgba(251,191,36,.10); color: #FBBF24; border-color: rgba(251,191,36,.2); }

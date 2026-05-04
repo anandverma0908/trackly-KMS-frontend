@@ -1160,7 +1160,7 @@
 
 /* ── EOS Code-Aware Context ── */
 .codeCtxCard {
-  border: 1px solid var(--accent-border, rgba(79,126,255,0.25));
+  border: 1px solid var(--accent-border, rgba(245, 158, 11,0.25));
   border-radius: var(--r-sm);
   overflow: hidden;
 }
@@ -1168,7 +1168,7 @@
 .codeCtxHeader {
   display: flex; align-items: center; gap: 7px;
   padding: 10px 14px;
-  background: var(--accent-dim, rgba(79,126,255,0.06));
+  background: var(--accent-dim, rgba(245, 158, 11,0.06));
   cursor: pointer; user-select: none;
 }
 .codeCtxTitle { flex: 1; font-size: 0.82rem; font-weight: 600; color: var(--text); }
@@ -1176,8 +1176,8 @@
 
 .eosBadgeInline {
   display: inline-flex; align-items: center; gap: 3px;
-  background: var(--accent-dim, rgba(79,126,255,0.1));
-  border: 1px solid var(--accent-border, rgba(79,126,255,0.25));
+  background: var(--accent-dim, rgba(245, 158, 11,0.1));
+  border: 1px solid var(--accent-border, rgba(245, 158, 11,0.25));
   border-radius: 4px; padding: 1px 5px;
   font-size: 0.62rem; font-weight: 700; color: var(--accent);
 }
@@ -1214,7 +1214,7 @@
 .codePrTitle { flex: 1; font-size: 0.78rem; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .codePrStatus { font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; flex-shrink: 0; }
 .codePrMerged { background: rgba(52,211,153,0.12); color: var(--green, #34D399); }
-.codePrOpen   { background: rgba(79,126,255,0.1);  color: var(--accent); }
+.codePrOpen   { background: rgba(245, 158, 11,0.1);  color: var(--accent); }
 
 /* Last Touched PR card */
 .lastPrCard {

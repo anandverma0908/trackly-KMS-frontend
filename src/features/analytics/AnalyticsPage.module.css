@@ -274,8 +274,8 @@
   align-items: flex-start;
   gap: 7px;
   padding: 10px 12px;
-  background: var(--accent-dim, rgba(79, 126, 255, 0.06));
-  border: 1px solid var(--accent-border, rgba(79, 126, 255, 0.2));
+  background: var(--accent-dim, rgba(245, 158, 11, 0.06));
+  border: 1px solid var(--accent-border, rgba(245, 158, 11, 0.2));
   border-radius: var(--r-sm);
   font-size: 0.8rem;
   color: var(--text-2);
@@ -541,8 +541,8 @@
   gap: 7px;
   padding: 10px 12px;
   margin-top: 4px;
-  background: var(--accent-dim, rgba(79, 126, 255, 0.06));
-  border: 1px solid var(--accent-border, rgba(79, 126, 255, 0.2));
+  background: var(--accent-dim, rgba(245, 158, 11, 0.06));
+  border: 1px solid var(--accent-border, rgba(245, 158, 11, 0.2));
   border-radius: var(--r-sm);
   font-size: 0.8rem;
   color: var(--text-2);
@@ -712,8 +712,8 @@
   gap: 7px;
   padding: 10px 12px;
   margin-top: 4px;
-  background: var(--accent-dim, rgba(79, 126, 255, 0.06));
-  border: 1px solid var(--accent-border, rgba(79, 126, 255, 0.2));
+  background: var(--accent-dim, rgba(245, 158, 11, 0.06));
+  border: 1px solid var(--accent-border, rgba(245, 158, 11, 0.2));
   border-radius: var(--r-sm);
   font-size: 0.8rem;
   color: var(--text-2);

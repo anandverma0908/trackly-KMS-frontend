@@ -60,7 +60,7 @@
   height: 800px;
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--accent-2, #818cf8) 14%, transparent) 0%,
+    color-mix(in srgb, var(--accent-2, #fbbf24) 14%, transparent) 0%,
     transparent 50%
   );
   pointer-events: none;
@@ -207,7 +207,7 @@
   background: linear-gradient(
     135deg,
     var(--accent) 0%,
-    var(--accent-2, #818cf8) 55%,
+    var(--accent-2, #fbbf24) 55%,
     #c084fc 100%
   );
   -webkit-background-clip: text;
@@ -304,9 +304,9 @@
   position: absolute;
   inset: 36px;
   border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--accent-2, #818cf8) 28%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-2, #fbbf24) 28%, transparent);
   box-shadow:
-    0 0 24px color-mix(in srgb, var(--accent-2, #818cf8) 16%, transparent),
+    0 0 24px color-mix(in srgb, var(--accent-2, #fbbf24) 16%, transparent),
     inset 0 0 18px rgba(255, 255, 255, 0.04);
   animation: pulseRingLarge 3.6s ease-in-out infinite;
 }
@@ -321,7 +321,7 @@
   color: color-mix(in srgb, var(--accent) 82%, #f7fbff);
   filter:
     drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 72%, transparent))
-    drop-shadow(0 0 24px color-mix(in srgb, var(--accent-2, #818cf8) 42%, transparent));
+    drop-shadow(0 0 24px color-mix(in srgb, var(--accent-2, #fbbf24) 42%, transparent));
   animation: glyphFloat 4.8s ease-in-out infinite;
 }
 
@@ -353,10 +353,10 @@
   border: 1px solid color-mix(in srgb, var(--accent) 16%, transparent);
   background:
     linear-gradient(90deg, transparent 49%, color-mix(in srgb, var(--accent) 50%, transparent) 50%, transparent 51%),
-    linear-gradient(transparent 49%, color-mix(in srgb, var(--accent-2, #818cf8) 44%, transparent) 50%, transparent 51%);
+    linear-gradient(transparent 49%, color-mix(in srgb, var(--accent-2, #fbbf24) 44%, transparent) 50%, transparent 51%);
   box-shadow:
     0 0 14px color-mix(in srgb, var(--accent) 20%, transparent),
-    inset 0 0 22px color-mix(in srgb, var(--accent-2, #818cf8) 10%, transparent);
+    inset 0 0 22px color-mix(in srgb, var(--accent-2, #fbbf24) 10%, transparent);
 }
 
 /* AI processor frame — corner brackets */
@@ -411,7 +411,7 @@
 }
 
 .novaFrame::after {
-  border-color: color-mix(in srgb, var(--accent-2, #818cf8) 20%, transparent);
+  border-color: color-mix(in srgb, var(--accent-2, #fbbf24) 20%, transparent);
   transform: rotate(45deg) scale(0.82);
   animation: framePulse 3.5s ease-in-out infinite 0.6s;
 }
@@ -422,7 +422,7 @@
   inset: 40px;
   border-radius: 50%;
   border: 1px solid
-    color-mix(in srgb, var(--accent-2, #818cf8) 22%, transparent);
+    color-mix(in srgb, var(--accent-2, #fbbf24) 22%, transparent);
   animation: pulseRing 4s ease-in-out infinite;
 }
 
@@ -460,10 +460,10 @@
   left: 50%;
   margin-top: -2px;
   margin-left: -2px;
-  background: var(--accent-2, #818cf8);
+  background: var(--accent-2, #fbbf24);
   border-radius: 1px;
   box-shadow: 0 0 6px
-    color-mix(in srgb, var(--accent-2, #818cf8) 60%, transparent);
+    color-mix(in srgb, var(--accent-2, #fbbf24) 60%, transparent);
   animation: orbit 5s linear infinite;
 }
 
@@ -607,7 +607,7 @@
 
 .novaReply em {
   font-style: normal;
-  background: rgba(79, 126, 255, 0.12);
+  background: rgba(245, 158, 11, 0.12);
   color: var(--accent);
   border-radius: 3px;
   padding: 1px 3px;
@@ -646,7 +646,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2, #818cf8));
+  background: linear-gradient(135deg, var(--accent), var(--accent-2, #fbbf24));
   box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
@@ -690,7 +690,7 @@
   bottom: 12px;
   height: 2px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent-2, #818cf8) 70%, transparent));
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent-2, #fbbf24) 70%, transparent));
   opacity: 0.65;
 }
 
@@ -781,7 +781,7 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2, #818cf8));
+  background: linear-gradient(135deg, var(--accent), var(--accent-2, #fbbf24));
   display: flex;
   align-items: center;
   justify-content: center;

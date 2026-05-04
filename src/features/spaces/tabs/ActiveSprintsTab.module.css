@@ -747,7 +747,7 @@
 }
 .kanbanCard:hover {
   border-color: var(--accent-border);
-  box-shadow: 0 2px 12px rgba(79, 126, 255, 0.1);
+  box-shadow: 0 2px 12px rgba(245, 158, 11, 0.1);
   transform: translateY(-1px);
 }
 

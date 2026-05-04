@@ -57,7 +57,7 @@ interface StatusMeta {
 }
 
 const STATUS_MAP: Record<string, StatusMeta> = {
-  "In Progress": { color: "var(--accent)",          bg: "rgba(79,126,255,0.15)",  label: "In Progress" },
+  "In Progress": { color: "var(--accent)",          bg: "rgba(245, 158, 11,0.15)",  label: "In Progress" },
   "In Review":   { color: "var(--amber)",            bg: "rgba(251,191,36,0.15)", label: "In Review"   },
   "Blocked":     { color: "var(--red,#F87171)",      bg: "rgba(248,113,113,0.15)",label: "Blocked"     },
   "To Do":       { color: "var(--text-3)",           bg: "var(--surface-2)",      label: "To Do"       },

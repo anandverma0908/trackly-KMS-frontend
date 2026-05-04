@@ -2,7 +2,7 @@ import type { Theme, ThemeId, ColorMode } from "@/types";
 import { createTheme } from "@mui/material";
 
 export const THEMES: Theme[] = [
-  { id: "default", name: "Cobalt", color: "#4F7EFF" },
+  { id: "default", name: "Cobalt", color: "#f59e0b" },
   { id: "emerald", name: "Emerald", color: "#10B981" },
   { id: "violet", name: "Violet", color: "#8B5CF6" },
   { id: "rose", name: "Rose", color: "#F43F5E" },
@@ -19,7 +19,7 @@ export function applyTheme(themeId: ThemeId, mode: ColorMode) {
 
 /* ── POD colors — consistent across charts & cards ── */
 const POD_COLORS: Record<string, string> = {
-  DPAI:       "#4F7EFF",
+  DPAI:       "#f59e0b",
   SNOP:       "#A78BFA",
   EDM:        "#FBBF24",
   PLAT:       "#34D399",
@@ -60,14 +60,14 @@ export function getStatusBadge(status: string) {
 // src/config/muiTheme.ts
 
 export function buildMuiTheme(themeId: ThemeId, colorMode: ColorMode) {
-  const accent = THEMES.find((t) => t.id === themeId)?.color ?? "#4F7EFF";
+  const accent = THEMES.find((t) => t.id === themeId)?.color ?? "#f59e0b";
   const dark = colorMode === "dark";
 
   return createTheme({
     palette: {
       mode: dark ? "dark" : "light",
       primary: { main: accent },
-      secondary: { main: "#818CF8" },
+      secondary: { main: "#fbbf24" },
       background: {
         default: dark ? "#0F1117" : "#F0F2F5",
         paper: dark ? "#1A1D27" : "#FFFFFF",
@@ -109,9 +109,9 @@ export function buildMuiTheme(themeId: ThemeId, colorMode: ColorMode) {
           },
           sizeSmall: { padding: "5px 12px", fontSize: "0.75rem" },
           containedPrimary: {
-            background: `linear-gradient(135deg, ${accent}, #818CF8)`,
+            background: `linear-gradient(135deg, ${accent}, #fbbf24)`,
             "&:hover": {
-              background: `linear-gradient(135deg, ${accent}dd, #818CF8dd)`,
+              background: `linear-gradient(135deg, ${accent}dd, #fbbf24dd)`,
             },
           },
         },

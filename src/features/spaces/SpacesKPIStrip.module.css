@@ -18,7 +18,7 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 2px;
-  background: var(--kc, #4f7eff);
+  background: var(--kc, #f59e0b);
   opacity: 0.55;
   border-radius: var(--r-xl) var(--r-xl) 0 0;
 } */

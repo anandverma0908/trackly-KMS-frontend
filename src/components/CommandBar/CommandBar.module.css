@@ -51,7 +51,7 @@
   display: flex; align-items: center; justify-content: center;
   transition: all 0.15s; flex-shrink: 0;
 }
-.runBtnActive { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--accent-glow-2, rgba(79,126,255,0.3)); }
+.runBtnActive { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--accent-glow-2, rgba(245, 158, 11,0.3)); }
 .runBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .spinner {

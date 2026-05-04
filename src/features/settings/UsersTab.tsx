@@ -25,7 +25,7 @@ const ALL_PODS = [
 ];
 
 const COLORS = [
-  "#4F7EFF", "#34D399", "#FBBF24", "#F87171", "#A78BFA", "#22D3EE", "#64748B",
+  "#f59e0b", "#34D399", "#FBBF24", "#F87171", "#A78BFA", "#22D3EE", "#64748B",
 ];
 function getColor(name: string) {
   let h = 0;

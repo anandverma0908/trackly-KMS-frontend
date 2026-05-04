@@ -76,8 +76,8 @@
 .item:hover { background: var(--surface-2); }
 .item:last-child { border-bottom: none; }
 
-.unread { background: rgba(79, 126, 255, 0.04); }
-.unread:hover { background: rgba(79, 126, 255, 0.08); }
+.unread { background: rgba(245, 158, 11, 0.04); }
+.unread:hover { background: rgba(245, 158, 11, 0.08); }
 
 .itemIcon {
   width: 32px;

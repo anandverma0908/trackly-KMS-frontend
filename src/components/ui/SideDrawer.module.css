@@ -390,8 +390,8 @@
   color: var(--text-2);
 }
 .typeChip {
-  background: rgba(79, 126, 255, 0.1);
-  border-color: rgba(79, 126, 255, 0.25);
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.25);
   color: var(--accent);
 }
 .typeBug {

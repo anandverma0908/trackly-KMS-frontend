@@ -399,7 +399,7 @@ function PasswordTab() {
             : 3;
 
   const strengthLabel = ["", "Weak", "Fair", "Good", "Strong"];
-  const strengthColor = ["", "#F87171", "#FBBF24", "#34D399", "#4F7EFF"];
+  const strengthColor = ["", "#F87171", "#FBBF24", "#34D399", "#f59e0b"];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

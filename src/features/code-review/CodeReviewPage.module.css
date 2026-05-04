@@ -394,7 +394,7 @@
   font-weight: 800;
   padding: 1px 5px;
   border-radius: 99px;
-  background: rgba(79, 126, 255, 0.14);
+  background: rgba(245, 158, 11, 0.14);
   color: var(--accent);
   border: 1px solid var(--accent-border);
 }
@@ -801,7 +801,7 @@
   color: var(--accent);
 }
 .logIndex .logMsg {
-  color: rgba(79, 126, 255, 0.7);
+  color: rgba(245, 158, 11, 0.7);
 }
 
 .logParse .logLevel {
@@ -1173,7 +1173,7 @@
 }
 
 .sev_medium {
-  background: rgba(79, 126, 255, 0.14);
+  background: rgba(245, 158, 11, 0.14);
   color: var(--accent);
   border: 1px solid var(--accent-border);
 }
@@ -1185,7 +1185,7 @@
 }
 
 .status_reviewing {
-  background: rgba(79, 126, 255, 0.14);
+  background: rgba(245, 158, 11, 0.14);
   color: var(--accent);
   border: 1px solid var(--accent-border);
 }

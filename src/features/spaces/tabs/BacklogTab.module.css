@@ -105,9 +105,9 @@
   transition: all 0.15s;
   flex-shrink: 0;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(79, 126, 255, 0.28);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.28);
 }
-.eosBtn:hover { opacity: 0.88; box-shadow: 0 4px 14px rgba(79, 126, 255, 0.35); }
+.eosBtn:hover { opacity: 0.88; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35); }
 .eosBtn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 .eosBtnError {
   background: var(--red) !important;
@@ -317,7 +317,7 @@
 }
 
 .badgePlanning {
-  background: rgba(79, 126, 255, 0.1);
+  background: rgba(245, 158, 11, 0.1);
   color: var(--accent);
   border: 1px solid var(--accent-border);
 }

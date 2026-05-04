@@ -36,7 +36,7 @@ import {
 } from "react-icons/ri";
 
 const AVATAR_COLORS = [
-  "linear-gradient(135deg,#4F7EFF,#818CF8)",
+  "linear-gradient(135deg,#f59e0b,#fbbf24)",
   "linear-gradient(135deg,#34D399,#10B981)",
   "linear-gradient(135deg,#FBBF24,#F59E0B)",
   "linear-gradient(135deg,#F87171,#FCA5A5)",
@@ -113,7 +113,7 @@ function getStatus(hours: number) {
 
 /* ── Timesheet Drawer ── */
 const SOURCE_STYLE: Record<string, { bg: string; color: string }> = {
-  ticket: { bg: "rgba(79,126,255,0.12)", color: "#4F7EFF" },
+  ticket: { bg: "rgba(245, 158, 11,0.12)", color: "#f59e0b" },
   manual: { bg: "rgba(52,211,153,0.12)", color: "#34D399" },
 };
 

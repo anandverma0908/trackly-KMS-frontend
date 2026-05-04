@@ -52,7 +52,7 @@ export default function CreateSpaceDrawer({
   const [key, setKey] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
-  const [color, setColor] = useState("#4F7EFF");
+  const [color, setColor] = useState("#f59e0b");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -64,7 +64,7 @@ export default function CreateSpaceDrawer({
       setKey("");
       setDescription("");
       setCategory("");
-      setColor("#4F7EFF");
+      setColor("#f59e0b");
       setSelectedIds([]);
       setDropdownOpen(false);
       setSearch("");
@@ -223,7 +223,7 @@ export default function CreateSpaceDrawer({
           <label className={styles.label}>Color</label>
           <div className={styles.colorRow}>
             {[
-              "#4F7EFF",
+              "#f59e0b",
               "#34D399",
               "#FBBF24",
               "#F87171",

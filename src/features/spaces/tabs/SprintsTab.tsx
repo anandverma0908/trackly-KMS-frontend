@@ -703,7 +703,7 @@ function SprintBurnUpView({ burnUp }: { burnUp: BurnUpPoint[] }) {
           <Tooltip contentStyle={{ background: "var(--surface-2)", border: "1px solid var(--border-2)", borderRadius: 8 }} />
           <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
           <Area type="monotone" dataKey="capacity" stroke="var(--text-3)" fill="rgba(148,163,184,0.08)" name="Capacity" />
-          <Area type="monotone" dataKey="planned" stroke="var(--accent)" fill="rgba(79,126,255,0.12)" name="Planned" />
+          <Area type="monotone" dataKey="planned" stroke="var(--accent)" fill="rgba(245, 158, 11,0.12)" name="Planned" />
           <Area type="monotone" dataKey="completed" stroke="var(--green)" fill="rgba(52,211,153,0.15)" name="Completed" />
           <Line type="monotone" dataKey="scope_changes" stroke="var(--amber)" strokeWidth={2} dot={{ r: 3 }} name="Scope Changes" />
         </AreaChart>

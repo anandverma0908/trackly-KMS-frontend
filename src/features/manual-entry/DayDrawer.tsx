@@ -99,7 +99,7 @@ export default function DayDrawer({ date, entries, onClose }: Props) {
                 style={{
                   background:
                     entry.source === "ticket"
-                      ? "rgba(79,126,255,0.12)"
+                      ? "rgba(245, 158, 11,0.12)"
                       : "rgba(167,139,250,0.12)",
                   color: entry.source === "ticket" ? "var(--accent)" : "#A78BFA",
                 }}
