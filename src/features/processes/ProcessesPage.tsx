@@ -590,47 +590,13 @@ export default function ProcessesPage({
   return (
     <div className={styles.page}>
       {/* Header */}
-      {!compact ? (
+      {!compact && (
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            <RiShieldCheckLine size={20} className={styles.headerIcon} />
             <div>
               <h1 className={styles.title}>Processes</h1>
-              <p className={styles.subtitle}>SOPs · Runbooks · Compliance · Templates</p>
             </div>
           </div>
-          <div className={styles.headerRight}>
-            <button className={styles.complianceBtn} onClick={() => setShowCompliance(true)}>
-              <RiShieldCheckLine size={14} /> Compliance
-            </button>
-            <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
-              <RiAddLine size={15} /> New Process
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className={styles.header}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {spaceId && (
-              <>
-                <button
-                  className={`${styles.filterChip} ${!includeOrg ? styles.filterChipActive : ""}`}
-                  onClick={() => setIncludeOrg(false)}
-                >
-                  <RiBuilding2Line size={11} /> This Space
-                </button>
-                <button
-                  className={`${styles.filterChip} ${includeOrg ? styles.filterChipActive : ""}`}
-                  onClick={() => setIncludeOrg(true)}
-                >
-                  <RiGlobalLine size={11} /> Org-Wide
-                </button>
-              </>
-            )}
-          </div>
-          <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
-            <RiAddLine size={15} /> New Process
-          </button>
         </div>
       )}
 
@@ -638,12 +604,39 @@ export default function ProcessesPage({
       {!compact && (
         <div className={styles.kpiRow}>
           {[
-            { label: "Total", value: String(processes.length), sub: "Processes documented", icon: <RiListCheck2 /> },
-            { label: "Compliance", value: String(processes.filter((p) => p.complianceRequired).length), sub: "Require compliance", icon: <RiShieldCheckLine /> },
-            { label: "Executions", value: String(processes.reduce((a, p) => a + (p.runCount ?? 0), 0)), sub: "Total runs logged", icon: <RiLoopLeftLine /> },
+            {
+              label: "Total",
+              value: String(processes.length),
+              sub: "Processes documented",
+              icon: <RiListCheck2 />,
+            },
+            {
+              label: "Compliance",
+              value: String(
+                processes.filter((p) => p.complianceRequired).length,
+              ),
+              sub: "Require compliance",
+              icon: <RiShieldCheckLine />,
+            },
+            {
+              label: "Executions",
+              value: String(
+                processes.reduce((a, p) => a + (p.runCount ?? 0), 0),
+              ),
+              sub: "Total runs logged",
+              icon: <RiLoopLeftLine />,
+            },
             {
               label: "Stale",
-              value: String(processes.filter((p) => { if (!p.lastUpdated) return false; return Date.now() - new Date(p.lastUpdated).getTime() > 90 * 24 * 60 * 60 * 1000; }).length),
+              value: String(
+                processes.filter((p) => {
+                  if (!p.lastUpdated) return false;
+                  return (
+                    Date.now() - new Date(p.lastUpdated).getTime() >
+                    90 * 24 * 60 * 60 * 1000
+                  );
+                }).length,
+              ),
               sub: "Not updated in 90d",
               icon: <RiAlertLine />,
             },
@@ -662,74 +655,19 @@ export default function ProcessesPage({
         </div>
       )}
 
-      <div className={styles.content}>
-        {/* Nova bar */}
-        <div className={styles.novaBar}>
-          <div className={styles.novaBarInner}>
-            <RiShieldCheckLine size={14} className={styles.novaIcon} />
-            <input
-              className={styles.novaInput}
-              placeholder='Ask EOS: "What runbooks cover database incidents?"'
-              value={novaQ}
-              onChange={(e) => setNovaQ(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleNovaQuery()}
-            />
-            <button
-              className={styles.novaAsk}
-              onClick={handleNovaQuery}
-              disabled={novaLoading}
-            >
-              {novaLoading ? "…" : "Ask"}
-            </button>
-          </div>
-          <AnimatePresence>
-            {novaAnswer && (
-              <motion.div
-                className={styles.novaAnswer}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-              >
-                <div>
-                  <RiShieldCheckLine
-                    size={13}
-                    className={styles.novaAnswerIcon}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <p>{novaAnswer}</p>
-                    {novaSources.length > 0 && (
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 6,
-                          flexWrap: "wrap",
-                          marginTop: 6,
-                        }}
-                      >
-                        {novaSources.slice(0, 4).map((s, i) => (
-                          <span
-                            key={i}
-                            className={styles.filterChip}
-                            style={{ cursor: s.url ? "pointer" : "default" }}
-                            onClick={() =>
-                              s.url && window.open(s.url, "_blank")
-                            }
-                          >
-                            {s.title}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+      {/* Filters */}
+      <div className={styles.filtersRow}>
+        <div className={styles.headerRight}>
+          <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
+            <RiAddLine size={15} /> New Process
+          </button>
+        {!compact &&  <button
+            className={styles.complianceBtn}
+            onClick={() => setShowCompliance(true)}
+          >
+            <RiShieldCheckLine size={14} /> Compliance
+          </button>}
         </div>
-
-
-
-        {/* Filters */}
         <div className={styles.filters}>
           <div className={styles.searchWrap}>
             <RiSearchLine size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
@@ -740,21 +678,26 @@ export default function ProcessesPage({
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className={styles.catFilters}>
-            {categories.map((c) => (
-              <button
-                key={c}
-                className={`${styles.filterChip} ${filterCat === c ? styles.filterChipActive : ""}`}
-                onClick={() => setFilterCat(c)}
-              >
-                {c === "all"
-                  ? "All"
-                  : categoryConfig[c as ProcessCategory].label}
-              </button>
-            ))}
+
+          <div className={styles.filterRight}>
+            <div className={styles.catFilters}>
+              {categories.map((c) => (
+                <button
+                  key={c}
+                  className={`${styles.filterChip} ${filterCat === c ? styles.filterChipActive : ""}`}
+                  onClick={() => setFilterCat(c)}
+                >
+                  {c === "all"
+                    ? "All"
+                    : categoryConfig[c as ProcessCategory].label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
+      </div>
 
+      <div className={styles.content}>
         {/* List */}
         <div className={styles.list}>
           {isLoading ? (

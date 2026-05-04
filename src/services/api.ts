@@ -49,7 +49,7 @@ import type {
 import type { Project } from "@/features/spaces/spacesData";
 import { getAuthHeader } from "@/features/auth/useAuthStore";
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: "/api",
   timeout: 30_000,
 });

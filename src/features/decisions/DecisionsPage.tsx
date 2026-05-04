@@ -16,17 +16,40 @@ import {
   RiBuilding2Line,
 } from "react-icons/ri";
 import styles from "./DecisionsPage.module.css";
-import { useDecisions, useCreateDecision, useDeleteDecision } from "./useDecisions";
+import {
+  useDecisions,
+  useCreateDecision,
+  useDeleteDecision,
+} from "./useDecisions";
 import { novaQuery } from "@/services/api";
 import SideDrawer from "@/components/ui/SideDrawer";
 import type { Decision, DecisionStatus } from "@/types";
 
 /* ── Helpers ── */
-const statusConfig: Record<DecisionStatus, { label: string; className: string; icon: React.ReactNode }> = {
-  accepted:   { label: "Accepted",   className: styles.statusAccepted,   icon: <RiCheckLine size={11} /> },
-  proposed:   { label: "Proposed",   className: styles.statusProposed,   icon: <RiQuestionLine size={11} /> },
-  deprecated: { label: "Deprecated", className: styles.statusDeprecated, icon: <RiTimeLine size={11} /> },
-  superseded: { label: "Superseded", className: styles.statusSuperseded, icon: <RiArrowRightLine size={11} /> },
+const statusConfig: Record<
+  DecisionStatus,
+  { label: string; className: string; icon: React.ReactNode }
+> = {
+  accepted: {
+    label: "Accepted",
+    className: styles.statusAccepted,
+    icon: <RiCheckLine size={11} />,
+  },
+  proposed: {
+    label: "Proposed",
+    className: styles.statusProposed,
+    icon: <RiQuestionLine size={11} />,
+  },
+  deprecated: {
+    label: "Deprecated",
+    className: styles.statusDeprecated,
+    icon: <RiTimeLine size={11} />,
+  },
+  superseded: {
+    label: "Superseded",
+    className: styles.statusSuperseded,
+    icon: <RiArrowRightLine size={11} />,
+  },
 };
 
 /* ── Create form ── */
@@ -81,10 +104,19 @@ function CreateDecisionForm({
       context: form.context.trim(),
       decision: form.decision.trim(),
       rationale: form.rationale.trim(),
-      alternatives: form.alternativesText.split("\n").map((s) => s.trim()).filter(Boolean),
+      alternatives: form.alternativesText
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
       consequences: form.consequences.trim(),
-      linkedTickets: form.linkedTicketsText.split(",").map((s) => s.trim()).filter(Boolean),
-      tags: form.tagsText.split(",").map((s) => s.trim()).filter(Boolean),
+      linkedTickets: form.linkedTicketsText
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      tags: form.tagsText
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
       space_id: form.org_level ? null : (spaceId ?? null),
       org_level: form.org_level,
     });
@@ -164,10 +196,14 @@ function CreateDecisionForm({
       </div>
 
       <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Alternatives Considered (one per line)</label>
+        <label className={styles.formLabel}>
+          Alternatives Considered (one per line)
+        </label>
         <textarea
           className={styles.formTextarea}
-          placeholder={"Option A — rejected because...\nOption B — rejected because..."}
+          placeholder={
+            "Option A — rejected because...\nOption B — rejected because..."
+          }
           value={form.alternativesText}
           onChange={(e) => set("alternativesText", e.target.value)}
           rows={3}
@@ -196,7 +232,9 @@ function CreateDecisionForm({
           />
         </div>
         <div className={styles.formGroup} style={{ flex: 1 }}>
-          <label className={styles.formLabel}>Linked Tickets (comma-separated)</label>
+          <label className={styles.formLabel}>
+            Linked Tickets (comma-separated)
+          </label>
           <input
             className={styles.formInput}
             placeholder="TRK-89, TRK-142"
@@ -240,7 +278,9 @@ function DecisionDetailBody({ decision }: { decision: Decision }) {
       {decision.tags.length > 0 && (
         <div className={styles.tags}>
           {decision.tags.map((t) => (
-            <span key={t} className={styles.tag}>{t}</span>
+            <span key={t} className={styles.tag}>
+              {t}
+            </span>
           ))}
         </div>
       )}
@@ -254,7 +294,9 @@ function DecisionDetailBody({ decision }: { decision: Decision }) {
 
       <section className={styles.detailSection}>
         <h3 className={styles.sectionHeading}>Decision</h3>
-        <p className={`${styles.sectionBody} ${styles.decisionHighlight}`}>{decision.decision}</p>
+        <p className={`${styles.sectionBody} ${styles.decisionHighlight}`}>
+          {decision.decision}
+        </p>
       </section>
 
       {decision.rationale && (
@@ -269,7 +311,9 @@ function DecisionDetailBody({ decision }: { decision: Decision }) {
           <h3 className={styles.sectionHeading}>Alternatives Considered</h3>
           <ul className={styles.altList}>
             {decision.alternatives.map((a, i) => (
-              <li key={i} className={styles.altItem}>{a}</li>
+              <li key={i} className={styles.altItem}>
+                {a}
+              </li>
             ))}
           </ul>
         </section>
@@ -311,7 +355,9 @@ export default function DecisionsPage({
   const [showCreate, setShowCreate] = useState(false);
   const [novaQ, setNovaQ] = useState("");
   const [novaAnswer, setNovaAnswer] = useState("");
-  const [novaSources, setNovaSources] = useState<{ title: string; url?: string }[]>([]);
+  const [novaSources, setNovaSources] = useState<
+    { title: string; url?: string }[]
+  >([]);
   const [novaLoading, setNovaLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [includeOrg, setIncludeOrg] = useState(false);
@@ -358,19 +404,36 @@ export default function DecisionsPage({
   }
 
   const detailBadge = selected ? (
-    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-      <span className={`${styles.statusBadge} ${statusConfig[selected.status].className}`}>
+    <div
+      style={{
+        display: "flex",
+        gap: 6,
+        alignItems: "center",
+        flexWrap: "wrap",
+      }}
+    >
+      <span
+        className={`${styles.statusBadge} ${statusConfig[selected.status].className}`}
+      >
         {statusConfig[selected.status].icon}
         {statusConfig[selected.status].label}
       </span>
       {selected.org_level && (
-        <span className={styles.orgBadge}><RiGlobalLine size={10} /> Org-wide</span>
+        <span className={styles.orgBadge}>
+          <RiGlobalLine size={10} /> Org-wide
+        </span>
       )}
       {!selected.org_level && selected.space_id && (
-        <span className={styles.orgBadge}><RiBuilding2Line size={10} /> {selected.space_id}</span>
+        <span className={styles.orgBadge}>
+          <RiBuilding2Line size={10} /> {selected.space_id}
+        </span>
       )}
-      <span className={styles.metaItem}><RiUser3Line size={12} /> {selected.owner}</span>
-      <span className={styles.metaItem}><RiTimeLine size={12} /> {new Date(selected.date).toLocaleDateString()}</span>
+      <span className={styles.metaItem}>
+        <RiUser3Line size={12} /> {selected.owner}
+      </span>
+      <span className={styles.metaItem}>
+        <RiTimeLine size={12} /> {new Date(selected.date).toLocaleDateString()}
+      </span>
     </div>
   ) : undefined;
 
@@ -387,130 +450,54 @@ export default function DecisionsPage({
   ) : undefined;
 
   const kpis = [
-    { label: "Total", value: decisions.length, icon: <RiFileTextLine size={16} /> },
-    { label: "Accepted", value: decisions.filter((d) => d.status === "accepted").length, icon: <RiCheckLine size={16} /> },
-    { label: "Proposed", value: decisions.filter((d) => d.status === "proposed").length, icon: <RiQuestionLine size={16} /> },
-    { label: "Deprecated", value: decisions.filter((d) => d.status === "deprecated").length, icon: <RiTimeLine size={16} /> },
+    {
+      label: "Total",
+      value: decisions.length,
+      icon: <RiFileTextLine size={16} />,
+    },
+    {
+      label: "Accepted",
+      value: decisions.filter((d) => d.status === "accepted").length,
+      icon: <RiCheckLine size={16} />,
+    },
+    {
+      label: "Proposed",
+      value: decisions.filter((d) => d.status === "proposed").length,
+      icon: <RiQuestionLine size={16} />,
+    },
+    {
+      label: "Deprecated",
+      value: decisions.filter((d) => d.status === "deprecated").length,
+      icon: <RiTimeLine size={16} />,
+    },
   ];
 
   return (
     <div className={styles.page}>
-      {!compact ? (
+      {!compact && (
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            <RiFileTextLine size={20} className={styles.headerIcon} />
             <div>
               <h1 className={styles.title}>Decisions</h1>
-              <p className={styles.subtitle}>Architecture decision records · Institutional memory</p>
             </div>
           </div>
-          <div className={styles.headerRight}>
-            <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
-              <RiAddLine size={15} /> New Decision
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className={styles.header}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {spaceId && (
-              <>
-                <button
-                  className={`${styles.filterChip} ${!includeOrg ? styles.filterChipActive : ""}`}
-                  onClick={() => setIncludeOrg(false)}
-                >
-                  <RiBuilding2Line size={11} /> This Space
-                </button>
-                <button
-                  className={`${styles.filterChip} ${includeOrg ? styles.filterChipActive : ""}`}
-                  onClick={() => setIncludeOrg(true)}
-                >
-                  <RiGlobalLine size={11} /> Org-Wide
-                </button>
-              </>
-            )}
-          </div>
-          <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
-            <RiAddLine size={15} /> New Decision
-          </button>
         </div>
       )}
-
-      {!compact && (
-        <div className={styles.summaryStrip}>
-          {kpis.map((k) => (
-            <div key={k.label} className={styles.kpiBox}>
-              <div className={styles.kpiTop}>
-                <span className={styles.kpiLabel}>{k.label}</span>
-                <span className={styles.kpiIconWrap}>{k.icon}</span>
-              </div>
-              <div className={styles.kpiNum}>{k.value}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className={styles.content}>
-        {/* Nova search */}
-        <div className={styles.novaBar}>
-          <div className={styles.novaBarInner}>
-            <RiBrainLine size={14} className={styles.novaIcon} />
-            <input
-              className={styles.novaInput}
-              placeholder='Ask EOS: "What was decided about authentication?"'
-              value={novaQ}
-              onChange={(e) => setNovaQ(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleNovaQuery()}
-            />
-            <button
-              className={styles.novaAsk}
-              onClick={handleNovaQuery}
-              disabled={novaLoading}
-            >
-              {novaLoading ? "…" : "Ask"}
-            </button>
-          </div>
-          <AnimatePresence>
-            {novaAnswer && (
-              <motion.div
-                className={styles.novaAnswer}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-              >
-                <div>
-                  <RiBrainLine size={13} className={styles.novaAnswerIcon} />
-                  <div style={{ flex: 1 }}>
-                    <p>{novaAnswer}</p>
-                    {novaSources.length > 0 && (
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-                        {novaSources.slice(0, 4).map((s, i) => (
-                          <span key={i} className={styles.tag} style={{ cursor: s.url ? "pointer" : "default" }}
-                            onClick={() => s.url && window.open(s.url, "_blank")}>
-                            {s.title}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+      {/* Filters */}
+      <div className={styles.filters}>
+        <div className={styles.searchWrap}>
+          <RiSearchLine size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
+          <input
+            className={styles.searchInput}
+            placeholder="Search decisions…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
 
-        {/* Filters */}
-        <div className={styles.filters}>
-          <div className={styles.searchWrap}>
-            <RiSearchLine size={14} style={{ opacity: 0.5, flexShrink: 0 }} />
-            <input
-              className={styles.searchInput}
-              placeholder="Search decisions…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+        <div className={styles.filtersRight}>
           <div className={styles.statusFilters}>
+            <span className={styles.rowTitle}>Filter by status:</span>
             {["all", "accepted", "proposed", "deprecated"].map((s) => (
               <button
                 key={s}
@@ -521,8 +508,13 @@ export default function DecisionsPage({
               </button>
             ))}
           </div>
-        </div>
 
+          <button className={styles.addBtn} onClick={() => setShowCreate(true)}>
+            <RiAddLine size={15} /> New Decision
+          </button>
+        </div>
+      </div>
+      <div className={styles.content}>
         {/* List */}
         <div className={styles.list}>
           {isLoading ? (
@@ -536,8 +528,8 @@ export default function DecisionsPage({
               {search || filterStatus !== "all"
                 ? "No decisions match your filters."
                 : spaceId
-                ? "No decisions yet for this space. Record your first ADR."
-                : "No decisions recorded yet. Start documenting your architecture choices."}
+                  ? "No decisions yet for this space. Record your first ADR."
+                  : "No decisions recorded yet. Start documenting your architecture choices."}
             </div>
           ) : (
             filtered.map((d, i) => (
@@ -547,30 +539,51 @@ export default function DecisionsPage({
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
-                onClick={() => { setSelected(d); setShowCreate(false); }}
+                onClick={() => {
+                  setSelected(d);
+                  setShowCreate(false);
+                }}
               >
                 <div className={styles.rowNum}>
-                  {d.number != null ? `ADR-${String(d.number).padStart(3, "0")}` : "ADR"}
+                  {d.number != null
+                    ? `ADR-${String(d.number).padStart(3, "0")}`
+                    : "ADR"}
                 </div>
                 <div className={styles.rowBody}>
                   <div className={styles.rowTitleRow}>
                     <span className={styles.rowTitle}>{d.title}</span>
-                    <span className={`${styles.statusBadge} ${statusConfig[d.status].className}`}>
+                    <span
+                      className={`${styles.statusBadge} ${statusConfig[d.status].className}`}
+                    >
                       {statusConfig[d.status].icon}
                       {statusConfig[d.status].label}
                     </span>
                   </div>
                   <div className={styles.rowMeta}>
                     <span>{d.owner}</span>
-                    {d.date && <><span>·</span><span>{new Date(d.date).toLocaleDateString()}</span></>}
+                    {d.date && (
+                      <>
+                        <span>·</span>
+                        <span>{new Date(d.date).toLocaleDateString()}</span>
+                      </>
+                    )}
                     {d.org_level && (
-                      <span className={styles.orgBadge} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                      <span
+                        className={styles.orgBadge}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 3,
+                        }}
+                      >
                         <RiGlobalLine size={9} /> Org
                       </span>
                     )}
                     <div className={styles.tags}>
                       {d.tags.slice(0, 3).map((t) => (
-                        <span key={t} className={styles.tag}>{t}</span>
+                        <span key={t} className={styles.tag}>
+                          {t}
+                        </span>
                       ))}
                     </div>
                   </div>
@@ -609,7 +622,10 @@ export default function DecisionsPage({
         title="New Decision"
         subtitle="Record an architecture decision (ADR)"
       >
-        <CreateDecisionForm spaceId={spaceId} onClose={() => setShowCreate(false)} />
+        <CreateDecisionForm
+          spaceId={spaceId}
+          onClose={() => setShowCreate(false)}
+        />
       </SideDrawer>
     </div>
   );

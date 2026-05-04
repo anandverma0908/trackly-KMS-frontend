@@ -60,6 +60,7 @@ import {
   triggerReindex,
   analyzeScreenshot,
   transcribeMedia,
+  api,
   type SpaceAnomaly,
 } from "@/services/api";
 import type { KnowledgeGap, Decision, Standup, Sprint } from "@/types";
@@ -558,26 +559,9 @@ function useStreamingText(text: string, active: boolean, speed = 11) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   SPEECH HOOK — female TTS via Web Speech API
+   SPEECH HOOK — cloned voice via XTTS-v2 backend
+   Falls back to browser SpeechSynthesis if no clone exists
 ══════════════════════════════════════════════════════════ */
-const FEMALE_VOICE_NAMES = [
-  "Samantha", "Karen", "Victoria", "Moira", "Tessa", "Fiona",
-  "Google UK English Female", "Google US English", "Microsoft Zira",
-  "Microsoft Aria", "Microsoft Jenny", "Nicky",
-];
-
-function pickFemaleVoice(): SpeechSynthesisVoice | null {
-  const voices = window.speechSynthesis.getVoices();
-  for (const name of FEMALE_VOICE_NAMES) {
-    const v = voices.find((v) => v.name.includes(name));
-    if (v) return v;
-  }
-  return (
-    voices.find((v) => v.lang.startsWith("en") && v.name.toLowerCase().includes("female")) ??
-    voices.find((v) => v.lang.startsWith("en-")) ??
-    null
-  );
-}
 
 function stripMarkdown(text: string): string {
   return text
@@ -592,52 +576,92 @@ function stripMarkdown(text: string): string {
     .trim();
 }
 
+// Split long text into sentence chunks for lower latency
+function splitSentences(text: string): string[] {
+  return text.match(/[^.!?]+[.!?]+/g)?.map((s) => s.trim()).filter(Boolean) ?? [text];
+}
+
 function useSpeech() {
   const [speaking, setSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const currentTextRef = useRef<string>("");
+  const [hasClonedVoice, setHasClonedVoice] = useState(false);
+  const audioQueueRef = useRef<HTMLAudioElement[]>([]);
+  const abortRef = useRef(false);
 
-  const speak = useCallback((text: string) => {
+  // Check if user has a cloned voice on mount
+  useEffect(() => {
+    api.get<{ has_voice: boolean }>("/nova/voice-sample/status")
+      .then((r) => setHasClonedVoice(r.data?.has_voice ?? false))
+      .catch(() => {});
+  }, []);
+
+  const stopAll = useCallback(() => {
+    abortRef.current = true;
+    audioQueueRef.current.forEach((a) => { a.pause(); a.src = ""; });
+    audioQueueRef.current = [];
+    window.speechSynthesis?.cancel();
+    setSpeaking(false);
+    setTimeout(() => { abortRef.current = false; }, 100);
+  }, []);
+
+  const speakCloned = useCallback(async (text: string) => {
+    const sentences = splitSentences(stripMarkdown(text).slice(0, 800));
+    setSpeaking(true);
+    abortRef.current = false;
+    for (const sentence of sentences) {
+      if (abortRef.current) break;
+      try {
+        const resp = await api.post("/nova/tts", { text: sentence }, { responseType: "blob", timeout: 120000 });
+        if (abortRef.current) break;
+        const url = URL.createObjectURL(resp.data);
+        await new Promise<void>((resolve) => {
+          const audio = new Audio(url);
+          audioQueueRef.current.push(audio);
+          audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+          audio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+          audio.play().catch(resolve);
+        });
+      } catch {
+        break;
+      }
+    }
+    setSpeaking(false);
+  }, []);
+
+  const speakBrowser = useCallback((text: string) => {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const clean = stripMarkdown(text).slice(0, 600);
     if (!clean) return;
-    currentTextRef.current = clean;
-
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.rate = 1.05;
     utterance.pitch = 1.1;
-    utterance.volume = 1;
+    utterance.onstart = () => setSpeaking(true);
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    const doSpeak = () => window.speechSynthesis.speak(utterance);
+    if (window.speechSynthesis.getVoices().length > 0) doSpeak();
+    else window.speechSynthesis.onvoiceschanged = doSpeak;
+  }, []);
 
-    const doSpeak = () => {
-      const voice = pickFemaleVoice();
-      if (voice) utterance.voice = voice;
-      utterance.onstart = () => setSpeaking(true);
-      utterance.onend = () => setSpeaking(false);
-      utterance.onerror = () => setSpeaking(false);
-      window.speechSynthesis.speak(utterance);
-    };
-
-    if (window.speechSynthesis.getVoices().length > 0) {
-      doSpeak();
+  const speak = useCallback((text: string) => {
+    if (hasClonedVoice) {
+      speakCloned(text);
     } else {
-      window.speechSynthesis.onvoiceschanged = doSpeak;
+      speakBrowser(text);
     }
-  }, []);
-
-  const stop = useCallback(() => {
-    window.speechSynthesis.cancel();
-    setSpeaking(false);
-  }, []);
+  }, [hasClonedVoice, speakCloned, speakBrowser]);
 
   const speakIfEnabled = useCallback(
-    (text: string) => {
-      if (voiceEnabled) speak(text);
-    },
+    (text: string) => { if (voiceEnabled) speak(text); },
     [voiceEnabled, speak],
   );
 
-  return { speaking, voiceEnabled, setVoiceEnabled, speak, speakIfEnabled, stop };
+  return {
+    speaking, voiceEnabled, setVoiceEnabled,
+    speak, speakIfEnabled, stop: stopAll,
+    hasClonedVoice, setHasClonedVoice,
+  };
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1240,7 +1264,66 @@ export default function NovaPage() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [cmdPaletteIndex, setCmdPaletteIndex] = useState(0);
 
-  const { speaking, voiceEnabled, setVoiceEnabled, speak, speakIfEnabled, stop } = useSpeech();
+  const { speaking, voiceEnabled, setVoiceEnabled, speak, speakIfEnabled, stop, hasClonedVoice, setHasClonedVoice } = useSpeech();
+  const [showVoiceSetup, setShowVoiceSetup] = useState(false);
+  const [voiceUploading, setVoiceUploading] = useState(false);
+  const voiceFileInputRef = useRef<HTMLInputElement>(null);
+  const voiceMediaRef = useRef<MediaRecorder | null>(null);
+  const [voiceRecording, setVoiceRecording] = useState(false);
+  const [voiceRecordSeconds, setVoiceRecordSeconds] = useState(0);
+  const voiceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const voiceChunksRef = useRef<Blob[]>([]);
+
+  async function uploadVoiceBlob(blob: Blob, filename: string) {
+    setVoiceUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", blob, filename);
+      const res = await api.post<{ ok: boolean; duration_seconds: number }>("/nova/voice-sample", form);
+      setHasClonedVoice(true);
+      setShowVoiceSetup(false);
+      toast.success(`Voice cloned! (${res.data.duration_seconds}s sample saved)`);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail ?? "Upload failed");
+    } finally {
+      setVoiceUploading(false);
+    }
+  }
+
+  function handleVoiceFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    uploadVoiceBlob(file, file.name);
+    e.target.value = "";
+  }
+
+  async function startVoiceRecord() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      voiceChunksRef.current = [];
+      mr.ondataavailable = (e) => voiceChunksRef.current.push(e.data);
+      mr.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(voiceChunksRef.current, { type: "audio/webm" });
+        uploadVoiceBlob(blob, "voice_sample.webm");
+      };
+      mr.start();
+      voiceMediaRef.current = mr;
+      setVoiceRecording(true);
+      setVoiceRecordSeconds(0);
+      voiceTimerRef.current = setInterval(() => setVoiceRecordSeconds((s) => s + 1), 1000);
+    } catch {
+      toast.error("Microphone access denied");
+    }
+  }
+
+  function stopVoiceRecord() {
+    voiceMediaRef.current?.stop();
+    voiceMediaRef.current = null;
+    if (voiceTimerRef.current) { clearInterval(voiceTimerRef.current); voiceTimerRef.current = null; }
+    setVoiceRecording(false);
+  }
 
   // Auto-speak latest nova message when voice is enabled
   useEffect(() => {
@@ -2084,6 +2167,14 @@ Return ONLY valid JSON:
             {voiceEnabled ? "Voice ON" : "Voice"}
           </button>
           <button
+            className={`${styles.agentToggle} ${hasClonedVoice ? styles.agentToggleOn : ""}`}
+            onClick={() => setShowVoiceSetup((v) => !v)}
+            title={hasClonedVoice ? "Your cloned voice is active — click to update" : "Set up your cloned voice (JARVIS mode)"}
+          >
+            <RiMicLine size={12} />
+            {hasClonedVoice ? "My Voice ✓" : "My Voice"}
+          </button>
+          <button
             className={`${styles.pulseToggleBtn} ${pulseOpen ? styles.pulseToggleBtnActive : ""}`}
             onClick={() => setPulseOpen((o) => !o)}
           >
@@ -2538,6 +2629,75 @@ Return ONLY valid JSON:
           }}
           onClose={() => setShowHistory(false)}
         />
+
+        {/* ── Voice Clone Setup Drawer ── */}
+        <SideDrawer
+          open={showVoiceSetup}
+          onClose={() => { setShowVoiceSetup(false); if (voiceRecording) stopVoiceRecord(); }}
+          title="My Voice"
+          subtitle="Record or upload your voice — Nova will speak in your voice"
+        >
+          <input
+            ref={voiceFileInputRef}
+            type="file"
+            accept="audio/*,.wav,.mp3,.m4a,.webm,.ogg"
+            style={{ display: "none" }}
+            onChange={handleVoiceFileChange}
+          />
+          <div className={styles.voiceSetupBody}>
+            {hasClonedVoice && (
+              <div className={styles.voiceActiveCard}>
+                <RiVolumeUpLine size={18} />
+                <div>
+                  <div className={styles.voiceActiveTitle}>Cloned voice active</div>
+                  <div className={styles.voiceActiveSub}>Nova is speaking in your voice. Upload a new sample to update it.</div>
+                </div>
+              </div>
+            )}
+
+            <div className={styles.voiceSetupSection}>
+              <div className={styles.voiceSetupSectionTitle}>Option 1 — Record now</div>
+              <p className={styles.voiceSetupHint}>
+                Click record and speak naturally for at least 15 seconds. Quiet environment works best.
+              </p>
+              <button
+                className={`${styles.voiceRecordBtn} ${voiceRecording ? styles.voiceRecordBtnActive : ""}`}
+                onClick={voiceRecording ? stopVoiceRecord : startVoiceRecord}
+                disabled={voiceUploading}
+              >
+                {voiceRecording ? (
+                  <>
+                    <span className={styles.voiceRecordDot} />
+                    Stop Recording ({voiceRecordSeconds}s)
+                  </>
+                ) : (
+                  <><RiMicLine size={15} /> Start Recording</>
+                )}
+              </button>
+            </div>
+
+            <div className={styles.voiceSetupDivider}>or</div>
+
+            <div className={styles.voiceSetupSection}>
+              <div className={styles.voiceSetupSectionTitle}>Option 2 — Upload audio file</div>
+              <p className={styles.voiceSetupHint}>
+                Upload a WAV, MP3, M4A, or WebM file of your voice (min 6 seconds).
+              </p>
+              <button
+                className={styles.voiceUploadBtn}
+                onClick={() => voiceFileInputRef.current?.click()}
+                disabled={voiceUploading || voiceRecording}
+              >
+                {voiceUploading ? "Uploading…" : <><RiAttachmentLine size={14} /> Choose File</>}
+              </button>
+            </div>
+
+            <div className={styles.voiceSetupTip}>
+              <RiSparklingLine size={12} />
+              <span>After uploading, enable <strong>Voice</strong> in the toolbar — Nova will respond in your cloned voice.</span>
+            </div>
+          </div>
+        </SideDrawer>
       </div>
     </div>
   );

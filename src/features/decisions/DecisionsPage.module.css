@@ -54,6 +54,12 @@
   padding: 12px 15px;
 }
 
+.filtersRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 /* ── Summary Strip ── */
 .summaryStrip {
   display: grid;
@@ -143,7 +149,9 @@
   font-family: var(--font-sans);
   transition: opacity 0.15s;
 }
-.addBtn:hover { opacity: 0.85; }
+.addBtn:hover {
+  opacity: 0.85;
+}
 
 /* ── Nova search bar ── */
 .novaBar {
@@ -175,7 +183,9 @@
   color: var(--text);
   font-family: var(--font-sans);
 }
-.novaInput::placeholder { color: var(--text-3); }
+.novaInput::placeholder {
+  color: var(--text-3);
+}
 
 .novaAsk {
   background: var(--accent);
@@ -190,8 +200,13 @@
   transition: opacity 0.15s;
   flex-shrink: 0;
 }
-.novaAsk:hover { opacity: 0.85; }
-.novaAsk:disabled { opacity: 0.5; cursor: not-allowed; }
+.novaAsk:hover {
+  opacity: 0.85;
+}
+.novaAsk:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .novaAnswer {
   overflow: hidden;
@@ -224,8 +239,12 @@
   display: flex;
   gap: 10px;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
   flex-shrink: 0;
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
+  padding: 12px 15px;
 }
 
 .searchWrap {
@@ -254,11 +273,13 @@
   color: var(--text);
   font-family: var(--font-sans);
 }
-.searchInput::placeholder { color: var(--text-3); }
+.searchInput::placeholder {
+  color: var(--text-3);
+}
 
 .statusFilters {
   display: flex;
-  gap: 4px;
+  gap: 10px;
 }
 
 .filterChip {
@@ -270,7 +291,7 @@
   color: var(--text-2);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 100px;
+  border-radius: var(--r-sm);
   padding: 5px 12px;
   cursor: pointer;
   font-family: var(--font-sans);
@@ -342,6 +363,8 @@
   font-size: 13.5px;
   font-weight: 600;
   color: var(--text);
+  display: flex;
+  align-items: center;
   flex: 1;
 }
 
@@ -518,7 +541,9 @@
   cursor: pointer;
   transition: opacity 0.15s;
 }
-.ticketRef:hover { opacity: 0.8; }
+.ticketRef:hover {
+  opacity: 0.8;
+}
 
 /* ── Create form ── */
 .createForm {
@@ -559,8 +584,12 @@
   box-sizing: border-box;
   transition: border-color 0.15s;
 }
-.formInput:focus { border-color: var(--accent-border); }
-.formInput::placeholder { color: var(--text-3); }
+.formInput:focus {
+  border-color: var(--accent-border);
+}
+.formInput::placeholder {
+  color: var(--text-3);
+}
 
 .formTextarea {
   background: var(--surface-2);
@@ -577,8 +606,12 @@
   box-sizing: border-box;
   transition: border-color 0.15s;
 }
-.formTextarea:focus { border-color: var(--accent-border); }
-.formTextarea::placeholder { color: var(--text-3); }
+.formTextarea:focus {
+  border-color: var(--accent-border);
+}
+.formTextarea::placeholder {
+  color: var(--text-3);
+}
 
 .formSelect {
   background: var(--surface-2);
@@ -593,7 +626,9 @@
   width: 100%;
   box-sizing: border-box;
 }
-.formSelect:focus { border-color: var(--accent-border); }
+.formSelect:focus {
+  border-color: var(--accent-border);
+}
 
 .formCheck {
   display: flex;
@@ -623,8 +658,13 @@
   font-family: var(--font-sans);
   transition: opacity 0.15s;
 }
-.formSubmit:hover { opacity: 0.85; }
-.formSubmit:disabled { opacity: 0.5; cursor: not-allowed; }
+.formSubmit:hover {
+  opacity: 0.85;
+}
+.formSubmit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .formCancel {
   padding: 9px 16px;
@@ -638,7 +678,10 @@
   font-family: var(--font-sans);
   transition: all 0.15s;
 }
-.formCancel:hover { border-color: var(--border-2); color: var(--text); }
+.formCancel:hover {
+  border-color: var(--border-2);
+  color: var(--text);
+}
 
 .deleteBtn {
   display: inline-flex;
@@ -646,7 +689,7 @@
   gap: 4px;
   background: var(--red-glow);
   color: var(--red);
-  border: 1px solid rgba(248,113,113,0.25);
+  border: 1px solid rgba(248, 113, 113, 0.25);
   border-radius: var(--r-xs);
   padding: 4px 10px;
   font-size: 12px;
@@ -655,7 +698,9 @@
   font-family: var(--font-sans);
   transition: opacity 0.15s;
 }
-.deleteBtn:hover { opacity: 0.8; }
+.deleteBtn:hover {
+  opacity: 0.8;
+}
 
 .loadingRow {
   height: 72px;
@@ -687,6 +732,11 @@
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
