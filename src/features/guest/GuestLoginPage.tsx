@@ -74,6 +74,7 @@ export default function GuestLoginPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
+
   // Both queries start in parallel as soon as token is available
   const meQuery = useQuery({
     queryKey: ["guest-me", token],
@@ -264,7 +265,6 @@ export default function GuestLoginPage() {
             }
             striped
             stickyHeader
-            maxHeight={620}
             footerLeft={
               ticketsQuery.isSuccess
                 ? `${filtered.length} of ${allTickets.length} ticket${allTickets.length !== 1 ? "s" : ""}`

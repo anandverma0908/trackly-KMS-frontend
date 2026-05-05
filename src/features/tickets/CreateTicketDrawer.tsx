@@ -590,20 +590,24 @@ export default function CreateTicketDrawer({
     } else if (!isEdit) {
       hasInitialized.current = true;
       setForm({
-        title: "",
-        description: "",
-        issue_type: "Task",
-        priority: "Medium",
-        status: defaultStatus,
-        reporter: user?.name ?? "",
-        epic: "",
-        parent: "",
-        originalEst: "",
-        timeSpent: "",
-        remaining: "",
+        title: initialData?.title ?? "",
+        description: initialData?.description ?? "",
+        issue_type: initialData?.issue_type ?? "Task",
+        priority: initialData?.priority ?? "Medium",
+        status: initialData?.status ?? defaultStatus,
+        reporter: initialData?.reporter ?? user?.name ?? "",
+        epic: initialData?.epic ?? "",
+        parent: initialData?.parent ?? "",
+        originalEst: initialData?.originalEst ?? "",
+        timeSpent: initialData?.timeSpent ?? "",
+        remaining: initialData?.remaining ?? "",
         attachments: [],
-        labels: [],
-        pod: defaultPod,
+        labels: initialData?.labels ?? [],
+        assignee: initialData?.assignee,
+        pod: initialData?.pod ?? defaultPod,
+        client: initialData?.client,
+        story_points: initialData?.story_points,
+        due_date: initialData?.due_date,
         epic_key: undefined,
         parent_key: undefined,
         fix_version: undefined,
@@ -870,6 +874,7 @@ export default function CreateTicketDrawer({
       qc.invalidateQueries({ queryKey: ["ticket", ticketKey] });
       qc.invalidateQueries({ queryKey: ["kanban-tickets"] });
       qc.invalidateQueries({ queryKey: ["tickets"] });
+      qc.invalidateQueries({ queryKey: ["activity"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });

@@ -223,50 +223,51 @@ export default function AnalyticsPage() {
             <div className={styles.cardHeader}>
               <div>
                 <div className={styles.cardTitle}>Workload Distribution</div>
-                {/* <span className={styles.cardSub}>
-                  Hours by engineer (top 20)
-                </span> */}
               </div>
             </div>
             {sortedWorkload.length === 0 ? (
               <p className={styles.empty}>No workload data available.</p>
             ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart
-                  data={sortedWorkload}
-                  layout="vertical"
-                  margin={{ left: 100, right: 20, top: 0, bottom: 0 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--border)"
-                    horizontal={false}
-                  />
-                  <XAxis
-                    type="number"
-                    tick={{ fontSize: 11, fill: "var(--text-2)" }}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="engineer"
-                    tick={{ fontSize: 11, fill: "var(--text-2)" }}
-                    width={100}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "var(--surface-2)",
-                      border: "1px solid var(--border-2)",
-                      borderRadius: 8,
-                    }}
-                    formatter={(v: number) => [`${v.toFixed(1)}h`, "Hours"]}
-                  />
-                  <Bar
-                    dataKey="total_hours"
-                    fill="var(--accent)"
-                    radius={[0, 4, 4, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className={styles.chartFlex}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={sortedWorkload}
+                    layout="vertical"
+                    margin={{ left: 100, right: 20, top: 4, bottom: 4 }}
+                    barCategoryGap="20%"
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--border)"
+                      horizontal={false}
+                    />
+                    <XAxis
+                      type="number"
+                      tick={{ fontSize: 11, fill: "var(--text-2)" }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="engineer"
+                      tick={{ fontSize: 11, fill: "var(--text-2)" }}
+                      width={100}
+                      padding={{ top: 0, bottom: 0 }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--surface-2)",
+                        border: "1px solid var(--border-2)",
+                        borderRadius: 8,
+                      }}
+                      formatter={(v: number) => [`${v.toFixed(1)}h`, "Hours"]}
+                    />
+                    <Bar
+                      dataKey="total_hours"
+                      fill="var(--accent)"
+                      radius={[0, 4, 4, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             )}
           </div>
 
@@ -275,14 +276,12 @@ export default function AnalyticsPage() {
             <div className={styles.cardHeader}>
               <div>
                 <div className={styles.cardTitle}>Team Health Monitor</div>
-                {/* <span className={styles.cardSub}>
-                  Workload balance · Burnout risk detection
-                </span> */}
               </div>
             </div>
             {teamHealth.length === 0 ? (
               <p className={styles.empty}>No workload data available.</p>
             ) : (
+              <div className={styles.cardBody}>
               <div className={styles.healthList}>
                 {teamHealth.slice(0, 8).map((m) => (
                   <div
@@ -351,6 +350,7 @@ export default function AnalyticsPage() {
                   </div>
                 )}
               </div>
+              </div>
             )}
           </div>
         </div>
@@ -373,7 +373,7 @@ export default function AnalyticsPage() {
                 Need at least 2 completed sprints for anomaly analysis.
               </p>
             ) : (
-              <>
+              <div className={styles.cardBody}>
                 {/* Summary panel */}
                 <div className={styles.anomalySummaryPanel}>
                   <span className={styles.anomalySummaryCount}>
@@ -525,7 +525,7 @@ export default function AnalyticsPage() {
                     })}
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
 
@@ -536,12 +536,9 @@ export default function AnalyticsPage() {
                 <div className={styles.cardTitle}>
                   Emotion-Aware Work Management
                 </div>
-                {/* <span className={styles.cardSub}>
-                  Linguistic signals in comments and ticket updates · Last 72
-                  hours
-                </span> */}
               </div>
             </div>
+            <div className={styles.cardBody}>
             <div className={styles.sentimentList}>
               {sentimentSignals.length === 0 && (
                 <div className={styles.anomalyHealthy}>
@@ -592,6 +589,7 @@ export default function AnalyticsPage() {
                 </div>
               )}
             </div>
+            </div>
           </div>
         </div>
 
@@ -610,7 +608,7 @@ export default function AnalyticsPage() {
             {!bugCost ? (
               <p className={styles.empty}>Loading bug cost data…</p>
             ) : (
-              <>
+              <div className={styles.cardBody}>
                 <div className={styles.bugCostStats}>
                   <div className={styles.bugCostStat}>
                     <span
@@ -694,7 +692,7 @@ export default function AnalyticsPage() {
                     reclaim capacity.
                   </span>
                 </div>
-              </>
+              </div>
             )}
           </div>
 
@@ -723,7 +721,7 @@ export default function AnalyticsPage() {
                 </span>
               </div>
             ) : (
-              <>
+              <div className={styles.cardBody}>
                 <p className={styles.cardSub} style={{ marginBottom: 12 }}>
                   Analysed {recurringData.total_bugs_analyzed} bug tickets ·{" "}
                   {recurringData.patterns.length} recurring pattern
@@ -769,7 +767,7 @@ export default function AnalyticsPage() {
                     to your wiki and retrospective action items.
                   </span>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -796,6 +794,7 @@ export default function AnalyticsPage() {
                 </span>
               </div>
             ) : (
+              <div className={styles.cardBody}>
               <div className={styles.clientHealthList}>
                 {clientHealth.map((c) => {
                   const color =
@@ -864,6 +863,7 @@ export default function AnalyticsPage() {
                   );
                 })}
               </div>
+              </div>
             )}
           </div>
 
@@ -896,6 +896,7 @@ export default function AnalyticsPage() {
                 </p>
               </div>
             ) : (
+              <div className={styles.cardBody}>
               <div className={styles.gapList}>
                 {gaps.map((gap) => (
                   <div key={gap.id} className={styles.gapItem}>
@@ -943,6 +944,7 @@ export default function AnalyticsPage() {
                     </div>
                   </div>
                 ))}
+              </div>
               </div>
             )}
           </div>

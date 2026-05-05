@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   RiBugLine,
-  RiCloseLine,
   RiGitRepositoryLine,
   RiPlayLine,
   RiShieldCheckLine,
@@ -17,6 +16,7 @@ import {
 import type { CodeReviewSnapshotMeta } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
+import SideDrawer from "@/components/ui/SideDrawer";
 import styles from "./CodeReviewPage.module.css";
 import {
   mergeFindingsWithState,
@@ -576,7 +576,11 @@ export default function CodeReviewPage() {
           defaultPod={ticketFinding.ticketDraft.pod ?? defaultPod}
           initialData={{
             title: ticketFinding.ticketDraft.title,
-            description: ticketFinding.ticketDraft.description,
+            description:
+              ticketFinding.ticketDraft.description +
+              (ticketFinding.reviewerNotes?.trim()
+                ? `\n\n**Reviewer Notes:**\n${ticketFinding.reviewerNotes.trim()}`
+                : ""),
             issue_type: "Bug",
             priority:
               ticketFinding.severity === "critical"
@@ -917,9 +921,11 @@ function BugCard({
         <button className={styles.viewBtn} onClick={onView}>
           View Details
         </button>
-        <button className={styles.approveBtn} onClick={onApprove}>
-          Approve →
-        </button>
+        {record.status !== "approved" && record.status !== "ticketed" && (
+          <button className={styles.approveBtn} onClick={onApprove}>
+            Approve →
+          </button>
+        )}
       </div>
     </div>
   );
@@ -938,113 +944,91 @@ function BugDrawer({
   onApprove: () => void;
   onPatch: (patch: Partial<CodeReviewFindingState>) => void;
 }) {
+  const canAct = finding.status !== "approved" && finding.status !== "ticketed";
+
   return (
-    <>
-      <div className={styles.drawerBackdrop} onClick={onClose} />
-      <aside className={styles.drawer}>
-        <div className={styles.drawerHead}>
-          <div className={styles.drawerHeadLeft}>
-            <div className={styles.drawerHeadBadges}>
-              <span
-                className={`${styles.sevBadge} ${styles[`sev_${finding.severity}`]}`}
-              >
-                {SEV_LABEL[finding.severity]}
-              </span>
-              <span
-                className={`${styles.statusBadge} ${styles[`status_${finding.status}`]}`}
-              >
-                {STATUS_LABEL[finding.status]}
-              </span>
-              <span className={styles.drawerArea}>{finding.area}</span>
+    <SideDrawer
+      open
+      onClose={onClose}
+      size="lg"
+      title={finding.title}
+      subtitle={finding.area}
+      badge={
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <span className={`${styles.sevBadge} ${styles[`sev_${finding.severity}`]}`}>
+            {SEV_LABEL[finding.severity]}
+          </span>
+          <span className={`${styles.statusBadge} ${styles[`status_${finding.status}`]}`}>
+            {STATUS_LABEL[finding.status]}
+          </span>
+        </div>
+      }
+      footer={
+        canAct ? (
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button
+              className={styles.rejectBtn}
+              onClick={() => { onPatch({ status: "rejected" }); onClose(); }}
+            >
+              Reject
+            </button>
+            <button
+              className={styles.reviewingBtn}
+              onClick={() => onPatch({ status: "reviewing" })}
+            >
+              Mark Reviewing
+            </button>
+            <button className={styles.approveTicketBtn} onClick={onApprove}>
+              Approve &amp; File Bug
+            </button>
+          </div>
+        ) : undefined
+      }
+    >
+      <div className={styles.drawerSection}>
+        <div className={styles.drawerSectionTitle}>Why This Is a Bug</div>
+        <p className={styles.drawerSectionText}>{finding.whyValid}</p>
+      </div>
+      <div className={styles.drawerSection}>
+        <div className={styles.drawerSectionTitle}>User Impact</div>
+        <p className={styles.drawerSectionText}>{finding.impact}</p>
+      </div>
+      <div className={styles.drawerSection}>
+        <div className={styles.drawerSectionTitle}>Evidence</div>
+        <ul className={styles.drawerList}>
+          {finding.evidence.map((item) => (
+            <li key={item} className={styles.drawerListItem}>{item}</li>
+          ))}
+        </ul>
+      </div>
+      <div className={styles.drawerSection}>
+        <div className={styles.drawerSectionTitle}>Reproduction Steps</div>
+        <ol className={styles.drawerListOrdered}>
+          {finding.reproduction.map((step, i) => (
+            <li key={i} className={styles.drawerListItem}>{step}</li>
+          ))}
+        </ol>
+      </div>
+      <div className={styles.drawerSection}>
+        <div className={styles.drawerSectionTitle}>Affected Files</div>
+        <div className={styles.drawerFiles}>
+          {finding.files.map((f) => (
+            <div key={`${f.path}-${f.line}`} className={styles.drawerFileRow}>
+              <span className={styles.drawerFilePath}>{f.path}</span>
+              {f.line && <span className={styles.drawerFileLine}>:{f.line}</span>}
             </div>
-            <h2 className={styles.drawerTitle}>{finding.title}</h2>
-          </div>
-          <button
-            className={styles.drawerClose}
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <RiCloseLine size={18} />
-          </button>
+          ))}
         </div>
-
-        <div className={styles.drawerBody}>
-          <div className={styles.drawerSection}>
-            <div className={styles.drawerSectionTitle}>Why This Is a Bug</div>
-            <p className={styles.drawerSectionText}>{finding.whyValid}</p>
-          </div>
-          <div className={styles.drawerSection}>
-            <div className={styles.drawerSectionTitle}>User Impact</div>
-            <p className={styles.drawerSectionText}>{finding.impact}</p>
-          </div>
-          <div className={styles.drawerSection}>
-            <div className={styles.drawerSectionTitle}>Evidence</div>
-            <ul className={styles.drawerList}>
-              {finding.evidence.map((item) => (
-                <li key={item} className={styles.drawerListItem}>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className={styles.drawerSection}>
-            <div className={styles.drawerSectionTitle}>Reproduction Steps</div>
-            <ol className={styles.drawerListOrdered}>
-              {finding.reproduction.map((step, i) => (
-                <li key={i} className={styles.drawerListItem}>
-                  {step}
-                </li>
-              ))}
-            </ol>
-          </div>
-          <div className={styles.drawerSection}>
-            <div className={styles.drawerSectionTitle}>Affected Files</div>
-            <div className={styles.drawerFiles}>
-              {finding.files.map((f) => (
-                <div
-                  key={`${f.path}-${f.line}`}
-                  className={styles.drawerFileRow}
-                >
-                  <span className={styles.drawerFilePath}>{f.path}</span>
-                  {f.line && (
-                    <span className={styles.drawerFileLine}>:{f.line}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className={styles.drawerSection}>
-            <div className={styles.drawerSectionTitle}>Reviewer Notes</div>
-            <textarea
-              className={styles.drawerNotes}
-              placeholder="Capture your review notes, acceptance comments, or ticket scoping here…"
-              value={finding.reviewerNotes}
-              onChange={(e) => onPatch({ reviewerNotes: e.target.value })}
-            />
-          </div>
-        </div>
-
-        <div className={styles.drawerFoot}>
-          <button
-            className={styles.rejectBtn}
-            onClick={() => {
-              onPatch({ status: "rejected" });
-              onClose();
-            }}
-          >
-            Reject
-          </button>
-          <button
-            className={styles.reviewingBtn}
-            onClick={() => onPatch({ status: "reviewing" })}
-          >
-            Mark Reviewing
-          </button>
-          <button className={styles.approveTicketBtn} onClick={onApprove}>
-            Approve &amp; File Bug
-          </button>
-        </div>
-      </aside>
-    </>
+      </div>
+      <div className={styles.drawerSection}>
+        <div className={styles.drawerSectionTitle}>Reviewer Notes</div>
+        <textarea
+          className={styles.drawerNotes}
+          placeholder="Capture your review notes, acceptance comments, or ticket scoping here…"
+          value={finding.reviewerNotes}
+          onChange={(e) => onPatch({ reviewerNotes: e.target.value })}
+        />
+      </div>
+    </SideDrawer>
   );
 }

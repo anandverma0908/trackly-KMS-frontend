@@ -52,6 +52,8 @@ import {
   RiLightbulbLine,
   RiTeamLine,
   RiGitMergeLine,
+  RiEditLine,
+  RiEyeLine,
 } from "react-icons/ri";
 
 /* ══════════════════════════════════════════════════════════
@@ -294,6 +296,7 @@ export default function WikiPage() {
   );
 
   // UI state
+  const [isEditing, setIsEditing] = useState(false);
   const [showNewSpace, setShowNewSpace] = useState(false);
   const [pageSearch, setPageSearch] = useState("");
   const [newSpaceName, setNewSpaceName] = useState("");
@@ -360,6 +363,11 @@ export default function WikiPage() {
       setActiveSpace(null);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Switch back to view mode when navigating to a different page
+  useEffect(() => {
+    setIsEditing(false);
+  }, [activePageId]);
 
   useEffect(() => {
     if (!urlPageId || !urlPage) return;
@@ -793,6 +801,23 @@ export default function WikiPage() {
                       </>
                     )}
                   </div>
+                  {isEditing ? (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setIsEditing(false)}
+                    >
+                      <RiEyeLine size={13} style={{ marginRight: 4 }} />
+                      View
+                    </button>
+                  ) : (
+                    <button
+                      className={`btn btn-primary btn-sm`}
+                      onClick={() => setIsEditing(true)}
+                    >
+                      <RiEditLine size={13} style={{ marginRight: 4 }} />
+                      Edit
+                    </button>
+                  )}
                   <button
                     className="btn btn-ghost btn-sm"
                     onClick={() => setShowVersions((v) => !v)}
@@ -882,37 +907,61 @@ export default function WikiPage() {
                 </div>
               )}
 
-              <div
-                className={styles.editorWrap}
-                onClick={(e) => {
-                  const target = e.target as HTMLElement;
-                  const pageId = target
-                    .closest("[data-page-id]")
-                    ?.getAttribute("data-page-id");
-                  if (pageId) {
-                    selectPage(pageId);
-                    return;
-                  }
-                  const ticketKey = target
-                    .closest("[data-ticket-key]")
-                    ?.getAttribute("data-ticket-key");
-                  if (ticketKey)
-                    navigate(
-                      `/backlog?search=${encodeURIComponent(ticketKey)}`,
-                    );
-                }}
-              >
-                <PageEditor
-                  key={activePage.id + "-" + activePage.updated_at}
-                  initialTitle={activePage.title}
-                  initialContent={
-                    activePage.content_md ?? activePage.content_html ?? ""
-                  }
-                  onSave={handleSave}
-                  pages={pages}
-                  pageId={activePage.id}
-                />
-              </div>
+              {isEditing ? (
+                <div
+                  className={styles.editorWrap}
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    const pageId = target
+                      .closest("[data-page-id]")
+                      ?.getAttribute("data-page-id");
+                    if (pageId) { selectPage(pageId); return; }
+                    const ticketKey = target
+                      .closest("[data-ticket-key]")
+                      ?.getAttribute("data-ticket-key");
+                    if (ticketKey)
+                      navigate(`/backlog?search=${encodeURIComponent(ticketKey)}`);
+                  }}
+                >
+                  <PageEditor
+                    key={activePage.id + "-" + activePage.updated_at}
+                    initialTitle={activePage.title}
+                    initialContent={
+                      activePage.content_md ?? activePage.content_html ?? ""
+                    }
+                    onSave={handleSave}
+                    pages={pages}
+                    pageId={activePage.id}
+                  />
+                </div>
+              ) : (
+                <div className={styles.viewWrap}>
+                  <h1 className={styles.viewTitle}>{activePage.title}</h1>
+                  {activePage.content_html || activePage.content_md ? (
+                    <div
+                      className={styles.viewContent}
+                      dangerouslySetInnerHTML={{
+                        __html: activePage.content_html ?? activePage.content_md ?? "",
+                      }}
+                      onClick={(e) => {
+                        const target = e.target as HTMLElement;
+                        const pageId = target.closest("[data-page-id]")?.getAttribute("data-page-id");
+                        if (pageId) { selectPage(pageId); return; }
+                        const ticketKey = target.closest("[data-ticket-key]")?.getAttribute("data-ticket-key");
+                        if (ticketKey) navigate(`/backlog?search=${encodeURIComponent(ticketKey)}`);
+                      }}
+                    />
+                  ) : (
+                    <div className={styles.viewEmpty}>
+                      <p>This page has no content yet.</p>
+                      <button className="btn btn-primary btn-sm" onClick={() => setIsEditing(true)}>
+                        <RiEditLine size={13} style={{ marginRight: 4 }} />
+                        Start writing
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           ) : (
             /* ── Empty state ── */

@@ -1714,8 +1714,9 @@ export async function fetchChatChannels(): Promise<ChatChannel[]> {
 export async function createChatChannel(payload: {
   name: string;
   type: "pod" | "general";
-  pod?: string | null;
+  is_private?: boolean;
   member_ids?: string[];
+  pod?: string | null;
 }): Promise<ChatChannel> {
   const { data } = await api.post("/chat/channels", payload);
   return data;
@@ -1757,6 +1758,11 @@ export async function addChannelMember(channelId: string, userId: string): Promi
 
 export async function removeChannelMember(channelId: string, userId: string): Promise<void> {
   await api.delete(`/chat/channels/${channelId}/members/${userId}`);
+}
+
+export async function deleteChatChannel(channelId: string): Promise<{ status: string }> {
+  const { data } = await api.delete(`/chat/channels/${channelId}`);
+  return data;
 }
 
 export async function fetchOrgMembers() {
