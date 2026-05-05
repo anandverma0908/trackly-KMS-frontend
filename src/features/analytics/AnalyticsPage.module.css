@@ -23,12 +23,14 @@
 }
 
 .content {
-
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   min-height: 0;
+  background: var(--bgrnd);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
 }
 
 /* ── 2-column grid row ── */
@@ -40,7 +42,8 @@
 
 /* ── Card (Goals-style) ── */
 .card {
-  background: var(--bgrnd);
+  background: var(--surface);
+  border: 1px solid var(--border-2);
   border-radius: var(--r-xl);
   padding: 20px;
   display: flex;
@@ -48,6 +51,29 @@
   gap: 14px;
   position: relative;
   overflow: hidden;
+}
+
+/* ── Cards inside a 2-col grid: equal height with scrollable body ── */
+.cardGrid .card {
+  max-height: 520px;
+}
+
+/* ── Scrollable content area inside a card ── */
+.cardBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* ── Chart grows to fill remaining card height ── */
+.chartFlex {
+  flex: 1;
+  min-height: 200px;
 }
 
 .card::before {

@@ -1715,6 +1715,7 @@ export async function createChatChannel(payload: {
   name: string;
   type: "pod" | "general";
   pod?: string | null;
+  member_ids?: string[];
 }): Promise<ChatChannel> {
   const { data } = await api.post("/chat/channels", payload);
   return data;
@@ -1741,6 +1742,21 @@ export async function sendChatMessage(
     parent_id: parentId,
   });
   return data;
+}
+
+export async function fetchChannelMembers(channelId: string): Promise<{
+  user_id: string; name: string; email: string; role: string; added_at: string; is_creator: boolean;
+}[]> {
+  const { data } = await api.get(`/chat/channels/${channelId}/members`);
+  return data;
+}
+
+export async function addChannelMember(channelId: string, userId: string): Promise<void> {
+  await api.post(`/chat/channels/${channelId}/members`, { user_id: userId });
+}
+
+export async function removeChannelMember(channelId: string, userId: string): Promise<void> {
+  await api.delete(`/chat/channels/${channelId}/members/${userId}`);
 }
 
 export async function fetchOrgMembers() {

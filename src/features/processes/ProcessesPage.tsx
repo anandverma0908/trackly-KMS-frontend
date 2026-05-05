@@ -27,7 +27,7 @@ import SideDrawer from "@/components/ui/SideDrawer";
 import type { Process, ProcessCategory, ProcessStatus } from "@/types";
 
 /* ── Helpers ── */
-const categoryConfig: Record<
+export const categoryConfig: Record<
   ProcessCategory,
   { label: string; color: string }
 > = {
@@ -38,7 +38,7 @@ const categoryConfig: Record<
   workflow: { label: "Workflow", color: styles.catWorkflow },
 };
 
-const statusConfig: Record<
+export const statusConfig: Record<
   ProcessStatus,
   { label: string; className: string }
 > = {
@@ -362,7 +362,7 @@ function CreateProcessForm({
 }
 
 /* ── Process detail body ── */
-function ProcessDetailBody({ process }: { process: Process }) {
+export function ProcessDetailBody({ process }: { process: Process }) {
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
 
   function toggleStep(id: string) {

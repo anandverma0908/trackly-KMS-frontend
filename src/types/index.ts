@@ -807,6 +807,9 @@ export interface ChatChannel {
   name: string;
   type: "pod" | "general";
   pod: string | null;
+  created_by?: string | null;
+  member_count?: number;
+  is_private?: boolean;
   created_at: string;
 }
 

@@ -1855,9 +1855,9 @@ Respond with exactly this structure:
                           </div>
                         )}
 
-                        {codeCtx.search_terms && codeCtx.search_terms.length > 0 && (
+                        {/* {codeCtx.search_terms && codeCtx.search_terms.length > 0 && (
                           <div className={styles.codeCtxNote}><RiSparklingLine size={9} color="var(--accent)" />AI searched: {codeCtx.search_terms.join(", ")}</div>
-                        )}
+                        )} */}
 
                         {/* Files grouped by FE / BE */}
                         {codeCtx.files.length > 0 && (() => {

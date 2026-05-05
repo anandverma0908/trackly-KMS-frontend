@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useAuthStore } from "@/features/auth/useAuthStore";
 import { useQuery } from "@tanstack/react-query";
 import { fetchProject } from "@/services/api";
 import { getPodColor } from "@/config/themes";
@@ -116,6 +117,13 @@ export default function ProjectDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const initialTab = (location.state as { tab?: Tab } | null)?.tab ?? "summary";
+  const { user } = useAuthStore();
+  const canSeeSettings = user?.role === "admin" || user?.role === "engineering_manager";
+  const visibleTabs = useMemo(
+    () => TABS.filter((t) => t.id !== "settings" || canSeeSettings),
+    [canSeeSettings],
+  );
+
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [showCreateTask, setShowCreateTask] = useState(false);
 
@@ -356,7 +364,7 @@ export default function ProjectDetailPage() {
         {/* ── Tabs ── */}
         <div className={styles.tabBarWrap}>
           <div className={styles.tabBar}>
-            {TABS.map((tab) => (
+            {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
                 className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ""}`}
@@ -404,7 +412,7 @@ export default function ProjectDetailPage() {
           )}
           {activeTab === "decisions" && <DecisionsTab pod={pod ?? ""} />}
           {activeTab === "processes" && <ProcessesTab pod={pod ?? ""} />}
-          {activeTab === "settings" && <SettingsTab project={project} />}
+          {activeTab === "settings" && canSeeSettings && <SettingsTab project={project} />}
           {activeTab === "epics" && <EpicsTab pod={pod ?? ""} />}
           {activeTab === "releases" && <ReleasesTab pod={pod ?? ""} />}
           {activeTab === "tests" && <TestsTab pod={pod ?? ""} />}

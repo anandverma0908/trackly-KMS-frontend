@@ -635,7 +635,7 @@ export default function WikiPage() {
                     <button
                       key={s.id}
                       className={`${styles.spaceItem} ${s.id === activeSpaceId ? styles.spaceItemActive : ""}`}
-                      onClick={() => setActiveSpace(s.id)}
+                      onClick={() => { setActiveSpace(s.id); selectPage(null); }}
                     >
                       <div className={styles.spaceRing}>
                         <svg width="20" height="20" viewBox="0 0 20 20">
