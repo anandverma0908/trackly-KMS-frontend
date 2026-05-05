@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { fetchProject } from "@/services/api";
 import { getPodColor } from "@/config/themes";
@@ -114,7 +114,9 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 export default function ProjectDetailPage() {
   const { projectId: pod } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<Tab>("summary");
+  const location = useLocation();
+  const initialTab = (location.state as { tab?: Tab } | null)?.tab ?? "summary";
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [showCreateTask, setShowCreateTask] = useState(false);
 
   /* ── EOS tab state (handled inside EOSTab component) ── */

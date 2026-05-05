@@ -1825,11 +1825,7 @@ Return ONLY valid JSON:
             return;
           }
 
-          const isShortOrConversational =
-            text.split(/\s+/).filter(Boolean).length <= 3 ||
-            /^(hi|hello|hey|thanks|thank you|ok|okay|cool|bye|yo|sup)\b/i.test(text.trim());
-
-          if (agentMode && !isShortOrConversational) {
+          if (agentMode) {
             setLiveSteps([]);
             const history = messages.slice(-10).map((m) => ({
               role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",

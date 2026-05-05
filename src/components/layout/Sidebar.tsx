@@ -84,8 +84,8 @@ export default function Sidebar({
     : false;
   const showTeamNav = isManager || hasDirectReports;
 
-  function handleNavClick(path: string) {
-    navigate(path);
+  function handleNavClick(path: string, state?: Record<string, unknown>) {
+    navigate(path, state ? { state } : undefined);
     onClose?.();
   }
 
@@ -217,7 +217,7 @@ export default function Sidebar({
                               key={p.pod}
                               className={`${styles.spaceItem} ${active ? styles.spaceItemActive : ""}`}
                               style={active ? { color } : {}}
-                              onClick={() => handleNavClick(`/spaces/${p.pod}`)}
+                              onClick={() => handleNavClick(`/spaces/${p.pod}`, { tab: "board" })}
                             >
                               <span className={styles.spaceDot} style={{ background: color }} />
                               <span className={styles.spaceLabel}>{p.pod}</span>
