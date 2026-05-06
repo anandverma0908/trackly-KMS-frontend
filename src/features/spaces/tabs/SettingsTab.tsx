@@ -11,11 +11,8 @@ import {
   RiUserAddLine,
   RiDeleteBinLine,
   RiSearchLine,
-  RiTeamLine,
   RiAddLine,
   RiShieldUserLine,
-  RiSettings4Line,
-  RiListSettingsLine,
 } from "react-icons/ri";
 import AutomationRuleBuilder from "@/features/spaces/components/AutomationRuleBuilder";
 import CustomFieldManager from "@/features/spaces/components/CustomFieldManager";

@@ -12,9 +12,6 @@ import type { AutomationRule } from "@/services/api";
 import {
   RiAddLine,
   RiDeleteBinLine,
-  RiFlashlightLine,
-  RiToggleLine,
-  RiToggleFill,
   RiEditLine,
   RiLightbulbLine,
 } from "react-icons/ri";
@@ -143,10 +140,6 @@ export default function AutomationRuleBuilder({ pod }: Props) {
     },
     onError: () => toast.error("Failed to delete rule"),
   });
-
-  const toggleActive = (rule: AutomationRule) => {
-    updateMut.mutate({ is_active: !rule.is_active });
-  };
 
   const saveForm = () => {
     if (!name.trim()) {
