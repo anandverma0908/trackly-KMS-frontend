@@ -18,6 +18,9 @@ import {
   fetchCodeReviewSnapshot,
   fetchPRReview,
   fetchPRReviews,
+  linkPRReviewStory,
+  reanalyzePRReview,
+  searchTickets,
 } from "@/services/api";
 import type { CodeReviewSnapshotMeta, PRReviewDetail, PRReviewMeta } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
@@ -37,6 +40,7 @@ import {
 
 type Phase = "idle" | "scanning" | "done";
 type ReviewMode = "repo" | "pr";
+type TicketFindingSource = "repo" | "pr";
 type LogLevel =
   | "CONN"
   | "INDEX"
@@ -169,9 +173,13 @@ export default function CodeReviewPage() {
   // Drawer state
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [ticketFindingId, setTicketFindingId] = useState<string | null>(null);
+  const [ticketFindingSource, setTicketFindingSource] = useState<TicketFindingSource>("repo");
   const [activePRReview, setActivePRReview] = useState<PRReviewDetail | null>(null);
   const [prRecords, setPrRecords] = useState<CodeReviewFindingRecord[]>([]);
   const [prLoadingId, setPrLoadingId] = useState<string | null>(null);
+
+  // Notification tracking
+  const prevPRIdsRef = useRef<Set<string> | null>(null);
 
   const { data: filtersData } = useQuery({
     queryKey: ["filters"],
@@ -198,6 +206,29 @@ export default function CodeReviewPage() {
 
   const hasLivePRReview = prReviews.some((r) => r.status === "pending" || r.status === "analyzing");
 
+  // Detect new PRs and fire browser notification
+  useEffect(() => {
+    if (!selectedRepo) return;
+    const currentIds = new Set(prReviews.map((r) => r.id));
+
+    if (prevPRIdsRef.current === null) {
+      prevPRIdsRef.current = currentIds;
+      return;
+    }
+
+    const newPRs = prReviews.filter((r) => !prevPRIdsRef.current!.has(r.id));
+    if (newPRs.length > 0 && "Notification" in window && Notification.permission === "granted") {
+      newPRs.forEach((pr) => {
+        new Notification(`New PR #${pr.pr_number} ready for review`, {
+          body: pr.pr_title,
+          icon: "/favicon.ico",
+        });
+      });
+    }
+    prevPRIdsRef.current = currentIds;
+  }, [prReviews, selectedRepo]);
+
+  // Poll for live PR analysis updates (10s)
   useEffect(() => {
     if (!selectedRepo || !hasLivePRReview) return;
     const interval = window.setInterval(() => {
@@ -205,6 +236,29 @@ export default function CodeReviewPage() {
     }, 10_000);
     return () => window.clearInterval(interval);
   }, [hasLivePRReview, refetchPRReviews, selectedRepo]);
+
+  // Background poll for new webhook-triggered PRs (30s), even when no live analysis is running
+  useEffect(() => {
+    if (!selectedRepo || hasLivePRReview) return;
+    const interval = window.setInterval(() => {
+      refetchPRReviews();
+    }, 30_000);
+    return () => window.clearInterval(interval);
+  }, [selectedRepo, hasLivePRReview, refetchPRReviews]);
+
+  useEffect(() => {
+    if (!activePRReview || (activePRReview.status !== "pending" && activePRReview.status !== "analyzing")) return;
+    const interval = window.setInterval(async () => {
+      const detail = await fetchPRReview(activePRReview.id);
+      setActivePRReview(detail);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setPrRecords(mergeFindingsWithState(detail.findings as any));
+      if (detail.status !== "pending" && detail.status !== "analyzing") {
+        refetchPRReviews();
+      }
+    }, 10_000);
+    return () => window.clearInterval(interval);
+  }, [activePRReview, refetchPRReviews]);
 
   // Load repos on mount
   useEffect(() => {
@@ -361,6 +415,7 @@ export default function CodeReviewPage() {
     setViewingId(null);
     setActivePRReview(null);
     setPrRecords([]);
+    prevPRIdsRef.current = null;
   }
 
   async function handleOpenPRReview(review: PRReviewMeta) {
@@ -393,6 +448,30 @@ export default function CodeReviewPage() {
     patchFinding(findingId, { status: "approved" });
     setViewingId(null);
     setTicketFindingId(findingId);
+    setTicketFindingSource("repo");
+  }
+
+  function handleApprovePRFinding(findingId: string) {
+    patchPRFinding(findingId, { status: "approved" });
+    setViewingId(null);
+    setTicketFindingId(findingId);
+    setTicketFindingSource("pr");
+  }
+
+  async function handleLinkPRStory(ticketKey: string) {
+    if (!activePRReview) return;
+    const detail = await linkPRReviewStory(activePRReview.id, ticketKey, true);
+    setActivePRReview(detail);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setPrRecords(mergeFindingsWithState(detail.findings as any));
+    refetchPRReviews();
+  }
+
+  async function handleReanalyzePR() {
+    if (!activePRReview) return;
+    await reanalyzePRReview(activePRReview.id);
+    setActivePRReview({ ...activePRReview, status: "pending" });
+    refetchPRReviews();
   }
 
   const stats = {
@@ -405,7 +484,10 @@ export default function CodeReviewPage() {
   const repoViewing = records.find((r) => r.id === viewingId) ?? null;
   const prViewing = prRecords.find((r) => r.id === viewingId) ?? null;
   const viewing = repoViewing ?? prViewing;
-  const ticketFinding = records.find((r) => r.id === ticketFindingId) ?? null;
+  const ticketFinding =
+    ticketFindingSource === "repo"
+      ? records.find((r) => r.id === ticketFindingId) ?? null
+      : prRecords.find((r) => r.id === ticketFindingId) ?? null;
   const activeSnap = history.find((h) => h.id === activeSnapshotId);
   const prAttentionCount = prReviews.filter((r) => r.status === "analyzing" || r.status === "pending" || r.total_count > 0).length;
 
@@ -568,7 +650,12 @@ export default function CodeReviewPage() {
               </button>
               <button
                 className={`${styles.modeTab} ${activeMode === "pr" ? styles.modeTabActive : ""}`}
-                onClick={() => setActiveMode("pr")}
+                onClick={() => {
+                  setActiveMode("pr");
+                  if ("Notification" in window && Notification.permission === "default") {
+                    Notification.requestPermission();
+                  }
+                }}
               >
                 <RiGitPullRequestLine size={14} />
                 PR Reviews
@@ -648,8 +735,7 @@ export default function CodeReviewPage() {
           onApprove={() => {
             if (repoViewing) handleApprove(viewing.id);
             else {
-              patchPRFinding(viewing.id, { status: "approved" });
-              setViewingId(null);
+              handleApprovePRFinding(viewing.id);
             }
           }}
           onPatch={(patch) => {
@@ -668,7 +754,9 @@ export default function CodeReviewPage() {
             setPrRecords([]);
           }}
           onView={(id) => setViewingId(id)}
-          onApprove={(id) => patchPRFinding(id, { status: "approved" })}
+          onApprove={handleApprovePRFinding}
+          onLinkStory={handleLinkPRStory}
+          onReanalyze={handleReanalyzePR}
         />
       )}
 
@@ -697,7 +785,8 @@ export default function CodeReviewPage() {
             pod: ticketFinding.ticketDraft.pod ?? defaultPod,
           }}
           onSuccess={() => {
-            patchFinding(ticketFinding.id, { status: "ticketed" });
+            if (ticketFindingSource === "repo") patchFinding(ticketFinding.id, { status: "ticketed" });
+            else patchPRFinding(ticketFinding.id, { status: "ticketed" });
             setTicketFindingId(null);
           }}
         />
@@ -957,14 +1046,51 @@ function PRReviewDrawer({
   onClose,
   onView,
   onApprove,
+  onLinkStory,
+  onReanalyze,
 }: {
   review: PRReviewDetail;
   records: CodeReviewFindingRecord[];
   onClose: () => void;
   onView: (id: string) => void;
   onApprove: (id: string) => void;
+  onLinkStory: (ticketKey: string) => Promise<void>;
+  onReanalyze: () => Promise<void>;
 }) {
   const state = prReviewState(review);
+  const [storyQuery, setStoryQuery] = useState(review.linked_story_key ?? "");
+  const [storyResults, setStoryResults] = useState<{ key: string; summary: string }[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLinking, setIsLinking] = useState(false);
+
+  useEffect(() => {
+    const q = storyQuery.trim();
+    if (q.length < 2) {
+      setStoryResults([]);
+      return;
+    }
+    const timeout = window.setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        setStoryResults(await searchTickets(q));
+      } finally {
+        setIsSearching(false);
+      }
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [storyQuery]);
+
+  async function linkStory(ticketKey: string) {
+    setIsLinking(true);
+    try {
+      await onLinkStory(ticketKey);
+      setStoryQuery(ticketKey);
+      setStoryResults([]);
+    } finally {
+      setIsLinking(false);
+    }
+  }
+
   return (
     <SideDrawer
       open
@@ -983,6 +1109,61 @@ function PRReviewDrawer({
             <a className={styles.prLink} href={review.pr_url} target="_blank" rel="noreferrer">
               GitHub <RiExternalLinkLine size={12} />
             </a>
+          )}
+        </div>
+      </div>
+
+      <div className={styles.drawerSection}>
+        <div className={styles.drawerSectionTitle}>Requirement Story</div>
+        <div className={styles.storyLinkPanel}>
+          <div className={styles.storyLinkTop}>
+            <div>
+              <div className={styles.storyLinkedKey}>
+                {review.linked_story_key ? review.linked_story_key : "No story linked"}
+              </div>
+              <div className={styles.storyLinkedSummary}>
+                {typeof review.requirement_context?.summary === "string"
+                  ? review.requirement_context.summary
+                  : "Link a board story so EOS checks the PR against the requirement."}
+              </div>
+            </div>
+            <button
+              className={styles.refreshBtn}
+              onClick={onReanalyze}
+              disabled={review.status === "pending" || review.status === "analyzing"}
+            >
+              Re-analyse
+            </button>
+          </div>
+          <div className={styles.storySearchWrap}>
+            <input
+              className={styles.storySearchInput}
+              value={storyQuery}
+              onChange={(e) => setStoryQuery(e.target.value)}
+              placeholder="Search or paste story key..."
+            />
+            <button
+              className={styles.storyLinkBtn}
+              disabled={isLinking || storyQuery.trim().length < 2}
+              onClick={() => linkStory(storyQuery.trim().toUpperCase())}
+            >
+              {isLinking ? "Linking..." : "Link & re-analyse"}
+            </button>
+          </div>
+          {(storyResults.length > 0 || isSearching) && (
+            <div className={styles.storyResults}>
+              {isSearching && <div className={styles.storyResultMuted}>Searching...</div>}
+              {storyResults.map((ticket) => (
+                <button
+                  key={ticket.key}
+                  className={styles.storyResult}
+                  onClick={() => linkStory(ticket.key)}
+                >
+                  <span>{ticket.key}</span>
+                  <small>{ticket.summary}</small>
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </div>

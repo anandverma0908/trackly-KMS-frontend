@@ -2400,6 +2400,8 @@ export interface PRReviewMeta {
   base_branch: string;
   head_branch: string;
   linked_tickets: string[];
+  linked_story_key?: string | null;
+  requirement_context?: Record<string, unknown>;
   changed_files_count: number;
   status: PRReviewStatus;
   total_count: number;
@@ -2422,6 +2424,23 @@ export async function fetchPRReviews(repo: string): Promise<PRReviewMeta[]> {
 
 export async function fetchPRReview(id: string): Promise<PRReviewDetail> {
   const { data } = await api.get(`/code-review/pr-reviews/${id}`);
+  return data;
+}
+
+export async function linkPRReviewStory(
+  id: string,
+  ticketKey: string,
+  reanalyze = true,
+): Promise<PRReviewDetail> {
+  const { data } = await api.post(`/code-review/pr-reviews/${id}/link-story`, {
+    ticket_key: ticketKey,
+    reanalyze,
+  });
+  return data;
+}
+
+export async function reanalyzePRReview(id: string): Promise<{ ok: boolean; review_id: string; status: PRReviewStatus }> {
+  const { data } = await api.post(`/code-review/pr-reviews/${id}/reanalyze`);
   return data;
 }
 

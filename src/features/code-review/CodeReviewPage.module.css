@@ -1297,6 +1297,119 @@
   flex-wrap: wrap;
 }
 
+.storyLinkPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.storyLinkTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.storyLinkedKey {
+  font-size: 12px;
+  font-weight: 850;
+  color: var(--text);
+}
+
+.storyLinkedSummary {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.45;
+}
+
+.storySearchWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.storySearchInput {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 0 10px;
+  outline: none;
+}
+
+.storySearchInput:focus {
+  border-color: var(--accent-border);
+}
+
+.storyLinkBtn {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.storyLinkBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.storyResults {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.storyResult {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.storyResult span {
+  font-size: 11px;
+  font-weight: 850;
+  color: var(--accent);
+}
+
+.storyResult small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.storyResultMuted {
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 6px 2px;
+}
+
 /* ── Bug Grid ────────────────────────────────────────────── */
 
 .bugGrid {
