@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -412,6 +414,7 @@ export default function WikiPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["wiki-page", activePageId] });
       qc.invalidateQueries({ queryKey: ["wiki-pages", activeSpaceId] });
+      qc.invalidateQueries({ queryKey: ["wiki-versions", activePageId] });
       setAutoSaveStatus("saved");
       setTimeout(() => setAutoSaveStatus("idle"), 3000);
     },
@@ -940,9 +943,6 @@ export default function WikiPage() {
                   {activePage.content_html || activePage.content_md ? (
                     <div
                       className={styles.viewContent}
-                      dangerouslySetInnerHTML={{
-                        __html: activePage.content_html ?? activePage.content_md ?? "",
-                      }}
                       onClick={(e) => {
                         const target = e.target as HTMLElement;
                         const pageId = target.closest("[data-page-id]")?.getAttribute("data-page-id");
@@ -950,7 +950,16 @@ export default function WikiPage() {
                         const ticketKey = target.closest("[data-ticket-key]")?.getAttribute("data-ticket-key");
                         if (ticketKey) navigate(`/backlog?search=${encodeURIComponent(ticketKey)}`);
                       }}
-                    />
+                    >
+                      {(() => {
+                        const content = activePage.content_md ?? activePage.content_html ?? "";
+                        return content.trimStart().startsWith("<") ? (
+                          <div dangerouslySetInnerHTML={{ __html: content }} />
+                        ) : (
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+                        );
+                      })()}
+                    </div>
                   ) : (
                     <div className={styles.viewEmpty}>
                       <p>This page has no content yet.</p>
