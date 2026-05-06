@@ -3,11 +3,11 @@
    ───────────────────────────────────────────── */
 :root {
   /* Accent — changes per theme */
-  --accent: #f59e0b;
-  --accent-2: #fbbf24;
-  --accent-glow: rgba(245, 158, 11, 0.12);
-  --accent-glow-2: rgba(245, 158, 11, 0.22);
-  --accent-border: rgba(245, 158, 11, 0.35);
+  --accent: #7494fd;
+  --accent-2: #8aaaff;
+  --accent-glow: rgba(116, 148, 253, 0.12);
+  --accent-glow-2: rgba(116, 148, 253, 0.22);
+  --accent-border: rgba(116, 148, 253, 0.35);
 
   /* Backgrounds */
   --bg: #0f1117;
