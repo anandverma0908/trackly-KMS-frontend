@@ -2386,6 +2386,64 @@ export async function fetchCodeReviewSnapshot(id: string): Promise<CodeReviewSna
   return data;
 }
 
+// ── Pull Request Reviews ───────────────────────────────────────────────────
+
+export type PRReviewStatus = "pending" | "analyzing" | "done" | "failed";
+
+export interface PRReviewMeta {
+  id: string;
+  github_repo: string;
+  pr_number: number;
+  pr_title: string;
+  pr_author: string;
+  pr_url: string;
+  base_branch: string;
+  head_branch: string;
+  linked_tickets: string[];
+  linked_story_key?: string | null;
+  requirement_context?: Record<string, unknown>;
+  changed_files_count: number;
+  status: PRReviewStatus;
+  total_count: number;
+  critical_count: number;
+  high_count: number;
+  medium_count: number;
+  created_at: string;
+  analyzed_at: string | null;
+}
+
+export interface PRReviewDetail extends PRReviewMeta {
+  findings: Record<string, unknown>[];
+  changed_files: string[];
+}
+
+export async function fetchPRReviews(repo: string): Promise<PRReviewMeta[]> {
+  const { data } = await api.get(`/code-review/pr-reviews?repo=${encodeURIComponent(repo)}`);
+  return data?.pr_reviews ?? [];
+}
+
+export async function fetchPRReview(id: string): Promise<PRReviewDetail> {
+  const { data } = await api.get(`/code-review/pr-reviews/${id}`);
+  return data;
+}
+
+export async function linkPRReviewStory(
+  id: string,
+  ticketKey: string,
+  reanalyze = true,
+): Promise<PRReviewDetail> {
+  const { data } = await api.post(`/code-review/pr-reviews/${id}/link-story`, {
+    ticket_key: ticketKey,
+    reanalyze,
+  });
+  return data;
+}
+
+export async function reanalyzePRReview(id: string): Promise<{ ok: boolean; review_id: string; status: PRReviewStatus }> {
+  const { data } = await api.post(`/code-review/pr-reviews/${id}/reanalyze`);
+  return data;
+}
+
 // ── Compliance Dashboard ───────────────────────────────────────────────────
 
 export async function fetchComplianceDashboard(): Promise<ComplianceDashboard> {
