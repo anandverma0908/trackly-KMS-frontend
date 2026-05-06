@@ -1,19 +1,10 @@
 import { format } from "date-fns";
 import SideDrawer from "@/components/ui/SideDrawer";
+import ActivityEntryRow from "@/components/ui/ActivityEntryRow";
+import type { ActivityEntryData } from "@/components/ui/ActivityEntryRow";
 import styles from "@/components/ui/SideDrawer.module.css";
 
-interface ActivityItem {
-  id: string;
-  source: "ticket" | "manual";
-  date: string;
-  activity: string;
-  hours: number;
-  pod: string | null;
-  client: string | null;
-  entry_type: string | null;
-  ticket_key: string | null;
-  notes: string | null;
-}
+type ActivityItem = ActivityEntryData;
 
 interface Props {
   date: Date;
@@ -93,43 +84,7 @@ export default function DayDrawer({ date, entries, onClose }: Props) {
       ) : (
         <div className={styles.entryList}>
           {entries.map((entry) => (
-            <div key={entry.id} className={styles.entryRow}>
-              <span
-                className={styles.sourceTag}
-                style={{
-                  background:
-                    entry.source === "ticket"
-                      ? "rgba(245, 158, 11,0.12)"
-                      : "rgba(167,139,250,0.12)",
-                  color: entry.source === "ticket" ? "var(--accent)" : "#A78BFA",
-                }}
-              >
-                {entry.source === "ticket" ? "⬡ Ticket" : "✦ Manual"}
-              </span>
-
-              <div className={styles.entryMain}>
-                <div className={styles.entryTitle}>{entry.activity}</div>
-                <div className={styles.entryMeta}>
-                  {entry.ticket_key && (
-                    <span className={styles.chipAccent}>{entry.ticket_key}</span>
-                  )}
-                  {entry.pod && (
-                    <span className={styles.chip}>{entry.pod}</span>
-                  )}
-                  {entry.client && (
-                    <span className={styles.chip}>{entry.client}</span>
-                  )}
-                  {entry.entry_type && (
-                    <span className={styles.chip}>{entry.entry_type}</span>
-                  )}
-                  {entry.notes && (
-                    <span className={styles.note}>{entry.notes}</span>
-                  )}
-                </div>
-              </div>
-
-              <div className={styles.entryHours}>{entry.hours.toFixed(1)}h</div>
-            </div>
+            <ActivityEntryRow key={entry.id} entry={entry} />
           ))}
         </div>
       )}

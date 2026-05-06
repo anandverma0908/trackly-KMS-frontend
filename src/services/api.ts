@@ -181,7 +181,7 @@ export async function fetchSummary(filters: MultiFilters): Promise<SummaryRespon
 
 export async function fetchFilters(): Promise<FiltersResponse> {
   if (mock()) return mock().fetchFilters();
-  const { data } = await api.get<FiltersResponse>("/filters");
+  const { data } = await api.get<FiltersResponse>("/filters/options");
   return data;
 }
 

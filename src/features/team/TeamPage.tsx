@@ -16,6 +16,8 @@ import type {
   PodBalance,
   ExpertiseMember,
 } from "@/services/api";
+import ActivityEntryRow from "@/components/ui/ActivityEntryRow";
+import drawerStyles from "@/components/ui/SideDrawer.module.css";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import { initials, formatNumber, formatDate } from "@/utils/formatters";
 import { useAuthStore } from "@/features/auth/useAuthStore";
@@ -112,10 +114,6 @@ function getStatus(hours: number) {
 }
 
 /* ── Timesheet Drawer ── */
-const SOURCE_STYLE: Record<string, { bg: string; color: string }> = {
-  ticket: { bg: "rgba(245, 158, 11,0.12)", color: "#f59e0b" },
-  manual: { bg: "rgba(52,211,153,0.12)", color: "#34D399" },
-};
 
 function TimesheetDrawer({
   member,
@@ -317,61 +315,11 @@ Write a concise 2-sentence performance brief. One sentence on productivity, one 
                   {dayTotal.toFixed(1)}h
                 </span>
               </div>
-              {entries.map((entry) => {
-                const src = SOURCE_STYLE[entry.source] ?? SOURCE_STYLE.manual;
-                return (
-                  <div key={entry.id} style={{
-                    display: "flex",
-                    gap: 10,
-                    alignItems: "flex-start",
-                    padding: "8px 0",
-                    borderBottom: "1px solid var(--border-subtle, rgba(255,255,255,0.04))",
-                  }}>
-                    <span style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      padding: "2px 7px",
-                      borderRadius: 4,
-                      background: src.bg,
-                      color: src.color,
-                      whiteSpace: "nowrap",
-                      marginTop: 1,
-                      flexShrink: 0,
-                    }}>
-                      {entry.ticket_key ?? "Manual"}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: "var(--text-1)", lineHeight: 1.4, marginBottom: 2 }}>
-                        {entry.activity}
-                      </div>
-                      {entry.notes && (
-                        <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 2 }}>
-                          {entry.notes}
-                        </div>
-                      )}
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        {entry.pod && (
-                          <span style={{ fontSize: 11, color: "var(--text-3)" }}>{entry.pod}</span>
-                        )}
-                        {entry.client && (
-                          <span style={{ fontSize: 11, color: "var(--text-3)" }}>· {entry.client}</span>
-                        )}
-                        {entry.entry_type && (
-                          <span style={{ fontSize: 11, color: "var(--text-3)" }}>· {entry.entry_type}</span>
-                        )}
-                      </div>
-                    </div>
-                    <span style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: "var(--text-1)",
-                      flexShrink: 0,
-                    }}>
-                      {entry.hours}h
-                    </span>
-                  </div>
-                );
-              })}
+              <div className={drawerStyles.entryList}>
+                {entries.map((entry) => (
+                  <ActivityEntryRow key={entry.id} entry={entry} />
+                ))}
+              </div>
             </div>
           );
         })}

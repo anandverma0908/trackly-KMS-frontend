@@ -48,7 +48,7 @@ export default function StandupDetailDrawer({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ yesterday: "", today: "", blockers: "" });
 
-  const canEdit = standup?.engineer === user?.name || user?.role === "admin" || user?.role === "engineering_manager" || user?.role === "tech_lead";
+  const canEdit = standup?.engineer === user?.name;
 
   const updateMut = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Partial<Standup> }) =>

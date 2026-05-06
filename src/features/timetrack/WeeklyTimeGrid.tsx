@@ -1,7 +1,7 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { fetchTickets, logTime } from "@/services/api";
+import { fetchTickets, logTime, fetchUserActivity } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import type { Ticket } from "@/types";
 import styles from "./WeeklyTimeGrid.module.css";
@@ -24,7 +24,11 @@ function addDays(date: Date, n: number): Date {
 }
 
 function fmtDate(d: Date): string {
-  return d.toISOString().split("T")[0];
+  // Use local date parts to avoid UTC-offset day shift (e.g. IST = UTC+5:30)
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function fmtDisplay(d: Date): string {
@@ -38,6 +42,8 @@ function todayStr(): string {
 type GridCell = string;
 type Grid = Record<string, Record<string, GridCell>>;
 
+const CLOSED_STATUSES = new Set(["Done", "Rejected"]);
+
 /* ── Weekly tab ─────────────────────────────────────────────────────────── */
 export function WeeklyTab() {
   const qc = useQueryClient();
@@ -46,12 +52,17 @@ export function WeeklyTab() {
   const [weekStart, setWeekStart] = useState<Date>(() =>
     getMondayOf(new Date()),
   );
+  // grid = current cell values (pre-filled from saved + user edits)
   const [grid, setGrid] = useState<Grid>({});
+  // originalGrid = hours loaded from server, used to compute delta on save
+  const [originalGrid, setOriginalGrid] = useState<Record<string, Record<string, number>>>({});
   const [saving, setSaving] = useState(false);
   const [comment, setComment] = useState("");
   const cellRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const weekDates = DAYS.map((_, i) => addDays(weekStart, i));
+  const weekDateFrom = fmtDate(weekDates[0]);
+  const weekDateTo   = fmtDate(weekDates[DAYS.length - 1]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["weekly-grid-tickets", user?.email],
@@ -59,8 +70,44 @@ export function WeeklyTab() {
     enabled: !!user,
   });
 
+  // Fetch existing worklogs for this week and pre-fill grid
+  const { data: weekActivity } = useQuery({
+    queryKey: ["weekly-activity", user?.name, weekDateFrom, weekDateTo],
+    queryFn: () =>
+      fetchUserActivity({ user: user!.name, dateFrom: weekDateFrom, dateTo: weekDateTo }),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!weekActivity) return;
+    const orig: Record<string, Record<string, number>> = {};
+    for (const entry of weekActivity) {
+      if (entry.source !== "ticket" || !entry.ticket_key) continue;
+      const dayIdx = weekDates.findIndex((d) => fmtDate(d) === entry.date);
+      if (dayIdx === -1) continue;
+      if (!orig[entry.ticket_key]) orig[entry.ticket_key] = {};
+      orig[entry.ticket_key][dayIdx] =
+        (orig[entry.ticket_key][dayIdx] ?? 0) + entry.hours;
+    }
+    setOriginalGrid(orig);
+    // Pre-fill grid with saved values so user sees them as editable
+    setGrid((prev) => {
+      const next = { ...prev };
+      for (const [tKey, days] of Object.entries(orig)) {
+        if (!next[tKey]) next[tKey] = {};
+        for (const [dayIdx, hours] of Object.entries(days)) {
+          // Only pre-fill if the user hasn't typed anything yet
+          if (!next[tKey][dayIdx]) next[tKey][dayIdx] = String(hours);
+        }
+      }
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekActivity, weekDateFrom]);
+
   const tickets: Ticket[] = (data?.tickets ?? [])
-    .filter((t) => !t.status.includes("Done"))
+    .filter((t) => !CLOSED_STATUSES.has(t.status))
     .slice(0, 40);
 
   const logMut = useMutation({
@@ -119,22 +166,37 @@ export function WeeklyTab() {
     [tickets],
   );
 
+  function cellVal(ticketKey: string, dayIdx: number): number {
+    return parseFloat(grid[ticketKey]?.[dayIdx] ?? "0") || 0;
+  }
+
+  function cellOriginal(ticketKey: string, dayIdx: number): number {
+    return originalGrid[ticketKey]?.[dayIdx] ?? 0;
+  }
+
+  function isSavedCell(ticketKey: string, dayIdx: number): boolean {
+    return cellOriginal(ticketKey, dayIdx) > 0;
+  }
+
   function rowTotal(ticketKey: string): number {
-    return DAYS.reduce(
-      (sum, _, i) => sum + (parseFloat(grid[ticketKey]?.[i] ?? "0") || 0),
-      0,
-    );
+    return DAYS.reduce((sum, _, i) => sum + cellVal(ticketKey, i), 0);
   }
 
   function dayTotal(dayIdx: number): number {
-    return tickets.reduce(
-      (sum, t) => sum + (parseFloat(grid[t.key]?.[dayIdx] ?? "0") || 0),
-      0,
-    );
+    return tickets.reduce((sum, t) => sum + cellVal(t.key, dayIdx), 0);
   }
 
   function grandTotal(): number {
     return DAYS.reduce((s, _, i) => s + dayTotal(i), 0);
+  }
+
+  // Hours pending to be logged = sum of positive deltas only
+  function pendingTotal(): number {
+    return tickets.reduce((sum, t) =>
+      sum + DAYS.reduce((s, _, i) => {
+        const delta = cellVal(t.key, i) - cellOriginal(t.key, i);
+        return s + (delta > 0 ? delta : 0);
+      }, 0), 0);
   }
 
   async function handleSave() {
@@ -142,14 +204,14 @@ export function WeeklyTab() {
     const entries: { key: string; date: string; hours: number }[] = [];
     tickets.forEach((t) => {
       DAYS.forEach((_, i) => {
-        const h = parseFloat(grid[t.key]?.[i] ?? "0") || 0;
-        if (h > 0)
-          entries.push({ key: t.key, date: fmtDate(weekDates[i]), hours: h });
+        const delta = cellVal(t.key, i) - cellOriginal(t.key, i);
+        if (delta > 0)
+          entries.push({ key: t.key, date: fmtDate(weekDates[i]), hours: delta });
       });
     });
 
     if (entries.length === 0) {
-      toast.error("No hours entered");
+      toast.error("No new hours to log");
       setSaving(false);
       return;
     }
@@ -166,10 +228,10 @@ export function WeeklyTab() {
         ),
       );
       qc.invalidateQueries({ queryKey: ["weekly-grid-tickets"] });
-      setGrid({});
+      qc.invalidateQueries({ queryKey: ["weekly-activity"] });
       setComment("");
       toast.success(
-        `Logged ${entries.length} entries (${grandTotal().toFixed(1)}h total)`,
+        `Logged ${entries.length} ${entries.length === 1 ? "entry" : "entries"} (${pendingTotal().toFixed(1)}h)`,
       );
     } catch {
       // individual errors already toasted
@@ -183,7 +245,7 @@ export function WeeklyTab() {
       <div className={styles.weekNav}>
         <button
           className="btn btn-ghost btn-sm"
-          onClick={() => setWeekStart(addDays(weekStart, -7))}
+          onClick={() => { setWeekStart(addDays(weekStart, -7)); setGrid({}); setOriginalGrid({}); }}
         >
           ← Prev
         </button>
@@ -192,13 +254,13 @@ export function WeeklyTab() {
         </span>
         <button
           className="btn btn-ghost btn-sm"
-          onClick={() => setWeekStart(addDays(weekStart, 7))}
+          onClick={() => { setWeekStart(addDays(weekStart, 7)); setGrid({}); setOriginalGrid({}); }}
         >
           Next →
         </button>
         <button
           className="btn btn-ghost btn-sm"
-          onClick={() => setWeekStart(getMondayOf(new Date()))}
+          onClick={() => { setWeekStart(getMondayOf(new Date())); setGrid({}); setOriginalGrid({}); }}
         >
           Today
         </button>
@@ -236,26 +298,29 @@ export function WeeklyTab() {
                       {ticket.status}
                     </span>
                   </td>
-                  {DAYS.map((_, dayIdx) => (
-                    <td key={dayIdx} className={styles.tdCell}>
-                      <input
-                        ref={(el) => {
-                          cellRefs.current[cellKey(ticket.key, dayIdx)] = el;
-                        }}
-                        className={styles.cellInput}
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="—"
-                        value={grid[ticket.key]?.[dayIdx] ?? ""}
-                        onChange={(e) =>
-                          setCell(ticket.key, dayIdx, e.target.value)
-                        }
-                        onKeyDown={(e) =>
-                          handleKeyDown(e, ticket.key, dayIdx, rowIdx)
-                        }
-                      />
-                    </td>
-                  ))}
+                  {DAYS.map((_, dayIdx) => {
+                    const saved = isSavedCell(ticket.key, dayIdx);
+                    return (
+                      <td key={dayIdx} className={styles.tdCell}>
+                        <input
+                          ref={(el) => {
+                            cellRefs.current[cellKey(ticket.key, dayIdx)] = el;
+                          }}
+                          className={`${styles.cellInput} ${saved ? styles.cellInputSaved : ""}`}
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="—"
+                          value={grid[ticket.key]?.[dayIdx] ?? ""}
+                          onChange={(e) =>
+                            setCell(ticket.key, dayIdx, e.target.value)
+                          }
+                          onKeyDown={(e) =>
+                            handleKeyDown(e, ticket.key, dayIdx, rowIdx)
+                          }
+                        />
+                      </td>
+                    );
+                  })}
                   <td className={styles.tdRowTotal}>
                     {rowTotal(ticket.key) > 0
                       ? `${rowTotal(ticket.key).toFixed(1)}h`
@@ -291,9 +356,9 @@ export function WeeklyTab() {
         <button
           className="btn btn-primary"
           onClick={handleSave}
-          disabled={saving || grandTotal() === 0}
+          disabled={saving || pendingTotal() === 0}
         >
-          {saving ? "Saving…" : `Log ${grandTotal().toFixed(1)}h`}
+          {saving ? "Saving…" : `Log ${pendingTotal().toFixed(1)}h`}
         </button>
       </div>
      </div>

@@ -241,6 +241,14 @@
   color: var(--text-3);
 }
 
+/* Already-logged cell — editable but visually distinct */
+.cellInputSaved {
+  border-color: var(--accent-border) !important;
+  background: var(--accent-glow) !important;
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
 /* Row total */
 .tdRowTotal {
   text-align: center;

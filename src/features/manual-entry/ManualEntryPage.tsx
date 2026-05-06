@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchFilters } from "@/services/api";
+import { fetchFilters, fetchSpacesList } from "@/services/api";
 import { QUERY_KEYS } from "@/config/queryKeys";
 import { useManualEntry } from "./useManualEntry";
 import StepInput from "./StepInput";
@@ -18,12 +18,22 @@ type Tab = "entry" | "timesheets" | "weekly";
 
 export default function ManualEntryPage() {
   const [activeTab, setActiveTab] = useState<Tab>("entry");
+
   const { data: filtersData } = useQuery({
     queryKey: QUERY_KEYS.filters(),
     queryFn: fetchFilters,
   });
 
-  const pods = filtersData?.pods ?? [];
+  const { data: spacesList = [] } = useQuery({
+    queryKey: ["spaces-list"],
+    queryFn: fetchSpacesList,
+    staleTime: 5 * 60_000,
+  });
+
+  // PODs = user's actual spaces (authoritative), supplemented by any from filter options
+  const spacePods = spacesList.map((s) => s.pod).filter(Boolean);
+  const filterPods = filtersData?.pods ?? [];
+  const pods = [...new Set([...spacePods, ...filterPods])].sort();
   const clients = filtersData?.clients ?? [];
 
   const {
