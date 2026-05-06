@@ -7,13 +7,19 @@ import {
   RiShieldCheckLine,
   RiHistoryLine,
   RiTimeLine,
+  RiGitPullRequestLine,
+  RiLoader4Line,
+  RiArrowRightLine,
+  RiExternalLinkLine,
 } from "react-icons/ri";
 import {
   fetchFilters,
   fetchCodeReviewHistory,
   fetchCodeReviewSnapshot,
+  fetchPRReview,
+  fetchPRReviews,
 } from "@/services/api";
-import type { CodeReviewSnapshotMeta } from "@/services/api";
+import type { CodeReviewSnapshotMeta, PRReviewDetail, PRReviewMeta } from "@/services/api";
 import { useAuthStore } from "@/features/auth/useAuthStore";
 import CreateTicketDrawer from "@/features/tickets/CreateTicketDrawer";
 import SideDrawer from "@/components/ui/SideDrawer";
@@ -30,6 +36,7 @@ import {
 /* ─── Types ──────────────────────────────────────────────── */
 
 type Phase = "idle" | "scanning" | "done";
+type ReviewMode = "repo" | "pr";
 type LogLevel =
   | "CONN"
   | "INDEX"
@@ -147,6 +154,7 @@ export default function CodeReviewPage() {
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [activeSnapshotId, setActiveSnapshotId] = useState<string | null>(null);
   const [isHistoricalView, setIsHistoricalView] = useState(false);
+  const [activeMode, setActiveMode] = useState<ReviewMode>("repo");
 
   // AI terminal state
   const [logLines, setLogLines] = useState<LogLine[]>([]);
@@ -161,6 +169,9 @@ export default function CodeReviewPage() {
   // Drawer state
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [ticketFindingId, setTicketFindingId] = useState<string | null>(null);
+  const [activePRReview, setActivePRReview] = useState<PRReviewDetail | null>(null);
+  const [prRecords, setPrRecords] = useState<CodeReviewFindingRecord[]>([]);
+  const [prLoadingId, setPrLoadingId] = useState<string | null>(null);
 
   const { data: filtersData } = useQuery({
     queryKey: ["filters"],
@@ -175,6 +186,25 @@ export default function CodeReviewPage() {
     queryFn: () => fetchCodeReviewHistory(selectedRepo!),
     enabled: !!selectedRepo,
   });
+
+  const {
+    data: prReviews = [],
+    refetch: refetchPRReviews,
+  } = useQuery({
+    queryKey: ["code-review-pr-reviews", selectedRepo],
+    queryFn: () => fetchPRReviews(selectedRepo!),
+    enabled: !!selectedRepo,
+  });
+
+  const hasLivePRReview = prReviews.some((r) => r.status === "pending" || r.status === "analyzing");
+
+  useEffect(() => {
+    if (!selectedRepo || !hasLivePRReview) return;
+    const interval = window.setInterval(() => {
+      refetchPRReviews();
+    }, 10_000);
+    return () => window.clearInterval(interval);
+  }, [hasLivePRReview, refetchPRReviews, selectedRepo]);
 
   // Load repos on mount
   useEffect(() => {
@@ -329,6 +359,20 @@ export default function CodeReviewPage() {
     setAnalyzeError(null);
     setIsHistoricalView(false);
     setViewingId(null);
+    setActivePRReview(null);
+    setPrRecords([]);
+  }
+
+  async function handleOpenPRReview(review: PRReviewMeta) {
+    setPrLoadingId(review.id);
+    try {
+      const detail = await fetchPRReview(review.id);
+      setActivePRReview(detail);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setPrRecords(mergeFindingsWithState(detail.findings as any));
+    } finally {
+      setPrLoadingId(null);
+    }
   }
 
   function patchFinding(
@@ -336,6 +380,13 @@ export default function CodeReviewPage() {
     patch: Partial<CodeReviewFindingState>,
   ) {
     setRecords((prev) => updateFindingState(findingId, patch, prev));
+  }
+
+  function patchPRFinding(
+    findingId: string,
+    patch: Partial<CodeReviewFindingState>,
+  ) {
+    setPrRecords((prev) => updateFindingState(findingId, patch, prev));
   }
 
   function handleApprove(findingId: string) {
@@ -351,9 +402,12 @@ export default function CodeReviewPage() {
     total: records.length,
   };
 
-  const viewing = records.find((r) => r.id === viewingId) ?? null;
+  const repoViewing = records.find((r) => r.id === viewingId) ?? null;
+  const prViewing = prRecords.find((r) => r.id === viewingId) ?? null;
+  const viewing = repoViewing ?? prViewing;
   const ticketFinding = records.find((r) => r.id === ticketFindingId) ?? null;
   const activeSnap = history.find((h) => h.id === activeSnapshotId);
+  const prAttentionCount = prReviews.filter((r) => r.status === "analyzing" || r.status === "pending" || r.total_count > 0).length;
 
   return (
     <div className={styles.page}>
@@ -503,6 +557,26 @@ export default function CodeReviewPage() {
 
         {/* Main content */}
         <main className={styles.main}>
+          {selectedRepo && (
+            <div className={styles.modeTabs}>
+              <button
+                className={`${styles.modeTab} ${activeMode === "repo" ? styles.modeTabActive : ""}`}
+                onClick={() => setActiveMode("repo")}
+              >
+                <RiShieldCheckLine size={14} />
+                Repo Health Scan
+              </button>
+              <button
+                className={`${styles.modeTab} ${activeMode === "pr" ? styles.modeTabActive : ""}`}
+                onClick={() => setActiveMode("pr")}
+              >
+                <RiGitPullRequestLine size={14} />
+                PR Reviews
+                {prAttentionCount > 0 && <span className={styles.modeTabCount}>{prAttentionCount}</span>}
+              </button>
+            </div>
+          )}
+
           {/* No repo selected */}
           {!selectedRepo && (
             <div className={styles.emptyMain}>
@@ -512,7 +586,7 @@ export default function CodeReviewPage() {
           )}
 
           {/* Run bar — idle phase only */}
-          {selectedRepo && phase === "idle" && (
+          {selectedRepo && activeMode === "repo" && phase === "idle" && (
             <div className={styles.idleRunBar}>
               <button className={styles.runBtn} onClick={handleStart}>
                 <RiPlayLine size={13} />
@@ -522,7 +596,7 @@ export default function CodeReviewPage() {
           )}
 
           {/* Idle — repo selected */}
-          {selectedRepo && phase === "idle" && (
+          {selectedRepo && activeMode === "repo" && phase === "idle" && (
             <IdleMain
               repo={repos.find((r) => r.slug === selectedRepo)!}
               history={history}
@@ -532,7 +606,7 @@ export default function CodeReviewPage() {
           )}
 
           {/* Scanning — AI terminal */}
-          {phase === "scanning" && (
+          {activeMode === "repo" && phase === "scanning" && (
             <ScanTerminal
               repo={selectedRepo!}
               logLines={logLines}
@@ -542,7 +616,7 @@ export default function CodeReviewPage() {
           )}
 
           {/* Done — findings */}
-          {phase === "done" && (
+          {activeMode === "repo" && phase === "done" && (
             <FindingsMain
               records={records}
               stats={stats}
@@ -554,6 +628,15 @@ export default function CodeReviewPage() {
               onRerun={handleStart}
             />
           )}
+
+          {selectedRepo && activeMode === "pr" && (
+            <PRReviewsMain
+              reviews={prReviews}
+              loadingId={prLoadingId}
+              onOpen={handleOpenPRReview}
+              onRefresh={refetchPRReviews}
+            />
+          )}
         </main>
       </div>
 
@@ -562,8 +645,30 @@ export default function CodeReviewPage() {
         <BugDrawer
           finding={viewing}
           onClose={() => setViewingId(null)}
-          onApprove={() => handleApprove(viewing.id)}
-          onPatch={(patch) => patchFinding(viewing.id, patch)}
+          onApprove={() => {
+            if (repoViewing) handleApprove(viewing.id);
+            else {
+              patchPRFinding(viewing.id, { status: "approved" });
+              setViewingId(null);
+            }
+          }}
+          onPatch={(patch) => {
+            if (repoViewing) patchFinding(viewing.id, patch);
+            else patchPRFinding(viewing.id, patch);
+          }}
+        />
+      )}
+
+      {activePRReview && (
+        <PRReviewDrawer
+          review={activePRReview}
+          records={prRecords}
+          onClose={() => {
+            setActivePRReview(null);
+            setPrRecords([]);
+          }}
+          onView={(id) => setViewingId(id)}
+          onApprove={(id) => patchPRFinding(id, { status: "approved" })}
         />
       )}
 
@@ -751,6 +856,191 @@ function ScanTerminal({
         </div>
       </div>
     </div>
+  );
+}
+
+/* ─── PR Reviews ─────────────────────────────────────────── */
+
+const PR_STATUS_LABEL: Record<PRReviewMeta["status"], string> = {
+  pending: "Queued",
+  analyzing: "Analyzing",
+  done: "Done",
+  failed: "Failed",
+};
+
+function prReviewState(review: PRReviewMeta): { label: string; className: string } {
+  if (review.status === "pending" || review.status === "analyzing") {
+    return { label: PR_STATUS_LABEL[review.status], className: styles.prStatusAnalyzing };
+  }
+  if (review.status === "failed") return { label: "Failed", className: styles.prStatusFailed };
+  if (review.total_count === 0) return { label: "Clean", className: styles.prStatusClean };
+  return { label: `${review.total_count} finding${review.total_count !== 1 ? "s" : ""}`, className: styles.prStatusBugs };
+}
+
+function PRReviewsMain({
+  reviews,
+  loadingId,
+  onOpen,
+  onRefresh,
+}: {
+  reviews: PRReviewMeta[];
+  loadingId: string | null;
+  onOpen: (review: PRReviewMeta) => void;
+  onRefresh: () => void;
+}) {
+  return (
+    <div className={styles.prMain}>
+      <div className={styles.prHeader}>
+        <div>
+          <div className={styles.prHeaderTitle}>Pull Request Reviews</div>
+          <div className={styles.prHeaderSub}>Webhook-triggered EOS analysis for changed files only</div>
+        </div>
+        <button className={styles.refreshBtn} onClick={onRefresh}>
+          Refresh
+        </button>
+      </div>
+
+      {reviews.length === 0 ? (
+        <div className={styles.emptyFindings}>
+          <RiGitPullRequestLine size={28} color="var(--text-3)" />
+          <p>No PR reviews yet</p>
+          <p style={{ color: "var(--text-3)", fontSize: 13, margin: 0 }}>
+            GitHub pull_request webhooks will appear here automatically.
+          </p>
+        </div>
+      ) : (
+        <div className={styles.prList}>
+          {reviews.map((review) => {
+            const state = prReviewState(review);
+            const isBusy = loadingId === review.id;
+            return (
+              <button
+                key={review.id}
+                className={styles.prRow}
+                onClick={() => onOpen(review)}
+                disabled={isBusy}
+              >
+                <div className={styles.prRowLeft}>
+                  <div className={styles.prNumber}>PR #{review.pr_number}</div>
+                  <div className={styles.prTitleLine}>
+                    <span className={styles.prTitle}>{review.pr_title}</span>
+                    {review.linked_tickets.slice(0, 3).map((ticket) => (
+                      <span key={ticket} className={styles.ticketChip}>{ticket}</span>
+                    ))}
+                  </div>
+                  <div className={styles.prMetaLine}>
+                    <span>{review.base_branch || "base"} ← {review.head_branch || "head"}</span>
+                    <span>@{review.pr_author || "unknown"}</span>
+                    <span>{relativeTime(review.created_at)}</span>
+                    <span>{review.changed_files_count} file{review.changed_files_count !== 1 ? "s" : ""}</span>
+                  </div>
+                </div>
+                <div className={styles.prRowRight}>
+                  <span className={`${styles.prStatus} ${state.className}`}>
+                    {(review.status === "pending" || review.status === "analyzing") && <RiLoader4Line size={13} className={styles.spinIcon} />}
+                    {state.label}
+                  </span>
+                  {isBusy ? <RiLoader4Line size={16} className={styles.spinIcon} /> : <RiArrowRightLine size={16} />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PRReviewDrawer({
+  review,
+  records,
+  onClose,
+  onView,
+  onApprove,
+}: {
+  review: PRReviewDetail;
+  records: CodeReviewFindingRecord[];
+  onClose: () => void;
+  onView: (id: string) => void;
+  onApprove: (id: string) => void;
+}) {
+  const state = prReviewState(review);
+  return (
+    <SideDrawer
+      open
+      onClose={onClose}
+      size="md"
+      title={`PR #${review.pr_number}`}
+      subtitle={review.pr_title}
+      badge={<span className={`${styles.prStatus} ${state.className}`}>{state.label}</span>}
+    >
+      <div className={styles.drawerSection}>
+        <div className={styles.prDrawerMeta}>
+          <span>{review.base_branch || "base"} ← {review.head_branch || "head"}</span>
+          <span>@{review.pr_author || "unknown"}</span>
+          <span>{review.changed_files_count} changed file{review.changed_files_count !== 1 ? "s" : ""}</span>
+          {review.pr_url && (
+            <a className={styles.prLink} href={review.pr_url} target="_blank" rel="noreferrer">
+              GitHub <RiExternalLinkLine size={12} />
+            </a>
+          )}
+        </div>
+      </div>
+
+      <div className={styles.drawerSection}>
+        <div className={styles.drawerSectionTitle}>EOS Findings</div>
+        {review.status === "pending" || review.status === "analyzing" ? (
+          <div className={styles.prDrawerLoading}>
+            <RiLoader4Line size={16} className={styles.spinIcon} />
+            EOS is reviewing the PR diff.
+          </div>
+        ) : review.status === "failed" ? (
+          <p className={styles.drawerSectionText}>Analysis failed. Re-open or push to the PR to trigger another review.</p>
+        ) : records.length === 0 ? (
+          <p className={styles.drawerSectionText}>No bugs, contract breaks, or high-signal optimizations found.</p>
+        ) : (
+          <div className={styles.prDrawerFindings}>
+            {records.map((record) => (
+              <BugCard
+                key={record.id}
+                record={record}
+                onView={() => onView(record.id)}
+                onApprove={() => onApprove(record.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {review.changed_files.length > 0 && (
+        <div className={styles.drawerSection}>
+          <div className={styles.drawerSectionTitle}>Changed Files</div>
+          <div className={styles.drawerFiles}>
+            {review.changed_files.slice(0, 12).map((file) => (
+              <div key={file} className={styles.drawerFileRow}>
+                <span className={styles.drawerFilePath}>{file}</span>
+              </div>
+            ))}
+            {review.changed_files.length > 12 && (
+              <div className={styles.drawerFileRow}>
+                <span className={styles.drawerFilePath}>+{review.changed_files.length - 12} more</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {review.linked_tickets.length > 0 && (
+        <div className={styles.drawerSection}>
+          <div className={styles.drawerSectionTitle}>Linked Tickets</div>
+          <div className={styles.ticketList}>
+            {review.linked_tickets.map((ticket) => (
+              <span key={ticket} className={styles.ticketChip}>{ticket}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </SideDrawer>
   );
 }
 
