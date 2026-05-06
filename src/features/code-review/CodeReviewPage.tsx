@@ -182,7 +182,7 @@ export default function CodeReviewPage() {
     const token: string | null = raw
       ? (JSON.parse(raw)?.state?.token ?? null)
       : null;
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    const apiUrl = import.meta.env.VITE_API_URL || "";
     fetch(`${apiUrl}/api/code-review/repos`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
@@ -254,7 +254,7 @@ export default function CodeReviewPage() {
         const token: string | null = raw
           ? (JSON.parse(raw)?.state?.token ?? null)
           : null;
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+        const apiUrl = import.meta.env.VITE_API_URL || "";
         const res = await fetch(`${apiUrl}/api/code-review/analyze`, {
           method: "POST",
           headers: {
