@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  RiFileTextLine,
   RiSearchLine,
-  RiBrainLine,
   RiAddLine,
   RiCheckLine,
   RiTimeLine,
@@ -21,7 +19,6 @@ import {
   useCreateDecision,
   useDeleteDecision,
 } from "./useDecisions";
-import { novaQuery } from "@/services/api";
 import SideDrawer from "@/components/ui/SideDrawer";
 import type { Decision, DecisionStatus } from "@/types";
 
@@ -353,18 +350,9 @@ export default function DecisionsPage({
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Decision | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [novaQ, setNovaQ] = useState("");
-  const [novaAnswer, setNovaAnswer] = useState("");
-  const [novaSources, setNovaSources] = useState<
-    { title: string; url?: string }[]
-  >([]);
-  const [novaLoading, setNovaLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [includeOrg, setIncludeOrg] = useState(false);
 
-  const queryParams = spaceId
-    ? { space_id: spaceId, ...(includeOrg ? { org_level: true } : {}) }
-    : undefined;
+  const queryParams = spaceId ? { space_id: spaceId } : undefined;
 
   const { data, isLoading } = useDecisions(queryParams);
   const deleteMut = useDeleteDecision();
@@ -378,21 +366,6 @@ export default function DecisionsPage({
     const matchStatus = filterStatus === "all" || d.status === filterStatus;
     return matchSearch && matchStatus;
   });
-
-  async function handleNovaQuery() {
-    if (!novaQ.trim()) return;
-    setNovaLoading(true);
-    setNovaAnswer("");
-    setNovaSources([]);
-    try {
-      const res = await novaQuery(novaQ);
-      setNovaAnswer(res.answer);
-      setNovaSources(res.citations ?? []);
-    } catch {
-      setNovaAnswer("EOS couldn't retrieve an answer. Try rephrasing.");
-    }
-    setNovaLoading(false);
-  }
 
   function handleDelete(id: string) {
     if (!confirm("Delete this decision record?")) return;
@@ -448,29 +421,6 @@ export default function DecisionsPage({
       </button>
     </div>
   ) : undefined;
-
-  const kpis = [
-    {
-      label: "Total",
-      value: decisions.length,
-      icon: <RiFileTextLine size={16} />,
-    },
-    {
-      label: "Accepted",
-      value: decisions.filter((d) => d.status === "accepted").length,
-      icon: <RiCheckLine size={16} />,
-    },
-    {
-      label: "Proposed",
-      value: decisions.filter((d) => d.status === "proposed").length,
-      icon: <RiQuestionLine size={16} />,
-    },
-    {
-      label: "Deprecated",
-      value: decisions.filter((d) => d.status === "deprecated").length,
-      icon: <RiTimeLine size={16} />,
-    },
-  ];
 
   return (
     <div className={styles.page}>

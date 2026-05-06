@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import CompliancePage from "./CompliancePage";
 import {
   RiShieldCheckLine,
@@ -11,7 +11,6 @@ import {
   RiCheckboxCircleLine,
   RiDeleteBinLine,
   RiGlobalLine,
-  RiBuilding2Line,
   RiListCheck2,
   RiLoopLeftLine,
   RiAlertLine,
@@ -22,7 +21,6 @@ import {
   useCreateProcess,
   useDeleteProcess,
 } from "./useProcesses";
-import { novaQuery } from "@/services/api";
 import SideDrawer from "@/components/ui/SideDrawer";
 import type { Process, ProcessCategory, ProcessStatus } from "@/types";
 
@@ -485,18 +483,9 @@ export default function ProcessesPage({
   const [selected, setSelected] = useState<Process | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [filterCat, setFilterCat] = useState<string>("all");
-  const [includeOrg, setIncludeOrg] = useState(false);
-  const [novaQ, setNovaQ] = useState("");
-  const [novaAnswer, setNovaAnswer] = useState("");
-  const [novaSources, setNovaSources] = useState<
-    { title: string; url?: string }[]
-  >([]);
-  const [novaLoading, setNovaLoading] = useState(false);
   const [showCompliance, setShowCompliance] = useState(false);
 
-  const queryParams = spaceId
-    ? { space_id: spaceId, ...(includeOrg ? { org_level: true } : {}) }
-    : undefined;
+  const queryParams = spaceId ? { space_id: spaceId } : undefined;
 
   const { data, isLoading } = useProcesses(queryParams);
   const deleteMut = useDeleteProcess();
@@ -519,21 +508,6 @@ export default function ProcessesPage({
     "template",
     "workflow",
   ];
-
-  async function handleNovaQuery() {
-    if (!novaQ.trim()) return;
-    setNovaLoading(true);
-    setNovaAnswer("");
-    setNovaSources([]);
-    try {
-      const res = await novaQuery(novaQ);
-      setNovaAnswer(res.answer);
-      setNovaSources(res.citations ?? []);
-    } catch {
-      setNovaAnswer("EOS couldn't retrieve an answer. Try rephrasing.");
-    }
-    setNovaLoading(false);
-  }
 
   function handleDelete(id: string) {
     if (!confirm("Delete this process?")) return;

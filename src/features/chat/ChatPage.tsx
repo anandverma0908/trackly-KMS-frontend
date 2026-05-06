@@ -24,7 +24,6 @@ import {
   RiSendPlaneLine,
   RiAddLine,
   RiChat3Line,
-  RiMessage3Line,
   RiRobot2Line,
   RiShieldCheckLine,
   RiCalendarCheckLine,

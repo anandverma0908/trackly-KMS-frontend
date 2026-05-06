@@ -27,8 +27,6 @@ import {
 } from "react-icons/ri";
 import { fetchComplianceDashboard } from "@/services/api";
 import type { ComplianceDashboard, Process } from "@/types";
-import SideDrawer from "@/components/ui/SideDrawer";
-import { ProcessDetailBody, categoryConfig, statusConfig } from "./ProcessesPage";
 import styles from "./CompliancePage.module.css";
 
 const STATUS_COLORS: Record<string, string> = {
