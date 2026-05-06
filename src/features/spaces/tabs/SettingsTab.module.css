@@ -1,64 +1,63 @@
 /* ═══════════════════════════════════════════════════════════
-   SETTINGS TAB — matches SummaryTab design language
+   SETTINGS TAB — industry-standard SaaS settings design
    ═══════════════════════════════════════════════════════════ */
 
 .tab {
-  padding: 16px 20px;
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  max-width: 960px;
 }
 
-/* ── Card — same as Summary's panelCard / reportCard ── */
+/* ── Section card ── */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r-xl);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  position: relative;
+  border-radius: 10px;
   overflow: hidden;
 }
 
-.card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent-2), transparent);
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* ── Two-column row — same as reportsRow ── */
-.twoCol {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  align-items: start;
-}
-
-/* ── Card header — same as chartCardHeader ── */
+/* ── Card header ── */
 .cardHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
 }
 
-.cardLabel {
-  font-size: 13px;
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cardIcon {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid var(--accent-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.cardTitle {
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: 0.05em;
+  line-height: 1.2;
 }
 
-.cardSub {
-  font-size: 0.72rem;
+.cardDesc {
+  font-size: 0.73rem;
   color: var(--text-3);
+  margin-top: 1px;
+  line-height: 1.3;
 }
 
 .countBadge {
@@ -69,22 +68,77 @@
   background: var(--accent-glow);
   border: 1px solid var(--accent-border);
   border-radius: 99px;
-  padding: 1px 8px;
+  padding: 2px 8px;
 }
 
-/* ── Search — standard app style ── */
+/* ── Card body — default padded ── */
+.cardBody {
+  padding: 16px 18px;
+}
+
+/* ── Card body — no padding (sub-components use their own) ── */
+.cardBodyFlush {
+  padding: 0;
+}
+
+/* ── Members two-panel layout ── */
+.membersGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 260px;
+}
+
+.memberPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+}
+
+.memberPanel + .memberPanel {
+  border-left: 1px solid var(--border);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.panelCount {
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 99px;
+  padding: 1px 7px;
+}
+
+/* ── Search ── */
 .searchWrap {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: var(--bgrnd);
+  gap: 7px;
+  background: var(--bg);
   border: 1px solid var(--border-2);
-  border-radius: var(--r);
-  padding: 8px 12px;
+  border-radius: 7px;
+  padding: 7px 10px;
   transition: border-color 0.15s;
 }
 .searchWrap:focus-within {
   border-color: var(--accent-border);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 .searchInput {
   flex: 1;
@@ -92,7 +146,6 @@
   border: none;
   outline: none;
   font-size: 12.5px;
-  font-weight: 500;
   color: var(--text);
   font-family: var(--font-sans);
 }
@@ -104,16 +157,16 @@
   font-size: 10px;
   color: var(--text-3);
   padding: 0;
-  transition: color 0.12s;
 }
 .searchClear:hover { color: var(--text); }
 
-/* ── Member list — same density as Summary ── */
+/* ── Member list ── */
 .memberList {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  max-height: 320px;
+  gap: 1px;
+  flex: 1;
+  max-height: 240px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--border-2) transparent;
@@ -122,36 +175,33 @@
 .memberList::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
 
 .empty {
-  padding: 28px 16px;
+  padding: 32px 16px;
   text-align: center;
-  font-size: 0.79rem;
+  font-size: 0.78rem;
   color: var(--text-3);
   font-style: italic;
   line-height: 1.5;
 }
 
-/* ── Member row — matches Summary's memberRow ── */
+/* ── Member row ── */
 .memberRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   padding: 6px 8px;
-  border-radius: var(--r-sm);
+  border-radius: 6px;
   transition: background 0.12s;
 }
 .memberRow:hover {
   background: var(--surface-2);
 }
 
-/* ── Avatar — same as Summary memberAvatar but slightly larger ── */
+/* ── Avatar ── */
 .avatar {
-  width: 26px;
-  height: 26px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.6rem;
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
@@ -161,24 +211,24 @@
 /* ── Member info ── */
 .memberInfo {
   flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
   min-width: 0;
 }
 .memberName {
-  font-size: 0.79rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .rolePill {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 1px 6px;
+  letter-spacing: 0.03em;
+  padding: 1px 5px;
   border-radius: 99px;
   border: 1px solid;
   white-space: nowrap;
@@ -190,8 +240,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex-shrink: 1;
-  min-width: 0;
+  margin-top: 1px;
 }
 
 /* ── Action buttons ── */
@@ -213,7 +262,7 @@
 .memberRow:hover .removeBtn { opacity: 1; }
 .removeBtn:hover {
   color: #f87171;
-  border-color: rgba(248, 113, 113, 0.35);
+  border-color: rgba(248, 113, 113, 0.3);
   background: rgba(248, 113, 113, 0.08);
 }
 .removeBtn:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -225,7 +274,7 @@
   font-size: 0.72rem;
   font-weight: 600;
   font-family: var(--font-sans);
-  padding: 3px 9px;
+  padding: 4px 10px;
   border-radius: 5px;
   border: 1px solid var(--accent-border);
   background: var(--accent-glow);
@@ -240,13 +289,9 @@
 .addBtn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 .addBtn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-/* ── Section body (wraps sub-components) ── */
-.sectionBody {
-  margin: -16px;
-  margin-top: 0;
-}
-
 /* ── Responsive ── */
-@media (max-width: 760px) {
-  .twoCol { grid-template-columns: 1fr; }
+@media (max-width: 680px) {
+  .membersGrid { grid-template-columns: 1fr; }
+  .memberPanel + .memberPanel { border-left: none; border-top: 1px solid var(--border); }
+  .tab { padding: 14px 16px; }
 }

@@ -7,13 +7,31 @@
   overflow: hidden;
 }
 
+/* ── Board + Stories shared container ── */
+.boardContainer {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 /* ── Stories Strip ── */
 .storiesStrip {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.storiesStripOpen {
+  position: static;
 }
 .storiesStripHeader {
   display: flex;
@@ -63,7 +81,8 @@
   opacity: 0.8;
 }
 .storiesList {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
   border-top: 1px solid var(--border);
 }
 .storyRow {
@@ -618,9 +637,9 @@
 /* ── Kanban Board ── */
 .boardWrap {
   flex: 1;
-  min-height: 0;
+  min-height: 400px;
   overflow-x: auto;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 .board {

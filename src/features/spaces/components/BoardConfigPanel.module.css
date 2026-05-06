@@ -1,33 +1,50 @@
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   padding: 8px 0;
 }
 
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
 .sectionTitle {
-  font-size: 13px;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--text);
   margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 
+.sectionHint {
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+
+/* Column cards */
 .columnsList {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.columnRow {
+.columnCard {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: visible;
+}
+
+.columnCardHeader {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
 }
 
 .colInput {
@@ -35,20 +52,42 @@
   background: transparent;
   border: none;
   outline: none;
-  font-size: 13px;
+  font-size: 0.83rem;
+  font-weight: 600;
   color: var(--text);
   font-family: var(--font-sans);
+  min-width: 0;
+}
+.colInput::placeholder {
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+.wipRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.wipLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .wipInput {
-  width: 50px;
+  width: 46px;
   background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: 4px;
   padding: 3px 6px;
-  font-size: 12px;
+  font-size: 0.78rem;
   color: var(--text);
   outline: none;
+  text-align: center;
 }
 
 .colDelete {
@@ -56,13 +95,169 @@
   border: none;
   color: var(--text-3);
   cursor: pointer;
-  padding: 2px;
+  padding: 3px;
   border-radius: 4px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
-
 .colDelete:hover {
   color: var(--red);
   background: var(--surface-2);
+}
+
+/* Status tag area */
+.statusTagWrap {
+  position: relative;
+  padding: 7px 10px;
+}
+
+.statusTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+
+.statusTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.statusTagRemove {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--accent);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  opacity: 0.6;
+}
+.statusTagRemove:hover {
+  opacity: 1;
+}
+
+.statusTagAdd {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: transparent;
+  border: 1px dashed var(--border-2);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 0.72rem;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.statusTagAdd:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.statusDropdown {
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+  z-index: 50;
+  min-width: 160px;
+  padding: 4px;
+}
+
+.statusDropdownItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  color: var(--text);
+  cursor: pointer;
+}
+.statusDropdownItem:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.statusDropdownItem:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Sub-sections inside column card */
+.subSection {
+  padding: 7px 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+}
+
+/* Transition pills */
+.transitionWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.transitionPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.transitionPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.transitionPill:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.transitionPillActive {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: var(--accent-border);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.transitionEmpty,
+.transitionHint {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  font-style: italic;
 }
 
 .addColumnBtn {
@@ -71,28 +266,29 @@
   gap: 5px;
   background: transparent;
   border: 1px dashed var(--border-2);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 12px;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
   color: var(--text-3);
   cursor: pointer;
 }
-
 .addColumnBtn:hover {
   color: var(--accent);
   border-color: var(--accent);
 }
 
 .select {
+  width: 100%;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 7px 10px;
-  font-size: 13px;
+  padding: 8px 10px;
+  font-size: 0.83rem;
   color: var(--text);
   outline: none;
   font-family: var(--font-sans);
   cursor: pointer;
+  margin-top: 8px;
 }
 
 .actions {
@@ -101,16 +297,16 @@
 }
 
 .saveBtn {
+  width: 100%;
   background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 13px;
+  padding: 10px 16px;
+  font-size: 0.83rem;
   font-weight: 600;
   cursor: pointer;
 }
-
 .saveBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;

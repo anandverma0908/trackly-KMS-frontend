@@ -258,7 +258,6 @@ export default function ActiveSprintsTab({
   // Stories strip state
   const [storiesOpen, setStoriesOpen] = useState(false);
   const [focusedStory, setFocusedStory] = useState<StoryItem | null>(null);
-  const [showAllStories, setShowAllStories] = useState(false);
   const [drawerStoryKey, setDrawerStoryKey] = useState<string | null>(null);
 
   const {
@@ -282,6 +281,25 @@ export default function ActiveSprintsTab({
   const debouncedSearch = useDebounce(search, 300);
   const [myTasksActive, setMyTasksActive] = useState(false);
   const [aiFilter, setAiFilter] = useState<AIFilter>(null);
+
+  const filteredStories = useMemo(() => {
+    let stories = allStories;
+    if (myTasksActive && currentUserName) {
+      stories = stories.filter(
+        (s) =>
+          s.assignee === currentUserName ||
+          s.tasks.some((t: { assignee: string }) => t.assignee === currentUserName),
+      );
+    }
+    if (selectedMembers.size > 0) {
+      stories = stories.filter(
+        (s) =>
+          selectedMembers.has(s.assignee) ||
+          s.tasks.some((t: { assignee: string }) => selectedMembers.has(t.assignee)),
+      );
+    }
+    return stories;
+  }, [allStories, myTasksActive, currentUserName, selectedMembers]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const createOpen = externalCreateOpen || showCreateModal;
   const [createColumn, setCreateColumn] = useState("To Do");
@@ -501,6 +519,30 @@ export default function ActiveSprintsTab({
       setDraggedTask(null);
       setDragOverCol(null);
       return;
+    }
+    // Validate transition
+    const currentCol = columnsConfig.find((c) =>
+      c.status_mapping.includes(draggedTask.status) || c.id === draggedTask.status
+    );
+    if (currentCol) {
+      const transitions = (currentCol as { allowed_transitions?: string[] }).allowed_transitions;
+      if (transitions && transitions.length > 0) {
+        // Configured transitions — only allow listed targets
+        if (!transitions.includes(colId)) {
+          setDraggedTask(null);
+          setDragOverCol(null);
+          return;
+        }
+      } else {
+        // Fallback: no backward movement; Blocked reachable from anywhere
+        const currentColIdx = columnsConfig.indexOf(currentCol);
+        const targetColIdx = columnsConfig.findIndex((c) => c.id === colId);
+        if (colId !== "Blocked" && targetColIdx < currentColIdx) {
+          setDraggedTask(null);
+          setDragOverCol(null);
+          return;
+        }
+      }
     }
     setLastMoved({ key: draggedTask.key, prevStatus: draggedTask.status });
     setLocalStatuses((prev) => ({ ...prev, [draggedTask.key]: newStatus }));
@@ -898,12 +940,13 @@ export default function ActiveSprintsTab({
               </button>
             </>
           ) : (
-            <button
-              className={styles.clearAllBtn}
-              onClick={() => setShowSaveFilter(true)}
-            >
-              Save Filter
-            </button>
+            <></>
+            // <button
+            //   className={styles.clearAllBtn}
+            //   onClick={() => setShowSaveFilter(true)}
+            // >
+            //   Save Filter
+            // </button>
           )}
         </div>
       )}
@@ -946,8 +989,9 @@ export default function ActiveSprintsTab({
           </div>
         </div>
       )}
-      {!storiesLoading && !storiesError && allStories.length > 0 && (
-        <div className={styles.storiesStrip}>
+      <div className={styles.boardContainer}>
+      {!storiesLoading && !storiesError && filteredStories.length > 0 && (
+        <div className={`${styles.storiesStrip} ${storiesOpen ? styles.storiesStripOpen : ""}`}>
           <div className={styles.storiesStripHeader}>
             <button
               className={styles.storiesToggle}
@@ -955,7 +999,7 @@ export default function ActiveSprintsTab({
             >
               <RiBookOpenLine size={12} />
               <span>Stories</span>
-              <span className={styles.storiesCount}>{allStories.length}</span>
+              <span className={styles.storiesCount}>{filteredStories.length}</span>
               <span className={styles.storiesChevron}>
                 {storiesOpen ? (
                   <RiArrowDownSLine size={15} />
@@ -983,7 +1027,7 @@ export default function ActiveSprintsTab({
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                {(showAllStories ? allStories : allStories.slice(0, 5)).map(
+                {filteredStories.map(
                   (story) => {
                     const isFocused = focusedStory?.id === story.id;
                     const insightColor =
@@ -1144,19 +1188,6 @@ export default function ActiveSprintsTab({
                   </div>
                 )}
 
-                {allStories.length > 5 && (
-                  <button
-                    className={styles.storiesShowMore}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAllStories((v) => !v);
-                    }}
-                  >
-                    {showAllStories
-                      ? "Show less"
-                      : `Show ${allStories.length - 5} more stories`}
-                  </button>
-                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -1402,6 +1433,7 @@ export default function ActiveSprintsTab({
           </div>
         )}
       </div>
+      </div>{/* end boardContainer */}
 
       {/* ── Create task drawer ── */}
       <CreateTicketDrawer

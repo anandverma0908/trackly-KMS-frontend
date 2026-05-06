@@ -14,6 +14,7 @@ import {
   RiEditLine,
   RiListSettingsLine,
 } from "react-icons/ri";
+import SideDrawer from "@/components/ui/SideDrawer";
 import styles from "./CustomFieldManager.module.css";
 
 interface Props {
@@ -35,7 +36,7 @@ export default function CustomFieldManager({ pod }: Props) {
     queryFn: () => fetchCustomFields(pod),
   });
 
-  const [showForm, setShowForm] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
   const [editing, setEditing] = useState<CustomFieldDefinition | null>(null);
 
   const [name, setName] = useState("");
@@ -53,7 +54,7 @@ export default function CustomFieldManager({ pod }: Props) {
 
   const openCreate = () => {
     resetForm();
-    setShowForm(true);
+    setShowDrawer(true);
   };
 
   const openEdit = (field: CustomFieldDefinition) => {
@@ -62,15 +63,16 @@ export default function CustomFieldManager({ pod }: Props) {
     setFieldType(field.field_type);
     setOptionsStr(field.options?.join("\n") ?? "");
     setIsRequired(field.is_required);
-    setShowForm(true);
+    setShowDrawer(true);
   };
 
-  const parseOptions = () => {
-    return optionsStr
-      .split("\n")
-      .map((s) => s.trim())
-      .filter(Boolean);
+  const closeDrawer = () => {
+    setShowDrawer(false);
+    resetForm();
   };
+
+  const parseOptions = () =>
+    optionsStr.split("\n").map((s) => s.trim()).filter(Boolean);
 
   const createMut = useMutation({
     mutationFn: () =>
@@ -84,8 +86,7 @@ export default function CustomFieldManager({ pod }: Props) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["custom-fields", pod] });
       toast.success("Custom field created");
-      setShowForm(false);
-      resetForm();
+      closeDrawer();
     },
     onError: () => toast.error("Failed to create custom field"),
   });
@@ -101,8 +102,7 @@ export default function CustomFieldManager({ pod }: Props) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["custom-fields", pod] });
       toast.success("Custom field updated");
-      setShowForm(false);
-      resetForm();
+      closeDrawer();
     },
     onError: () => toast.error("Failed to update custom field"),
   });
@@ -117,114 +117,112 @@ export default function CustomFieldManager({ pod }: Props) {
   });
 
   const save = () => {
-    if (!name.trim()) {
-      toast.error("Field name is required");
-      return;
-    }
+    if (!name.trim()) { toast.error("Field name is required"); return; }
     if (fieldType === "select" && parseOptions().length === 0) {
       toast.error("Dropdown fields need at least one option");
       return;
     }
-    if (editing) {
-      updateMut.mutate();
-    } else {
-      createMut.mutate();
-    }
+    if (editing) updateMut.mutate();
+    else createMut.mutate();
   };
 
+  const isPending = createMut.isPending || updateMut.isPending;
+
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <div className={styles.titleRow}>
-          <RiListSettingsLine size={18} />
-          <h3 className={styles.title}>Custom Fields</h3>
-        </div>
-        <button className={styles.newBtn} onClick={openCreate}>
-          <RiAddLine size={14} />
-          Add Field
-        </button>
-      </div>
-
-      {isLoading && <div className={styles.empty}>Loading…</div>}
-
-      {!isLoading && fields.length === 0 && (
-        <div className={styles.empty}>
-          No custom fields defined yet.
-          <br />
-          <button className={styles.emptyBtn} onClick={openCreate}>
-            Create your first field
+    <>
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <button className={styles.newBtn} onClick={openCreate}>
+            <RiAddLine size={14} />
+            Add Field
           </button>
         </div>
-      )}
 
-      <div className={styles.fieldList}>
-        {fields.map((field) => (
-          <div key={field.id} className={styles.fieldCard}>
-            <div className={styles.fieldLeft}>
-              <div className={styles.fieldName}>
-                {field.name}
-                <span className={styles.fieldTypeBadge}>{field.field_type}</span>
-                {field.is_required && <span className={styles.requiredBadge}>required</span>}
-              </div>
-              {field.field_type === "select" && field.options && (
-                <div className={styles.fieldOptions}>
-                  {field.options.join(" · ")}
-                </div>
-              )}
-            </div>
-            <div className={styles.fieldRight}>
-              <button className={styles.iconBtn} onClick={() => openEdit(field)} title="Edit">
-                <RiEditLine size={16} />
-              </button>
-              <button
-                className={styles.iconBtnDanger}
-                onClick={() => {
-                  if (confirm(`Delete custom field "${field.name}"?`)) deleteMut.mutate(field.id);
-                }}
-                title="Delete"
-              >
-                <RiDeleteBinLine size={16} />
-              </button>
-            </div>
+        {isLoading && <div className={styles.empty}>Loading…</div>}
+
+        {!isLoading && fields.length === 0 && (
+          <div className={styles.empty}>
+            No custom fields defined yet.
           </div>
-        ))}
+        )}
+
+        <div className={styles.fieldList}>
+          {fields.map((field) => (
+            <div key={field.id} className={styles.fieldCard}>
+              <div className={styles.fieldLeft}>
+                <div className={styles.fieldName}>
+                  {field.name}
+                  <span className={styles.fieldTypeBadge}>{field.field_type}</span>
+                  {field.is_required && <span className={styles.requiredBadge}>required</span>}
+                </div>
+                {field.field_type === "select" && field.options && (
+                  <div className={styles.fieldOptions}>{field.options.join(" · ")}</div>
+                )}
+              </div>
+              <div className={styles.fieldRight}>
+                <button className={styles.iconBtn} onClick={() => openEdit(field)} title="Edit">
+                  <RiEditLine size={16} />
+                </button>
+                <button
+                  className={styles.iconBtnDanger}
+                  onClick={() => {
+                    if (confirm(`Delete custom field "${field.name}"?`)) deleteMut.mutate(field.id);
+                  }}
+                  title="Delete"
+                >
+                  <RiDeleteBinLine size={16} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* ── Inline form ── */}
-      {showForm && (
-        <div className={styles.formPanel}>
-          <div className={styles.formTitle}>{editing ? "Edit Field" : "New Custom Field"}</div>
+      {/* ── Side drawer form ── */}
+      <SideDrawer
+        open={showDrawer}
+        onClose={closeDrawer}
+        size="xs"
+        title={editing ? "Edit Field" : "New Custom Field"}
+        avatar={<RiListSettingsLine size={18} />}
+      >
+        <div className={styles.drawerBody}>
 
-          <label className={styles.fieldLabel}>Field name</label>
-          <input
-            className={styles.textInput}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Severity"
-          />
+          <div className={styles.formGroup}>
+            <label className={styles.fieldLabel}>Field name</label>
+            <input
+              className={styles.textInput}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Severity"
+              autoFocus
+            />
+          </div>
 
-          <label className={styles.fieldLabel}>Field type</label>
-          <select
-            className={styles.select}
-            value={fieldType}
-            onChange={(e) => setFieldType(e.target.value as CustomFieldDefinition["field_type"])}
-          >
-            {FIELD_TYPE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          <div className={styles.formGroup}>
+            <label className={styles.fieldLabel}>Field type</label>
+            <select
+              className={styles.select}
+              value={fieldType}
+              onChange={(e) => setFieldType(e.target.value as CustomFieldDefinition["field_type"])}
+            >
+              {FIELD_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
 
           {fieldType === "select" && (
-            <>
+            <div className={styles.formGroup}>
               <label className={styles.fieldLabel}>Options (one per line)</label>
               <textarea
                 className={styles.textarea}
                 value={optionsStr}
                 onChange={(e) => setOptionsStr(e.target.value)}
-                placeholder="Low&#10;Medium&#10;High"
-                rows={3}
+                placeholder={"Low\nMedium\nHigh"}
+                rows={4}
               />
-            </>
+            </div>
           )}
 
           <label className={styles.checkboxRow}>
@@ -236,16 +234,16 @@ export default function CustomFieldManager({ pod }: Props) {
             <span>Required field</span>
           </label>
 
-          <div className={styles.formActions}>
-            <button className={styles.secondaryBtn} onClick={() => { setShowForm(false); resetForm(); }}>
+          <div className={styles.drawerActions}>
+            <button className={styles.secondaryBtn} onClick={closeDrawer}>
               Cancel
             </button>
-            <button className={styles.primaryBtn} onClick={save} disabled={createMut.isPending || updateMut.isPending}>
-              {editing ? "Save Changes" : "Create Field"}
+            <button className={styles.primaryBtn} onClick={save} disabled={isPending}>
+              {isPending ? "Saving…" : editing ? "Save Changes" : "Create Field"}
             </button>
           </div>
         </div>
-      )}
-    </div>
+      </SideDrawer>
+    </>
   );
 }

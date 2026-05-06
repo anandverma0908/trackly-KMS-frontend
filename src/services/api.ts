@@ -1292,7 +1292,7 @@ export async function deleteSavedFilter(id: string) {
 }
 
 export interface BoardConfig {
-  columns: { id: string; name: string; status_mapping: string[] }[];
+  columns: { id: string; name: string; status_mapping: string[]; allowed_transitions?: string[] }[];
   swimlane_by: "none" | "assignee" | "epic" | "priority";
   wip_limits: Record<string, number>;
 }
