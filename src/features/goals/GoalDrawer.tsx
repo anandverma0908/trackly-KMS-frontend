@@ -143,7 +143,7 @@ export default function GoalDrawer({ open, onClose, editGoal }: GoalDrawerProps)
     <SideDrawer
       open={open}
       onClose={onClose}
-      size="md"
+      size="sm"
       title={isEdit ? `Edit Goal` : "Create Goal"}
       subtitle={quarter}
       badge={

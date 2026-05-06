@@ -85,7 +85,7 @@ export default function StandupDetailDrawer({
     <SideDrawer
       open={open}
       onClose={onClose}
-      size="md"
+      size="sm"
       title={s.engineer}
       subtitle={`${s.pod || "No POD"} · ${formatDate(s.date, "EEEE, MMMM d, yyyy")}`}
       badge={

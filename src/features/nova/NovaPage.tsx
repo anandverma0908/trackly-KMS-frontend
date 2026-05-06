@@ -717,7 +717,7 @@ function ChatHistoryPanel({
   }, [open]);
 
   return (
-    <SideDrawer open={open} onClose={onClose} size="sm" title="Chat History" subtitle={`${history.length} conversation${history.length !== 1 ? 's' : ''}`}>
+    <SideDrawer open={open} onClose={onClose} size="xs" title="Chat History" subtitle={`${history.length} conversation${history.length !== 1 ? 's' : ''}`}>
       <div style={{ padding: '8px 0' }}>
         {history.length === 0 && (
           <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-3)', fontSize: '0.84rem' }}>

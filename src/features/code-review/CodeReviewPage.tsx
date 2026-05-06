@@ -950,7 +950,7 @@ function BugDrawer({
     <SideDrawer
       open
       onClose={onClose}
-      size="lg"
+      size="sm"
       title={finding.title}
       subtitle={finding.area}
       badge={

@@ -1060,7 +1060,7 @@ export default function WikiPage() {
         <SideDrawer
           open={showAIPanel}
           onClose={() => setShowAIPanel(false)}
-          size="lg"
+          size="sm"
           title="EOS Assistant"
           subtitle={activePage.title}
           avatar={<RiSparklingLine size={18} color="var(--accent)" />}

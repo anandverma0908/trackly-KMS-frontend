@@ -599,7 +599,7 @@ export default function DecisionsPage({
       <SideDrawer
         open={!!selected && !showCreate}
         onClose={() => setSelected(null)}
-        size="md"
+        size="sm"
         title={selected?.title ?? ""}
         avatar={
           <div className={styles.adrAvatar}>
@@ -618,7 +618,7 @@ export default function DecisionsPage({
       <SideDrawer
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        size="md"
+        size="sm"
         title="New Decision"
         subtitle="Record an architecture decision (ADR)"
       >

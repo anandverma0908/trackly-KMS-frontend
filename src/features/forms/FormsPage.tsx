@@ -699,7 +699,7 @@ export default function FormsPage() {
       <SideDrawer
         open={showBuilder}
         onClose={() => setShowBuilder(false)}
-        size="md"
+        size="xs"
         title="New Form Template"
         subtitle="Build a form to collect structured submissions"
       >

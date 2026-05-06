@@ -790,7 +790,7 @@ export default function ProcessesPage({
       <SideDrawer
         open={!!selected && !showCreate}
         onClose={() => setSelected(null)}
-        size="md"
+        size="sm"
         title={selected?.title ?? ""}
         badge={detailBadge}
         footer={detailFooter}
@@ -802,7 +802,7 @@ export default function ProcessesPage({
       <SideDrawer
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        size="md"
+        size="sm"
         title="New Process"
         subtitle="Document a runbook, SOP, or workflow"
       >
