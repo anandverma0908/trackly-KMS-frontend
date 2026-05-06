@@ -462,21 +462,30 @@
 
 /* ── Skeleton ── */
 .cardSkeleton {
-  background: var(--surface);
-  border: 1px solid var(--border-2);
   border-radius: var(--r-sm);
-  padding: 16px;
   height: 180px;
-  animation: pulseSkeleton 1.6s ease-in-out infinite;
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmerSkeleton 1.5s infinite;
 }
-@keyframes pulseSkeleton {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+
+.cogLoadSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cogLoadSkeletonRow {
+  height: 28px;
+  border-radius: var(--r-xs);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmerSkeleton 1.5s infinite;
+}
+
+@keyframes shimmerSkeleton {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ── Drawer Body ── */

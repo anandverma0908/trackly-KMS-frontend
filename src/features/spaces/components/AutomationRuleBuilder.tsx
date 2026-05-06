@@ -12,9 +12,6 @@ import type { AutomationRule } from "@/services/api";
 import {
   RiAddLine,
   RiDeleteBinLine,
-  RiFlashlightLine,
-  RiToggleLine,
-  RiToggleFill,
   RiEditLine,
   RiLightbulbLine,
 } from "react-icons/ri";
@@ -69,7 +66,9 @@ export default function AutomationRuleBuilder({ pod }: Props) {
   const [triggerType, setTriggerType] = useState("ticket_created");
   const [triggerConfig, setTriggerConfig] = useState<Record<string, any>>({});
   const [conditionType, setConditionType] = useState("always");
-  const [conditionConfig, setConditionConfig] = useState<Record<string, any>>({});
+  const [conditionConfig, setConditionConfig] = useState<Record<string, any>>(
+    {},
+  );
   const [actionType, setActionType] = useState("set_status");
   const [actionConfig, setActionConfig] = useState<Record<string, any>>({});
 
@@ -109,7 +108,8 @@ export default function AutomationRuleBuilder({ pod }: Props) {
         trigger_type: triggerType,
         trigger_config: triggerConfig,
         condition_type: conditionType === "always" ? undefined : conditionType,
-        condition_config: conditionType === "always" ? undefined : conditionConfig,
+        condition_config:
+          conditionType === "always" ? undefined : conditionConfig,
         action_type: actionType,
         action_config: actionConfig,
       }),
@@ -141,10 +141,6 @@ export default function AutomationRuleBuilder({ pod }: Props) {
     onError: () => toast.error("Failed to delete rule"),
   });
 
-  const toggleActive = (rule: AutomationRule) => {
-    updateMut.mutate({ is_active: !rule.is_active });
-  };
-
   const saveForm = () => {
     if (!name.trim()) {
       toast.error("Rule name is required");
@@ -156,7 +152,8 @@ export default function AutomationRuleBuilder({ pod }: Props) {
         trigger_type: triggerType,
         trigger_config: triggerConfig,
         condition_type: conditionType === "always" ? undefined : conditionType,
-        condition_config: conditionType === "always" ? undefined : conditionConfig,
+        condition_config:
+          conditionType === "always" ? undefined : conditionConfig,
         action_type: actionType,
         action_config: actionConfig,
       });
@@ -168,21 +165,20 @@ export default function AutomationRuleBuilder({ pod }: Props) {
   };
 
   const triggerLabel = useMemo(
-    () => TRIGGER_OPTIONS.find((o) => o.value === triggerType)?.label ?? triggerType,
-    [triggerType]
+    () =>
+      TRIGGER_OPTIONS.find((o) => o.value === triggerType)?.label ??
+      triggerType,
+    [triggerType],
   );
   const actionLabel = useMemo(
-    () => ACTION_OPTIONS.find((o) => o.value === actionType)?.label ?? actionType,
-    [actionType]
+    () =>
+      ACTION_OPTIONS.find((o) => o.value === actionType)?.label ?? actionType,
+    [actionType],
   );
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <div className={styles.titleRow}>
-          <RiFlashlightLine size={18} />
-          <h3 className={styles.title}>Automation Rules</h3>
-        </div>
         <button className={styles.newBtn} onClick={openCreate}>
           <RiAddLine size={14} />
           New Rule
@@ -203,39 +199,57 @@ export default function AutomationRuleBuilder({ pod }: Props) {
 
       <div className={styles.ruleList}>
         {rules.map((rule) => (
-          <div key={rule.id} className={`${styles.ruleCard} ${!rule.is_active ? styles.inactive : ""}`}>
+          <div
+            key={rule.id}
+            className={`${styles.ruleCard} ${!rule.is_active ? styles.inactive : ""}`}
+          >
             <div className={styles.ruleLeft}>
               <div className={styles.ruleName}>
                 <RiLightbulbLine size={14} className={styles.ruleIcon} />
                 {rule.name}
               </div>
               <div className={styles.ruleMeta}>
-                {TRIGGER_OPTIONS.find((o) => o.value === rule.trigger_type)?.label ?? rule.trigger_type}
+                {TRIGGER_OPTIONS.find((o) => o.value === rule.trigger_type)
+                  ?.label ?? rule.trigger_type}
                 {" → "}
                 {rule.condition_type && rule.condition_type !== "always"
-                  ? (CONDITION_OPTIONS.find((o) => o.value === rule.condition_type)?.label ?? rule.condition_type)
+                  ? (CONDITION_OPTIONS.find(
+                      (o) => o.value === rule.condition_type,
+                    )?.label ?? rule.condition_type)
                   : "Always"}
                 {" → "}
-                {ACTION_OPTIONS.find((o) => o.value === rule.action_type)?.label ?? rule.action_type}
+                {ACTION_OPTIONS.find((o) => o.value === rule.action_type)
+                  ?.label ?? rule.action_type}
               </div>
             </div>
 
             <div className={styles.ruleRight}>
-              <span className={styles.runCount}>{rule.run_count ?? 0} runs</span>
-              <button
+              <span className={styles.runCount}>
+                {rule.run_count ?? 0} runs
+              </span>
+              {/* <button
                 className={styles.iconBtn}
                 onClick={() => toggleActive(rule)}
                 title={rule.is_active ? "Disable" : "Enable"}
               >
-                {rule.is_active ? <RiToggleFill size={18} color="var(--accent)" /> : <RiToggleLine size={18} />}
-              </button>
-              <button className={styles.iconBtn} onClick={() => openEdit(rule)} title="Edit">
+                {rule.is_active ? (
+                  <RiToggleFill size={18} color="var(--accent)" />
+                ) : (
+                  <RiToggleLine size={18} />
+                )}
+              </button> */}
+              <button
+                className={styles.iconBtn}
+                onClick={() => openEdit(rule)}
+                title="Edit"
+              >
                 <RiEditLine size={16} />
               </button>
               <button
                 className={styles.iconBtnDanger}
                 onClick={() => {
-                  if (confirm("Delete this automation rule?")) deleteMut.mutate(rule.id);
+                  if (confirm("Delete this automation rule?"))
+                    deleteMut.mutate(rule.id);
                 }}
                 title="Delete"
               >
@@ -253,15 +267,25 @@ export default function AutomationRuleBuilder({ pod }: Props) {
           setShowDrawer(false);
           resetForm();
         }}
-        size="md"
+        size="xs"
         title={editing ? "Edit Rule" : "New Automation Rule"}
         subtitle={`${triggerLabel} → ${actionLabel}`}
         footer={
           <div className={styles.footerBar}>
-            <button className={styles.footerSecondary} onClick={() => { setShowDrawer(false); resetForm(); }}>
+            <button
+              className={styles.footerSecondary}
+              onClick={() => {
+                setShowDrawer(false);
+                resetForm();
+              }}
+            >
               Cancel
             </button>
-            <button className={styles.footerPrimary} onClick={saveForm} disabled={createMut.isPending || updateMut.isPending}>
+            <button
+              className={styles.footerPrimary}
+              onClick={saveForm}
+              disabled={createMut.isPending || updateMut.isPending}
+            >
               {editing ? "Save Changes" : "Create Rule"}
             </button>
           </div>
@@ -286,32 +310,50 @@ export default function AutomationRuleBuilder({ pod }: Props) {
             onChange={(e) => setTriggerType(e.target.value)}
           >
             {TRIGGER_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
             ))}
           </select>
 
           {triggerType === "status_change" && (
             <>
-              <label className={styles.fieldLabel}>From status (optional)</label>
+              <label className={styles.fieldLabel}>
+                From status (optional)
+              </label>
               <select
                 className={styles.select}
                 value={triggerConfig.from_status ?? ""}
-                onChange={(e) => setTriggerConfig({ ...triggerConfig, from_status: e.target.value || undefined })}
+                onChange={(e) =>
+                  setTriggerConfig({
+                    ...triggerConfig,
+                    from_status: e.target.value || undefined,
+                  })
+                }
               >
                 <option value="">Any status</option>
                 {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
                 ))}
               </select>
               <label className={styles.fieldLabel}>To status (optional)</label>
               <select
                 className={styles.select}
                 value={triggerConfig.to_status ?? ""}
-                onChange={(e) => setTriggerConfig({ ...triggerConfig, to_status: e.target.value || undefined })}
+                onChange={(e) =>
+                  setTriggerConfig({
+                    ...triggerConfig,
+                    to_status: e.target.value || undefined,
+                  })
+                }
               >
                 <option value="">Any status</option>
                 {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
                 ))}
               </select>
             </>
@@ -329,7 +371,9 @@ export default function AutomationRuleBuilder({ pod }: Props) {
             }}
           >
             {CONDITION_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
             ))}
           </select>
 
@@ -339,11 +383,15 @@ export default function AutomationRuleBuilder({ pod }: Props) {
               <select
                 className={styles.select}
                 value={conditionConfig.priority ?? ""}
-                onChange={(e) => setConditionConfig({ priority: e.target.value })}
+                onChange={(e) =>
+                  setConditionConfig({ priority: e.target.value })
+                }
               >
                 <option value="">Select…</option>
                 {PRIORITY_OPTIONS.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
                 ))}
               </select>
             </>
@@ -355,11 +403,15 @@ export default function AutomationRuleBuilder({ pod }: Props) {
               <select
                 className={styles.select}
                 value={conditionConfig.issue_type ?? ""}
-                onChange={(e) => setConditionConfig({ issue_type: e.target.value })}
+                onChange={(e) =>
+                  setConditionConfig({ issue_type: e.target.value })
+                }
               >
                 <option value="">Select…</option>
                 {ISSUE_TYPE_OPTIONS.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
                 ))}
               </select>
             </>
@@ -375,7 +427,9 @@ export default function AutomationRuleBuilder({ pod }: Props) {
               >
                 <option value="">Select…</option>
                 {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
                 ))}
               </select>
             </>
@@ -387,7 +441,9 @@ export default function AutomationRuleBuilder({ pod }: Props) {
               <input
                 className={styles.textInput}
                 value={conditionConfig.assignee ?? ""}
-                onChange={(e) => setConditionConfig({ assignee: e.target.value })}
+                onChange={(e) =>
+                  setConditionConfig({ assignee: e.target.value })
+                }
                 placeholder="User ID"
               />
             </>
@@ -405,7 +461,9 @@ export default function AutomationRuleBuilder({ pod }: Props) {
             }}
           >
             {ACTION_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
             ))}
           </select>
 
@@ -419,7 +477,9 @@ export default function AutomationRuleBuilder({ pod }: Props) {
               >
                 <option value="">Select…</option>
                 {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
                 ))}
               </select>
             </>
@@ -447,7 +507,9 @@ export default function AutomationRuleBuilder({ pod }: Props) {
               >
                 <option value="">Select…</option>
                 {PRIORITY_OPTIONS.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
                 ))}
               </select>
             </>
@@ -471,7 +533,9 @@ export default function AutomationRuleBuilder({ pod }: Props) {
               <textarea
                 className={styles.textarea}
                 value={actionConfig.comment_body ?? ""}
-                onChange={(e) => setActionConfig({ comment_body: e.target.value })}
+                onChange={(e) =>
+                  setActionConfig({ comment_body: e.target.value })
+                }
                 placeholder="Write the automated comment…"
                 rows={3}
               />
@@ -484,7 +548,9 @@ export default function AutomationRuleBuilder({ pod }: Props) {
               <input
                 className={styles.textInput}
                 value={actionConfig.subtask_summary ?? ""}
-                onChange={(e) => setActionConfig({ subtask_summary: e.target.value })}
+                onChange={(e) =>
+                  setActionConfig({ subtask_summary: e.target.value })
+                }
                 placeholder="e.g. Write tests"
               />
             </>
@@ -496,14 +562,21 @@ export default function AutomationRuleBuilder({ pod }: Props) {
               <input
                 className={styles.textInput}
                 value={actionConfig.webhook_url ?? ""}
-                onChange={(e) => setActionConfig({ ...actionConfig, webhook_url: e.target.value })}
+                onChange={(e) =>
+                  setActionConfig({
+                    ...actionConfig,
+                    webhook_url: e.target.value,
+                  })
+                }
                 placeholder="https://hooks.slack.com/services/..."
               />
               <label className={styles.fieldLabel}>Message (optional)</label>
               <input
                 className={styles.textInput}
                 value={actionConfig.message ?? ""}
-                onChange={(e) => setActionConfig({ ...actionConfig, message: e.target.value })}
+                onChange={(e) =>
+                  setActionConfig({ ...actionConfig, message: e.target.value })
+                }
                 placeholder="e.g. Ticket status updated"
               />
             </>

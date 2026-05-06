@@ -1,7 +1,7 @@
 import type { ParsedEntry, ManualEntryType, AIParseResponse } from "./types";
 import { format } from "date-fns";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API = import.meta.env.VITE_API_URL || "";
 
 function getAuthHeader(): Record<string, string> {
   // Import inline to avoid circular deps

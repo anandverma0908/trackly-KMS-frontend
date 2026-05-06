@@ -15,7 +15,7 @@ import { useAuthStore } from "@/features/auth/useAuthStore";
 import styles from "./MyTimesheets.module.css";
 import DayDrawer from "./DayDrawer";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API = import.meta.env.VITE_API_URL || "";
 
 function getAuthHeader(): Record<string, string> {
   const token = useAuthStore.getState().token;

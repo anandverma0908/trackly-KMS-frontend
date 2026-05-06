@@ -2,11 +2,15 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://trackly-backend.onrender.com/api/:path*"
+      "destination": "https://trackly-kms-backend-production.up.railway.app/api/:path*"
     },
     {
       "source": "/uploads/:path*",
-      "destination": "https://trackly-backend.onrender.com/uploads/:path*"
+      "destination": "https://trackly-kms-backend-production.up.railway.app/uploads/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

@@ -991,16 +991,30 @@
 }
 .cancelBtn:hover { border-color: var(--border-2); color: var(--text); }
 
+/* ── Template skeleton ── */
+.templateSkeleton {
+  height: 120px;
+  border-radius: var(--r);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* ── Empty state ── */
 .emptyState {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 60px 24px;
+  gap: 8px;
+  padding: 48px 24px;
   color: var(--text-3);
-  font-size: 13px;
+  font-size: var(--text-sm);
   text-align: center;
 }
 

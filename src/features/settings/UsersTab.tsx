@@ -10,7 +10,7 @@ import { TbKeyFilled } from "react-icons/tb";
 import { TbTrashFilled } from "react-icons/tb";
 import { RiSearchLine } from "react-icons/ri";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API = import.meta.env.VITE_API_URL || "";
 
 const ROLES = [
   { value: "admin", label: "Admin" },

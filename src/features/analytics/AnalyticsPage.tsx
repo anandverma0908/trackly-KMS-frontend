@@ -66,22 +66,22 @@ function AnomalyDot(props: any): React.ReactElement<SVGElement> | null {
 export default function AnalyticsPage() {
   const qc = useQueryClient();
 
-  const { data: workload = [] } = useQuery({
+  const { data: workload = [], isLoading: loadingWorkload } = useQuery({
     queryKey: ["analytics-workload"],
     queryFn: fetchWorkload,
   });
 
-  const { data: bugCost } = useQuery<BugCostData>({
+  const { data: bugCost, isLoading: loadingBugCost } = useQuery<BugCostData>({
     queryKey: ["analytics-bug-cost"],
     queryFn: fetchBugCost,
   });
 
-  const { data: recurringData } = useQuery({
+  const { data: recurringData, isLoading: loadingRecurring } = useQuery({
     queryKey: ["analytics-recurring-problems"],
     queryFn: fetchRecurringProblems,
   });
 
-  const { data: clientHealth = [] } = useQuery<ClientHealthEntry[]>({
+  const { data: clientHealth = [], isLoading: loadingClientHealth } = useQuery<ClientHealthEntry[]>({
     queryKey: ["analytics-client-health"],
     queryFn: fetchClientHealth,
   });
@@ -101,17 +101,17 @@ export default function AnalyticsPage() {
     queryFn: fetchVelocityAnomalies,
   });
 
-  const { data: sentimentData } = useQuery<SentimentSignalsResponse>({
+  const { data: sentimentData, isLoading: loadingSentiment } = useQuery<SentimentSignalsResponse>({
     queryKey: ["analytics-sentiment-signals"],
     queryFn: fetchSentimentSignals,
   });
 
-  const { data: benchmarkData = [] } = useQuery<BenchmarkEntry[]>({
+  const { data: benchmarkData = [], isLoading: loadingBenchmarks } = useQuery<BenchmarkEntry[]>({
     queryKey: ["analytics-benchmarks"],
     queryFn: fetchBenchmarks,
   });
 
-  const { data: resourceData } = useQuery<ResourceGapsResponse>({
+  const { data: resourceData, isLoading: loadingResourceData } = useQuery<ResourceGapsResponse>({
     queryKey: ["analytics-resource-gaps"],
     queryFn: fetchResourceGaps,
   });
@@ -225,7 +225,13 @@ export default function AnalyticsPage() {
                 <div className={styles.cardTitle}>Workload Distribution</div>
               </div>
             </div>
-            {sortedWorkload.length === 0 ? (
+            {loadingWorkload ? (
+              <div className={styles.skeletonWrap}>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className={styles.skeletonBlock} style={{ height: 18, width: `${75 - i * 8}%` }} />
+                ))}
+              </div>
+            ) : sortedWorkload.length === 0 ? (
               <p className={styles.empty}>No workload data available.</p>
             ) : (
               <div className={styles.chartFlex}>
@@ -278,7 +284,13 @@ export default function AnalyticsPage() {
                 <div className={styles.cardTitle}>Team Health Monitor</div>
               </div>
             </div>
-            {teamHealth.length === 0 ? (
+            {loadingWorkload ? (
+              <div className={styles.skeletonWrap}>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className={styles.skeletonBlock} style={{ height: 36, borderRadius: "var(--r-sm)" }} />
+                ))}
+              </div>
+            ) : teamHealth.length === 0 ? (
               <p className={styles.empty}>No workload data available.</p>
             ) : (
               <div className={styles.cardBody}>
@@ -540,14 +552,20 @@ export default function AnalyticsPage() {
             </div>
             <div className={styles.cardBody}>
             <div className={styles.sentimentList}>
-              {sentimentSignals.length === 0 && (
+              {loadingSentiment ? (
+                <div className={styles.skeletonWrap}>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className={styles.skeletonBlock} style={{ height: 40 }} />
+                  ))}
+                </div>
+              ) : sentimentSignals.length === 0 ? (
                 <div className={styles.anomalyHealthy}>
                   <RiSparklingLine size={16} color="var(--green)" />
                   <span>
                     No emotional friction signals detected in the last 72 hours.
                   </span>
                 </div>
-              )}
+              ) : null}
               {sentimentSignals.map((s) => (
                 <div
                   key={s.engineer}
@@ -605,8 +623,15 @@ export default function AnalyticsPage() {
                 </span> */}
               </div>
             </div>
-            {!bugCost ? (
-              <p className={styles.empty}>Loading bug cost data…</p>
+            {loadingBugCost ? (
+              <div className={styles.skeletonWrap}>
+                <div className={styles.skeletonBlock} style={{ height: 48 }} />
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className={styles.skeletonBlock} style={{ height: 20 }} />
+                ))}
+              </div>
+            ) : !bugCost ? (
+              <p className={styles.empty}>No bug cost data available.</p>
             ) : (
               <div className={styles.cardBody}>
                 <div className={styles.bugCostStats}>
@@ -709,8 +734,14 @@ export default function AnalyticsPage() {
                 </span> */}
               </div>
             </div>
-            {!recurringData ? (
-              <p className={styles.empty}>Loading pattern analysis…</p>
+            {loadingRecurring ? (
+              <div className={styles.skeletonWrap}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className={styles.skeletonBlock} style={{ height: 40 }} />
+                ))}
+              </div>
+            ) : !recurringData ? (
+              <p className={styles.empty}>No pattern data available.</p>
             ) : recurringData.patterns.length === 0 ? (
               <div className={styles.anomalyHealthy}>
                 <RiSparklingLine size={16} color="var(--green)" />
@@ -785,14 +816,14 @@ export default function AnalyticsPage() {
                 </span> */}
               </div>
             </div>
-            {clientHealth.length === 0 ? (
-              <div className={styles.anomalyHealthy}>
-                <RiSparklingLine size={16} color="var(--green)" />
-                <span>
-                  No client data found. Assign tickets to clients to track
-                  health scores.
-                </span>
+            {loadingClientHealth ? (
+              <div className={styles.skeletonWrap}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className={styles.skeletonBlock} style={{ height: 44 }} />
+                ))}
               </div>
+            ) : clientHealth.length === 0 ? (
+              <p className={styles.empty}>No client data found. Assign tickets to clients to track health scores.</p>
             ) : (
               <div className={styles.cardBody}>
               <div className={styles.clientHealthList}>
@@ -888,7 +919,11 @@ export default function AnalyticsPage() {
               </div>
             </div>
             {loadingGaps ? (
-              <p className={styles.empty}>Loading gaps…</p>
+              <div className={styles.skeletonWrap}>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className={styles.skeletonBlock} style={{ height: 52 }} />
+                ))}
+              </div>
             ) : gaps.length === 0 ? (
               <div className={styles.emptyState}>
                 <p>
@@ -964,7 +999,13 @@ export default function AnalyticsPage() {
             </div>
           </div>
           <div className={styles.resourceList}>
-            {resourceGaps.length === 0 ? (
+            {loadingResourceData ? (
+              <div className={styles.skeletonWrap}>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className={styles.skeletonBlock} style={{ height: 72 }} />
+                ))}
+              </div>
+            ) : resourceGaps.length === 0 ? (
               <p className={styles.empty}>
                 No resource gaps detected from current ticket data.
               </p>
@@ -1019,8 +1060,14 @@ export default function AnalyticsPage() {
             </div>
           </div>
           <div className={styles.benchmarkList}>
-            {benchmarks.length === 0 ? (
-              <p className={styles.empty}>Computing benchmarks…</p>
+            {loadingBenchmarks ? (
+              <div className={styles.skeletonWrap}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className={styles.skeletonBlock} style={{ height: 56 }} />
+                ))}
+              </div>
+            ) : benchmarks.length === 0 ? (
+              <p className={styles.empty}>No benchmark data available yet.</p>
             ) : (
               benchmarks.map((b) => (
                 <div key={b.metric} className={styles.benchmarkItem}>

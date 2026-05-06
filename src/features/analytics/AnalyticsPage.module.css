@@ -179,23 +179,51 @@
 }
 
 .empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
   color: var(--text-3);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
+  text-align: center;
 }
 
 .emptyState {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 40px;
+  justify-content: center;
+  gap: 6px;
+  padding: 40px 24px;
   text-align: center;
   color: var(--text-3);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .emptyIcon {
-  font-size: 2rem;
+  font-size: 22px;
+  opacity: 0.5;
+  line-height: 1;
+}
+
+/* ── Skeleton loading ── */
+.skeletonBlock {
+  border-radius: var(--r-sm);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeletonWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ── Team Health Monitor ── */

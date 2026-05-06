@@ -1,4 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#4F7EFF"/>
-  <path d="M128 256h64v96h-64zM224 192h64v160h-64zM320 128h64v224h-64z" fill="#ffffff"/>
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7494fd"/>
+      <stop offset="100%" stop-color="#8aaaff"/>
+    </linearGradient>
+    <clipPath id="clip">
+      <rect width="512" height="512" rx="112"/>
+    </clipPath>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <text
+    x="256"
+    y="356"
+    font-family="Inter, Arial, sans-serif"
+    font-weight="900"
+    font-size="320"
+    fill="#ffffff"
+    text-anchor="middle"
+    letter-spacing="-10"
+  >T</text>
 </svg>
