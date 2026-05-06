@@ -367,14 +367,18 @@ export default function FormsPage() {
   }>({ name: "", description: "", fields: [emptyField()] });
 
   const [saving, setSaving] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
 
   const loadTemplates = useCallback(async () => {
+    setLoadingTemplates(true);
     try {
       const data = await fetchFormTemplates();
       setTemplates(data);
       if (data.length > 0 && !selectedTemplate) setSelectedTemplate(data[0]);
     } catch {
       toast.error("Failed to load templates");
+    } finally {
+      setLoadingTemplates(false);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -542,11 +546,15 @@ export default function FormsPage() {
               transition={{ duration: 0.18 }}
               className={styles.templateList}
             >
-              {templates.length === 0 ? (
+              {loadingTemplates ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className={styles.templateSkeleton} />
+                ))
+              ) : templates.length === 0 ? (
                 <div className={styles.emptyState}>
-                  <RiFileListLine size={32} style={{ opacity: 0.2 }} />
-                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--text-2)" }}>No forms yet</p>
-                  <p style={{ margin: 0, fontSize: 13, color: "var(--text-3)" }}>Create your first form template to start collecting submissions</p>
+                  <RiFileListLine size={24} style={{ opacity: 0.25 }} />
+                  <p style={{ margin: 0, fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--text-2)" }}>No forms yet</p>
+                  <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-3)" }}>Create your first form template to start collecting submissions</p>
                   <button className={styles.addBtn} onClick={() => setShowBuilder(true)}>
                     <RiAddLine size={14} /> Create First Form
                   </button>
@@ -661,12 +669,12 @@ export default function FormsPage() {
 
                   {filteredSubmissions.length === 0 ? (
                     <div className={styles.emptyState}>
-                      <RiClipboardLine size={28} style={{ opacity: 0.2 }} />
-                      <p style={{ margin: 0, fontSize: 14, color: "var(--text-2)" }}>
+                      <RiClipboardLine size={22} style={{ opacity: 0.25 }} />
+                      <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-2)" }}>
                         {submissionSearch ? "No submissions match your search" : "No submissions yet"}
                       </p>
                       {!submissionSearch && (
-                        <p style={{ margin: 0, fontSize: 12, color: "var(--text-3)" }}>
+                        <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-3)" }}>
                           Share the form link to start collecting responses
                         </p>
                       )}
@@ -686,8 +694,8 @@ export default function FormsPage() {
                 </>
               ) : (
                 <div className={styles.emptyState}>
-                  <RiFileListLine size={28} style={{ opacity: 0.2 }} />
-                  <p style={{ margin: 0, fontSize: 14, color: "var(--text-2)" }}>Select a form template</p>
+                  <RiFileListLine size={22} style={{ opacity: 0.25 }} />
+                  <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-2)" }}>Select a form template</p>
                 </div>
               )}
             </motion.div>

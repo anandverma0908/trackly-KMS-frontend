@@ -101,7 +101,7 @@ export default function MyWorkPage() {
         onTicketClick={setSelectedKey}
         onNavigate={navigate}
       />
-        <SmartFocusBlock block={focusBlock} onTicketClick={setSelectedKey} />
+      <SmartFocusBlock block={focusBlock} onTicketClick={setSelectedKey} />
 
       {/* Main grid */}
       <div className={`${styles.mainRow} fade-up-2`}>

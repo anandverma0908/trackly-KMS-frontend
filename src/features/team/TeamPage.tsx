@@ -359,19 +359,19 @@ export default function TeamPage() {
     staleTime: 5 * 60_000,
   });
 
-  const { data: cogLoadData } = useQuery({
+  const { data: cogLoadData, isLoading: cogLoadLoading } = useQuery({
     queryKey: ["cognitive-load"],
     queryFn: fetchCognitiveLoad,
     staleTime: 5 * 60_000,
   });
 
-  const { data: chemistryData } = useQuery({
+  const { data: chemistryData, isLoading: chemistryLoading } = useQuery({
     queryKey: ["team-chemistry"],
     queryFn: fetchTeamChemistry,
     staleTime: 5 * 60_000,
   });
 
-  const { data: memoryData } = useQuery({
+  const { data: memoryData, isLoading: memoryLoading } = useQuery({
     queryKey: ["memory-graph"],
     queryFn: fetchMemoryGraph,
     staleTime: 5 * 60_000,
@@ -662,8 +662,14 @@ Keep it direct and actionable.`;
             </span>
           </div>
           <div className={styles.insightCardBody}>
-            {!memoryData ? (
-              <span className={styles.aiPanelHint}>Loading memory graph…</span>
+            {memoryLoading ? (
+              <div className={styles.cogLoadSkeleton}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className={styles.cogLoadSkeletonRow} />
+                ))}
+              </div>
+            ) : !memoryData ? (
+              <span className={styles.aiPanelHint}>No memory graph data.</span>
             ) : (
               <>
                 {memoryData.ai_summary && (
@@ -743,11 +749,13 @@ Keep it direct and actionable.`;
               </span>
             </div>
             <div className={styles.insightCardBody}>
-              {!cogLoadData ? (
-                <span className={styles.aiPanelHint}>
-                  Loading cognitive load data…
-                </span>
-              ) : cogLoadData.members.length === 0 ? (
+              {cogLoadLoading ? (
+                <div className={styles.cogLoadSkeleton}>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className={styles.cogLoadSkeletonRow} />
+                  ))}
+                </div>
+              ) : !cogLoadData || cogLoadData.members.length === 0 ? (
                 <span className={styles.aiPanelHint}>
                   No active ticket assignments found.
                 </span>
@@ -816,11 +824,13 @@ Keep it direct and actionable.`;
               </span>
             </div>
             <div className={styles.insightCardBody}>
-              {!chemistryData ? (
-                <span className={styles.aiPanelHint}>
-                  Loading chemistry analysis…
-                </span>
-              ) : chemistryData.pod_count === 0 ? (
+              {chemistryLoading ? (
+                <div className={styles.cogLoadSkeleton}>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className={styles.cogLoadSkeletonRow} />
+                  ))}
+                </div>
+              ) : !chemistryData || chemistryData.pod_count === 0 ? (
                 <span className={styles.aiPanelHint}>
                   No multi-member pod data found.
                 </span>
