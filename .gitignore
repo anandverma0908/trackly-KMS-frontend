@@ -21,3 +21,4 @@ Thumbs.db
 .idea/
 package-lock.
 *.json
+!vercel.json
